@@ -1,0 +1,127 @@
+-- =====================================================
+--  Storyboard System Database Initialization
+--  漫剧分镜系统 数据库初始化
+-- =====================================================
+
+CREATE DATABASE IF NOT EXISTS storyboard DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE storyboard;
+
+-- 项目表
+CREATE TABLE IF NOT EXISTS projects (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL COMMENT '项目名称',
+    description TEXT COMMENT '项目描述',
+    script_text TEXT COMMENT '导入的原始剧本文本',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目表';
+
+-- 章节表
+CREATE TABLE IF NOT EXISTS chapters (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL COMMENT '章节标题',
+    summary TEXT COMMENT '章节摘要',
+    sort_order INT DEFAULT 0 COMMENT '排序',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    INDEX idx_project_id (project_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='章节表';
+
+-- 场景表
+CREATE TABLE IF NOT EXISTS scenes (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    chapter_id BIGINT NOT NULL,
+    project_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL COMMENT '场景标题',
+    description TEXT COMMENT '场景描述',
+    location VARCHAR(255) COMMENT '地点',
+    time_of_day VARCHAR(50) COMMENT '时间（白天/夜晚等）',
+    sort_order INT DEFAULT 0 COMMENT '排序',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    INDEX idx_chapter_id (chapter_id),
+    INDEX idx_project_id (project_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场景表';
+
+-- 分镜表
+CREATE TABLE IF NOT EXISTS storyboards (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    scene_id BIGINT NOT NULL,
+    chapter_id BIGINT NOT NULL,
+    project_id BIGINT NOT NULL,
+    shot_number INT COMMENT '镜号',
+    content TEXT NOT NULL COMMENT '分镜内容/台词',
+    camera_direction VARCHAR(100) COMMENT '机位/运镜',
+    duration DECIMAL(8,2) COMMENT '时长（秒）',
+    background TEXT COMMENT '背景描述',
+    thumbnail_url VARCHAR(500) COMMENT '缩略图URL',
+    notes TEXT COMMENT '备注',
+    sort_order INT DEFAULT 0 COMMENT '排序',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (scene_id) REFERENCES scenes(id),
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    INDEX idx_scene_id (scene_id),
+    INDEX idx_project_id (project_id),
+    INDEX idx_chapter_id (chapter_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜表';
+
+-- 角色表
+CREATE TABLE IF NOT EXISTS characters (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL COMMENT '角色名称',
+    description TEXT COMMENT '角色描述',
+    avatar_url VARCHAR(500) COMMENT '头像URL',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    INDEX idx_project_id (project_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
+
+-- 资产表
+CREATE TABLE IF NOT EXISTS assets (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    character_id BIGINT NULL COMMENT '关联角色（可为空，场景资产无）',
+    name VARCHAR(255) NOT NULL COMMENT '资产名称',
+    type VARCHAR(50) NOT NULL COMMENT '类型: character/image/scene/background',
+    file_url VARCHAR(500) NOT NULL COMMENT '文件URL',
+    thumbnail_url VARCHAR(500) NULL COMMENT '缩略图URL',
+    meta JSON NULL COMMENT '元数据（宽高、文件大小等）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (character_id) REFERENCES characters(id),
+    INDEX idx_project_id (project_id),
+    INDEX idx_character_id (character_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资产表';
+
+-- 分镜-角色关联表（多对多）
+CREATE TABLE IF NOT EXISTS storyboard_characters (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    storyboard_id BIGINT NOT NULL,
+    character_id BIGINT NOT NULL,
+    line TEXT COMMENT '该角色在此分镜的台词',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (storyboard_id) REFERENCES storyboards(id),
+    FOREIGN KEY (character_id) REFERENCES characters(id),
+    UNIQUE KEY uk_storyboard_character (storyboard_id, character_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜角色关联表';

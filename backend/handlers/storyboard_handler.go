@@ -1,0 +1,229 @@
+package handlers
+
+import (
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"storyboard-backend/models"
+	"storyboard-backend/repository"
+	"storyboard-backend/pkg/response"
+)
+
+// StoryboardHandler handles storyboard-related requests
+type StoryboardHandler struct {
+	repo *repository.StoryboardRepository
+	sceneRepo *repository.SceneRepository
+}
+
+func NewStoryboardHandler() *StoryboardHandler {
+	return &StoryboardHandler{
+		repo: &repository.StoryboardRepository{},
+		sceneRepo: &repository.SceneRepository{},
+	}
+}
+
+// GetByScene returns all storyboards for a scene
+func (h *StoryboardHandler) GetByScene(c *gin.Context) {
+	sceneIDStr := c.Param("id")
+	sceneID, err := strconv.ParseInt(sceneIDStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid scene id")
+		return
+	}
+
+	// Check if scene exists
+	scene, err := h.sceneRepo.FindByID(sceneID)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if scene == nil {
+		response.Error(c, "scene not found")
+		return
+	}
+
+	storyboards, err := h.repo.FindBySceneID(sceneID)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, storyboards)
+}
+
+// GetByID returns a storyboard by ID
+func (h *StoryboardHandler) GetByID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	storyboard, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if storyboard == nil {
+		response.Error(c, "storyboard not found")
+		return
+	}
+
+	response.Success(c, storyboard)
+}
+
+// Create creates a new storyboard
+func (h *StoryboardHandler) Create(c *gin.Context) {
+	sceneIDStr := c.Param("id")
+	sceneID, err := strconv.ParseInt(sceneIDStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid scene id")
+		return
+	}
+
+	// Check if scene exists
+	scene, err := h.sceneRepo.FindByID(sceneID)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if scene == nil {
+		response.Error(c, "scene not found")
+		return
+	}
+
+	var req struct {
+		ShotNumber      int     `json:"shot_number"`
+		Content         string  `json:"content" binding:"required"`
+		CameraDirection string  `json:"camera_direction"`
+		Duration        float64 `json:"duration"`
+		Background      string  `json:"background"`
+		ThumbnailURL    string  `json:"thumbnail_url"`
+		Notes           string  `json:"notes"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	// Get max sort order
+	maxSort, err := h.repo.GetMaxSortOrder(sceneID)
+	if err != nil {
+		maxSort = 0
+	}
+
+	// Auto-generate shot number if not provided
+	shotNumber := req.ShotNumber
+	if shotNumber == 0 {
+		shotNumber = maxSort + 1
+	}
+
+	storyboard := &models.Storyboard{
+		SceneID:         sceneID,
+		ChapterID:       scene.ChapterID,
+		ProjectID:       scene.ProjectID,
+		ShotNumber:      shotNumber,
+		Content:         req.Content,
+		CameraDirection: req.CameraDirection,
+		Duration:        req.Duration,
+		Background:      req.Background,
+		ThumbnailURL:    req.ThumbnailURL,
+		Notes:           req.Notes,
+		SortOrder:       maxSort + 1,
+	}
+
+	if err := h.repo.Create(storyboard); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Created(c, storyboard)
+}
+
+// Update updates a storyboard
+func (h *StoryboardHandler) Update(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	storyboard, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if storyboard == nil {
+		response.Error(c, "storyboard not found")
+		return
+	}
+
+	var req struct {
+		ShotNumber      *int    `json:"shot_number"`
+		Content         *string `json:"content"`
+		CameraDirection *string `json:"camera_direction"`
+		Duration        *float64 `json:"duration"`
+		Background      *string `json:"background"`
+		ThumbnailURL    *string `json:"thumbnail_url"`
+		Notes           *string `json:"notes"`
+		SortOrder       *int    `json:"sort_order"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	// Update only provided fields
+	if req.ShotNumber != nil {
+		storyboard.ShotNumber = *req.ShotNumber
+	}
+	if req.Content != nil {
+		storyboard.Content = *req.Content
+	}
+	if req.CameraDirection != nil {
+		storyboard.CameraDirection = *req.CameraDirection
+	}
+	if req.Duration != nil {
+		storyboard.Duration = *req.Duration
+	}
+	if req.Background != nil {
+		storyboard.Background = *req.Background
+	}
+	if req.ThumbnailURL != nil {
+		storyboard.ThumbnailURL = *req.ThumbnailURL
+	}
+	if req.Notes != nil {
+		storyboard.Notes = *req.Notes
+	}
+	if req.SortOrder != nil {
+		storyboard.SortOrder = *req.SortOrder
+	}
+
+	if err := h.repo.Update(storyboard); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, storyboard)
+}
+
+// Delete deletes a storyboard
+func (h *StoryboardHandler) Delete(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	if err := h.repo.Delete(id); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"success": true})
+}
