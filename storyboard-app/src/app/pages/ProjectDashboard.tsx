@@ -106,15 +106,15 @@ export default function ProjectDashboard() {
                 <CardContent>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div className="text-center p-2 bg-[#0a0a0a] rounded">
-                      <div className="text-purple-400 font-medium">--</div>
+                      <div className="text-purple-400 font-medium">{project.chapter_count ?? 0}</div>
                       <div className="text-xs text-gray-500 mt-1">章节</div>
                     </div>
                     <div className="text-center p-2 bg-[#0a0a0a] rounded">
-                      <div className="text-pink-400 font-medium">--</div>
+                      <div className="text-pink-400 font-medium">{project.scene_count ?? 0}</div>
                       <div className="text-xs text-gray-500 mt-1">场景</div>
                     </div>
                     <div className="text-center p-2 bg-[#0a0a0a] rounded">
-                      <div className="text-blue-400 font-medium">--</div>
+                      <div className="text-blue-400 font-medium">{project.storyboard_count ?? 0}</div>
                       <div className="text-xs text-gray-500 mt-1">分镜</div>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   Film,
   Search,
@@ -35,6 +35,8 @@ import {
 
 export default function AssetLibrary() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const currentProjectId = Number(searchParams.get("project") || window.localStorage.getItem("currentProjectId") || "0");
   const [activeTab, setActiveTab] = useState("characters");
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -42,7 +44,6 @@ export default function AssetLibrary() {
   const [loading, setLoading] = useState(false);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [currentProjectId, setCurrentProjectId] = useState<number>(1); // TODO: get from context/state
 
   // Upload state
   const [uploading, setUploading] = useState(false);
@@ -59,12 +60,15 @@ export default function AssetLibrary() {
     } else {
       loadAssets();
     }
-  }, [activeTab]);
+  }, [activeTab, currentProjectId]);
 
   const loadCharacters = async () => {
     setLoading(true);
     try {
-      // TODO: get actual current project id
+      if (!currentProjectId) {
+        setCharacters([]);
+        return;
+      }
       const data = await characterApi.getCharactersByProject(currentProjectId);
       setCharacters(data);
     } catch (error) {
@@ -77,7 +81,10 @@ export default function AssetLibrary() {
   const loadAssets = async () => {
     setLoading(true);
     try {
-      // TODO: get actual current project id
+      if (!currentProjectId) {
+        setAssets([]);
+        return;
+      }
       const data = await assetApi.getAssetsByProject(currentProjectId);
       setAssets(data);
     } catch (error) {
@@ -163,7 +170,7 @@ export default function AssetLibrary() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate("/workspace")}
+              onClick={() => navigate(currentProjectId ? "/workspace?project=" + currentProjectId : "/workspace")}
               className="h-8 text-gray-400 hover:text-gray-200"
             >
               <ArrowLeft className="w-4 h-4 mr-1.5" />

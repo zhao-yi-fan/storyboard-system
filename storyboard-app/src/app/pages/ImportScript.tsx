@@ -22,20 +22,20 @@ export default function ImportScript() {
 [夜晚的都市天台，霓虹灯光映照在主角脸上]
 李明站在天台边缘，望着这座从未真正属于他的城市。
 
-李明（独白）："如果能重来一次，我一定不会选择这条路。"
+李明（独白）：“如果能重来一次，我一定不会选择这条路。”
 
 场景2：回忆闪回-校园
 [阳光明媚的大学校园]
 年轻的李明和林婉在樱花树下相遇。
 
-林婉："你好，我叫林婉。"
-李明（紧张）："我...我是李明。"
+林婉：“你好，我叫林婉。”
+李明（紧张）：“我...我是李明。”
 
 场景3：回到现实-天台
 [手机铃声响起]
 李明接起电话，神情凝重。
 
-神秘声音："你的时间不多了，最后一次机会。"`;
+神秘声音：“你的时间不多了，最后一次机会。”`;
 
   const handleLoadExample = () => {
     setScriptText(exampleScript);
@@ -55,19 +55,16 @@ export default function ImportScript() {
 
     setLoading(true);
     try {
-      // 1. 创建新项目
       const project = await projectApi.createProject({
         name: projectName,
         description: projectDescription,
       });
 
-      // 2. 导入脚本
-      await projectApi.importScript(project.id, scriptText);
-
-      // 3. 跳转到工作台
-      navigate("/workspace");
+      const importResult = await projectApi.importScript(project.id, scriptText);
+      const targetProjectId = importResult.project_id ?? project.id;
+      window.localStorage.setItem("currentProjectId", String(targetProjectId));
+      navigate(`/workspace?project=${targetProjectId}`);
     } catch (error) {
-      // Error is already toasted by api client
       console.error("Failed to create project:", error);
     } finally {
       setLoading(false);
@@ -76,7 +73,6 @@ export default function ImportScript() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
-      {/* Header */}
       <header className="border-b border-gray-800 bg-[#111111]">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -95,14 +91,12 @@ export default function ImportScript() {
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-2 gap-8">
-          {/* Left: Import Area */}
           <div className="space-y-6">
             <div>
               <h2 className="mb-2">新建分镜项目</h2>
               <p className="text-sm text-gray-400">创建新项目并导入剧本，系统将自动解析剧本结构</p>
             </div>
 
-            {/* Project Info */}
             <div className="bg-[#141414] border border-gray-800 rounded-lg p-4 space-y-4">
               <div>
                 <Label className="text-sm text-gray-300">项目名称</Label>
@@ -124,7 +118,6 @@ export default function ImportScript() {
               </div>
             </div>
 
-            {/* Import Tabs */}
             <div className="bg-[#141414] border border-gray-800 rounded-lg overflow-hidden">
               <div className="border-b border-gray-800 flex">
                 <button className="px-4 py-3 text-sm bg-[#1a1a1a] border-b-2 border-purple-500 flex items-center gap-2">
@@ -153,14 +146,11 @@ export default function ImportScript() {
                   >
                     加载示例剧本
                   </Button>
-                  <span className="text-xs text-gray-500">
-                    {scriptText.length} 字符
-                  </span>
+                  <span className="text-xs text-gray-500">{scriptText.length} 字符</span>
                 </div>
               </div>
             </div>
 
-            {/* Split Rules */}
             <div className="bg-[#141414] border border-gray-800 rounded-lg p-4 space-y-4">
               <div className="flex items-center gap-2 text-sm">
                 <Settings2 className="w-4 h-4 text-purple-400" />
@@ -185,11 +175,7 @@ export default function ImportScript() {
 
                 <div>
                   <Label className="text-sm text-gray-300">镜头时长（秒）</Label>
-                  <Input
-                    type="number"
-                    defaultValue="3-8"
-                    className="mt-1.5 bg-[#0a0a0a] border-gray-700"
-                  />
+                  <Input type="number" defaultValue="3-8" className="mt-1.5 bg-[#0a0a0a] border-gray-700" />
                 </div>
 
                 <div>
@@ -227,7 +213,6 @@ export default function ImportScript() {
             </Button>
           </div>
 
-          {/* Right: Preview Area */}
           <div className="space-y-6">
             <div>
               <h2 className="mb-2">剧本结构预览</h2>
@@ -237,14 +222,11 @@ export default function ImportScript() {
             <div className="bg-[#141414] border border-gray-800 rounded-lg p-4">
               {scriptText ? (
                 <div className="space-y-4">
-                  {/* Chapter */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-purple-400">
                       <div className="w-1 h-4 bg-purple-500 rounded"></div>
                       第一章：觉醒
                     </div>
-                    
-                    {/* Scenes */}
                     <div className="ml-4 space-y-3">
                       <div className="bg-[#0a0a0a] border border-gray-800 rounded p-3 space-y-2">
                         <div className="flex items-center justify-between">
@@ -272,7 +254,6 @@ export default function ImportScript() {
                     </div>
                   </div>
 
-                  {/* Statistics */}
                   <div className="pt-4 border-t border-gray-800 grid grid-cols-3 gap-4 text-center">
                     <div>
                       <div className="text-2xl text-purple-400">1</div>

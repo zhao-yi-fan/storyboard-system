@@ -5,8 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
-	"storyboard-backend/repository"
 	"storyboard-backend/pkg/response"
+	"storyboard-backend/repository"
+	"storyboard-backend/services"
 )
 
 // ProjectHandler handles project-related requests
@@ -137,7 +138,7 @@ func (h *ProjectHandler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"success": true})
 }
 
-// ImportScript imports script text into a project
+// ImportScript imports script text into a project, parses it, and persists the generated structure.
 func (h *ProjectHandler) ImportScript(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -165,16 +166,12 @@ func (h *ProjectHandler) ImportScript(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.UpdateScriptText(id, req.ScriptText); err != nil {
+	parser := services.NewScriptParserService()
+	result, err := parser.ParseAndImport(id, req.ScriptText)
+	if err != nil {
 		response.Error(c, err.Error())
 		return
 	}
 
-	// For now, we just save the script. Actual parsing will be added later with model integration.
-	data := gin.H{
-		"project_id": id,
-		"script_length": len(req.ScriptText),
-		"success": true,
-	}
-	response.Success(c, data)
+	response.Success(c, result)
 }

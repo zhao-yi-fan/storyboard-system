@@ -58,28 +58,102 @@ export default function Workspace() {
     loadProjects();
   }, []);
 
+  const resolveProjectId = () => {
+    const url = new URL(window.location.href);
+    const fromQuery = Number(url.searchParams.get("project") || "0");
+    const fromStorage = Number(window.localStorage.getItem("currentProjectId") || "0");
+    return fromQuery || fromStorage || 0;
+  };
+
+  const loadStoryboards = async (sceneId: number) => {
+    try {
+      const data = await storyboardApi.getStoryboardsByScene(sceneId);
+      setStoryboards(data);
+      setSelectedShot(data[0] ?? null);
+    } catch (error) {
+      console.error("Failed to load storyboards:", error);
+      setStoryboards([]);
+      setSelectedShot(null);
+    }
+  };
+
+  const loadScenes = async (chapterId: number, autoSelect = false) => {
+    try {
+      const data = await sceneApi.getScenesByChapter(chapterId);
+      setScenes(data);
+
+      if (autoSelect) {
+        const firstScene = data[0] ?? null;
+        setSelectedScene(firstScene);
+        if (firstScene) {
+          await loadStoryboards(firstScene.id);
+        } else {
+          setStoryboards([]);
+          setSelectedShot(null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load scenes:", error);
+      setScenes([]);
+      if (autoSelect) {
+        setSelectedScene(null);
+        setStoryboards([]);
+        setSelectedShot(null);
+      }
+    }
+  };
+
+  const loadChapters = async (projectId: number, autoSelect = false) => {
+    try {
+      const data = await chapterApi.getChaptersByProject(projectId);
+      setChapters(data);
+
+      if (autoSelect) {
+        const firstChapter = data[0] ?? null;
+        setSelectedChapter(firstChapter);
+        setExpandedChapters(firstChapter ? [firstChapter.id] : []);
+        if (firstChapter) {
+          await loadScenes(firstChapter.id, true);
+        } else {
+          setScenes([]);
+          setSelectedScene(null);
+          setStoryboards([]);
+          setSelectedShot(null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load chapters:", error);
+      setChapters([]);
+      if (autoSelect) {
+        setSelectedChapter(null);
+        setScenes([]);
+        setSelectedScene(null);
+        setStoryboards([]);
+        setSelectedShot(null);
+      }
+    }
+  };
+
+  const applyProjectSelection = async (projectId: number, projectList: Project[]) => {
+    const project = projectList.find((p) => p.id === projectId);
+    if (!project) {
+      return;
+    }
+
+    window.localStorage.setItem("currentProjectId", String(projectId));
+    setSelectedProject(project);
+    setExpandedProjects([projectId]);
+    await loadChapters(projectId, true);
+  };
+
   const loadProjects = async () => {
     setLoading(true);
     try {
       const data = await projectApi.getProjects();
       setProjects(data);
-
-      // Check URL for project id from search params
-      const url = new URL(window.location.href);
-      const projectIdStr = url.searchParams.get("project");
-      if (projectIdStr) {
-        const projectId = parseInt(projectIdStr);
-        if (!isNaN(projectId)) {
-          // Expand and load the project
-          if (!expandedProjects.includes(projectId)) {
-            setExpandedProjects([...expandedProjects, projectId]);
-          }
-          const project = data.find(p => p.id === projectId);
-          if (project) {
-            setSelectedProject(project);
-            loadChapters(projectId);
-          }
-        }
+      const projectId = resolveProjectId();
+      if (projectId) {
+        await applyProjectSelection(projectId, data);
       }
     } catch (error) {
       console.error("Failed to load projects:", error);
@@ -88,78 +162,50 @@ export default function Workspace() {
     }
   };
 
-  const toggleProject = (projectId: number) => {
-    setExpandedProjects((prev) =>
-      prev.includes(projectId)
-        ? prev.filter((id) => id !== projectId)
-        : [...prev, projectId]
-    );
+  const toggleProject = async (projectId: number) => {
+    const isExpanded = expandedProjects.includes(projectId);
 
-    const project = projects.find((p) => p.id === projectId);
-    if (project && !expandedProjects.includes(projectId)) {
-      setSelectedProject(project);
-      loadChapters(project.id);
-    } else if (selectedProject?.id === projectId) {
+    if (isExpanded) {
+      setExpandedProjects((prev) => prev.filter((id) => id !== projectId));
       setSelectedProject(null);
+      window.localStorage.removeItem("currentProjectId");
       setChapters([]);
       setSelectedChapter(null);
       setScenes([]);
       setSelectedScene(null);
       setStoryboards([]);
       setSelectedShot(null);
+      return;
     }
+
+    await applyProjectSelection(projectId, projects);
   };
 
-  const loadChapters = async (projectId: number) => {
-    try {
-      const data = await chapterApi.getChaptersByProject(projectId);
-      setChapters(data);
-    } catch (error) {
-      console.error("Failed to load chapters:", error);
-    }
-  };
-
-  const toggleChapter = (chapterId: number) => {
-    setExpandedChapters((prev) =>
-      prev.includes(chapterId)
-        ? prev.filter((id) => id !== chapterId)
-        : [...prev, chapterId]
-    );
-
+  const toggleChapter = async (chapterId: number) => {
+    const isExpanded = expandedChapters.includes(chapterId);
     const chapter = chapters.find((c) => c.id === chapterId);
-    if (chapter && !expandedChapters.includes(chapterId)) {
-      setSelectedChapter(chapter);
-      loadScenes(chapter.id);
-    } else if (selectedChapter?.id === chapterId) {
+    if (!chapter) {
+      return;
+    }
+
+    if (isExpanded) {
+      setExpandedChapters((prev) => prev.filter((id) => id !== chapterId));
       setSelectedChapter(null);
       setScenes([]);
       setSelectedScene(null);
       setStoryboards([]);
       setSelectedShot(null);
+      return;
     }
-  };
 
-  const loadScenes = async (chapterId: number) => {
-    try {
-      const data = await sceneApi.getScenesByChapter(chapterId);
-      setScenes(data);
-    } catch (error) {
-      console.error("Failed to load scenes:", error);
-    }
+    setExpandedChapters([chapterId]);
+    setSelectedChapter(chapter);
+    await loadScenes(chapter.id, true);
   };
 
   const selectScene = async (scene: Scene) => {
     setSelectedScene(scene);
-    loadStoryboards(scene.id);
-  };
-
-  const loadStoryboards = async (sceneId: number) => {
-    try {
-      const data = await storyboardApi.getStoryboardsByScene(sceneId);
-      setStoryboards(data);
-    } catch (error) {
-      console.error("Failed to load storyboards:", error);
-    }
+    await loadStoryboards(scene.id);
   };
 
   const filteredShots = selectedScene
@@ -202,7 +248,13 @@ export default function Workspace() {
                 size="sm"
                 variant="ghost"
                 className="h-8 text-gray-400 hover:text-gray-200"
-                onClick={() => navigate("/assets")}
+                onClick={() =>
+                  navigate(
+                    selectedProject
+                      ? `/assets?project=${selectedProject.id}`
+                      : "/assets",
+                  )
+                }
               >
                 <Package className="w-4 h-4 mr-1.5" />
                 资产库

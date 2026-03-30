@@ -1,21 +1,22 @@
-// 统一后端响应格式
-export type ApiResponse<T = any> = {
+export type ApiResponse<T = unknown> = {
   code: number;
   data: T;
   message: string;
 };
 
-// 项目实体类型
 export type Project = {
   id: number;
   name: string;
   description: string;
-  scriptText: string;
+  script_text?: string;
+  scriptText?: string;
+  chapter_count?: number;
+  scene_count?: number;
+  storyboard_count?: number;
   created_at?: string;
   updated_at?: string;
 };
 
-// 章节实体类型
 export type Chapter = {
   id: number;
   project_id: number;
@@ -26,7 +27,6 @@ export type Chapter = {
   updated_at?: string;
 };
 
-// 场景实体类型
 export type Scene = {
   id: number;
   chapter_id: number;
@@ -40,7 +40,6 @@ export type Scene = {
   updated_at?: string;
 };
 
-// 角色实体类型
 export type Character = {
   id: number;
   project_id: number;
@@ -51,19 +50,19 @@ export type Character = {
   updated_at?: string;
 };
 
-// 资产实体类型
 export type Asset = {
   id: number;
   project_id: number;
   character_id?: number;
-  url: string;
-  type: string;
   name: string;
+  type: string;
+  file_url: string;
+  thumbnail_url?: string;
+  meta?: string;
   created_at?: string;
   updated_at?: string;
 };
 
-// 分镜镜头实体类型
 export type Storyboard = {
   id: number;
   scene_id: number;
