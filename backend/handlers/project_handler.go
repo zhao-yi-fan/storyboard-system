@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
@@ -63,6 +64,22 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		return
 	}
 
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		response.Error(c, "项目名称不能为空")
+		return
+	}
+
+	existing, err := h.repo.FindByName(req.Name)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if existing != nil {
+		response.Error(c, "项目名称已存在，请更换名称")
+		return
+	}
+
 	project := &models.Project{
 		Name:        req.Name,
 		Description: req.Description,
@@ -70,6 +87,10 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.repo.Create(project); err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			response.Error(c, "项目名称已存在，请更换名称")
+			return
+		}
 		response.Error(c, err.Error())
 		return
 	}
@@ -108,12 +129,32 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 	}
 
 	if req.Name != "" {
+		req.Name = strings.TrimSpace(req.Name)
+		if req.Name == "" {
+			response.Error(c, "项目名称不能为空")
+			return
+		}
+
+		existing, err := h.repo.FindByNameExceptID(req.Name, id)
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+		if existing != nil {
+			response.Error(c, "项目名称已存在，请更换名称")
+			return
+		}
+
 		project.Name = req.Name
 	}
 	project.Description = req.Description
 	project.ScriptText = req.ScriptText
 
 	if err := h.repo.Update(project); err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			response.Error(c, "项目名称已存在，请更换名称")
+			return
+		}
 		response.Error(c, err.Error())
 		return
 	}

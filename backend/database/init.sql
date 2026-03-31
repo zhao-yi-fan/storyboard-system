@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS projects (
     script_text TEXT COMMENT '导入的原始剧本文本',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at DATETIME NULL
+    deleted_at DATETIME NULL,
+    UNIQUE KEY uk_projects_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目表';
 
 -- 章节表

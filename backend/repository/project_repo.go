@@ -59,6 +59,38 @@ func (r *ProjectRepository) FindByID(id int64) (*models.Project, error) {
 	return &p, nil
 }
 
+// FindByName finds an active project by name
+func (r *ProjectRepository) FindByName(name string) (*models.Project, error) {
+	query := `SELECT id, name, description, script_text, created_at, updated_at
+	          FROM projects WHERE name = ? AND deleted_at IS NULL LIMIT 1`
+
+	var p models.Project
+	err := database.DB.QueryRow(query, name).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &p.CreatedAt, &p.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// FindByNameExceptID finds an active project by name excluding the specified ID
+func (r *ProjectRepository) FindByNameExceptID(name string, id int64) (*models.Project, error) {
+	query := `SELECT id, name, description, script_text, created_at, updated_at
+	          FROM projects WHERE name = ? AND id <> ? AND deleted_at IS NULL LIMIT 1`
+
+	var p models.Project
+	err := database.DB.QueryRow(query, name, id).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &p.CreatedAt, &p.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 // Create creates a new project
 func (r *ProjectRepository) Create(p *models.Project) error {
 	query := `INSERT INTO projects (name, description, script_text) VALUES (?, ?, ?)`
