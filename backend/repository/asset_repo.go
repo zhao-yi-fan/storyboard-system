@@ -20,7 +20,7 @@ func (r *AssetRepository) FindByProjectID(projectID int64) ([]models.Asset, erro
 	}
 	defer rows.Close()
 
-	var assets []models.Asset
+	assets := make([]models.Asset, 0)
 	for rows.Next() {
 		var a models.Asset
 		if err := rows.Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &a.ThumbnailURL, &a.Meta, &a.CreatedAt, &a.UpdatedAt); err != nil {
@@ -43,7 +43,7 @@ func (r *AssetRepository) FindByCharacterID(characterID int64) ([]models.Asset, 
 	}
 	defer rows.Close()
 
-	var assets []models.Asset
+	assets := make([]models.Asset, 0)
 	for rows.Next() {
 		var a models.Asset
 		if err := rows.Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &a.ThumbnailURL, &a.Meta, &a.CreatedAt, &a.UpdatedAt); err != nil {

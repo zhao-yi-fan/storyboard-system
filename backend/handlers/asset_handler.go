@@ -4,21 +4,22 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"storyboard-backend/repository"
+	"storyboard-backend/models"
 	"storyboard-backend/pkg/response"
+	"storyboard-backend/repository"
 )
 
 // AssetHandler handles asset-related requests
 type AssetHandler struct {
-	repo *repository.AssetRepository
-	projectRepo *repository.ProjectRepository
+	repo          *repository.AssetRepository
+	projectRepo   *repository.ProjectRepository
 	characterRepo *repository.CharacterRepository
 }
 
 func NewAssetHandler() *AssetHandler {
 	return &AssetHandler{
-		repo: &repository.AssetRepository{},
-		projectRepo: &repository.ProjectRepository{},
+		repo:          &repository.AssetRepository{},
+		projectRepo:   &repository.ProjectRepository{},
 		characterRepo: &repository.CharacterRepository{},
 	}
 }
@@ -48,6 +49,9 @@ func (h *AssetHandler) GetByProject(c *gin.Context) {
 		response.Error(c, err.Error())
 		return
 	}
+	if assets == nil {
+		assets = []models.Asset{}
+	}
 
 	response.Success(c, assets)
 }
@@ -76,6 +80,9 @@ func (h *AssetHandler) GetByCharacter(c *gin.Context) {
 	if err != nil {
 		response.Error(c, err.Error())
 		return
+	}
+	if assets == nil {
+		assets = []models.Asset{}
 	}
 
 	response.Success(c, assets)

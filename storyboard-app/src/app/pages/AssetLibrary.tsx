@@ -70,7 +70,7 @@ export default function AssetLibrary() {
         return;
       }
       const data = await characterApi.getCharactersByProject(currentProjectId);
-      setCharacters(data);
+      setCharacters(data ?? []);
     } catch (error) {
       console.error("Failed to load characters:", error);
     } finally {
@@ -86,7 +86,7 @@ export default function AssetLibrary() {
         return;
       }
       const data = await assetApi.getAssetsByProject(currentProjectId);
-      setAssets(data);
+      setAssets(data ?? []);
     } catch (error) {
       console.error("Failed to load assets:", error);
     } finally {
