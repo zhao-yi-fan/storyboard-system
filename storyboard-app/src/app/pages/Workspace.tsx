@@ -196,6 +196,29 @@ export default function Workspace() {
     return filteredShots.reduce((sum, shot) => sum + (shot.duration || 0), 0);
   };
 
+  const formatShotNumber = (num?: number) => String(num ?? 0).padStart(3, "0");
+
+  const deriveShotType = (shot: Storyboard) => {
+    const text = `${shot.content || ""} ${shot.notes || ""}`;
+    if (text.includes("特写")) return "特写";
+    if (text.includes("中景")) return "中景";
+    if (text.includes("近景")) return "近景";
+    if (text.includes("远景")) return "远景";
+    if (text.includes("全景")) return "全景";
+    return "镜头";
+  };
+
+  const deriveEmotion = (shot: Storyboard) => {
+    const text = `${shot.content || ""} ${shot.notes || ""}`;
+    if (text.includes("孤独")) return "孤独";
+    if (text.includes("沉思")) return "沉思";
+    if (text.includes("紧张")) return "紧张";
+    if (text.includes("悔恨")) return "悔恨";
+    if (text.includes("温暖")) return "温暖";
+    if (text.includes("渺小")) return "渺小";
+    return "";
+  };
+
   return (
     <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
@@ -408,12 +431,12 @@ export default function Workspace() {
                         <ImageIcon className="w-12 h-12 text-gray-700" />
                       )}
                     </div>
-                    <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono">
-                      {shot.shot_number}
+                    <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono tracking-[0.2em]">
+                      {formatShotNumber(shot.shot_number)}
                     </div>
                     <div className="absolute top-2 right-2 flex gap-1">
                       <Badge className="bg-purple-600/90 text-white text-xs px-1.5 py-0">
-                        {/* TODO: shot type */}
+                        {deriveShotType(shot)}
                       </Badge>
                     </div>
                     {shot.duration > 0 && (
@@ -430,7 +453,11 @@ export default function Workspace() {
                       <Badge variant="outline" className="text-xs border-gray-700 text-gray-400">
                         {selectedScene?.title}
                       </Badge>
-                      {/* TODO: characters */}
+                      {shot.background ? (
+                        <Badge variant="outline" className="text-xs border-blue-800 text-blue-300">
+                          {shot.background}
+                        </Badge>
+                      ) : null}
                     </div>
 
                     <p className="text-xs text-gray-400 line-clamp-2">
@@ -443,6 +470,14 @@ export default function Workspace() {
                         <p className="line-clamp-1">{shot.notes}</p>
                       </div>
                     )}
+
+                    {deriveEmotion(shot) ? (
+                      <div className="flex items-center gap-1">
+                        <Badge className="text-xs bg-pink-600/20 text-pink-300 border-0">
+                          {deriveEmotion(shot)}
+                        </Badge>
+                      </div>
+                    ) : null}
                   </div>
                 </button>
               ))}
@@ -507,6 +542,36 @@ export default function Workspace() {
                       className="mt-1.5 bg-[#1a1a1a] border-gray-700"
                       readOnly
                     />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-gray-400">角色</Label>
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      {selectedShot.background ? (
+                        <Badge variant="outline" className="border-blue-700 text-blue-300">
+                          {selectedShot.background}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-gray-700 text-gray-500">
+                          待关联
+                        </Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-xs border-gray-700 text-gray-400"
+                        onClick={() =>
+                          navigate(
+                            selectedProject
+                              ? `/assets?project=${selectedProject.id}`
+                              : "/assets",
+                          )
+                        }
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        添加
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Description */}

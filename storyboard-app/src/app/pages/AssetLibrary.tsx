@@ -161,6 +161,32 @@ export default function AssetLibrary() {
       asset.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const deriveAssetPrimaryTag = (asset: Asset) => {
+    const type = asset.type?.toLowerCase?.() || "";
+    if (type.includes("scene") || type.includes("background") || type.includes("场景") || type.includes("背景")) {
+      return "场景";
+    }
+    if (type.includes("prop") || type.includes("道具")) {
+      return "道具";
+    }
+    return "素材";
+  };
+
+  const deriveAssetSecondaryTag = (asset: Asset) => {
+    const type = asset.type?.trim();
+    return type || "资源";
+  };
+
+  const deriveAssetDescription = (asset: Asset) => {
+    return asset.meta?.trim() || `${asset.name} 资源文件`;
+  };
+
+  const deriveAssetTags = (asset: Asset) => {
+    const tags = [deriveAssetPrimaryTag(asset)];
+    if (asset.type) tags.push(asset.type);
+    return Array.from(new Set(tags.filter(Boolean))).slice(0, 3);
+  };
+
   return (
     <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
@@ -229,7 +255,7 @@ export default function AssetLibrary() {
                     className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none px-4"
                   >
                     <MapPin className="w-4 h-4 mr-2" />
-                    素材资产
+                    场景资产
                     <Badge className="ml-2 bg-gray-800 text-gray-400 text-xs">
                       {assets.length}
                     </Badge>
@@ -399,7 +425,7 @@ export default function AssetLibrary() {
                   <div className="h-full flex items-center justify-center text-gray-500">
                     <div className="text-center">
                       <MapPin className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">暂无素材资产</p>
+                      <p className="text-sm">暂无场景资产</p>
                       <p className="text-xs mt-1">点击右上角按钮添加新资产</p>
                     </div>
                   </div>
@@ -423,7 +449,12 @@ export default function AssetLibrary() {
                           />
                           <div className="absolute top-3 left-3">
                             <Badge className="bg-green-600 text-white text-xs">
-                              {asset.type}
+                              {deriveAssetPrimaryTag(asset)}
+                            </Badge>
+                          </div>
+                          <div className="absolute top-3 right-3">
+                            <Badge className="bg-blue-600 text-white text-xs">
+                              {deriveAssetSecondaryTag(asset)}
                             </Badge>
                           </div>
                         </div>
@@ -437,8 +468,20 @@ export default function AssetLibrary() {
                           </div>
 
                           <p className="text-xs text-gray-400 line-clamp-2">
-                            {asset.file_url}
+                            {deriveAssetDescription(asset)}
                           </p>
+
+                          <div className="flex flex-wrap gap-1">
+                            {deriveAssetTags(asset).map((tag) => (
+                              <Badge
+                                key={`${asset.id}-${tag}`}
+                                variant="outline"
+                                className="text-xs border-gray-700 text-gray-400"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </button>
                     ))}
@@ -464,16 +507,31 @@ export default function AssetLibrary() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium">{asset.name}</h4>
-                            <Badge className="bg-green-600 text-white text-xs">
-                              {asset.type}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-400 line-clamp-1 mb-2">
-                            {asset.file_url}
-                          </p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium">{asset.name}</h4>
+                          <Badge className="bg-green-600 text-white text-xs">
+                            {deriveAssetPrimaryTag(asset)}
+                          </Badge>
+                          <Badge className="bg-blue-600 text-white text-xs">
+                            {deriveAssetSecondaryTag(asset)}
+                          </Badge>
                         </div>
+                        <p className="text-sm text-gray-400 line-clamp-1 mb-2">
+                          {deriveAssetDescription(asset)}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1">
+                          {deriveAssetTags(asset).map((tag) => (
+                            <Badge
+                              key={`${asset.id}-${tag}`}
+                              variant="outline"
+                              className="text-xs border-gray-700 text-gray-400"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
 
                         <div className="text-right flex-shrink-0">
                           {/* <div className="text-sm text-gray-400">{asset.usageCount}</div> */}
@@ -493,7 +551,7 @@ export default function AssetLibrary() {
             <>
               <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
                 <h3 className="text-sm">
-                  {selectedAsset.type === "character" ? "角色详情" : "资产详情"}
+                  {selectedAsset.type === "character" ? "角色详情" : "场景详情"}
                 </h3>
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
@@ -590,7 +648,7 @@ export default function AssetLibrary() {
 
                     {/* Name */}
                     <div>
-                      <Label className="text-xs text-gray-400">资产名称</Label>
+                      <Label className="text-xs text-gray-400">场景名称</Label>
                       <Input
                         value={selectedAsset.data.name}
                         onChange={(e) =>
@@ -603,9 +661,79 @@ export default function AssetLibrary() {
                       />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-400">资源类型</Label>
+                        <Input
+                          value={deriveAssetPrimaryTag(selectedAsset.data)}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">资源分类</Label>
+                        <Input
+                          value={deriveAssetSecondaryTag(selectedAsset.data)}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                          readOnly
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">场景描述</Label>
+                      <Textarea
+                        value={deriveAssetDescription(selectedAsset.data)}
+                        onChange={(e) =>
+                          setSelectedAsset({
+                            ...selectedAsset,
+                            data: { ...selectedAsset.data, meta: e.target.value },
+                          })
+                        }
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">资源地址</Label>
+                      <Textarea
+                        value={selectedAsset.data.file_url}
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
+                        readOnly
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">标签</Label>
+                      <div className="mt-1.5 flex flex-wrap gap-2">
+                        {deriveAssetTags(selectedAsset.data).map((tag) => (
+                          <Badge
+                            key={`selected-${tag}`}
+                            variant="outline"
+                            className="border-gray-700 text-gray-400"
+                          >
+                            {tag}
+                            <button className="ml-1.5 hover:text-gray-300">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="pt-4 border-t border-gray-800">
                       <Button
-                        className="w-full bg-purple-600 hover:bg-purple-700"
+                        variant="outline"
+                        className="w-full border-gray-700 text-gray-300 hover:bg-gray-900"
+                        onClick={() =>
+                          navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/workspace")
+                        }
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        插入到当前镜头
+                      </Button>
+                      <Button
+                        className="w-full mt-2 bg-purple-600 hover:bg-purple-700"
                         onClick={() => {
                           // TODO: update
                           alert("保存功能开发中");
