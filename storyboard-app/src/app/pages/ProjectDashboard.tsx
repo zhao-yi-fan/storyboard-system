@@ -1,21 +1,57 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Film, Plus, Clock, ChevronRight, Users, Camera, Search } from "lucide-react";
+import {
+  Film,
+  Plus,
+  Search,
+  Clock,
+  Layers,
+  Video,
+  Camera,
+  MoreHorizontal,
+  FolderOpen,
+  Filter,
+  Grid3x3,
+  List,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { projectApi, type Project } from "../api";
+
+type ViewMode = "grid" | "list";
+type StatusFilter = "all" | "草稿" | "进行中" | "已完成";
+
+const gradients = [
+  "from-purple-500 to-pink-600",
+  "from-blue-500 to-cyan-500",
+  "from-red-500 to-orange-500",
+  "from-green-500 to-emerald-500",
+];
+
+function deriveStats(project: Project) {
+  const chapters = project.chapter_count ?? 0;
+  const scenes = project.scene_count ?? 0;
+  const shots = project.storyboard_count ?? 0;
+  const targetShots = Math.max(scenes * 3, 1);
+  const progress = scenes === 0 && shots === 0 ? 0 : Math.min(100, Math.round((shots / targetShots) * 100));
+  const status: Exclude<StatusFilter, "all"> = progress >= 100 ? "已完成" : shots > 0 || scenes > 0 ? "进行中" : "草稿";
+  const statusColor =
+    status === "已完成" ? "bg-purple-600" : status === "进行中" ? "bg-green-600" : "bg-gray-600";
+
+  return { chapters, scenes, shots, progress, status, statusColor };
+}
 
 export default function ProjectDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  // Load projects on mount
   useEffect(() => {
-    loadProjects();
+    void loadProjects();
   }, []);
 
   const loadProjects = async () => {
@@ -30,116 +66,260 @@ export default function ProjectDashboard() {
     }
   };
 
-  const filteredProjects = projects.filter(
-    (project) =>
-      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      const text = `${project.name} ${project.description ?? ""}`.toLowerCase();
+      const matchesSearch = text.includes(searchQuery.toLowerCase());
+      const { status } = deriveStats(project);
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [projects, searchQuery, statusFilter]);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("zh-CN");
+  const statusOptions: { value: StatusFilter; label: string }[] = [
+    { value: "all", label: "全部状态" },
+    { value: "草稿", label: "草稿" },
+    { value: "进行中", label: "进行中" },
+    { value: "已完成", label: "已完成" },
+  ];
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "刚刚更新";
+    return new Date(dateStr).toLocaleDateString("zh-CN");
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
-      {/* Header */}
-      <header className="border-b border-gray-800 bg-[#111111]">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-              <Film className="w-5 h-5 text-white" />
+    <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
+      <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-[0_8px_24px_rgba(168,85,247,0.35)]">
+                <Film className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-medium">漫剧分镜系统</h1>
+                <p className="text-xs text-gray-500">专业分镜创作工具</p>
+              </div>
             </div>
-            <h1 className="text-xl">漫剧分镜项目</h1>
+
+            <Button size="sm" className="h-9 bg-purple-600 hover:bg-purple-700" onClick={() => navigate("/import")}>
+              <Plus className="w-4 h-4 mr-2" />
+              新建项目
+            </Button>
           </div>
-          <Button
-            className="bg-purple-600 hover:bg-purple-700"
-            onClick={() => navigate("/import")}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            新建项目
-          </Button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <Input
-              placeholder="搜索项目..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-[#1a1a1a] border-gray-700 text-gray-100"
-            />
+      <main className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="px-6 py-4 border-b border-gray-800 bg-[#0f0f0f] flex-shrink-0">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-medium">我的项目</h2>
+              <Badge className="bg-gray-800 text-gray-400 text-xs">{filteredProjects.length}</Badge>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input
+                  placeholder="搜索项目..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 bg-[#1a1a1a] border-gray-700 text-sm text-gray-100"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 bg-[#1a1a1a] rounded-md border border-gray-700 px-2 py-1">
+                <Filter className="w-4 h-4 text-gray-500" />
+                {statusOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setStatusFilter(option.value)}
+                    className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                      statusFilter === option.value ? "bg-purple-600 text-white" : "text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex bg-[#1a1a1a] rounded border border-gray-700">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={`h-9 w-9 p-0 rounded-none ${viewMode === "grid" ? "bg-gray-800" : ""}`}
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={`h-9 w-9 p-0 rounded-none ${viewMode === "list" ? "bg-gray-800" : ""}`}
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Projects Grid */}
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-sm">加载中...</p>
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <Film className="w-16 h-16 mx-auto mb-3 opacity-20" />
-            <p className="text-sm">暂无项目</p>
-            <p className="text-xs mt-1">点击右上角"新建项目"开始创建</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
-              <Card
-                key={project.id}
-                className="bg-[#141414] border-gray-800 hover:border-purple-500 transition-colors cursor-pointer"
-                onClick={() => navigate(`/workspace?project=${project.id}`)}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="text-lg">{project.name}</span>
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
-                  </CardTitle>
-                  <CardDescription className="text-gray-400 text-sm line-clamp-2">
-                    {project.description || "暂无描述"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="text-center p-2 bg-[#0a0a0a] rounded">
-                      <div className="text-purple-400 font-medium">{project.chapter_count ?? 0}</div>
-                      <div className="text-xs text-gray-500 mt-1">章节</div>
+        <div className="flex-1 overflow-y-auto p-6 min-h-0">
+          {loading ? (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <Film className="w-12 h-12 mx-auto mb-3 opacity-30 animate-pulse" />
+                <p className="text-sm">加载项目中...</p>
+              </div>
+            </div>
+          ) : filteredProjects.length > 0 ? (
+            viewMode === "grid" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-6">
+                {filteredProjects.map((project, index) => {
+                  const stats = deriveStats(project);
+                  const gradient = gradients[index % gradients.length];
+                  return (
+                    <div
+                      key={project.id}
+                      className="bg-[#141414] border border-gray-800 rounded-lg overflow-hidden hover:border-gray-700 transition-all group cursor-pointer"
+                      onClick={() => navigate(`/workspace?project=${project.id}`)}
+                    >
+                      <div className={`h-40 bg-gradient-to-br ${gradient} relative flex items-center justify-center`}>
+                        <Film className="w-16 h-16 text-white/30" />
+                        <div className="absolute top-3 right-3">
+                          <Badge className={`${stats.statusColor} text-white text-xs`}>{stats.status}</Badge>
+                        </div>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <Button size="sm" className="bg-white/90 text-gray-900 hover:bg-white" onClick={(e) => { e.stopPropagation(); navigate(`/workspace?project=${project.id}`); }}>
+                            <FolderOpen className="w-4 h-4 mr-2" />
+                            打开项目
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-medium text-base">{project.name}</h3>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 -mt-1 -mr-1">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        <p className="text-xs text-gray-400 line-clamp-2 mb-3">{project.description || "暂无描述"}</p>
+
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div className="bg-[#1a1a1a] rounded px-2 py-1.5">
+                            <div className="flex items-center gap-1 text-purple-400 mb-0.5">
+                              <Layers className="w-3 h-3" />
+                              <span className="text-xs">{stats.chapters}</span>
+                            </div>
+                            <div className="text-[10px] text-gray-500">章节</div>
+                          </div>
+                          <div className="bg-[#1a1a1a] rounded px-2 py-1.5">
+                            <div className="flex items-center gap-1 text-blue-400 mb-0.5">
+                              <Video className="w-3 h-3" />
+                              <span className="text-xs">{stats.scenes}</span>
+                            </div>
+                            <div className="text-[10px] text-gray-500">场景</div>
+                          </div>
+                          <div className="bg-[#1a1a1a] rounded px-2 py-1.5">
+                            <div className="flex items-center gap-1 text-green-400 mb-0.5">
+                              <Camera className="w-3 h-3" />
+                              <span className="text-xs">{stats.shots}</span>
+                            </div>
+                            <div className="text-[10px] text-gray-500">镜头</div>
+                          </div>
+                        </div>
+
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-500">完成度</span>
+                            <span className="text-xs text-gray-400">{stats.progress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all" style={{ width: `${stats.progress}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatDate(project.updated_at)}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center p-2 bg-[#0a0a0a] rounded">
-                      <div className="text-pink-400 font-medium">{project.scene_count ?? 0}</div>
-                      <div className="text-xs text-gray-500 mt-1">场景</div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-3 pb-6">
+                {filteredProjects.map((project, index) => {
+                  const stats = deriveStats(project);
+                  const gradient = gradients[index % gradients.length];
+                  return (
+                    <div key={project.id} className="bg-[#141414] border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-24 h-16 bg-gradient-to-br ${gradient} rounded flex items-center justify-center flex-shrink-0 relative`}>
+                          <Film className="w-8 h-8 text-white/30" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium">{project.name}</h3>
+                            <Badge className={`${stats.statusColor} text-white text-xs`}>{stats.status}</Badge>
+                          </div>
+                          <p className="text-sm text-gray-400 line-clamp-1 mb-2">{project.description || "暂无描述"}</p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span className="flex items-center gap-1"><Layers className="w-3 h-3 text-purple-400" />{stats.chapters} 章节</span>
+                            <span className="flex items-center gap-1"><Video className="w-3 h-3 text-blue-400" />{stats.scenes} 场景</span>
+                            <span className="flex items-center gap-1"><Camera className="w-3 h-3 text-green-400" />{stats.shots} 镜头</span>
+                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(project.updated_at)}</span>
+                          </div>
+                        </div>
+                        <div className="w-32 flex-shrink-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-500">完成度</span>
+                            <span className="text-xs text-gray-400">{stats.progress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: `${stats.progress}%` }} />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button size="sm" className="h-8 bg-purple-600 hover:bg-purple-700" onClick={() => navigate(`/workspace?project=${project.id}`)}>
+                            <FolderOpen className="w-4 h-4 mr-1.5" />
+                            打开
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center p-2 bg-[#0a0a0a] rounded">
-                      <div className="text-blue-400 font-medium">{project.storyboard_count ?? 0}</div>
-                      <div className="text-xs text-gray-500 mt-1">分镜</div>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex items-center justify-between border-t border-gray-800 pt-4">
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatDate(project.updated_at)}</span>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/workspace?project=${project.id}`);
-                    }}
-                  >
-                    继续编辑
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                  );
+                })}
+              </div>
+            )
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-20 h-20 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+                  <FolderOpen className="w-10 h-10 text-gray-600" />
+                </div>
+                <h3 className="text-base mb-2 text-gray-400">暂无项目</h3>
+                <p className="text-sm text-gray-600 mb-4">{searchQuery || statusFilter !== "all" ? "没有找到匹配的项目" : "开始创建你的第一个分镜项目"}</p>
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => navigate("/import")}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  新建项目
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

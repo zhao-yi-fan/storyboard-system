@@ -162,15 +162,24 @@ export default function AssetLibrary() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
-      {/* Top Header */}
+    <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate(currentProjectId ? "/workspace?project=" + currentProjectId : "/workspace")}
+              onClick={() => navigate("/")}
+              className="h-8 text-gray-400 hover:text-gray-200"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              项目列表
+            </Button>
+            <div className="h-6 w-px bg-gray-700"></div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/workspace")}
               className="h-8 text-gray-400 hover:text-gray-200"
             >
               <ArrowLeft className="w-4 h-4 mr-1.5" />
@@ -640,4 +649,3 @@ export default function AssetLibrary() {
     </div>
   );
 }
-

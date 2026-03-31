@@ -19,6 +19,7 @@ import {
   X,
   Sparkles,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -49,7 +50,6 @@ export default function Workspace() {
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [selectedShot, setSelectedShot] = useState<Storyboard | null>(null);
-  const [expandedProjects, setExpandedProjects] = useState<number[]>([]);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -142,7 +142,6 @@ export default function Workspace() {
 
     window.localStorage.setItem("currentProjectId", String(projectId));
     setSelectedProject(project);
-    setExpandedProjects([projectId]);
     await loadChapters(projectId, true);
   };
 
@@ -160,25 +159,6 @@ export default function Workspace() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleProject = async (projectId: number) => {
-    const isExpanded = expandedProjects.includes(projectId);
-
-    if (isExpanded) {
-      setExpandedProjects((prev) => prev.filter((id) => id !== projectId));
-      setSelectedProject(null);
-      window.localStorage.removeItem("currentProjectId");
-      setChapters([]);
-      setSelectedChapter(null);
-      setScenes([]);
-      setSelectedScene(null);
-      setStoryboards([]);
-      setSelectedShot(null);
-      return;
-    }
-
-    await applyProjectSelection(projectId, projects);
   };
 
   const toggleChapter = async (chapterId: number) => {
@@ -217,18 +197,29 @@ export default function Workspace() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
-      {/* Top Toolbar */}
+    <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate("/")}
+              className="h-8 text-gray-400 hover:text-gray-200"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              项目列表
+            </Button>
+
+            <div className="h-6 w-px bg-gray-700"></div>
+
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-pink-600 rounded flex items-center justify-center">
                 <Film className="w-4 h-4 text-white" />
               </div>
               <span className="text-sm">
                 {selectedProject
-                  ? `${selectedProject.name} · 分镜工作台`
+                  ? `《${selectedProject.name}》分镜工作台`
                   : "漫剧分镜工作台"}
               </span>
             </div>
@@ -299,13 +290,13 @@ export default function Workspace() {
       </header>
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left Sidebar: Project/Chapter/Scene Tree */}
+        {/* Left Sidebar: Chapter/Scene Tree */}
         <aside className="w-64 border-r border-gray-800 bg-[#0f0f0f] flex flex-col">
           <div className="p-3 border-b border-gray-800 flex-shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <Input
-                placeholder="搜索..."
+                placeholder="搜索场景..."
                 className="pl-9 h-8 bg-[#1a1a1a] border-gray-700 text-sm"
               />
             </div>
@@ -317,76 +308,47 @@ export default function Workspace() {
                 <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin opacity-30" />
                 <p className="text-sm">加载中...</p>
               </div>
-            ) : projects.length === 0 ? (
+            ) : !selectedProject ? (
               <div className="p-8 text-center text-gray-500">
                 <Film className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">暂无项目</p>
-                <p className="text-xs mt-1">回到首页创建新项目</p>
+                <p className="text-sm">请选择一个项目</p>
+                <p className="text-xs mt-1">回到项目列表进入工作台</p>
               </div>
             ) : (
               <div className="p-2 space-y-1">
-                {projects.map((project) => (
-                  <div key={project.id}>
+                {chapters.map((chapter) => (
+                  <div key={chapter.id}>
                     <button
-                      onClick={() => toggleProject(project.id)}
+                      onClick={() => toggleChapter(chapter.id)}
                       className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-[#1a1a1a] rounded"
                     >
-                      {expandedProjects.includes(project.id) ? (
+                      {expandedChapters.includes(chapter.id) ? (
                         <ChevronDown className="w-4 h-4 text-gray-400" />
                       ) : (
                         <ChevronRight className="w-4 h-4 text-gray-400" />
                       )}
                       <Film className="w-4 h-4 text-purple-400" />
-                      <span className="flex-1 text-left">{project.name}</span>
+                      <span className="flex-1 text-left truncate">{chapter.title}</span>
                     </button>
 
-                    {expandedProjects.includes(project.id) && (
+                    {expandedChapters.includes(chapter.id) && (
                       <div className="ml-6 mt-1 space-y-0.5">
-                        {chapters.map((chapter) => (
-                          <div key={chapter.id}>
+                        {scenes
+                          .filter((s) => s.chapter_id === chapter.id)
+                          .map((scene) => (
                             <button
-                              onClick={() => toggleChapter(chapter.id)}
+                              key={scene.id}
+                              onClick={() => selectScene(scene)}
                               className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded ${
-                                expandedChapters.includes(chapter.id)
+                                selectedScene?.id === scene.id
                                   ? "bg-purple-600/20 text-purple-300"
                                   : "hover:bg-[#1a1a1a] text-gray-300"
                               }`}
                             >
-                              {expandedChapters.includes(chapter.id) ? (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-400" />
-                              )}
-                              <Film className="w-4 h-4 text-purple-400" />
-                              <span className="flex-1 text-left truncate">
-                                {chapter.title}
-                              </span>
+                              <Camera className="w-3.5 h-3.5" />
+                              <span className="flex-1 text-left truncate">{scene.title}</span>
                             </button>
-
-                              {expandedChapters.includes(chapter.id) && (
-                                <div className="ml-6 mt-1 space-y-0.5">
-                                  {scenes
-                                    .filter((s) => s.chapter_id === chapter.id)
-                                    .map((scene) => (
-                                      <button
-                                        key={scene.id}
-                                        onClick={() => selectScene(scene)}
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded ${
-                                          selectedScene?.id === scene.id
-                                            ? "bg-purple-600/20 text-purple-300"
-                                            : "hover:bg-[#1a1a1a] text-gray-300"
-                                        }`}
-                                      >
-                                        <Camera className="w-3.5 h-3.5" />
-                                        <span className="flex-1 text-left truncate">
-                                          {scene.title}
-                                        </span>
-                                      </button>
-                                    ))}
-                                </div>
-                              )}
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     )}
                   </div>
@@ -398,7 +360,7 @@ export default function Workspace() {
           <div className="p-3 border-t border-gray-800 flex-shrink-0">
             <Button size="sm" variant="outline" className="w-full h-8 border-gray-700 text-gray-400">
               <Plus className="w-4 h-4 mr-1.5" />
-              新建章节
+              新建场景
             </Button>
           </div>
         </aside>
