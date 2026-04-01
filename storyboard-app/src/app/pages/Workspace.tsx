@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   Film,
@@ -20,6 +20,10 @@ import {
   Sparkles,
   Loader2,
   ArrowLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -27,7 +31,6 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { ScrollArea } from "../components/ui/scroll-area";
 import {
   projectApi,
   chapterApi,
@@ -52,11 +55,59 @@ export default function Workspace() {
   const [selectedShot, setSelectedShot] = useState<Storyboard | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingRight, setIsResizingRight] = useState(false);
+  const leftSidebarRef = useRef<HTMLDivElement>(null);
+  const rightSidebarRef = useRef<HTMLDivElement>(null);
+
+  const MIN_SIDEBAR_WIDTH = 220;
+  const MAX_SIDEBAR_WIDTH = 500;
 
   // Load projects on mount
   useEffect(() => {
     loadProjects();
   }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        const newWidth = e.clientX;
+        if (newWidth >= MIN_SIDEBAR_WIDTH && newWidth <= MAX_SIDEBAR_WIDTH) {
+          setLeftSidebarWidth(newWidth);
+        }
+      }
+
+      if (isResizingRight) {
+        const newWidth = window.innerWidth - e.clientX;
+        if (newWidth >= MIN_SIDEBAR_WIDTH && newWidth <= MAX_SIDEBAR_WIDTH) {
+          setRightSidebarWidth(newWidth);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingRight(false);
+    };
+
+    if (isResizingLeft || isResizingRight) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizingLeft, isResizingRight]);
 
   const resolveProjectId = () => {
     const url = new URL(window.location.href);
@@ -188,6 +239,16 @@ export default function Workspace() {
     await loadStoryboards(scene.id);
   };
 
+  const handleLeftMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingLeft(true);
+  };
+
+  const handleRightMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingRight(true);
+  };
+
   const filteredShots = selectedScene
     ? storyboards.filter((shot) => shot.scene_id === selectedScene.id)
     : [];
@@ -313,9 +374,24 @@ export default function Workspace() {
       </header>
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left Sidebar: Chapter/Scene Tree */}
-        <aside className="w-64 border-r border-gray-800 bg-[#0f0f0f] flex flex-col">
+        {isLeftSidebarOpen && (
+          <aside
+            ref={leftSidebarRef}
+            style={{ width: leftSidebarWidth }}
+            className="border-r border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0 relative"
+          >
           <div className="p-3 border-b border-gray-800 flex-shrink-0">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-gray-400">章节场景</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsLeftSidebarOpen(false)}
+                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </Button>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <Input
@@ -386,7 +462,27 @@ export default function Workspace() {
               新建场景
             </Button>
           </div>
-        </aside>
+
+            <div
+              className={`resize-handle resize-handle-right absolute top-0 bottom-0 right-0 w-1 ${isResizingLeft ? "dragging" : ""}`}
+              onMouseDown={handleLeftMouseDown}
+            />
+          </aside>
+        )}
+
+        {!isLeftSidebarOpen && (
+          <div className="flex-shrink-0 w-12 border-r border-gray-800 bg-[#0f0f0f] flex flex-col items-center py-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsLeftSidebarOpen(true)}
+              className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 mb-2"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </Button>
+            <div className="flex-1" />
+          </div>
+        )}
 
         {/* Center: Shot Cards */}
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
@@ -495,15 +591,29 @@ export default function Workspace() {
           </div>
         </main>
 
-        {/* Right Sidebar: Shot Details */}
-        <aside className="w-96 border-l border-gray-800 bg-[#0f0f0f] flex flex-col">
+        {isRightSidebarOpen && (
+          <aside
+            ref={rightSidebarRef}
+            style={{ width: rightSidebarWidth }}
+            className="border-l border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0 relative"
+          >
           {selectedShot ? (
             <>
               <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
                 <h3 className="text-sm">镜头详情</h3>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsRightSidebarOpen(false)}
+                    className="h-7 w-7 p-0 text-gray-400 hover:text-gray-200"
+                  >
+                    <PanelRightClose className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 min-h-0">
@@ -681,7 +791,27 @@ export default function Workspace() {
               </div>
             </div>
           )}
-        </aside>
+
+            <div
+              className={`resize-handle resize-handle-left absolute top-0 bottom-0 left-0 w-1 ${isResizingRight ? "dragging" : ""}`}
+              onMouseDown={handleRightMouseDown}
+            />
+          </aside>
+        )}
+
+        {!isRightSidebarOpen && (
+          <div className="flex-shrink-0 w-12 border-l border-gray-800 bg-[#0f0f0f] flex flex-col items-center py-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsRightSidebarOpen(true)}
+              className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 mb-2"
+            >
+              <PanelRightOpen className="w-4 h-4" />
+            </Button>
+            <div className="flex-1" />
+          </div>
+        )}
       </div>
     </div>
   );

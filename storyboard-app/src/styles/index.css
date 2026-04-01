@@ -1,3 +1,64 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a #0a0a0a;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: #4a4a4a;
+}
+
+.resize-handle {
+  position: relative;
+  user-select: none;
+}
+
+.resize-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.resize-handle.resize-handle-right::before {
+  right: 0;
+}
+
+.resize-handle.resize-handle-left::before {
+  left: 0;
+}
+
+.resize-handle:hover::before,
+.resize-handle.dragging::before {
+  background: #6b21a8;
+  box-shadow: 0 0 8px rgba(107, 33, 168, 0.5);
+}
+
+.resize-handle:hover,
+.resize-handle.dragging {
+  cursor: col-resize;
+}
