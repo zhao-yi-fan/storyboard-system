@@ -57,6 +57,7 @@ export default function Workspace() {
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
+  const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
@@ -67,6 +68,7 @@ export default function Workspace() {
   const [isResizingRight, setIsResizingRight] = useState(false);
   const leftSidebarRef = useRef<HTMLDivElement>(null);
   const rightSidebarRef = useRef<HTMLDivElement>(null);
+  const videoPollingTimerRef = useRef<number | null>(null);
 
   const MIN_SIDEBAR_WIDTH = 220;
   const MAX_SIDEBAR_WIDTH = 500;
@@ -74,6 +76,14 @@ export default function Workspace() {
   // Load projects on mount
   useEffect(() => {
     loadProjects();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (videoPollingTimerRef.current !== null) {
+        window.clearInterval(videoPollingTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -130,6 +140,36 @@ export default function Workspace() {
       setStoryboards([]);
       setSelectedShot(null);
     }
+  };
+
+  const applyStoryboardUpdate = (nextShot: Storyboard) => {
+    setStoryboards((prev) => prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)));
+    setSelectedShot((prev) => (prev?.id === nextShot.id ? nextShot : prev));
+  };
+
+  const stopVideoPolling = () => {
+    if (videoPollingTimerRef.current !== null) {
+      window.clearInterval(videoPollingTimerRef.current);
+      videoPollingTimerRef.current = null;
+    }
+  };
+
+  const pollStoryboardVideo = (storyboardId: number) => {
+    stopVideoPolling();
+    videoPollingTimerRef.current = window.setInterval(async () => {
+      try {
+        const latest = await storyboardApi.getStoryboard(storyboardId);
+        applyStoryboardUpdate(latest);
+        if (latest.video_status !== "generating") {
+          stopVideoPolling();
+          setGeneratingVideoId(null);
+        }
+      } catch (error) {
+        console.error("Failed to poll storyboard video status:", error);
+        stopVideoPolling();
+        setGeneratingVideoId(null);
+      }
+    }, 5000);
   };
 
   const loadScenes = async (chapterId: number, autoSelect = false) => {
@@ -315,6 +355,40 @@ export default function Workspace() {
       setPendingGeneratedShotId(null);
     }
   };
+
+  const handleGenerateVideo = async () => {
+    if (!selectedShot) {
+      return;
+    }
+
+    setGeneratingVideoId(selectedShot.id);
+    try {
+      const result = await storyboardApi.generateStoryboardVideo(selectedShot.id);
+      const nextShot = result.storyboard;
+      applyStoryboardUpdate(nextShot);
+      if (nextShot.video_status === "generating") {
+        pollStoryboardVideo(nextShot.id);
+      } else {
+        setGeneratingVideoId(null);
+      }
+    } catch (error) {
+      console.error("Failed to generate storyboard video:", error);
+      setGeneratingVideoId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedShot?.video_status === "generating") {
+      setGeneratingVideoId(selectedShot.id);
+      pollStoryboardVideo(selectedShot.id);
+      return;
+    }
+
+    if (selectedShot?.id !== generatingVideoId) {
+      stopVideoPolling();
+      setGeneratingVideoId(null);
+    }
+  }, [selectedShot?.id, selectedShot?.video_status]);
 
   return (
     <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
@@ -585,6 +659,12 @@ export default function Workspace() {
                         {shot.duration}s
                       </div>
                     )}
+                    {shot.video_url ? (
+                      <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs flex items-center gap-1 text-purple-200">
+                        <Play className="w-3 h-3 fill-current" />
+                        视频
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Info */}
@@ -722,6 +802,55 @@ export default function Workspace() {
                         </>
                       )}
                     </Button>
+                    <Button
+                      type="button"
+                      onClick={handleGenerateVideo}
+                      disabled={generatingVideoId === selectedShot.id}
+                      className="mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      {generatingVideoId === selectedShot.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          正在生成视频...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          生成视频
+                        </>
+                      )}
+                    </Button>
+                    {selectedShot.video_status === "failed" && selectedShot.video_error ? (
+                      <p className="mt-2 text-xs text-red-400 leading-5">{selectedShot.video_error}</p>
+                    ) : null}
+                    {selectedShot.video_status === "generating" ? (
+                      <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-4">
+                        <div className="flex flex-col items-center justify-center gap-3 text-center">
+                          <Loader2 className="w-6 h-6 text-purple-300 animate-spin" />
+                          <div>
+                            <p className="text-sm text-gray-200">正在生成新视频...</p>
+                            <p className="text-xs text-gray-500 mt-1">生成完成后会自动刷新预览</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : selectedShot.video_url ? (
+                      <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-2">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs text-gray-400">视频预览</span>
+                          {selectedShot.video_duration ? (
+                            <span className="text-xs text-gray-500">{selectedShot.video_duration}s</span>
+                          ) : null}
+                        </div>
+                        <video
+                          key={selectedShot.video_url}
+                          src={selectedShot.video_url}
+                          controls
+                          preload="metadata"
+                          poster={selectedShot.thumbnail_url || undefined}
+                          className="w-full rounded bg-black"
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Scene */}

@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { GenerateStoryboardCoverResult, Storyboard } from "../api/types";
+import type { GenerateStoryboardCoverResult, GenerateStoryboardVideoResult, Storyboard } from "../api/types";
 
 // 获取场景下所有分镜镜头
 export function getStoryboardsByScene(sceneId: number) {
@@ -52,4 +52,9 @@ export function deleteStoryboard(id: number) {
 // 生成分镜封面
 export function generateStoryboardCover(id: number) {
   return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`);
+}
+
+// 生成分镜视频
+export function generateStoryboardVideo(id: number) {
+  return apiClient.post<GenerateStoryboardVideoResult>(`/storyboards/${id}/generate-video`);
 }

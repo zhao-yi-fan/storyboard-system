@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"storyboard-backend/config"
 	"storyboard-backend/models"
 	"storyboard-backend/pkg/response"
 	"storyboard-backend/repository"
@@ -12,13 +14,13 @@ import (
 
 // StoryboardHandler handles storyboard-related requests
 type StoryboardHandler struct {
-	repo *repository.StoryboardRepository
+	repo      *repository.StoryboardRepository
 	sceneRepo *repository.SceneRepository
 }
 
 func NewStoryboardHandler() *StoryboardHandler {
 	return &StoryboardHandler{
-		repo: &repository.StoryboardRepository{},
+		repo:      &repository.StoryboardRepository{},
 		sceneRepo: &repository.SceneRepository{},
 	}
 }
@@ -163,14 +165,18 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	}
 
 	var req struct {
-		ShotNumber      *int    `json:"shot_number"`
-		Content         *string `json:"content"`
-		CameraDirection *string `json:"camera_direction"`
+		ShotNumber      *int     `json:"shot_number"`
+		Content         *string  `json:"content"`
+		CameraDirection *string  `json:"camera_direction"`
 		Duration        *float64 `json:"duration"`
-		Background      *string `json:"background"`
-		ThumbnailURL    *string `json:"thumbnail_url"`
-		Notes           *string `json:"notes"`
-		SortOrder       *int    `json:"sort_order"`
+		Background      *string  `json:"background"`
+		ThumbnailURL    *string  `json:"thumbnail_url"`
+		VideoURL        *string  `json:"video_url"`
+		VideoStatus     *string  `json:"video_status"`
+		VideoError      *string  `json:"video_error"`
+		VideoDuration   *float64 `json:"video_duration"`
+		Notes           *string  `json:"notes"`
+		SortOrder       *int     `json:"sort_order"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -196,6 +202,18 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	}
 	if req.ThumbnailURL != nil {
 		storyboard.ThumbnailURL = *req.ThumbnailURL
+	}
+	if req.VideoURL != nil {
+		storyboard.VideoURL = *req.VideoURL
+	}
+	if req.VideoStatus != nil {
+		storyboard.VideoStatus = *req.VideoStatus
+	}
+	if req.VideoError != nil {
+		storyboard.VideoError = *req.VideoError
+	}
+	if req.VideoDuration != nil {
+		storyboard.VideoDuration = *req.VideoDuration
 	}
 	if req.Notes != nil {
 		storyboard.Notes = *req.Notes
@@ -251,8 +269,47 @@ func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{
-		"storyboard_id":  storyboard.ID,
-		"thumbnail_url":  storyboard.ThumbnailURL,
-		"storyboard":     storyboard,
+		"storyboard_id": storyboard.ID,
+		"thumbnail_url": storyboard.ThumbnailURL,
+		"storyboard":    storyboard,
+	})
+}
+
+// GenerateVideo generates and attaches a short video for a storyboard
+func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	service, err := services.NewStoryboardVideoService()
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
+	} else if forwardedProto := c.Request.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
+		scheme = forwardedProto
+	}
+	publicBaseURL := scheme + "://" + c.Request.Host
+	if strings.TrimSpace(config.GlobalConfig.PublicAppBaseURL) != "" {
+		publicBaseURL = strings.TrimRight(config.GlobalConfig.PublicAppBaseURL, "/")
+	}
+
+	storyboard, err := service.StartGenerate(id, publicBaseURL)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"storyboard_id": storyboard.ID,
+		"video_url":     storyboard.VideoURL,
+		"storyboard":    storyboard,
 	})
 }

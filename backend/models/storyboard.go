@@ -16,6 +16,10 @@ type Storyboard struct {
 	Duration        float64     `json:"duration"`
 	Background      string      `json:"background"`
 	ThumbnailURL    string      `json:"thumbnail_url"`
+	VideoURL        string      `json:"video_url"`
+	VideoStatus     string      `json:"video_status"`
+	VideoError      string      `json:"video_error"`
+	VideoDuration   float64     `json:"video_duration"`
 	Notes           string      `json:"notes"`
 	SortOrder       int         `json:"sort_order"`
 	CreatedAt       time.Time   `json:"created_at"`

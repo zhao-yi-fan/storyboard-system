@@ -111,6 +111,7 @@ func main() {
 			storyboards.PUT("/:id", storyboardHandler.Update)
 			storyboards.DELETE("/:id", storyboardHandler.Delete)
 			storyboards.POST("/:id/generate-cover", storyboardHandler.GenerateCover)
+			storyboards.POST("/:id/generate-video", storyboardHandler.GenerateVideo)
 		}
 
 		// Characters
