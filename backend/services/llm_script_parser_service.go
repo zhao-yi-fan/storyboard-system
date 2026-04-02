@@ -201,7 +201,7 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 			}
 
 			for storyboardIndex, storyboard := range scene.Storyboards {
-				visualDescription := strings.TrimSpace(storyboard.VisualDescription)
+				visualDescription := normalizeVisualDescription(storyboard.VisualDescription, storyboard.Notes, storyboard.Dialogue, sceneSummary)
 				if visualDescription == "" {
 					return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：场景《%s》的第 %d 个分镜缺少 visual_description", sceneTitle, storyboardIndex+1)
 				}
@@ -288,6 +288,20 @@ func normalizeDuration(duration float64) float64 {
 		return 5
 	}
 	return duration
+}
+
+func normalizeVisualDescription(visualDescription, notes, dialogue, sceneSummary string) string {
+	for _, candidate := range []string{
+		strings.TrimSpace(visualDescription),
+		strings.TrimSpace(notes),
+		strings.TrimSpace(dialogue),
+		strings.TrimSpace(sceneSummary),
+	} {
+		if candidate != "" {
+			return candidate
+		}
+	}
+	return ""
 }
 
 func normalizedPositiveOrder(value, fallback int) int {

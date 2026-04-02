@@ -189,11 +189,11 @@ func (c *ArkClient) ParseScript(ctx context.Context, scriptText string) (*llmSto
 	return &document, nil
 }
 
-const arkStoryboardSystemPrompt = `你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你只能输出一个 JSON 对象，不要输出解释、不要输出 Markdown、不要输出代码块、不要输出额外文本。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。characters 字段只能填写人物/角色名字，绝对不能填写场景标题、地点、时间、氛围描述、镜头描述，也不能把多个信息用标点连接成一个字符串。`
+const arkStoryboardSystemPrompt = `你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你只能输出一个 JSON 对象，不要输出解释、不要输出 Markdown、不要输出代码块、不要输出额外文本。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。characters 字段只能填写人物/角色名字，绝对不能填写场景标题、地点、时间、氛围描述、镜头描述，也不能把多个信息用标点连接成一个字符串。每个 storyboard 都必须填写 visual_description，不能留空；如果原文没有直接描写，也要根据上下文补出可视化画面描述。`
 
 func buildArkStoryboardUserPrompt(scriptText string) string {
 	schemaBytes, _ := json.MarshalIndent(buildArkStoryboardSchema(), "", "  ")
-	return fmt.Sprintf("请将下面的文本整理为章节、场景、分镜和角色结构，并且只返回一个 JSON 对象。JSON 必须严格满足下面这个 schema 的字段结构与必填要求。\n\n额外要求：\n1. characters 数组里只能出现角色名称，例如“李明”“林婉”“神秘男人”。\n2. 不允许把“旧城区雨夜小巷”“夜晚，十二点前”“废弃照相馆门口”这类地点、时间、场景描述写进 characters。\n3. 如果某个场景没有明确人物，可以返回空数组，不要编造地点词充当角色名。\n\nSchema:\n%s\n\n文本内容：\n%s", string(schemaBytes), scriptText)
+	return fmt.Sprintf("请将下面的文本整理为章节、场景、分镜和角色结构，并且只返回一个 JSON 对象。JSON 必须严格满足下面这个 schema 的字段结构与必填要求。\n\n额外要求：\n1. characters 数组里只能出现角色名称，例如“李明”“林婉”“神秘男人”。\n2. 不允许把“旧城区雨夜小巷”“夜晚，十二点前”“废弃照相馆门口”这类地点、时间、场景描述写进 characters。\n3. 如果某个场景没有明确人物，可以返回空数组，不要编造地点词充当角色名。\n4. 每个 storyboard 的 visual_description 都必须有值，不能为空，必须写成可以直接拿去生成画面的中文描述。\n5. 如果原文主要是心理、回忆或对话，也要把它转换成可拍摄的画面描述，不要遗漏 visual_description。\n6. shot_type、camera_angle、mood、notes 允许简洁，但 visual_description 绝不能空。\n\nSchema:\n%s\n\n文本内容：\n%s", string(schemaBytes), scriptText)
 }
 
 func extractJSONObject(content string) string {
