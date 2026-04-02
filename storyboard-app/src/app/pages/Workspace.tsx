@@ -655,7 +655,7 @@ export default function Workspace() {
                   </div>
 
                   <div>
-                    <Label className="text-xs text-gray-400">角色</Label>
+                    <Label className="text-xs text-gray-400">背景场景</Label>
                     <div className="mt-1.5 flex flex-wrap gap-2">
                       {selectedShot.background ? (
                         <Badge variant="outline" className="border-blue-700 text-blue-300">
@@ -663,7 +663,7 @@ export default function Workspace() {
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="border-gray-700 text-gray-500">
-                          待关联
+                          未生成
                         </Badge>
                       )}
                       <Button
@@ -679,7 +679,7 @@ export default function Workspace() {
                         }
                       >
                         <Plus className="w-3 h-3 mr-1" />
-                        添加
+                        查看资产
                       </Button>
                     </div>
                   </div>
