@@ -21,4 +21,5 @@ type Storyboard struct {
 	CreatedAt       time.Time   `json:"created_at"`
 	UpdatedAt       time.Time   `json:"updated_at"`
 	Characters      []Character `json:"characters,omitempty"`
+	CharacterNames  []string    `json:"character_names,omitempty"`
 }

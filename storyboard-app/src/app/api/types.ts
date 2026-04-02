@@ -76,6 +76,8 @@ export type Storyboard = {
   thumbnail_url: string;
   notes: string;
   sort_order: number;
+  characters?: Character[];
+  character_names?: string[];
   created_at?: string;
   updated_at?: string;
 };

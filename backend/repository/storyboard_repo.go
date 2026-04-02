@@ -31,6 +31,10 @@ func (r *StoryboardRepository) FindBySceneID(sceneID int64) ([]models.Storyboard
 		storyboards = append(storyboards, sb)
 	}
 
+	if err := r.attachCharacterNames(storyboards); err != nil {
+		return nil, err
+	}
+
 	return storyboards, nil
 }
 
@@ -49,7 +53,133 @@ func (r *StoryboardRepository) FindByID(id int64) (*models.Storyboard, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if err := r.attachCharacterNamesToPointers([]*models.Storyboard{sb}); err != nil {
+		return nil, err
+	}
 	return &sb, nil
+}
+
+func (r *StoryboardRepository) attachCharacterNames(storyboards []models.Storyboard) error {
+	if len(storyboards) == 0 {
+		return nil
+	}
+
+	ids := make([]any, 0, len(storyboards))
+	index := make(map[int64]*models.Storyboard, len(storyboards))
+	placeholders := make([]byte, 0, len(storyboards)*2)
+	for i := range storyboards {
+		id := storyboards[i].ID
+		ids = append(ids, id)
+		index[id] = &storyboards[i]
+		if i > 0 {
+			placeholders = append(placeholders, ',', '?')
+		} else {
+			placeholders = append(placeholders, '?')
+		}
+	}
+
+	query := `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url, c.created_at, c.updated_at
+		FROM storyboard_characters sc
+		JOIN characters c ON c.id = sc.character_id
+		WHERE sc.storyboard_id IN (` + string(placeholders) + `)
+		ORDER BY sc.storyboard_id ASC, c.id ASC`
+
+	rows, err := database.DB.Query(query, ids...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var storyboardID int64
+		var character models.Character
+		if err := rows.Scan(
+			&storyboardID,
+			&character.ID,
+			&character.ProjectID,
+			&character.Name,
+			&character.Description,
+			&character.AvatarURL,
+			&character.CreatedAt,
+			&character.UpdatedAt,
+		); err != nil {
+			return err
+		}
+
+		if sb, ok := index[storyboardID]; ok {
+			sb.Characters = append(sb.Characters, character)
+			sb.CharacterNames = append(sb.CharacterNames, character.Name)
+		}
+	}
+
+	return rows.Err()
+}
+
+func (r *StoryboardRepository) attachCharacterNamesToPointers(storyboards []*models.Storyboard) error {
+	if len(storyboards) == 0 {
+		return nil
+	}
+
+	ids := make([]any, 0, len(storyboards))
+	index := make(map[int64]*models.Storyboard, len(storyboards))
+	placeholders := make([]byte, 0, len(storyboards)*2)
+	for i, storyboard := range storyboards {
+		if storyboard == nil {
+			continue
+		}
+		id := storyboard.ID
+		ids = append(ids, id)
+		index[id] = storyboard
+		if len(ids) > 1 {
+			placeholders = append(placeholders, ',', '?')
+		} else {
+			placeholders = append(placeholders, '?')
+		}
+		if i == len(storyboards)-1 && len(ids) == 0 {
+			return nil
+		}
+	}
+
+	if len(ids) == 0 {
+		return nil
+	}
+
+	query := `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url, c.created_at, c.updated_at
+		FROM storyboard_characters sc
+		JOIN characters c ON c.id = sc.character_id
+		WHERE sc.storyboard_id IN (` + string(placeholders) + `)
+		ORDER BY sc.storyboard_id ASC, c.id ASC`
+
+	rows, err := database.DB.Query(query, ids...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var storyboardID int64
+		var character models.Character
+		if err := rows.Scan(
+			&storyboardID,
+			&character.ID,
+			&character.ProjectID,
+			&character.Name,
+			&character.Description,
+			&character.AvatarURL,
+			&character.CreatedAt,
+			&character.UpdatedAt,
+		); err != nil {
+			return err
+		}
+
+		if sb, ok := index[storyboardID]; ok {
+			sb.Characters = append(sb.Characters, character)
+			sb.CharacterNames = append(sb.CharacterNames, character.Name)
+		}
+	}
+
+	return rows.Err()
 }
 
 // Create creates a new storyboard

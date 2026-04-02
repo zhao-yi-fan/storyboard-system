@@ -280,6 +280,16 @@ export default function Workspace() {
     return "";
   };
 
+  const deriveCharacterNames = (shot: Storyboard) => {
+    if (shot.character_names && shot.character_names.length > 0) {
+      return shot.character_names;
+    }
+    if (shot.characters && shot.characters.length > 0) {
+      return shot.characters.map((character) => character.name);
+    }
+    return [];
+  };
+
   return (
     <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
@@ -655,15 +665,17 @@ export default function Workspace() {
                   </div>
 
                   <div>
-                    <Label className="text-xs text-gray-400">背景场景</Label>
+                    <Label className="text-xs text-gray-400">角色</Label>
                     <div className="mt-1.5 flex flex-wrap gap-2">
-                      {selectedShot.background ? (
-                        <Badge variant="outline" className="border-blue-700 text-blue-300">
-                          {selectedShot.background}
-                        </Badge>
+                      {deriveCharacterNames(selectedShot).length > 0 ? (
+                        deriveCharacterNames(selectedShot).map((name) => (
+                          <Badge key={name} variant="outline" className="border-purple-700 text-purple-300">
+                            {name}
+                          </Badge>
+                        ))
                       ) : (
                         <Badge variant="outline" className="border-gray-700 text-gray-500">
-                          未生成
+                          待关联
                         </Badge>
                       )}
                       <Button
@@ -679,8 +691,23 @@ export default function Workspace() {
                         }
                       >
                         <Plus className="w-3 h-3 mr-1" />
-                        查看资产
+                        管理角色
                       </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-gray-400">背景场景</Label>
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      {selectedShot.background ? (
+                        <Badge variant="outline" className="border-blue-700 text-blue-300">
+                          {selectedShot.background}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-gray-700 text-gray-500">
+                          未生成
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
