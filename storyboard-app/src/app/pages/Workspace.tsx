@@ -56,6 +56,7 @@ export default function Workspace() {
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
+  const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -297,6 +298,7 @@ export default function Workspace() {
     }
 
     setGeneratingCoverId(selectedShot.id);
+    setPendingGeneratedShotId(selectedShot.id);
     try {
       const result = await storyboardApi.generateStoryboardCover(selectedShot.id);
       const nextShot = result.storyboard;
@@ -308,6 +310,7 @@ export default function Workspace() {
       console.error("Failed to generate storyboard cover:", error);
     } finally {
       setGeneratingCoverId(null);
+      setPendingGeneratedShotId(null);
     }
   };
 
@@ -552,11 +555,17 @@ export default function Workspace() {
                         <img
                           src={shot.thumbnail_url}
                           alt=""
-                          className="w-full h-full object-cover"
+                          className={`w-full h-full object-cover transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
                         />
                       ) : (
                         <ImageIcon className="w-12 h-12 text-gray-700" />
                       )}
+                      {pendingGeneratedShotId === shot.id ? (
+                        <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-2">
+                          <Loader2 className="w-6 h-6 text-white animate-spin" />
+                          <span className="text-xs text-white/90">正在生成新封面...</span>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono tracking-[0.2em]">
                       {formatShotNumber(shot.shot_number)}
@@ -662,13 +671,18 @@ export default function Workspace() {
                   {/* Preview */}
                   <div>
                     <Label className="text-xs text-gray-400">预览图</Label>
-                    <div className="mt-1.5 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded border border-gray-700 flex items-center justify-center">
-                      {selectedShot.thumbnail_url ? (
+                    <div className="mt-1.5 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
+                      {selectedShot.thumbnail_url && generatingCoverId !== selectedShot.id ? (
                         <img
                           src={selectedShot.thumbnail_url}
                           alt=""
                           className="w-full h-full object-cover rounded"
                         />
+                      ) : generatingCoverId === selectedShot.id ? (
+                        <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
+                          <Loader2 className="w-8 h-8 text-purple-300 animate-spin" />
+                          <span className="text-xs text-gray-300">正在生成新封面...</span>
+                        </div>
                       ) : (
                         <ImageIcon className="w-16 h-16 text-gray-700" />
                       )}
