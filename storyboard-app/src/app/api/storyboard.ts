@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Storyboard } from "../api/types";
+import type { GenerateStoryboardCoverResult, Storyboard } from "../api/types";
 
 // 获取场景下所有分镜镜头
 export function getStoryboardsByScene(sceneId: number) {
@@ -47,4 +47,9 @@ export function updateStoryboard(
 // 删除分镜镜头
 export function deleteStoryboard(id: number) {
   return apiClient.delete<{ success: boolean }>(`/storyboards/${id}`);
+}
+
+// 生成分镜封面
+export function generateStoryboardCover(id: number) {
+  return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`);
 }

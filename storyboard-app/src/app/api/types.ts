@@ -81,3 +81,9 @@ export type Storyboard = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type GenerateStoryboardCoverResult = {
+  storyboard_id: number;
+  thumbnail_url: string;
+  storyboard: Storyboard;
+};

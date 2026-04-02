@@ -110,6 +110,7 @@ func main() {
 			storyboards.GET("/:id", storyboardHandler.GetByID)
 			storyboards.PUT("/:id", storyboardHandler.Update)
 			storyboards.DELETE("/:id", storyboardHandler.Delete)
+			storyboards.POST("/:id/generate-cover", storyboardHandler.GenerateCover)
 		}
 
 		// Characters

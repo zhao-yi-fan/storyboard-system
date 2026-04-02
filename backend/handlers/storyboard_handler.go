@@ -5,8 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
-	"storyboard-backend/repository"
 	"storyboard-backend/pkg/response"
+	"storyboard-backend/repository"
+	"storyboard-backend/services"
 )
 
 // StoryboardHandler handles storyboard-related requests
@@ -226,4 +227,32 @@ func (h *StoryboardHandler) Delete(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"success": true})
+}
+
+// GenerateCover generates and attaches a cover image for a storyboard
+func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	service, err := services.NewStoryboardCoverService()
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	storyboard, err := service.GenerateAndAttach(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"storyboard_id":  storyboard.ID,
+		"thumbnail_url":  storyboard.ThumbnailURL,
+		"storyboard":     storyboard,
+	})
 }

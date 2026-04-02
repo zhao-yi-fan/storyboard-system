@@ -55,6 +55,7 @@ export default function Workspace() {
   const [selectedShot, setSelectedShot] = useState<Storyboard | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -288,6 +289,26 @@ export default function Workspace() {
       return shot.characters.map((character) => character.name);
     }
     return [];
+  };
+
+  const handleGenerateCover = async () => {
+    if (!selectedShot) {
+      return;
+    }
+
+    setGeneratingCoverId(selectedShot.id);
+    try {
+      const result = await storyboardApi.generateStoryboardCover(selectedShot.id);
+      const nextShot = result.storyboard;
+      setStoryboards((prev) =>
+        prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)),
+      );
+      setSelectedShot(nextShot);
+    } catch (error) {
+      console.error("Failed to generate storyboard cover:", error);
+    } finally {
+      setGeneratingCoverId(null);
+    }
   };
 
   return (
@@ -652,6 +673,24 @@ export default function Workspace() {
                         <ImageIcon className="w-16 h-16 text-gray-700" />
                       )}
                     </div>
+                    <Button
+                      type="button"
+                      onClick={handleGenerateCover}
+                      disabled={generatingCoverId === selectedShot.id}
+                      className="mt-2 w-full bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100"
+                    >
+                      {generatingCoverId === selectedShot.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          正在生成封面...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          生成封面
+                        </>
+                      )}
+                    </Button>
                   </div>
 
                   {/* Scene */}
