@@ -54,7 +54,7 @@ func (r *StoryboardRepository) FindByID(id int64) (*models.Storyboard, error) {
 		return nil, err
 	}
 
-	if err := r.attachCharacterNamesToPointers([]*models.Storyboard{sb}); err != nil {
+	if err := r.attachCharacterNamesToPointers([]*models.Storyboard{&sb}); err != nil {
 		return nil, err
 	}
 	return &sb, nil
