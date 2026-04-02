@@ -79,14 +79,7 @@ type arkMessage struct {
 }
 
 type arkResponseFormat struct {
-	Type       string         `json:"type"`
-	JSONSchema *arkJSONSchema `json:"json_schema,omitempty"`
-}
-
-type arkJSONSchema struct {
-	Name   string         `json:"name"`
-	Strict bool           `json:"strict"`
-	Schema map[string]any `json:"schema"`
+	Type string `json:"type"`
 }
 
 type arkChatResponse struct {
@@ -136,12 +129,7 @@ func (c *ArkClient) ParseScript(ctx context.Context, scriptText string) (*llmSto
 			},
 		},
 		ResponseFormat: arkResponseFormat{
-			Type: "json_schema",
-			JSONSchema: &arkJSONSchema{
-				Name:   "storyboard_import_result",
-				Strict: true,
-				Schema: buildArkStoryboardSchema(),
-			},
+			Type: "json_object",
 		},
 	}
 
@@ -207,10 +195,11 @@ func (c *ArkClient) ParseScript(ctx context.Context, scriptText string) (*llmSto
 	return &document, nil
 }
 
-const arkStoryboardSystemPrompt = `你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你必须严格遵守提供的 JSON Schema 输出，不要输出解释、不要输出 Markdown、不要输出代码块。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。`
+const arkStoryboardSystemPrompt = `你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你只能输出一个 JSON 对象，不要输出解释、不要输出 Markdown、不要输出代码块、不要输出额外文本。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。`
 
 func buildArkStoryboardUserPrompt(scriptText string) string {
-	return "请将下面的文本整理为章节、场景、分镜和角色结构，并仅返回符合 schema 的 JSON：\n\n" + scriptText
+	schemaBytes, _ := json.MarshalIndent(buildArkStoryboardSchema(), "", "  ")
+	return fmt.Sprintf("请将下面的文本整理为章节、场景、分镜和角色结构，并且只返回一个 JSON 对象。JSON 必须严格满足下面这个 schema 的字段结构与必填要求。\n\nSchema:\n%s\n\n文本内容：\n%s", string(schemaBytes), scriptText)
 }
 
 func buildArkStoryboardSchema() map[string]any {
