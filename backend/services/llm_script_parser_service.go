@@ -141,7 +141,7 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 	normalizedCharacters := make(map[string]llmCharacter)
 	for _, character := range document.Characters {
 		name := strings.TrimSpace(character.Name)
-		if name == "" {
+		if !isLikelyCharacterName(name) {
 			continue
 		}
 
@@ -190,7 +190,7 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 				return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：场景《%s》没有分镜", sceneTitle)
 			}
 
-			sceneCharacters := uniqueNonEmpty(scene.Characters)
+			sceneCharacters := normalizeCharacterNames(scene.Characters)
 			parsedSceneItem := parsedScene{
 				Title:       sceneTitle,
 				Description: sceneSummary,
@@ -206,7 +206,7 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 					return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：场景《%s》的第 %d 个分镜缺少 visual_description", sceneTitle, storyboardIndex+1)
 				}
 
-				shotCharacters := uniqueNonEmpty(append(sceneCharacters, storyboard.Characters...))
+				shotCharacters := normalizeCharacterNames(append(sceneCharacters, storyboard.Characters...))
 				for _, name := range shotCharacters {
 					if _, ok := normalizedCharacters[name]; !ok {
 						normalizedCharacters[name] = llmCharacter{Name: name, Tags: []string{}}
@@ -306,6 +306,58 @@ func filterNonEmptyStrings(values []string) []string {
 		}
 	}
 	return result
+}
+
+func normalizeCharacterNames(values []string) []string {
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		name := strings.TrimSpace(value)
+		if !isLikelyCharacterName(name) {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		result = append(result, name)
+	}
+	return result
+}
+
+func isLikelyCharacterName(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return false
+	}
+
+	runeCount := utf8.RuneCountInString(name)
+	if runeCount > 12 {
+		return false
+	}
+
+	if strings.ContainsAny(name, "·，,。：:；;、（）()《》[]【】/|") {
+		return false
+	}
+
+	if containsAnyKeyword(name, []string{
+		"场景", "地点", "时间", "夜晚", "深夜", "凌晨", "清晨", "黄昏", "傍晚", "中午", "下午", "晚上",
+		"雨夜", "旧城区", "城区", "小巷", "街道", "天台", "校园", "车站", "仓库", "门口", "室内", "室外",
+		"照相馆", "办公室", "病房", "公园", "广场", "走廊", "房间", "废弃",
+	}) {
+		return false
+	}
+
+	return true
+}
+
+func containsAnyKeyword(value string, keywords []string) bool {
+	for _, keyword := range keywords {
+		if strings.Contains(value, keyword) {
+			return true
+		}
+	}
+	return false
 }
 
 func prefixIfNotEmpty(prefix, value string) string {

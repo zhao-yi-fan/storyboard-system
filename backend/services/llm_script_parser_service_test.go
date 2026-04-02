@@ -102,3 +102,29 @@ func TestNormalizeLLMStoryboardDocument_RejectsMissingStoryboardDescription(t *t
 		t.Fatalf("expected error for missing visual_description")
 	}
 }
+
+func TestNormalizeCharacterNames_FiltersSceneLikeValues(t *testing.T) {
+	names := normalizeCharacterNames([]string{
+		"李明",
+		"旧城区雨夜小巷 · 旧城区狭窄巷子 · 夜晚，十二点前",
+		"林婉",
+		"废弃照相馆门口",
+		"神秘男人",
+	})
+
+	if len(names) != 3 {
+		t.Fatalf("expected 3 valid character names, got %d: %#v", len(names), names)
+	}
+
+	expected := map[string]bool{
+		"李明":   true,
+		"林婉":   true,
+		"神秘男人": true,
+	}
+
+	for _, name := range names {
+		if !expected[name] {
+			t.Fatalf("unexpected character name preserved: %s", name)
+		}
+	}
+}
