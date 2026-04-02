@@ -24,6 +24,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
 import {
   characterApi,
   assetApi,
@@ -43,6 +44,7 @@ export default function AssetLibrary() {
   const [loading, setLoading] = useState(false);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
 
   // Upload state
   const [uploading, setUploading] = useState(false);
@@ -341,6 +343,8 @@ export default function AssetLibrary() {
                             <img
                               src={character.avatar_url}
                               alt={character.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -385,6 +389,8 @@ export default function AssetLibrary() {
                             <img
                               src={character.avatar_url}
                               alt={character.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover rounded"
                             />
                           ) : (
@@ -450,6 +456,8 @@ export default function AssetLibrary() {
                           <img
                             src={asset.file_url}
                             alt={asset.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute top-3 left-3">
@@ -507,6 +515,8 @@ export default function AssetLibrary() {
                           <img
                             src={asset.file_url}
                             alt={asset.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover rounded"
                           />
                         </div>
@@ -579,11 +589,24 @@ export default function AssetLibrary() {
                     {/* Preview */}
                     <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded border border-gray-700 flex items-center justify-center">
                       {selectedAsset.data.avatar_url ? (
-                        <img
-                          src={selectedAsset.data.avatar_url}
-                          alt={selectedAsset.data.name}
-                          className="w-full h-full object-cover rounded"
-                        />
+                        <button
+                          type="button"
+                          className="w-full h-full"
+                          onClick={() =>
+                            setPreviewImage({
+                              src: selectedAsset.data.avatar_url,
+                              alt: selectedAsset.data.name,
+                            })
+                          }
+                        >
+                          <img
+                            src={selectedAsset.data.avatar_url}
+                            alt={selectedAsset.data.name}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover rounded"
+                          />
+                        </button>
                       ) : (
                         <Users className="w-24 h-24 text-gray-700" />
                       )}
@@ -644,11 +667,24 @@ export default function AssetLibrary() {
                   <div className="space-y-4">
                     {/* Preview */}
                     <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center">
-                      <img
-                        src={selectedAsset.data.file_url}
-                        alt={selectedAsset.data.name}
-                        className="w-full h-full object-cover rounded"
-                      />
+                      <button
+                        type="button"
+                        className="w-full h-full"
+                        onClick={() =>
+                          setPreviewImage({
+                            src: selectedAsset.data.file_url,
+                            alt: selectedAsset.data.name,
+                          })
+                        }
+                      >
+                        <img
+                          src={selectedAsset.data.file_url}
+                          alt={selectedAsset.data.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover rounded"
+                        />
+                      </button>
                     </div>
 
                     {/* Name */}
@@ -779,6 +815,14 @@ export default function AssetLibrary() {
           )}
         </aside>
       </div>
+      <ImagePreviewDialog
+        open={!!previewImage}
+        onOpenChange={(open) => {
+          if (!open) setPreviewImage(null);
+        }}
+        src={previewImage?.src || ""}
+        alt={previewImage?.alt || "资产预览图"}
+      />
     </div>
   );
 }

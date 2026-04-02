@@ -85,7 +85,15 @@ export default function ProjectDashboard() {
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "刚刚更新";
-    return new Date(dateStr).toLocaleDateString("zh-CN");
+    return new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(new Date(dateStr));
   };
 
   return (

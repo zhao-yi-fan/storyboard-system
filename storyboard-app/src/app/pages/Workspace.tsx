@@ -31,6 +31,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
+import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
 import {
   projectApi,
   chapterApi,
@@ -57,6 +58,7 @@ export default function Workspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -555,6 +557,8 @@ export default function Workspace() {
                         <img
                           src={shot.thumbnail_url}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className={`w-full h-full object-cover transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
                         />
                       ) : (
@@ -673,11 +677,24 @@ export default function Workspace() {
                     <Label className="text-xs text-gray-400">预览图</Label>
                     <div className="mt-1.5 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
                       {selectedShot.thumbnail_url && generatingCoverId !== selectedShot.id ? (
-                        <img
-                          src={selectedShot.thumbnail_url}
-                          alt=""
-                          className="w-full h-full object-cover rounded"
-                        />
+                        <button
+                          type="button"
+                          className="w-full h-full"
+                          onClick={() =>
+                            setPreviewImage({
+                              src: selectedShot.thumbnail_url!,
+                              alt: `镜头 ${selectedShot.shot_number} 预览图`,
+                            })
+                          }
+                        >
+                          <img
+                            src={selectedShot.thumbnail_url}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover rounded"
+                          />
+                        </button>
                       ) : generatingCoverId === selectedShot.id ? (
                         <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
                           <Loader2 className="w-8 h-8 text-purple-300 animate-spin" />
@@ -893,6 +910,14 @@ export default function Workspace() {
           </div>
         )}
       </div>
+      <ImagePreviewDialog
+        open={!!previewImage}
+        onOpenChange={(open) => {
+          if (!open) setPreviewImage(null);
+        }}
+        src={previewImage?.src || ""}
+        alt={previewImage?.alt || "镜头预览图"}
+      />
     </div>
   );
 }
