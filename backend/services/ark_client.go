@@ -67,19 +67,14 @@ type ArkClient struct {
 }
 
 type arkChatRequest struct {
-	Model          string            `json:"model"`
-	Messages       []arkMessage      `json:"messages"`
-	Temperature    float64           `json:"temperature"`
-	ResponseFormat arkResponseFormat `json:"response_format"`
+	Model       string       `json:"model"`
+	Messages    []arkMessage `json:"messages"`
+	Temperature float64      `json:"temperature"`
 }
 
 type arkMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
-}
-
-type arkResponseFormat struct {
-	Type string `json:"type"`
 }
 
 type arkChatResponse struct {
@@ -127,9 +122,6 @@ func (c *ArkClient) ParseScript(ctx context.Context, scriptText string) (*llmSto
 				Role:    "user",
 				Content: buildArkStoryboardUserPrompt(scriptText),
 			},
-		},
-		ResponseFormat: arkResponseFormat{
-			Type: "json_object",
 		},
 	}
 
@@ -187,6 +179,8 @@ func (c *ArkClient) ParseScript(ctx context.Context, scriptText string) (*llmSto
 	content = strings.TrimSuffix(content, "```")
 	content = strings.TrimSpace(content)
 
+	content = extractJSONObject(content)
+
 	var document llmStoryboardDocument
 	if err := json.Unmarshal([]byte(content), &document); err != nil {
 		return nil, fmt.Errorf("Ark 解析失败：模型未返回合法 JSON")
@@ -200,6 +194,15 @@ const arkStoryboardSystemPrompt = `你是一个影视分镜整理助手。你的
 func buildArkStoryboardUserPrompt(scriptText string) string {
 	schemaBytes, _ := json.MarshalIndent(buildArkStoryboardSchema(), "", "  ")
 	return fmt.Sprintf("请将下面的文本整理为章节、场景、分镜和角色结构，并且只返回一个 JSON 对象。JSON 必须严格满足下面这个 schema 的字段结构与必填要求。\n\nSchema:\n%s\n\n文本内容：\n%s", string(schemaBytes), scriptText)
+}
+
+func extractJSONObject(content string) string {
+	start := strings.Index(content, "{")
+	end := strings.LastIndex(content, "}")
+	if start >= 0 && end >= start {
+		return strings.TrimSpace(content[start : end+1])
+	}
+	return content
 }
 
 func buildArkStoryboardSchema() map[string]any {
