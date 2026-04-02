@@ -207,7 +207,7 @@ func (h *ProjectHandler) ImportScript(c *gin.Context) {
 		return
 	}
 
-	parser := services.NewScriptParserService()
+	parser := services.NewLLMScriptParserService()
 	result, err := parser.ParseAndImport(id, req.ScriptText)
 	if err != nil {
 		response.Error(c, err.Error())

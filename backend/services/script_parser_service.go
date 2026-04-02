@@ -41,6 +41,7 @@ type parsedScene struct {
 
 type parsedStoryboard struct {
 	Content         string
+	Dialogue        string
 	CameraDirection string
 	Duration        float64
 	Background      string
