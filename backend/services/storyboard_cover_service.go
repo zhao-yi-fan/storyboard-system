@@ -80,7 +80,7 @@ func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64) (*models.
 
 func buildStoryboardCoverPrompt(storyboard *models.Storyboard, scene *models.Scene) string {
 	var b strings.Builder
-	b.WriteString("为漫画分镜生成一张高质量电影感封面图。")
+	b.WriteString("为漫画分镜生成一张单镜头关键帧封面图。")
 	if scene.Title != "" {
 		b.WriteString(" 场景标题：")
 		b.WriteString(scene.Title)
@@ -132,7 +132,9 @@ func buildStoryboardCoverPrompt(storyboard *models.Storyboard, scene *models.Sce
 		b.WriteString("。")
 	}
 
-	b.WriteString(" 风格要求：写实电影感、构图清晰、适合用作分镜封面、细节丰富、光影自然。不要文字，不要水印，不要多宫格。")
+	b.WriteString(" 画面要求：只生成一个明确主体的单帧镜头，不要拼贴，不要多角色重复，不要多画格，不要分镜条。")
+	b.WriteString(" 风格要求：写实电影感、叙事性强、构图清晰、景深自然、光影克制、适合用作分镜封面。")
+	b.WriteString(" 输出要求：横版16比9，主体突出，避免文字、水印、边框、logo、字幕、海报排版。")
 	return b.String()
 }
 

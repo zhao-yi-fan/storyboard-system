@@ -113,9 +113,9 @@ func (c *WanxClient) generateQwenImageSync(ctx context.Context, prompt string) (
 	payload.Input.Messages = append(payload.Input.Messages, message)
 	payload.Parameters = map[string]any{
 		"negative_prompt": "低分辨率，低画质，构图混乱，文字模糊，水印，过度AI感，肢体畸形",
-		"prompt_extend":   true,
+		"prompt_extend":   false,
 		"watermark":       false,
-		"size":            "2048*2048",
+		"size":            "1024*576",
 	}
 
 	body, err := json.Marshal(payload)
@@ -158,9 +158,9 @@ func (c *WanxClient) createWanxAsyncTask(ctx context.Context, prompt string) (st
 			"prompt": prompt,
 		},
 		"parameters": map[string]any{
-			"size":            "1024*1024",
+			"size":            "1024*576",
 			"n":               1,
-			"prompt_extend":   true,
+			"prompt_extend":   false,
 			"watermark":       false,
 			"negative_prompt": "低分辨率，低画质，构图混乱，文字模糊，水印，过度AI感，肢体畸形",
 		},
