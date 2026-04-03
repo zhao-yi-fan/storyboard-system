@@ -33,6 +33,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../components/ui/badge";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import {
   projectApi,
   chapterApi,
   sceneApi,
@@ -41,10 +51,36 @@ import {
   type Chapter,
   type Scene,
   type Storyboard,
+  type StoryboardMediaGeneration,
 } from "../api";
+
+const COVER_MODEL_OPTIONS = [
+  { value: "qwen-image-2.0", label: "Qwen Image 2.0" },
+] as const;
+
+const VIDEO_MODEL_OPTIONS = [
+  { value: "wan2.6-i2v-flash", label: "Wan 2.6 I2V Flash" },
+] as const;
 
 const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
   shot?.thumbnail_preview_url || shot?.thumbnail_url || "";
+
+const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
+  generation?.preview_url || generation?.result_url || "";
+
+const formatShanghaiDateTime = (dateStr?: string) => {
+  if (!dateStr) return "";
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Shanghai",
+  }).format(new Date(dateStr));
+};
 
 export default function Workspace() {
   const navigate = useNavigate();
@@ -53,6 +89,7 @@ export default function Workspace() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [storyboards, setStoryboards] = useState<Storyboard[]>([]);
+  const [mediaGenerations, setMediaGenerations] = useState<StoryboardMediaGeneration[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
@@ -63,6 +100,10 @@ export default function Workspace() {
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>(COVER_MODEL_OPTIONS[0].value);
+  const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
+  const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
+  const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -88,6 +129,14 @@ export default function Workspace() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (selectedShot?.id) {
+      void loadMediaGenerations(selectedShot.id);
+    } else {
+      setMediaGenerations([]);
+    }
+  }, [selectedShot?.id]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -145,6 +194,16 @@ export default function Workspace() {
     }
   };
 
+  const loadMediaGenerations = async (storyboardId: number) => {
+    try {
+      const data = await storyboardApi.getStoryboardMediaGenerations(storyboardId);
+      setMediaGenerations(data);
+    } catch (error) {
+      console.error("Failed to load media generations:", error);
+      setMediaGenerations([]);
+    }
+  };
+
   const applyStoryboardUpdate = (nextShot: Storyboard) => {
     setStoryboards((prev) => prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)));
     setSelectedShot((prev) => (prev?.id === nextShot.id ? nextShot : prev));
@@ -163,6 +222,8 @@ export default function Workspace() {
       try {
         const latest = await storyboardApi.getStoryboard(storyboardId);
         applyStoryboardUpdate(latest);
+        const generations = await storyboardApi.getStoryboardMediaGenerations(storyboardId);
+        setMediaGenerations(generations);
         if (latest.video_status !== "generating") {
           stopVideoPolling();
           setGeneratingVideoId(null);
@@ -337,7 +398,7 @@ export default function Workspace() {
     return [];
   };
 
-  const handleGenerateCover = async () => {
+  const runGenerateCover = async () => {
     if (!selectedShot) {
       return;
     }
@@ -351,6 +412,7 @@ export default function Workspace() {
         prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)),
       );
       setSelectedShot(nextShot);
+      await loadMediaGenerations(nextShot.id);
     } catch (error) {
       console.error("Failed to generate storyboard cover:", error);
     } finally {
@@ -359,7 +421,7 @@ export default function Workspace() {
     }
   };
 
-  const handleGenerateVideo = async () => {
+  const runGenerateVideo = async () => {
     if (!selectedShot) {
       return;
     }
@@ -369,6 +431,7 @@ export default function Workspace() {
       const result = await storyboardApi.generateStoryboardVideo(selectedShot.id);
       const nextShot = result.storyboard;
       applyStoryboardUpdate(nextShot);
+      await loadMediaGenerations(nextShot.id);
       if (nextShot.video_status === "generating") {
         pollStoryboardVideo(nextShot.id);
       } else {
@@ -379,6 +442,33 @@ export default function Workspace() {
       setGeneratingVideoId(null);
     }
   };
+
+  const handleGenerateCover = () => {
+    if (!selectedShot || generatingCoverId === selectedShot.id) {
+      return;
+    }
+    setIsCoverConfirmOpen(true);
+  };
+
+  const confirmGenerateCover = async () => {
+    setIsCoverConfirmOpen(false);
+    await runGenerateCover();
+  };
+
+  const handleGenerateVideo = () => {
+    if (!selectedShot || generatingVideoId === selectedShot.id) {
+      return;
+    }
+    setIsVideoConfirmOpen(true);
+  };
+
+  const confirmGenerateVideo = async () => {
+    setIsVideoConfirmOpen(false);
+    await runGenerateVideo();
+  };
+
+  const coverGenerations = mediaGenerations.filter((item) => item.media_type === "cover");
+  const videoGenerations = mediaGenerations.filter((item) => item.media_type === "video");
 
   useEffect(() => {
     if (selectedShot?.video_status === "generating") {
@@ -787,42 +877,72 @@ export default function Workspace() {
                         <ImageIcon className="w-16 h-16 text-gray-700" />
                       )}
                     </div>
-                    <Button
-                      type="button"
-                      onClick={handleGenerateCover}
-                      disabled={generatingCoverId === selectedShot.id}
-                      className="mt-2 w-full bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100"
-                    >
-                      {generatingCoverId === selectedShot.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          正在生成封面...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          生成封面
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleGenerateVideo}
-                      disabled={generatingVideoId === selectedShot.id}
-                      className="mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      {generatingVideoId === selectedShot.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          正在生成视频...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          生成视频
-                        </>
-                      )}
-                    </Button>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Select value={selectedCoverModel} onValueChange={(value) => setSelectedCoverModel(value as typeof selectedCoverModel)}>
+                          <SelectTrigger className="flex-1 bg-[#1a1a1a] border-gray-700 h-10 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            {COVER_MODEL_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          onClick={handleGenerateCover}
+                          disabled={generatingCoverId === selectedShot.id}
+                          className="bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100 shrink-0"
+                        >
+                          {generatingCoverId === selectedShot.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              正在生成
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              生成封面
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select value={selectedVideoModel} onValueChange={(value) => setSelectedVideoModel(value as typeof selectedVideoModel)}>
+                          <SelectTrigger className="flex-1 bg-[#1a1a1a] border-gray-700 h-10 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            {VIDEO_MODEL_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          onClick={handleGenerateVideo}
+                          disabled={generatingVideoId === selectedShot.id}
+                          className="bg-purple-600 hover:bg-purple-700 text-white shrink-0"
+                        >
+                          {generatingVideoId === selectedShot.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              正在生成
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4 mr-2" />
+                              生成视频
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                     {selectedShot.video_status === "failed" && selectedShot.video_error ? (
                       <p className="mt-2 text-xs text-red-400 leading-5">{selectedShot.video_error}</p>
                     ) : null}
@@ -854,6 +974,124 @@ export default function Workspace() {
                         />
                       </div>
                     ) : null}
+                  </div>
+
+                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-300">封面历史</p>
+                        <p className="text-[11px] text-gray-500">新生成的封面会自动成为当前版本</p>
+                      </div>
+                      <Badge variant="outline" className="border-gray-700 text-gray-400">{coverGenerations.length}</Badge>
+                    </div>
+                    {coverGenerations.length > 0 ? (
+                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        {coverGenerations.map((generation) => (
+                          <div key={generation.id} className="rounded-md border border-gray-800 bg-[#161616] p-2">
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]"
+                                onClick={() => generation.result_url && setPreviewImage({ src: generation.result_url, alt: `封面历史 ${generation.id}` })}
+                                disabled={!generation.result_url}
+                              >
+                                {getGenerationPreviewSrc(generation) ? (
+                                  <img
+                                    src={getGenerationPreviewSrc(generation)}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <ImageIcon className="w-4 h-4 text-gray-600" />
+                                  </div>
+                                )}
+                              </button>
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs text-gray-200">{generation.model}</span>
+                                  {generation.is_current ? (
+                                    <Badge className="bg-purple-600 text-white text-[10px]">当前</Badge>
+                                  ) : null}
+                                  <Badge variant="outline" className="border-gray-700 text-gray-400 text-[10px]">{generation.status}</Badge>
+                                </div>
+                                <p className="text-[11px] text-gray-500">{formatShanghaiDateTime(generation.created_at)}</p>
+                                {generation.error_message ? (
+                                  <p className="text-[11px] leading-5 text-red-400 line-clamp-2">{generation.error_message}</p>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">当前镜头还没有封面历史记录</p>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-300">视频历史</p>
+                        <p className="text-[11px] text-gray-500">多次生成会保留全部历史，不覆盖旧结果</p>
+                      </div>
+                      <Badge variant="outline" className="border-gray-700 text-gray-400">{videoGenerations.length}</Badge>
+                    </div>
+                    {videoGenerations.length > 0 ? (
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {videoGenerations.map((generation) => (
+                          <div key={generation.id} className="rounded-md border border-gray-800 bg-[#161616] p-2 space-y-2">
+                            <div className="flex gap-3">
+                              <div className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]">
+                                {getGenerationPreviewSrc(generation) ? (
+                                  <img
+                                    src={getGenerationPreviewSrc(generation)}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Play className="w-4 h-4 text-gray-600" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs text-gray-200">{generation.model}</span>
+                                  {generation.is_current ? (
+                                    <Badge className="bg-purple-600 text-white text-[10px]">当前</Badge>
+                                  ) : null}
+                                  <Badge variant="outline" className="border-gray-700 text-gray-400 text-[10px]">{generation.status}</Badge>
+                                </div>
+                                <p className="text-[11px] text-gray-500">{formatShanghaiDateTime(generation.created_at)}</p>
+                                {generation.error_message ? (
+                                  <p className="text-[11px] leading-5 text-red-400 line-clamp-2">{generation.error_message}</p>
+                                ) : null}
+                              </div>
+                            </div>
+                            {generation.status === "succeeded" && generation.result_url ? (
+                              <div className="flex justify-end">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 border-gray-700 text-xs text-gray-300"
+                                  onClick={() => window.open(generation.result_url, "_blank", "noopener,noreferrer")}
+                                >
+                                  打开视频
+                                </Button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">当前镜头还没有视频历史记录</p>
+                    )}
                   </div>
 
                   {/* Scene */}
@@ -1042,6 +1280,46 @@ export default function Workspace() {
           </div>
         )}
       </div>
+      <AlertDialog open={isCoverConfirmOpen} onOpenChange={setIsCoverConfirmOpen}>
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认生成封面</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              会为当前镜头调用图像模型生成 1 张新封面，并消耗模型额度。新结果会保留到历史记录中，不会覆盖旧版本。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedCoverModel}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">输出</span><span>1 张封面图</span></div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]">取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateCover}>确认生成</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isVideoConfirmOpen} onOpenChange={setIsVideoConfirmOpen}>
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认生成视频</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              会为当前镜头生成 720P、5 秒、有声视频，并消耗较高额度。新结果会保留到历史记录中，不会覆盖旧版本。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedVideoModel}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 5秒 / 有声</span></div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]">取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateVideo}>确认生成</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <ImagePreviewDialog
         open={!!previewImage}
         onOpenChange={(open) => {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -26,6 +27,7 @@ import (
 type StoryboardVideoService struct {
 	storyboardRepo *repository.StoryboardRepository
 	sceneRepo      *repository.SceneRepository
+	historyRepo    *repository.StoryboardMediaGenerationRepository
 	coverService   *StoryboardCoverService
 	videoClient    *WanxVideoClient
 	httpClient     *http.Client
@@ -44,6 +46,7 @@ func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 	return &StoryboardVideoService{
 		storyboardRepo: &repository.StoryboardRepository{},
 		sceneRepo:      &repository.SceneRepository{},
+		historyRepo:    &repository.StoryboardMediaGenerationRepository{},
 		coverService:   coverService,
 		videoClient:    videoClient,
 		httpClient: &http.Client{
@@ -52,42 +55,66 @@ func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 	}, nil
 }
 
-func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBaseURL string) (*models.Storyboard, error) {
+func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBaseURL string, generation *models.StoryboardMediaGeneration) (*models.Storyboard, error) {
 	storyboard, err := s.storyboardRepo.FindByID(storyboardID)
 	if err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 	if storyboard == nil {
-		return nil, fmt.Errorf("storyboard not found")
+		err := fmt.Errorf("storyboard not found")
+		s.markGenerationFailed(generation, err)
+		return nil, err
 	}
 
 	scene, err := s.sceneRepo.FindByID(storyboard.SceneID)
 	if err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 	if scene == nil {
-		return nil, fmt.Errorf("scene not found")
+		err := fmt.Errorf("scene not found")
+		s.markGenerationFailed(generation, err)
+		return nil, err
 	}
 
 	if strings.TrimSpace(storyboard.ThumbnailURL) == "" {
 		storyboard, err = s.coverService.GenerateAndAttach(storyboardID)
 		if err != nil {
+			s.markGenerationFailed(generation, err)
 			return nil, err
 		}
 	}
 
 	imageInput, err := s.resolveImageInput(publicBaseURL, storyboard.ThumbnailURL)
 	if err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 	if imageInput == "" {
-		return nil, fmt.Errorf("镜头封面图不可用，无法生成视频")
+		err := fmt.Errorf("镜头封面图不可用，无法生成视频")
+		s.markGenerationFailed(generation, err)
+		return nil, err
 	}
 
 	storyboard.VideoStatus = "generating"
 	storyboard.VideoError = ""
 	if err := s.storyboardRepo.Update(storyboard); err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
+	}
+
+	if generation != nil {
+		generation.SourceURL = storyboard.ThumbnailURL
+		generation.PreviewURL = firstNonEmpty(storyboard.ThumbnailPreviewURL, storyboard.ThumbnailURL)
+		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
+			"resolution": "720P",
+			"duration":   5,
+			"audio":      true,
+		})
+		if err := s.historyRepo.Update(generation); err != nil {
+			return nil, err
+		}
 	}
 
 	prompt := buildStoryboardVideoPrompt(storyboard, scene)
@@ -99,6 +126,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		storyboard.VideoStatus = "failed"
 		storyboard.VideoError = err.Error()
 		_ = s.storyboardRepo.Update(storyboard)
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 
@@ -107,6 +135,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		storyboard.VideoStatus = "failed"
 		storyboard.VideoError = err.Error()
 		_ = s.storyboardRepo.Update(storyboard)
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 
@@ -115,7 +144,27 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	storyboard.VideoError = ""
 	storyboard.VideoDuration = duration
 	if err := s.storyboardRepo.Update(storyboard); err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
+	}
+
+	if generation != nil {
+		generation.Status = "succeeded"
+		generation.ResultURL = publicPath
+		generation.PreviewURL = firstNonEmpty(storyboard.ThumbnailPreviewURL, storyboard.ThumbnailURL)
+		generation.SourceURL = storyboard.ThumbnailURL
+		generation.ErrorMessage = ""
+		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
+			"resolution": "720P",
+			"duration":   duration,
+			"audio":      true,
+		})
+		if err := s.historyRepo.Update(generation); err != nil {
+			return nil, err
+		}
+		if err := s.historyRepo.MarkCurrent(storyboard.ID, generation.MediaType, generation.ID); err != nil {
+			return nil, err
+		}
 	}
 
 	return s.storyboardRepo.FindByID(storyboard.ID)
@@ -134,25 +183,47 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 		return storyboard, nil
 	}
 
-	storyboard.VideoStatus = "generating"
-	storyboard.VideoError = ""
-	if err := s.storyboardRepo.Update(storyboard); err != nil {
+	generation := &models.StoryboardMediaGeneration{
+		StoryboardID: storyboard.ID,
+		MediaType:    "video",
+		Model:        config.GlobalConfig.WanxVideoModel,
+		Status:       "generating",
+		PreviewURL:   firstNonEmpty(storyboard.ThumbnailPreviewURL, storyboard.ThumbnailURL),
+		SourceURL:    storyboard.ThumbnailURL,
+		MetaJSON:     mustMarshalMediaMeta(map[string]any{"resolution": "720P", "duration": 5, "audio": true}),
+	}
+	if err := s.historyRepo.Create(generation); err != nil {
 		return nil, err
 	}
 
-	go func() {
-		if _, err := s.GenerateAndAttach(storyboardID, publicBaseURL); err != nil {
+	storyboard.VideoStatus = "generating"
+	storyboard.VideoError = ""
+	if err := s.storyboardRepo.Update(storyboard); err != nil {
+		s.markGenerationFailed(generation, err)
+		return nil, err
+	}
+
+	go func(gen models.StoryboardMediaGeneration) {
+		if _, err := s.GenerateAndAttach(storyboardID, publicBaseURL, &gen); err != nil {
 			latest, findErr := s.storyboardRepo.FindByID(storyboardID)
-			if findErr != nil || latest == nil {
-				return
+			if findErr == nil && latest != nil {
+				latest.VideoStatus = "failed"
+				latest.VideoError = err.Error()
+				_ = s.storyboardRepo.Update(latest)
 			}
-			latest.VideoStatus = "failed"
-			latest.VideoError = err.Error()
-			_ = s.storyboardRepo.Update(latest)
 		}
-	}()
+	}(*generation)
 
 	return s.storyboardRepo.FindByID(storyboardID)
+}
+
+func (s *StoryboardVideoService) markGenerationFailed(generation *models.StoryboardMediaGeneration, generationErr error) {
+	if generation == nil {
+		return
+	}
+	generation.Status = "failed"
+	generation.ErrorMessage = generationErr.Error()
+	_ = s.historyRepo.Update(generation)
 }
 
 func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Scene) string {
@@ -321,16 +392,12 @@ func centerCropToAspect(src image.Image, aspectW, aspectH int) image.Image {
 		return cropImage(src, image.Rect(x0, b.Min.Y, x0+cropW, b.Max.Y))
 	}
 
-	if srcRatio < targetRatio {
-		cropH := int(float64(srcW) / targetRatio)
-		y0 := b.Min.Y + (srcH-cropH)/2
-		return cropImage(src, image.Rect(b.Min.X, y0, b.Max.X, y0+cropH))
-	}
-
-	return src
+	cropH := int(float64(srcW) / targetRatio)
+	y0 := b.Min.Y + (srcH-cropH)/2
+	return cropImage(src, image.Rect(b.Min.X, y0, b.Max.X, y0+cropH))
 }
 
-func cropImage(src image.Image, rect image.Rectangle) *image.RGBA {
+func cropImage(src image.Image, rect image.Rectangle) image.Image {
 	dst := image.NewRGBA(image.Rect(0, 0, rect.Dx(), rect.Dy()))
 	for y := 0; y < rect.Dy(); y++ {
 		for x := 0; x < rect.Dx(); x++ {
@@ -340,36 +407,24 @@ func cropImage(src image.Image, rect image.Rectangle) *image.RGBA {
 	return dst
 }
 
-func resizeNearest(src image.Image, dstW, dstH int) *image.RGBA {
-	dst := image.NewRGBA(image.Rect(0, 0, dstW, dstH))
+func resizeNearest(src image.Image, width, height int) image.Image {
+	dst := image.NewRGBA(image.Rect(0, 0, width, height))
 	srcBounds := src.Bounds()
 	srcW := srcBounds.Dx()
 	srcH := srcBounds.Dy()
-	if srcW <= 0 || srcH <= 0 {
+	if srcW == 0 || srcH == 0 {
 		return dst
 	}
 
-	for y := 0; y < dstH; y++ {
-		srcY := srcBounds.Min.Y + y*srcH/dstH
-		for x := 0; x < dstW; x++ {
-			srcX := srcBounds.Min.X + x*srcW/dstW
-			dst.Set(x, y, src.At(srcX, srcY))
+	for y := 0; y < height; y++ {
+		sy := srcBounds.Min.Y + y*srcH/height
+		for x := 0; x < width; x++ {
+			sx := srcBounds.Min.X + x*srcW/width
+			dst.Set(x, y, src.At(sx, sy))
 		}
 	}
 	return dst
 }
-
-func mimeTypeFromPath(path string) string {
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".jpg", ".jpeg":
-		return "image/jpeg"
-	case ".webp":
-		return "image/webp"
-	default:
-		return "image/png"
-	}
-}
-
 
 func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboardID int64, sourceURL string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
@@ -399,7 +454,7 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 		return "", fmt.Errorf("创建视频目录失败: %w", err)
 	}
 
-	filename := fmt.Sprintf("storyboard-%d-%d%s", storyboardID, time.Now().Unix(), inferVideoExtension(sourceURL))
+	filename := fmt.Sprintf("storyboard-%d-%d.mp4", storyboardID, time.Now().Unix())
 	dstPath := filepath.Join(videosDir, filename)
 	file, err := os.Create(dstPath)
 	if err != nil {
@@ -415,16 +470,22 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 	return fmt.Sprintf("%s/videos/%s", basePath, filename), nil
 }
 
-func inferVideoExtension(rawURL string) string {
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return ".mp4"
-	}
-	ext := strings.ToLower(filepath.Ext(parsed.Path))
-	switch ext {
-	case ".mp4", ".mov", ".webm":
-		return ext
+func mimeTypeFromPath(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".webp":
+		return "image/webp"
 	default:
-		return ".mp4"
+		return "image/png"
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }

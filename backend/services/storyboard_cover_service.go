@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 type StoryboardCoverService struct {
 	storyboardRepo *repository.StoryboardRepository
 	sceneRepo      *repository.SceneRepository
+	historyRepo    *repository.StoryboardMediaGenerationRepository
 	wanxClient     *WanxClient
 	httpClient     *http.Client
 	previewService *ImagePreviewService
@@ -33,6 +35,7 @@ func NewStoryboardCoverService() (*StoryboardCoverService, error) {
 	return &StoryboardCoverService{
 		storyboardRepo: &repository.StoryboardRepository{},
 		sceneRepo:      &repository.SceneRepository{},
+		historyRepo:    &repository.StoryboardMediaGenerationRepository{},
 		wanxClient:     wanxClient,
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
@@ -58,33 +61,68 @@ func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64) (*models.
 		return nil, fmt.Errorf("scene not found")
 	}
 
+	generation := &models.StoryboardMediaGeneration{
+		StoryboardID: storyboard.ID,
+		MediaType:    "cover",
+		Model:        config.GlobalConfig.WanxModel,
+		Status:       "generating",
+		MetaJSON:     mustMarshalMediaMeta(map[string]any{"resolution": "1024x576", "preview_format": "webp", "preview_width": 480}),
+	}
+	if err := s.historyRepo.Create(generation); err != nil {
+		return nil, err
+	}
+
 	prompt := buildStoryboardCoverPrompt(storyboard, scene)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GlobalConfig.WanxRequestTimeoutSeconds)*time.Second)
 	defer cancel()
 
 	imageURL, err := s.wanxClient.GenerateImage(ctx, prompt)
 	if err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 
 	publicPath, localPath, err := s.downloadAndStore(ctx, storyboard.ID, imageURL)
 	if err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 
 	previewFilename := strings.TrimSuffix(filepath.Base(localPath), filepath.Ext(localPath)) + ".thumb.webp"
 	previewPath, err := s.previewService.CreatePreviewFromLocalPath(localPath, "covers", previewFilename, StoryboardPreviewSpec())
 	if err != nil {
+		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
 
 	storyboard.ThumbnailURL = publicPath
 	storyboard.ThumbnailPreviewURL = previewPath
 	if err := s.storyboardRepo.Update(storyboard); err != nil {
+		s.markGenerationFailed(generation, err)
+		return nil, err
+	}
+
+	generation.Status = "succeeded"
+	generation.ResultURL = publicPath
+	generation.PreviewURL = previewPath
+	generation.ErrorMessage = ""
+	if err := s.historyRepo.Update(generation); err != nil {
+		return nil, err
+	}
+	if err := s.historyRepo.MarkCurrent(storyboard.ID, generation.MediaType, generation.ID); err != nil {
 		return nil, err
 	}
 
 	return s.storyboardRepo.FindByID(storyboard.ID)
+}
+
+func (s *StoryboardCoverService) markGenerationFailed(generation *models.StoryboardMediaGeneration, generationErr error) {
+	if generation == nil {
+		return
+	}
+	generation.Status = "failed"
+	generation.ErrorMessage = generationErr.Error()
+	_ = s.historyRepo.Update(generation)
 }
 
 func buildStoryboardCoverPrompt(storyboard *models.Storyboard, scene *models.Scene) string {
@@ -208,4 +246,15 @@ func inferImageExtension(rawURL string) string {
 	default:
 		return ".png"
 	}
+}
+
+func mustMarshalMediaMeta(value map[string]any) string {
+	if len(value) == 0 {
+		return ""
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }

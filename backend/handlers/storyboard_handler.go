@@ -18,6 +18,7 @@ import (
 type StoryboardHandler struct {
 	repo           *repository.StoryboardRepository
 	sceneRepo      *repository.SceneRepository
+	mediaRepo      *repository.StoryboardMediaGenerationRepository
 	previewService *services.ImagePreviewService
 }
 
@@ -25,6 +26,7 @@ func NewStoryboardHandler() *StoryboardHandler {
 	return &StoryboardHandler{
 		repo:           &repository.StoryboardRepository{},
 		sceneRepo:      &repository.SceneRepository{},
+		mediaRepo:      &repository.StoryboardMediaGenerationRepository{},
 		previewService: services.NewImagePreviewService(),
 	}
 }
@@ -82,6 +84,35 @@ func (h *StoryboardHandler) GetByID(c *gin.Context) {
 
 	h.ensureStoryboardPreview(c, storyboard)
 	response.Success(c, storyboard)
+}
+
+func (h *StoryboardHandler) GetMediaGenerations(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	storyboard, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if storyboard == nil {
+		response.Error(c, "storyboard not found")
+		return
+	}
+
+	items, err := h.mediaRepo.ListByStoryboardID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if items == nil {
+		items = []models.StoryboardMediaGeneration{}
+	}
+	response.Success(c, items)
 }
 
 // Create creates a new storyboard

@@ -88,6 +88,22 @@ export type Storyboard = {
   updated_at?: string;
 };
 
+export type StoryboardMediaGeneration = {
+  id: number;
+  storyboard_id: number;
+  media_type: "cover" | "video" | string;
+  model: string;
+  status: "pending" | "generating" | "succeeded" | "failed" | string;
+  result_url?: string;
+  preview_url?: string;
+  source_url?: string;
+  error_message?: string;
+  is_current: boolean;
+  meta_json?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type GenerateStoryboardCoverResult = {
   storyboard_id: number;
   thumbnail_url: string;
