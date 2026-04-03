@@ -1,26 +1,32 @@
 package handlers
 
 import (
+	"fmt"
+	"log"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
 	"storyboard-backend/pkg/response"
 	"storyboard-backend/repository"
+	"storyboard-backend/services"
 )
 
 // AssetHandler handles asset-related requests
 type AssetHandler struct {
-	repo          *repository.AssetRepository
-	projectRepo   *repository.ProjectRepository
-	characterRepo *repository.CharacterRepository
+	repo           *repository.AssetRepository
+	projectRepo    *repository.ProjectRepository
+	characterRepo  *repository.CharacterRepository
+	previewService *services.ImagePreviewService
 }
 
 func NewAssetHandler() *AssetHandler {
 	return &AssetHandler{
-		repo:          &repository.AssetRepository{},
-		projectRepo:   &repository.ProjectRepository{},
-		characterRepo: &repository.CharacterRepository{},
+		repo:           &repository.AssetRepository{},
+		projectRepo:    &repository.ProjectRepository{},
+		characterRepo:  &repository.CharacterRepository{},
+		previewService: services.NewImagePreviewService(),
 	}
 }
 
@@ -33,7 +39,6 @@ func (h *AssetHandler) GetByProject(c *gin.Context) {
 		return
 	}
 
-	// Check if project exists
 	project, err := h.projectRepo.FindByID(projectID)
 	if err != nil {
 		response.Error(c, err.Error())
@@ -53,6 +58,10 @@ func (h *AssetHandler) GetByProject(c *gin.Context) {
 		assets = []models.Asset{}
 	}
 
+	for i := range assets {
+		h.ensureAssetPreview(c, &assets[i])
+	}
+
 	response.Success(c, assets)
 }
 
@@ -65,7 +74,6 @@ func (h *AssetHandler) GetByCharacter(c *gin.Context) {
 		return
 	}
 
-	// Check if character exists
 	character, err := h.characterRepo.FindByID(characterID)
 	if err != nil {
 		response.Error(c, err.Error())
@@ -83,6 +91,10 @@ func (h *AssetHandler) GetByCharacter(c *gin.Context) {
 	}
 	if assets == nil {
 		assets = []models.Asset{}
+	}
+
+	for i := range assets {
+		h.ensureAssetPreview(c, &assets[i])
 	}
 
 	response.Success(c, assets)
@@ -103,4 +115,20 @@ func (h *AssetHandler) Delete(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"success": true})
+}
+
+func (h *AssetHandler) ensureAssetPreview(c *gin.Context, asset *models.Asset) {
+	if asset == nil || strings.TrimSpace(asset.FileURL) == "" || strings.TrimSpace(asset.ThumbnailURL) != "" {
+		return
+	}
+
+	previewURL, err := h.previewService.CreatePreviewFromSource(c.Request.Context(), asset.FileURL, "assets", fmt.Sprintf("asset-%d", asset.ID), services.AssetPreviewSpec())
+	if err != nil {
+		log.Printf("failed to generate asset preview for %d: %v", asset.ID, err)
+		return
+	}
+	asset.ThumbnailURL = previewURL
+	if err := h.repo.UpdateThumbnailURL(asset.ID, previewURL); err != nil {
+		log.Printf("failed to persist asset preview for %d: %v", asset.ID, err)
+	}
 }

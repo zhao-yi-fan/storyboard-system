@@ -43,6 +43,9 @@ import {
   type Storyboard,
 } from "../api";
 
+const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
+  shot?.thumbnail_preview_url || shot?.thumbnail_url || "";
+
 export default function Workspace() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -629,7 +632,7 @@ export default function Workspace() {
                     <div className="absolute inset-0 flex items-center justify-center">
                       {shot.thumbnail_url ? (
                         <img
-                          src={shot.thumbnail_url}
+                          src={getStoryboardPreviewSrc(shot)}
                           alt=""
                           loading="lazy"
                           decoding="async"
@@ -768,7 +771,7 @@ export default function Workspace() {
                           }
                         >
                           <img
-                            src={selectedShot.thumbnail_url}
+                            src={getStoryboardPreviewSrc(selectedShot)}
                             alt=""
                             loading="lazy"
                             decoding="async"

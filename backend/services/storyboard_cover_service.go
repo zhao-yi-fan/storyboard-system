@@ -21,6 +21,7 @@ type StoryboardCoverService struct {
 	sceneRepo      *repository.SceneRepository
 	wanxClient     *WanxClient
 	httpClient     *http.Client
+	previewService *ImagePreviewService
 }
 
 func NewStoryboardCoverService() (*StoryboardCoverService, error) {
@@ -36,6 +37,7 @@ func NewStoryboardCoverService() (*StoryboardCoverService, error) {
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
+		previewService: NewImagePreviewService(),
 	}, nil
 }
 
@@ -65,12 +67,19 @@ func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64) (*models.
 		return nil, err
 	}
 
-	publicPath, err := s.downloadAndStore(ctx, storyboard.ID, imageURL)
+	publicPath, localPath, err := s.downloadAndStore(ctx, storyboard.ID, imageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	previewFilename := strings.TrimSuffix(filepath.Base(localPath), filepath.Ext(localPath)) + ".thumb.webp"
+	previewPath, err := s.previewService.CreatePreviewFromLocalPath(localPath, "covers", previewFilename, StoryboardPreviewSpec())
 	if err != nil {
 		return nil, err
 	}
 
 	storyboard.ThumbnailURL = publicPath
+	storyboard.ThumbnailPreviewURL = previewPath
 	if err := s.storyboardRepo.Update(storyboard); err != nil {
 		return nil, err
 	}
@@ -143,48 +152,48 @@ func sanitizePromptText(input string) string {
 	return replacer.Replace(strings.TrimSpace(input))
 }
 
-func (s *StoryboardCoverService) downloadAndStore(ctx context.Context, storyboardID int64, sourceURL string) (string, error) {
+func (s *StoryboardCoverService) downloadAndStore(ctx context.Context, storyboardID int64, sourceURL string) (string, string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("下载生成图片失败: %w", err)
+		return "", "", fmt.Errorf("下载生成图片失败: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("下载生成图片失败: HTTP %d", resp.StatusCode)
+		return "", "", fmt.Errorf("下载生成图片失败: HTTP %d", resp.StatusCode)
 	}
 
 	assetRoot := config.GlobalConfig.GeneratedAssetDir
 	if !filepath.IsAbs(assetRoot) {
 		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	coversDir := filepath.Join(assetRoot, "covers")
 	if err := os.MkdirAll(coversDir, 0o755); err != nil {
-		return "", fmt.Errorf("创建封面目录失败: %w", err)
+		return "", "", fmt.Errorf("创建封面目录失败: %w", err)
 	}
 
 	filename := fmt.Sprintf("storyboard-%d-%d%s", storyboardID, time.Now().Unix(), inferImageExtension(sourceURL))
 	dstPath := filepath.Join(coversDir, filename)
 	file, err := os.Create(dstPath)
 	if err != nil {
-		return "", fmt.Errorf("创建封面文件失败: %w", err)
+		return "", "", fmt.Errorf("创建封面文件失败: %w", err)
 	}
 	defer file.Close()
 
 	if _, err := io.Copy(file, resp.Body); err != nil {
-		return "", fmt.Errorf("保存封面文件失败: %w", err)
+		return "", "", fmt.Errorf("保存封面文件失败: %w", err)
 	}
 
 	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	return fmt.Sprintf("%s/covers/%s", basePath, filename), nil
+	return fmt.Sprintf("%s/covers/%s", basePath, filename), dstPath, nil
 }
 
 func inferImageExtension(rawURL string) string {

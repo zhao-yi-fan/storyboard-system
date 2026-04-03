@@ -1,24 +1,30 @@
 package handlers
 
 import (
+	"fmt"
+	"log"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
-	"storyboard-backend/repository"
 	"storyboard-backend/pkg/response"
+	"storyboard-backend/repository"
+	"storyboard-backend/services"
 )
 
 // CharacterHandler handles character-related requests
 type CharacterHandler struct {
-	repo *repository.CharacterRepository
-	projectRepo *repository.ProjectRepository
+	repo           *repository.CharacterRepository
+	projectRepo    *repository.ProjectRepository
+	previewService *services.ImagePreviewService
 }
 
 func NewCharacterHandler() *CharacterHandler {
 	return &CharacterHandler{
-		repo: &repository.CharacterRepository{},
-		projectRepo: &repository.ProjectRepository{},
+		repo:           &repository.CharacterRepository{},
+		projectRepo:    &repository.ProjectRepository{},
+		previewService: services.NewImagePreviewService(),
 	}
 }
 
@@ -31,7 +37,6 @@ func (h *CharacterHandler) GetByProject(c *gin.Context) {
 		return
 	}
 
-	// Check if project exists
 	project, err := h.projectRepo.FindByID(projectID)
 	if err != nil {
 		response.Error(c, err.Error())
@@ -46,6 +51,10 @@ func (h *CharacterHandler) GetByProject(c *gin.Context) {
 	if err != nil {
 		response.Error(c, err.Error())
 		return
+	}
+
+	for i := range characters {
+		h.ensureAvatarPreview(c, &characters[i])
 	}
 
 	response.Success(c, characters)
@@ -70,6 +79,7 @@ func (h *CharacterHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	h.ensureAvatarPreview(c, character)
 	response.Success(c, character)
 }
 
@@ -82,7 +92,6 @@ func (h *CharacterHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Check if project exists
 	project, err := h.projectRepo.FindByID(projectID)
 	if err != nil {
 		response.Error(c, err.Error())
@@ -105,10 +114,11 @@ func (h *CharacterHandler) Create(c *gin.Context) {
 	}
 
 	character := &models.Character{
-		ProjectID:   projectID,
-		Name:        req.Name,
-		Description: req.Description,
-		AvatarURL:   req.AvatarURL,
+		ProjectID:        projectID,
+		Name:             req.Name,
+		Description:      req.Description,
+		AvatarURL:        req.AvatarURL,
+		AvatarPreviewURL: "",
 	}
 
 	if err := h.repo.Create(character); err != nil {
@@ -116,6 +126,7 @@ func (h *CharacterHandler) Create(c *gin.Context) {
 		return
 	}
 
+	h.ensureAvatarPreview(c, character)
 	response.Created(c, character)
 }
 
@@ -154,12 +165,14 @@ func (h *CharacterHandler) Update(c *gin.Context) {
 	}
 	character.Description = req.Description
 	character.AvatarURL = req.AvatarURL
+	character.AvatarPreviewURL = ""
 
 	if err := h.repo.Update(character); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
 
+	h.ensureAvatarPreview(c, character)
 	response.Success(c, character)
 }
 
@@ -178,4 +191,32 @@ func (h *CharacterHandler) Delete(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"success": true})
+}
+
+func (h *CharacterHandler) ensureAvatarPreview(c *gin.Context, character *models.Character) {
+	if character == nil {
+		return
+	}
+	if strings.TrimSpace(character.AvatarURL) == "" {
+		if character.AvatarPreviewURL != "" {
+			character.AvatarPreviewURL = ""
+			if err := h.repo.Update(character); err != nil {
+				log.Printf("failed to clear character preview: %v", err)
+			}
+		}
+		return
+	}
+	if strings.TrimSpace(character.AvatarPreviewURL) != "" {
+		return
+	}
+
+	previewURL, err := h.previewService.CreatePreviewFromSource(c.Request.Context(), character.AvatarURL, "characters", fmt.Sprintf("character-%d", character.ID), services.AvatarPreviewSpec())
+	if err != nil {
+		log.Printf("failed to generate character preview for %d: %v", character.ID, err)
+		return
+	}
+	character.AvatarPreviewURL = previewURL
+	if err := h.repo.Update(character); err != nil {
+		log.Printf("failed to persist character preview for %d: %v", character.ID, err)
+	}
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+
 	"storyboard-backend/database"
 	"storyboard-backend/models"
 )
@@ -11,9 +12,9 @@ type AssetRepository struct{}
 
 // FindByProjectID finds all assets for a project
 func (r *AssetRepository) FindByProjectID(projectID int64) ([]models.Asset, error) {
-	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at 
+	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at
 	          FROM assets WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`
-	
+
 	rows, err := database.DB.Query(query, projectID)
 	if err != nil {
 		return nil, err
@@ -34,9 +35,9 @@ func (r *AssetRepository) FindByProjectID(projectID int64) ([]models.Asset, erro
 
 // FindByCharacterID finds all assets for a character
 func (r *AssetRepository) FindByCharacterID(characterID int64) ([]models.Asset, error) {
-	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at 
+	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at
 	          FROM assets WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`
-	
+
 	rows, err := database.DB.Query(query, characterID)
 	if err != nil {
 		return nil, err
@@ -57,9 +58,9 @@ func (r *AssetRepository) FindByCharacterID(characterID int64) ([]models.Asset, 
 
 // FindByID finds an asset by ID
 func (r *AssetRepository) FindByID(id int64) (*models.Asset, error) {
-	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at 
+	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at
 	          FROM assets WHERE id = ? AND deleted_at IS NULL`
-	
+
 	var a models.Asset
 	err := database.DB.QueryRow(query, id).Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &a.ThumbnailURL, &a.Meta, &a.CreatedAt, &a.UpdatedAt)
 	if err == sql.ErrNoRows {
@@ -73,9 +74,9 @@ func (r *AssetRepository) FindByID(id int64) (*models.Asset, error) {
 
 // Create creates a new asset
 func (r *AssetRepository) Create(a *models.Asset) error {
-	query := `INSERT INTO assets (project_id, character_id, name, type, file_url, thumbnail_url, meta) 
+	query := `INSERT INTO assets (project_id, character_id, name, type, file_url, thumbnail_url, meta)
 	          VALUES (?, ?, ?, ?, ?, ?, ?)`
-	
+
 	result, err := database.DB.Exec(query, a.ProjectID, a.CharacterID, a.Name, a.Type, a.FileURL, a.ThumbnailURL, a.Meta)
 	if err != nil {
 		return err
@@ -87,6 +88,12 @@ func (r *AssetRepository) Create(a *models.Asset) error {
 	}
 	a.ID = id
 	return nil
+}
+
+func (r *AssetRepository) UpdateThumbnailURL(id int64, thumbnailURL string) error {
+	query := `UPDATE assets SET thumbnail_url = ? WHERE id = ?`
+	_, err := database.DB.Exec(query, thumbnailURL, id)
+	return err
 }
 
 // Delete soft deletes an asset

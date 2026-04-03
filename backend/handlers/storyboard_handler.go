@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -14,14 +16,16 @@ import (
 
 // StoryboardHandler handles storyboard-related requests
 type StoryboardHandler struct {
-	repo      *repository.StoryboardRepository
-	sceneRepo *repository.SceneRepository
+	repo           *repository.StoryboardRepository
+	sceneRepo      *repository.SceneRepository
+	previewService *services.ImagePreviewService
 }
 
 func NewStoryboardHandler() *StoryboardHandler {
 	return &StoryboardHandler{
-		repo:      &repository.StoryboardRepository{},
-		sceneRepo: &repository.SceneRepository{},
+		repo:           &repository.StoryboardRepository{},
+		sceneRepo:      &repository.SceneRepository{},
+		previewService: services.NewImagePreviewService(),
 	}
 }
 
@@ -34,7 +38,6 @@ func (h *StoryboardHandler) GetByScene(c *gin.Context) {
 		return
 	}
 
-	// Check if scene exists
 	scene, err := h.sceneRepo.FindByID(sceneID)
 	if err != nil {
 		response.Error(c, err.Error())
@@ -49,6 +52,10 @@ func (h *StoryboardHandler) GetByScene(c *gin.Context) {
 	if err != nil {
 		response.Error(c, err.Error())
 		return
+	}
+
+	for i := range storyboards {
+		h.ensureStoryboardPreview(c, &storyboards[i])
 	}
 
 	response.Success(c, storyboards)
@@ -73,6 +80,7 @@ func (h *StoryboardHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	h.ensureStoryboardPreview(c, storyboard)
 	response.Success(c, storyboard)
 }
 
@@ -85,7 +93,6 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Check if scene exists
 	scene, err := h.sceneRepo.FindByID(sceneID)
 	if err != nil {
 		response.Error(c, err.Error())
@@ -97,13 +104,14 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 	}
 
 	var req struct {
-		ShotNumber      int     `json:"shot_number"`
-		Content         string  `json:"content" binding:"required"`
-		CameraDirection string  `json:"camera_direction"`
-		Duration        float64 `json:"duration"`
-		Background      string  `json:"background"`
-		ThumbnailURL    string  `json:"thumbnail_url"`
-		Notes           string  `json:"notes"`
+		ShotNumber          int     `json:"shot_number"`
+		Content             string  `json:"content" binding:"required"`
+		CameraDirection     string  `json:"camera_direction"`
+		Duration            float64 `json:"duration"`
+		Background          string  `json:"background"`
+		ThumbnailURL        string  `json:"thumbnail_url"`
+		ThumbnailPreviewURL string  `json:"thumbnail_preview_url"`
+		Notes               string  `json:"notes"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -111,30 +119,29 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Get max sort order
 	maxSort, err := h.repo.GetMaxSortOrder(sceneID)
 	if err != nil {
 		maxSort = 0
 	}
 
-	// Auto-generate shot number if not provided
 	shotNumber := req.ShotNumber
 	if shotNumber == 0 {
 		shotNumber = maxSort + 1
 	}
 
 	storyboard := &models.Storyboard{
-		SceneID:         sceneID,
-		ChapterID:       scene.ChapterID,
-		ProjectID:       scene.ProjectID,
-		ShotNumber:      shotNumber,
-		Content:         req.Content,
-		CameraDirection: req.CameraDirection,
-		Duration:        req.Duration,
-		Background:      req.Background,
-		ThumbnailURL:    req.ThumbnailURL,
-		Notes:           req.Notes,
-		SortOrder:       maxSort + 1,
+		SceneID:             sceneID,
+		ChapterID:           scene.ChapterID,
+		ProjectID:           scene.ProjectID,
+		ShotNumber:          shotNumber,
+		Content:             req.Content,
+		CameraDirection:     req.CameraDirection,
+		Duration:            req.Duration,
+		Background:          req.Background,
+		ThumbnailURL:        req.ThumbnailURL,
+		ThumbnailPreviewURL: req.ThumbnailPreviewURL,
+		Notes:               req.Notes,
+		SortOrder:           maxSort + 1,
 	}
 
 	if err := h.repo.Create(storyboard); err != nil {
@@ -165,18 +172,19 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	}
 
 	var req struct {
-		ShotNumber      *int     `json:"shot_number"`
-		Content         *string  `json:"content"`
-		CameraDirection *string  `json:"camera_direction"`
-		Duration        *float64 `json:"duration"`
-		Background      *string  `json:"background"`
-		ThumbnailURL    *string  `json:"thumbnail_url"`
-		VideoURL        *string  `json:"video_url"`
-		VideoStatus     *string  `json:"video_status"`
-		VideoError      *string  `json:"video_error"`
-		VideoDuration   *float64 `json:"video_duration"`
-		Notes           *string  `json:"notes"`
-		SortOrder       *int     `json:"sort_order"`
+		ShotNumber          *int     `json:"shot_number"`
+		Content             *string  `json:"content"`
+		CameraDirection     *string  `json:"camera_direction"`
+		Duration            *float64 `json:"duration"`
+		Background          *string  `json:"background"`
+		ThumbnailURL        *string  `json:"thumbnail_url"`
+		ThumbnailPreviewURL *string  `json:"thumbnail_preview_url"`
+		VideoURL            *string  `json:"video_url"`
+		VideoStatus         *string  `json:"video_status"`
+		VideoError          *string  `json:"video_error"`
+		VideoDuration       *float64 `json:"video_duration"`
+		Notes               *string  `json:"notes"`
+		SortOrder           *int     `json:"sort_order"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -184,7 +192,6 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Update only provided fields
 	if req.ShotNumber != nil {
 		storyboard.ShotNumber = *req.ShotNumber
 	}
@@ -202,6 +209,9 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	}
 	if req.ThumbnailURL != nil {
 		storyboard.ThumbnailURL = *req.ThumbnailURL
+	}
+	if req.ThumbnailPreviewURL != nil {
+		storyboard.ThumbnailPreviewURL = *req.ThumbnailPreviewURL
 	}
 	if req.VideoURL != nil {
 		storyboard.VideoURL = *req.VideoURL
@@ -269,9 +279,10 @@ func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{
-		"storyboard_id": storyboard.ID,
-		"thumbnail_url": storyboard.ThumbnailURL,
-		"storyboard":    storyboard,
+		"storyboard_id":         storyboard.ID,
+		"thumbnail_url":         storyboard.ThumbnailURL,
+		"thumbnail_preview_url": storyboard.ThumbnailPreviewURL,
+		"storyboard":            storyboard,
 	})
 }
 
@@ -312,4 +323,20 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 		"video_url":     storyboard.VideoURL,
 		"storyboard":    storyboard,
 	})
+}
+
+func (h *StoryboardHandler) ensureStoryboardPreview(c *gin.Context, storyboard *models.Storyboard) {
+	if storyboard == nil || strings.TrimSpace(storyboard.ThumbnailURL) == "" || strings.TrimSpace(storyboard.ThumbnailPreviewURL) != "" {
+		return
+	}
+
+	previewURL, err := h.previewService.CreatePreviewFromSource(c.Request.Context(), storyboard.ThumbnailURL, "covers", fmt.Sprintf("storyboard-%d", storyboard.ID), services.StoryboardPreviewSpec())
+	if err != nil {
+		log.Printf("failed to generate storyboard preview for %d: %v", storyboard.ID, err)
+		return
+	}
+	storyboard.ThumbnailPreviewURL = previewURL
+	if err := h.repo.Update(storyboard); err != nil {
+		log.Printf("failed to persist storyboard preview for %d: %v", storyboard.ID, err)
+	}
 }

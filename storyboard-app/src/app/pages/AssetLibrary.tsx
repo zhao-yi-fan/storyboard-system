@@ -33,6 +33,12 @@ import {
   type Asset,
 } from "../api";
 
+const getCharacterPreviewSrc = (character: Character | null | undefined) =>
+  character?.avatar_preview_url || character?.avatar_url || "";
+
+const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
+  asset?.thumbnail_url || asset?.file_url || "";
+
 export default function AssetLibrary() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -341,7 +347,7 @@ export default function AssetLibrary() {
                         <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 relative flex items-center justify-center">
                           {character.avatar_url ? (
                             <img
-                              src={character.avatar_url}
+                              src={getCharacterPreviewSrc(character)}
                               alt={character.name}
                               loading="lazy"
                               decoding="async"
@@ -387,7 +393,7 @@ export default function AssetLibrary() {
                         <div className="w-16 h-16 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded flex items-center justify-center flex-shrink-0">
                           {character.avatar_url ? (
                             <img
-                              src={character.avatar_url}
+                              src={getCharacterPreviewSrc(character)}
                               alt={character.name}
                               loading="lazy"
                               decoding="async"
@@ -454,7 +460,7 @@ export default function AssetLibrary() {
                       >
                         <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 relative flex items-center justify-center">
                           <img
-                            src={asset.file_url}
+                            src={getAssetPreviewSrc(asset)}
                             alt={asset.name}
                             loading="lazy"
                             decoding="async"
@@ -513,7 +519,7 @@ export default function AssetLibrary() {
                       >
                         <div className="w-20 h-14 bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded flex items-center justify-center flex-shrink-0">
                           <img
-                            src={asset.file_url}
+                            src={getAssetPreviewSrc(asset)}
                             alt={asset.name}
                             loading="lazy"
                             decoding="async"
@@ -600,7 +606,7 @@ export default function AssetLibrary() {
                           }
                         >
                           <img
-                            src={selectedAsset.data.avatar_url}
+                            src={getCharacterPreviewSrc(selectedAsset.data)}
                             alt={selectedAsset.data.name}
                             loading="lazy"
                             decoding="async"
@@ -678,7 +684,7 @@ export default function AssetLibrary() {
                         }
                       >
                         <img
-                          src={selectedAsset.data.file_url}
+                          src={getAssetPreviewSrc(selectedAsset.data)}
                           alt={selectedAsset.data.name}
                           loading="lazy"
                           decoding="async"
