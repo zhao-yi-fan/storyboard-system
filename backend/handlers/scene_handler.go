@@ -3,10 +3,11 @@ package handlers
 import (
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
-	"storyboard-backend/repository"
 	"storyboard-backend/pkg/response"
+	"storyboard-backend/repository"
+
+	"github.com/gin-gonic/gin"
 )
 
 // SceneHandler handles scene-related requests
@@ -46,6 +47,9 @@ func (h *SceneHandler) GetByChapter(c *gin.Context) {
 	if err != nil {
 		response.Error(c, err.Error())
 		return
+	}
+	if scenes == nil {
+		scenes = []models.Scene{}
 	}
 
 	response.Success(c, scenes)

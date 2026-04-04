@@ -24,6 +24,16 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
 import {
   characterApi,
@@ -45,6 +55,7 @@ export default function AssetLibrary() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [characterDeleteTarget, setCharacterDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   // Upload state
   const [uploading, setUploading] = useState(false);
@@ -656,7 +667,12 @@ export default function AssetLibrary() {
                       <Button
                         variant="outline"
                         className="w-full mt-2 border-red-800 text-red-400 hover:bg-red-900/20"
-                        onClick={() => deleteCharacter(selectedAsset.data.id)}
+                        onClick={() =>
+                          setCharacterDeleteTarget({
+                            id: selectedAsset.data.id,
+                            name: selectedAsset.data.name,
+                          })
+                        }
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         删除角色
@@ -823,6 +839,34 @@ export default function AssetLibrary() {
         src={previewImage?.src || ""}
         alt={previewImage?.alt || "资产预览图"}
       />
+
+      <AlertDialog
+        open={!!characterDeleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setCharacterDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除角色</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`是否确认删除角色${characterDeleteTarget?.name ?? ""}？`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                if (!characterDeleteTarget) return;
+                void deleteCharacter(characterDeleteTarget.id);
+                setCharacterDeleteTarget(null);
+              }}
+            >
+              确认
+            </AlertDialogAction>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

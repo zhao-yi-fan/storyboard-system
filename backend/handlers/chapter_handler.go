@@ -3,10 +3,11 @@ package handlers
 import (
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
-	"storyboard-backend/repository"
 	"storyboard-backend/pkg/response"
+	"storyboard-backend/repository"
+
+	"github.com/gin-gonic/gin"
 )
 
 // ChapterHandler handles chapter-related requests
@@ -46,6 +47,9 @@ func (h *ChapterHandler) GetByProject(c *gin.Context) {
 	if err != nil {
 		response.Error(c, err.Error())
 		return
+	}
+	if chapters == nil {
+		chapters = []models.Chapter{}
 	}
 
 	response.Success(c, chapters)

@@ -4,11 +4,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"storyboard-backend/models"
 	"storyboard-backend/pkg/response"
 	"storyboard-backend/repository"
 	"storyboard-backend/services"
+
+	"github.com/gin-gonic/gin"
 )
 
 // ProjectHandler handles project-related requests
@@ -26,6 +27,9 @@ func (h *ProjectHandler) GetAll(c *gin.Context) {
 	if err != nil {
 		response.Error(c, err.Error())
 		return
+	}
+	if projects == nil {
+		projects = []models.ProjectWithStats{}
 	}
 	response.Success(c, projects)
 }
