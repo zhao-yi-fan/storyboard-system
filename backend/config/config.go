@@ -29,6 +29,10 @@ type Config struct {
 	WanxBaseURL              string
 	WanxModel                string
 	WanxRequestTimeoutSeconds int
+	WanxVideoBaseURL         string
+	WanxVideoModel           string
+	WanxVideoRequestTimeoutSeconds int
+	PublicAppBaseURL         string
 	GeneratedAssetDir        string
 	GeneratedAssetBasePath   string
 }
@@ -59,11 +63,28 @@ func Load() {
 		WanxBaseURL:              getEnv("WANX_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
 		WanxModel:                getEnv("WANX_MODEL", "wanx2.0-t2i-turbo"),
 		WanxRequestTimeoutSeconds: getEnvInt("WANX_REQUEST_TIMEOUT_SECONDS", 120),
+		WanxVideoBaseURL:         getEnv("WANX_VIDEO_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
+		WanxVideoModel:           getEnv("WANX_VIDEO_MODEL", "wan2.6-i2v-flash"),
+		WanxVideoRequestTimeoutSeconds: getEnvInt("WANX_VIDEO_REQUEST_TIMEOUT_SECONDS", 300),
+		PublicAppBaseURL:         getEnv("PUBLIC_APP_BASE_URL", ""),
 		GeneratedAssetDir:        getEnv("GENERATED_ASSET_DIR", "../storage"),
 		GeneratedAssetBasePath:   getEnv("GENERATED_ASSET_BASE_PATH", "/generated"),
 	}
 
 	log.Println("Configuration loaded")
+}
+
+func (c Config) ValidateWanxVideoConfig() error {
+	switch {
+	case c.DashScopeAPIKey == "":
+		return fmt.Errorf("镜头视频生成未配置：缺少 DASHSCOPE_API_KEY")
+	case c.WanxVideoBaseURL == "":
+		return fmt.Errorf("镜头视频生成未配置：缺少 WANX_VIDEO_BASE_URL")
+	case c.WanxVideoModel == "":
+		return fmt.Errorf("镜头视频生成未配置：缺少 WANX_VIDEO_MODEL")
+	default:
+		return nil
+	}
 }
 
 func (c Config) ValidateWanxConfig() error {

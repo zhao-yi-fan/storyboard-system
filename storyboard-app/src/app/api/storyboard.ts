@@ -1,17 +1,23 @@
 import { apiClient } from "./client";
-import type { GenerateStoryboardCoverResult, Storyboard } from "../api/types";
+import type {
+  GenerateStoryboardCoverResult,
+  GenerateStoryboardVideoResult,
+  Storyboard,
+  StoryboardMediaGeneration,
+} from "../api/types";
 
-// 获取场景下所有分镜镜头
 export function getStoryboardsByScene(sceneId: number) {
   return apiClient.get<Storyboard[]>(`/scenes/${sceneId}/storyboards`);
 }
 
-// 获取单个分镜镜头详情
 export function getStoryboard(id: number) {
   return apiClient.get<Storyboard>(`/storyboards/${id}`);
 }
 
-// 创建分镜镜头
+export function getStoryboardMediaGenerations(id: number) {
+  return apiClient.get<StoryboardMediaGeneration[]>(`/storyboards/${id}/media-generations`);
+}
+
 export function createStoryboard(
   sceneId: number,
   data: {
@@ -27,7 +33,6 @@ export function createStoryboard(
   return apiClient.post<Storyboard>(`/scenes/${sceneId}/storyboards`, data);
 }
 
-// 更新分镜镜头
 export function updateStoryboard(
   id: number,
   data: {
@@ -44,12 +49,14 @@ export function updateStoryboard(
   return apiClient.put<Storyboard>(`/storyboards/${id}`, data);
 }
 
-// 删除分镜镜头
 export function deleteStoryboard(id: number) {
   return apiClient.delete<{ success: boolean }>(`/storyboards/${id}`);
 }
 
-// 生成分镜封面
 export function generateStoryboardCover(id: number) {
   return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`);
+}
+
+export function generateStoryboardVideo(id: number) {
+  return apiClient.post<GenerateStoryboardVideoResult>(`/storyboards/${id}/generate-video`);
 }

@@ -65,7 +65,12 @@ CREATE TABLE IF NOT EXISTS storyboards (
     camera_direction VARCHAR(100) COMMENT '机位/运镜',
     duration DECIMAL(8,2) COMMENT '时长（秒）',
     background TEXT COMMENT '背景描述',
-    thumbnail_url VARCHAR(500) COMMENT '缩略图URL',
+    thumbnail_url VARCHAR(500) COMMENT '原图URL',
+    thumbnail_preview_url VARCHAR(500) COMMENT '缩略图预览URL',
+    video_url VARCHAR(500) COMMENT '视频URL',
+    video_status VARCHAR(50) COMMENT '视频生成状态',
+    video_error TEXT COMMENT '视频生成错误信息',
+    video_duration DECIMAL(8,2) COMMENT '视频时长（秒）',
     notes TEXT COMMENT '备注',
     sort_order INT DEFAULT 0 COMMENT '排序',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -86,7 +91,8 @@ CREATE TABLE IF NOT EXISTS characters (
     project_id BIGINT NOT NULL,
     name VARCHAR(100) NOT NULL COMMENT '角色名称',
     description TEXT COMMENT '角色描述',
-    avatar_url VARCHAR(500) COMMENT '头像URL',
+    avatar_url VARCHAR(500) COMMENT '头像原图URL',
+    avatar_preview_url VARCHAR(500) COMMENT '头像缩略图URL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
@@ -126,3 +132,25 @@ CREATE TABLE IF NOT EXISTS storyboard_characters (
     FOREIGN KEY (character_id) REFERENCES characters(id),
     UNIQUE KEY uk_storyboard_character (storyboard_id, character_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜角色关联表';
+
+-- 分镜媒体生成历史表
+CREATE TABLE IF NOT EXISTS storyboard_media_generations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    storyboard_id BIGINT NOT NULL,
+    media_type VARCHAR(20) NOT NULL COMMENT '媒体类型: cover/video',
+    model VARCHAR(100) NOT NULL COMMENT '生成模型',
+    status VARCHAR(20) NOT NULL COMMENT '生成状态',
+    result_url VARCHAR(500) NULL COMMENT '正式资源URL',
+    preview_url VARCHAR(500) NULL COMMENT '预览资源URL',
+    source_url VARCHAR(500) NULL COMMENT '输入源URL',
+    error_message TEXT NULL COMMENT '错误信息',
+    is_current TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否当前采用版本',
+    meta_json JSON NULL COMMENT '附加元数据',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (storyboard_id) REFERENCES storyboards(id),
+    INDEX idx_storyboard_media_storyboard_id (storyboard_id),
+    INDEX idx_storyboard_media_type (storyboard_id, media_type),
+    INDEX idx_storyboard_media_current (storyboard_id, media_type, is_current)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜媒体生成历史表';
+

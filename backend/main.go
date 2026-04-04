@@ -108,9 +108,11 @@ func main() {
 		storyboards := api.Group("/storyboards")
 		{
 			storyboards.GET("/:id", storyboardHandler.GetByID)
+			storyboards.GET("/:id/media-generations", storyboardHandler.GetMediaGenerations)
 			storyboards.PUT("/:id", storyboardHandler.Update)
 			storyboards.DELETE("/:id", storyboardHandler.Delete)
 			storyboards.POST("/:id/generate-cover", storyboardHandler.GenerateCover)
+			storyboards.POST("/:id/generate-video", storyboardHandler.GenerateVideo)
 		}
 
 		// Characters
