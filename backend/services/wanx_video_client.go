@@ -77,17 +77,30 @@ func (c *WanxVideoClient) createTask(ctx context.Context, prompt, imageURL, mode
 
 	payload := map[string]any{
 		"model": model,
-		"input": map[string]any{
-			"prompt":  prompt,
-			"img_url": imageURL,
-		},
 		"parameters": map[string]any{
 			"resolution":    "720P",
 			"duration":      5,
 			"prompt_extend": true,
 			"watermark":     false,
-			"audio":         true,
 		},
+	}
+
+	if model == "wan2.7-i2v" {
+		payload["input"] = map[string]any{
+			"prompt": prompt,
+			"media": []map[string]any{
+				{
+					"type": "first_frame",
+					"url":  imageURL,
+				},
+			},
+		}
+	} else {
+		payload["input"] = map[string]any{
+			"prompt":  prompt,
+			"img_url": imageURL,
+		}
+		payload["parameters"].(map[string]any)["audio"] = true
 	}
 
 	body, err := json.Marshal(payload)
