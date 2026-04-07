@@ -61,8 +61,8 @@ func NewWanxVideoClient() (*WanxVideoClient, error) {
 	}, nil
 }
 
-func (c *WanxVideoClient) GenerateVideo(ctx context.Context, prompt, imageURL, model string) (string, float64, error) {
-	taskID, err := c.createTask(ctx, prompt, imageURL, model)
+func (c *WanxVideoClient) GenerateVideo(ctx context.Context, prompt, imageURL, model string, duration int) (string, float64, error) {
+	taskID, err := c.createTask(ctx, prompt, imageURL, model, duration)
 	if err != nil {
 		return "", 0, err
 	}
@@ -70,16 +70,19 @@ func (c *WanxVideoClient) GenerateVideo(ctx context.Context, prompt, imageURL, m
 	return c.waitForTask(ctx, taskID)
 }
 
-func (c *WanxVideoClient) createTask(ctx context.Context, prompt, imageURL, model string) (string, error) {
+func (c *WanxVideoClient) createTask(ctx context.Context, prompt, imageURL, model string, duration int) (string, error) {
 	if strings.TrimSpace(model) == "" {
 		model = c.model
+	}
+	if duration == 0 {
+		duration = 5
 	}
 
 	payload := map[string]any{
 		"model": model,
 		"parameters": map[string]any{
 			"resolution":    "720P",
-			"duration":      5,
+			"duration":      duration,
 			"prompt_extend": true,
 			"watermark":     false,
 		},

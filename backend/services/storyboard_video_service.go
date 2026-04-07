@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"encoding/base64"
 	"fmt"
 	"image"
@@ -114,7 +115,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		generation.PreviewURL = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
 			"resolution": "720P",
-			"duration":   5,
+			"duration":   generationDuration(generation),
 			"audio":      true,
 		})
 		if err := s.historyRepo.Update(generation); err != nil {
@@ -122,11 +123,12 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		}
 	}
 
-	prompt := buildStoryboardVideoPrompt(storyboard, scene)
+	duration := generationDuration(generation)
+	prompt := buildStoryboardVideoPrompt(storyboard, scene, duration)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GlobalConfig.WanxVideoRequestTimeoutSeconds)*time.Second)
 	defer cancel()
 
-	videoURL, duration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput, generation.Model)
+	videoURL, duration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput, generation.Model, duration)
 	if err != nil {
 		storyboard.VideoStatus = "failed"
 		storyboard.VideoError = err.Error()
@@ -177,7 +179,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	return s.storyboardRepo.FindByID(storyboard.ID)
 }
 
-func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL, model string) (*models.Storyboard, error) {
+func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL, model string, duration int) (*models.Storyboard, error) {
 	storyboard, err := s.storyboardRepo.FindByID(storyboardID)
 	if err != nil {
 		return nil, err
@@ -193,6 +195,12 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 	if storyboard.VideoStatus == "generating" {
 		return storyboard, nil
 	}
+	if duration == 0 {
+		duration = 5
+	}
+	if duration != 5 {
+		return nil, fmt.Errorf("当前视频模型仅支持 5 秒输出")
+	}
 
 	generation := &models.StoryboardMediaGeneration{
 		StoryboardID: storyboard.ID,
@@ -201,7 +209,7 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 		Status:       "generating",
 		PreviewURL:   "",
 		SourceURL:    storyboard.ThumbnailURL,
-		MetaJSON:     mustMarshalMediaMeta(map[string]any{"resolution": "720P", "duration": 5, "audio": true, "preview_height": storyboardVideoPreviewHeight}),
+		MetaJSON:     mustMarshalMediaMeta(map[string]any{"resolution": "720P", "duration": duration, "audio": true, "preview_height": storyboardVideoPreviewHeight}),
 	}
 	if err := s.historyRepo.Create(generation); err != nil {
 		return nil, err
@@ -237,9 +245,9 @@ func (s *StoryboardVideoService) markGenerationFailed(generation *models.Storybo
 	_ = s.historyRepo.Update(generation)
 }
 
-func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Scene) string {
+func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Scene, duration int) string {
 	var b strings.Builder
-	b.WriteString("基于输入首帧图像生成一个5秒的单镜头电影分镜视频。")
+	b.WriteString(fmt.Sprintf("基于输入首帧图像生成一个%d秒的单镜头电影分镜视频。", duration))
 	if scene.Title != "" {
 		b.WriteString(" 场景：")
 		b.WriteString(scene.Title)
@@ -286,6 +294,29 @@ func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Sce
 	b.WriteString(" 风格：写实电影感、自然运动、光影克制、镜头稳定。")
 	b.WriteString(" 音频：根据场景自动生成环境音和氛围声，不要旁白，不要字幕，不要水印。")
 	return b.String()
+}
+
+func generationDuration(generation *models.StoryboardMediaGeneration) int {
+	if generation == nil || strings.TrimSpace(generation.MetaJSON) == "" {
+		return 5
+	}
+	var meta map[string]any
+	if err := json.Unmarshal([]byte(generation.MetaJSON), &meta); err != nil {
+		return 5
+	}
+	if value, ok := meta["duration"]; ok {
+		switch v := value.(type) {
+		case float64:
+			if v > 0 {
+				return int(v)
+			}
+		case int:
+			if v > 0 {
+				return v
+			}
+		}
+	}
+	return 5
 }
 
 func absolutizeGeneratedURL(publicBaseURL, path string) string {

@@ -403,7 +403,8 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 	}
 
 	var req struct {
-		Model string `json:"model"`
+		Model    string `json:"model"`
+		Duration *int   `json:"duration"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil && !strings.Contains(err.Error(), "EOF") {
 		response.Error(c, err.Error())
@@ -416,6 +417,15 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 	}
 	if !config.IsSupportedWanxVideoModel(selectedModel) {
 		response.Error(c, "unsupported video model")
+		return
+	}
+
+	selectedDuration := 5
+	if req.Duration != nil {
+		selectedDuration = *req.Duration
+	}
+	if selectedDuration != 5 {
+		response.Error(c, "当前视频模型仅支持 5 秒输出")
 		return
 	}
 
@@ -436,7 +446,7 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 		publicBaseURL = strings.TrimRight(config.GlobalConfig.PublicAppBaseURL, "/")
 	}
 
-	storyboard, err := service.StartGenerate(id, publicBaseURL, selectedModel)
+	storyboard, err := service.StartGenerate(id, publicBaseURL, selectedModel, selectedDuration)
 	if err != nil {
 		response.Error(c, err.Error())
 		return

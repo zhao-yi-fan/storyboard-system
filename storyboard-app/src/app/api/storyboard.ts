@@ -66,6 +66,6 @@ export function generateStoryboardCover(id: number) {
   return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`);
 }
 
-export function generateStoryboardVideo(id: number, data?: { model?: string }) {
+export function generateStoryboardVideo(id: number, data?: { model?: string; duration?: number }) {
   return apiClient.post<GenerateStoryboardVideoResult>(`/storyboards/${id}/generate-video`, data);
 }
