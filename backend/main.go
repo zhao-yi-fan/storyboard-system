@@ -78,6 +78,7 @@ func main() {
 
 			// Assets under project
 			projects.GET("/:id/assets", assetHandler.GetByProject)
+			projects.POST("/:id/assets", assetHandler.Create)
 		}
 
 		// Chapters
@@ -124,6 +125,8 @@ func main() {
 			characters.PUT("/:id", characterHandler.Update)
 			characters.DELETE("/:id", characterHandler.Delete)
 
+			characters.POST("/:id/generate-cover", characterHandler.GenerateCover)
+
 			// Assets under character
 			characters.GET("/:id/assets", assetHandler.GetByCharacter)
 		}
@@ -131,7 +134,9 @@ func main() {
 		// Assets
 		assets := api.Group("/assets")
 		{
+			assets.PUT("/:id", assetHandler.Update)
 			assets.DELETE("/:id", assetHandler.Delete)
+			assets.POST("/:id/generate-cover", assetHandler.GenerateCover)
 		}
 
 		// OSS signature for direct upload

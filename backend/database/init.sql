@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS assets (
     name VARCHAR(255) NOT NULL COMMENT '资产名称',
     type VARCHAR(50) NOT NULL COMMENT '类型: character/image/scene/background',
     file_url VARCHAR(500) NOT NULL COMMENT '文件URL',
+    cover_url VARCHAR(500) NULL COMMENT '封面原图URL',
     thumbnail_url VARCHAR(500) NULL COMMENT '缩略图URL',
     meta JSON NULL COMMENT '元数据（宽高、文件大小等）',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

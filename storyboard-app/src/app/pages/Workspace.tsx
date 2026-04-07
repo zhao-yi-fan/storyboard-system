@@ -43,6 +43,14 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import {
   projectApi,
   chapterApi,
   sceneApi,
@@ -86,6 +94,13 @@ const emptyShotForm: ShotFormState = {
   camera_motion: "",
   mood: "",
   notes: "",
+};
+
+const emptySceneForm = {
+  title: "",
+  description: "",
+  location: "",
+  time_of_day: "",
 };
 
 const buildShotFormState = (shot: Storyboard | null): ShotFormState => ({
@@ -146,9 +161,13 @@ export default function Workspace() {
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
+  const [isCreateSceneOpen, setIsCreateSceneOpen] = useState(false);
+  const [isCreatingScene, setIsCreatingScene] = useState(false);
+  const [isCreatingShot, setIsCreatingShot] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
+  const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -567,6 +586,63 @@ export default function Workspace() {
     setShotForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const updateNewSceneForm = <K extends keyof typeof emptySceneForm>(key: K, value: (typeof emptySceneForm)[K]) => {
+    setNewSceneForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const resetNewSceneForm = () => {
+    setNewSceneForm(emptySceneForm);
+  };
+
+  const handleCreateScene = async () => {
+    if (!selectedChapter || !newSceneForm.title.trim()) {
+      return;
+    }
+
+    setIsCreatingScene(true);
+    try {
+      const scene = await sceneApi.createScene(selectedChapter.id, {
+        title: newSceneForm.title.trim(),
+        description: newSceneForm.description.trim(),
+        location: newSceneForm.location.trim(),
+        time_of_day: newSceneForm.time_of_day.trim(),
+      });
+
+      await loadScenes(selectedChapter.id);
+      setSelectedScene(scene);
+      await loadStoryboards(scene.id);
+      setIsCreateSceneOpen(false);
+      resetNewSceneForm();
+    } catch (error) {
+      console.error("Failed to create scene:", error);
+    } finally {
+      setIsCreatingScene(false);
+    }
+  };
+
+  const handleInsertShot = async () => {
+    if (!selectedScene) {
+      return;
+    }
+
+    setIsCreatingShot(true);
+    try {
+      const storyboard = await storyboardApi.createStoryboard(selectedScene.id, {
+        content: "新镜头",
+        duration: 5,
+        camera_direction: "平视",
+        background: selectedScene.title || "",
+      });
+
+      await loadStoryboards(selectedScene.id);
+      setSelectedShot(storyboard);
+    } catch (error) {
+      console.error("Failed to create storyboard:", error);
+    } finally {
+      setIsCreatingShot(false);
+    }
+  };
+
   const handleSaveShot = async () => {
     if (!selectedShot) {
       return;
@@ -784,7 +860,13 @@ export default function Workspace() {
           </div>
 
           <div className="p-3 border-t border-gray-800 flex-shrink-0">
-            <Button size="sm" variant="outline" className="w-full h-8 border-gray-700 text-gray-400">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-8 border-gray-700 text-gray-400"
+              onClick={() => setIsCreateSceneOpen(true)}
+              disabled={!selectedChapter}
+            >
               <Plus className="w-4 h-4 mr-1.5" />
               新建场景
             </Button>
@@ -821,8 +903,18 @@ export default function Workspace() {
                   : "请选择一个场景"}
               </h3>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400">
-                  <Plus className="w-3.5 h-3.5 mr-1" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-gray-400"
+                  onClick={handleInsertShot}
+                  disabled={!selectedScene || isCreatingShot}
+                >
+                  {isCreatingShot ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                  )}
                   插入镜头
                 </Button>
               </div>
@@ -1503,6 +1595,88 @@ export default function Workspace() {
           </div>
         )}
       </div>
+      <Dialog
+        open={isCreateSceneOpen}
+        onOpenChange={(open) => {
+          setIsCreateSceneOpen(open);
+          if (!open) {
+            resetNewSceneForm();
+          }
+        }}
+      >
+        <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>新建场景</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              在当前章节下创建一个新场景，创建后会自动切换到该场景。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-gray-400">场景标题</Label>
+              <Input
+                value={newSceneForm.title}
+                onChange={(e) => updateNewSceneForm("title", e.target.value)}
+                className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-gray-400">地点</Label>
+                <Input
+                  value={newSceneForm.location}
+                  onChange={(e) => updateNewSceneForm("location", e.target.value)}
+                  className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-400">时间</Label>
+                <Input
+                  value={newSceneForm.time_of_day}
+                  onChange={(e) => updateNewSceneForm("time_of_day", e.target.value)}
+                  className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-400">描述</Label>
+              <Textarea
+                value={newSceneForm.description}
+                onChange={(e) => updateNewSceneForm("description", e.target.value)}
+                className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]"
+              onClick={() => {
+                setIsCreateSceneOpen(false);
+                resetNewSceneForm();
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={handleCreateScene}
+              disabled={isCreatingScene || !newSceneForm.title.trim()}
+            >
+              {isCreatingScene ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  创建中
+                </>
+              ) : (
+                "确认创建"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={isCoverConfirmOpen} onOpenChange={setIsCoverConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
           <AlertDialogHeader>

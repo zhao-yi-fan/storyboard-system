@@ -12,7 +12,7 @@ type AssetRepository struct{}
 
 // FindByProjectID finds all assets for a project
 func (r *AssetRepository) FindByProjectID(projectID int64) ([]models.Asset, error) {
-	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at
+	query := `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
 	          FROM assets WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`
 
 	rows, err := database.DB.Query(query, projectID)
@@ -24,9 +24,15 @@ func (r *AssetRepository) FindByProjectID(projectID int64) ([]models.Asset, erro
 	assets := make([]models.Asset, 0)
 	for rows.Next() {
 		var a models.Asset
-		if err := rows.Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &a.ThumbnailURL, &a.Meta, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		var coverURL sql.NullString
+		var thumbnailURL sql.NullString
+		var meta sql.NullString
+		if err := rows.Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &coverURL, &thumbnailURL, &meta, &a.CreatedAt, &a.UpdatedAt); err != nil {
 			return nil, err
 		}
+		a.CoverURL = nullStringValue(coverURL)
+		a.ThumbnailURL = nullStringValue(thumbnailURL)
+		a.Meta = nullStringValue(meta)
 		assets = append(assets, a)
 	}
 
@@ -35,7 +41,7 @@ func (r *AssetRepository) FindByProjectID(projectID int64) ([]models.Asset, erro
 
 // FindByCharacterID finds all assets for a character
 func (r *AssetRepository) FindByCharacterID(characterID int64) ([]models.Asset, error) {
-	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at
+	query := `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
 	          FROM assets WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`
 
 	rows, err := database.DB.Query(query, characterID)
@@ -47,9 +53,15 @@ func (r *AssetRepository) FindByCharacterID(characterID int64) ([]models.Asset, 
 	assets := make([]models.Asset, 0)
 	for rows.Next() {
 		var a models.Asset
-		if err := rows.Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &a.ThumbnailURL, &a.Meta, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		var coverURL sql.NullString
+		var thumbnailURL sql.NullString
+		var meta sql.NullString
+		if err := rows.Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &coverURL, &thumbnailURL, &meta, &a.CreatedAt, &a.UpdatedAt); err != nil {
 			return nil, err
 		}
+		a.CoverURL = nullStringValue(coverURL)
+		a.ThumbnailURL = nullStringValue(thumbnailURL)
+		a.Meta = nullStringValue(meta)
 		assets = append(assets, a)
 	}
 
@@ -58,26 +70,32 @@ func (r *AssetRepository) FindByCharacterID(characterID int64) ([]models.Asset, 
 
 // FindByID finds an asset by ID
 func (r *AssetRepository) FindByID(id int64) (*models.Asset, error) {
-	query := `SELECT id, project_id, character_id, name, type, file_url, thumbnail_url, meta, created_at, updated_at
+	query := `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
 	          FROM assets WHERE id = ? AND deleted_at IS NULL`
 
 	var a models.Asset
-	err := database.DB.QueryRow(query, id).Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &a.ThumbnailURL, &a.Meta, &a.CreatedAt, &a.UpdatedAt)
+	var coverURL sql.NullString
+	var thumbnailURL sql.NullString
+	var meta sql.NullString
+	err := database.DB.QueryRow(query, id).Scan(&a.ID, &a.ProjectID, &a.CharacterID, &a.Name, &a.Type, &a.FileURL, &coverURL, &thumbnailURL, &meta, &a.CreatedAt, &a.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	a.CoverURL = nullStringValue(coverURL)
+	a.ThumbnailURL = nullStringValue(thumbnailURL)
+	a.Meta = nullStringValue(meta)
 	return &a, nil
 }
 
 // Create creates a new asset
 func (r *AssetRepository) Create(a *models.Asset) error {
-	query := `INSERT INTO assets (project_id, character_id, name, type, file_url, thumbnail_url, meta)
-	          VALUES (?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO assets (project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := database.DB.Exec(query, a.ProjectID, a.CharacterID, a.Name, a.Type, a.FileURL, a.ThumbnailURL, a.Meta)
+	result, err := database.DB.Exec(query, a.ProjectID, a.CharacterID, a.Name, a.Type, a.FileURL, a.CoverURL, a.ThumbnailURL, a.Meta)
 	if err != nil {
 		return err
 	}
@@ -90,9 +108,21 @@ func (r *AssetRepository) Create(a *models.Asset) error {
 	return nil
 }
 
+func (r *AssetRepository) Update(a *models.Asset) error {
+	query := `UPDATE assets SET character_id = ?, name = ?, type = ?, file_url = ?, cover_url = ?, thumbnail_url = ?, meta = ? WHERE id = ?`
+	_, err := database.DB.Exec(query, a.CharacterID, a.Name, a.Type, a.FileURL, a.CoverURL, a.ThumbnailURL, a.Meta, a.ID)
+	return err
+}
+
 func (r *AssetRepository) UpdateThumbnailURL(id int64, thumbnailURL string) error {
 	query := `UPDATE assets SET thumbnail_url = ? WHERE id = ?`
 	_, err := database.DB.Exec(query, thumbnailURL, id)
+	return err
+}
+
+func (r *AssetRepository) UpdateCoverURLs(id int64, coverURL, thumbnailURL string) error {
+	query := `UPDATE assets SET cover_url = ?, thumbnail_url = ? WHERE id = ?`
+	_, err := database.DB.Exec(query, coverURL, thumbnailURL, id)
 	return err
 }
 

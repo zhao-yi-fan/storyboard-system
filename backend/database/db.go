@@ -107,6 +107,12 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("assets", "cover_url") {
+		if _, err := DB.Exec(`ALTER TABLE assets ADD COLUMN cover_url VARCHAR(500) NULL DEFAULT NULL AFTER file_url`); err != nil {
+			return err
+		}
+	}
+
 	backfillQueries := []string{
 		`UPDATE storyboards
 		SET shot_type = TRIM(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, '景别：', -1), '\n', 1), '\r', ''))

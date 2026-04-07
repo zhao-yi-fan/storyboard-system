@@ -58,6 +58,7 @@ export type Asset = {
   name: string;
   type: string;
   file_url: string;
+  cover_url?: string;
   thumbnail_url?: string;
   meta?: string;
   created_at?: string;

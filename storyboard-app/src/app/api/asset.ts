@@ -1,17 +1,32 @@
 import { apiClient } from "./client";
 import type { Asset } from "./types";
 
-// 获取项目下所有资产
 export function getAssetsByProject(projectId: number) {
   return apiClient.get<Asset[]>(`/projects/${projectId}/assets`);
 }
 
-// 获取角色下所有资产
 export function getAssetsByCharacter(characterId: number) {
   return apiClient.get<Asset[]>(`/characters/${characterId}/assets`);
 }
 
-// 删除资产
+export function createAsset(
+  projectId: number,
+  data: { character_id?: number; name: string; type: string; file_url?: string; meta?: string }
+) {
+  return apiClient.post<Asset>(`/projects/${projectId}/assets`, data);
+}
+
+export function updateAsset(
+  id: number,
+  data: { character_id?: number; name?: string; type?: string; file_url?: string; meta?: string }
+) {
+  return apiClient.put<Asset>(`/assets/${id}`, data);
+}
+
+export function generateAssetCover(id: number) {
+  return apiClient.post<Asset>(`/assets/${id}/generate-cover`);
+}
+
 export function deleteAsset(id: number) {
   return apiClient.delete<{ success: boolean }>(`/assets/${id}`);
 }
