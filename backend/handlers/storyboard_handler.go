@@ -545,6 +545,7 @@ func applyGenerationToStoryboard(storyboard *models.Storyboard, generation *mode
 		storyboard.VideoError = generation.ErrorMessage
 		if duration := extractVideoDuration(generation.MetaJSON); duration > 0 {
 			storyboard.VideoDuration = duration
+			storyboard.Duration = duration
 		}
 	}
 }
@@ -564,6 +565,7 @@ func clearStoryboardMedia(storyboard *models.Storyboard, mediaType string) {
 		storyboard.VideoStatus = ""
 		storyboard.VideoError = ""
 		storyboard.VideoDuration = 0
+		storyboard.Duration = 0
 	}
 }
 
@@ -577,6 +579,14 @@ func extractVideoDuration(metaJSON string) float64 {
 		return 0
 	}
 
+	if value, ok := meta["duration"]; ok {
+		switch v := value.(type) {
+		case float64:
+			return v
+		case int:
+			return float64(v)
+		}
+	}
 	switch value := meta["duration_seconds"].(type) {
 	case float64:
 		return value

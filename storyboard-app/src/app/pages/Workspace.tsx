@@ -63,9 +63,6 @@ const VIDEO_MODEL_OPTIONS = [
   { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
 ] as const;
 
-const VIDEO_DURATION_OPTIONS = [
-  { value: "5", label: "5 秒" },
-] as const;
 
 function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
   if (!storyboard) return "";
@@ -112,7 +109,6 @@ export default function Workspace() {
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>(COVER_MODEL_OPTIONS[0].value);
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
-  const [selectedVideoDuration, setSelectedVideoDuration] = useState<(typeof VIDEO_DURATION_OPTIONS)[number]["value"]>(VIDEO_DURATION_OPTIONS[0].value);
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
@@ -448,7 +444,6 @@ export default function Workspace() {
     try {
       const result = await storyboardApi.generateStoryboardVideo(selectedShot.id, {
         model: selectedVideoModel,
-        duration: Number(selectedVideoDuration),
       });
       const nextShot = result.storyboard;
       applyStoryboardUpdate(nextShot);
@@ -982,18 +977,6 @@ export default function Workspace() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <Select value={selectedVideoDuration} onValueChange={(value) => setSelectedVideoDuration(value as typeof selectedVideoDuration)}>
-                          <SelectTrigger className="w-28 bg-[#1a1a1a] border-gray-700 h-10 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            {VIDEO_DURATION_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                         <Button
                           type="button"
                           onClick={handleGenerateVideo}
@@ -1032,7 +1015,7 @@ export default function Workspace() {
                         <div className="mb-2 flex items-center justify-between">
                           <span className="text-xs text-gray-400">视频预览</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-xs text-gray-500">{selectedShot.video_duration ? `${selectedShot.video_duration}s` : `${selectedVideoDuration}秒`}</span>
+                            <span className="text-xs text-gray-500">{(selectedShot.video_duration || selectedShot.duration) ? `${selectedShot.video_duration || selectedShot.duration}s` : "-"}</span>
                             <button
                               type="button"
                               className="text-xs text-purple-300 hover:text-purple-200"
@@ -1346,9 +1329,9 @@ export default function Workspace() {
                   {/* Duration & Emotion */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs text-gray-400">镜头预计时长（秒）</Label>
+                      <Label className="text-xs text-gray-400">时长（秒）</Label>
                       <Input
-                        value={selectedShot.duration || ""}
+                        value={selectedShot.video_duration || selectedShot.duration || ""}
                         className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
                         readOnly
                       />
@@ -1441,13 +1424,13 @@ export default function Workspace() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认生成视频</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400 leading-6">
-              会为当前镜头生成 720P、5 秒、有声视频，并消耗较高额度。新结果会保留到历史记录中，不会覆盖旧版本。当前视频时长由模型生成设置决定，不受镜头预计时长影响。
+              会为当前镜头生成 720P、5 秒、有声视频，并消耗较高额度。新结果会保留到历史记录中，不会覆盖旧版本。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
             <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
             <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedVideoModel}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">视频时长</span><span>{selectedVideoDuration} 秒</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">时长</span><span>5 秒</span></div>
             <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 5秒 / 有声</span></div>
           </div>
           <AlertDialogFooter>

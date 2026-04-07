@@ -151,6 +151,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	storyboard.VideoStatus = "succeeded"
 	storyboard.VideoError = ""
 	storyboard.VideoDuration = generatedDuration
+	storyboard.Duration = generatedDuration
 	if err := s.storyboardRepo.Update(storyboard); err != nil {
 		s.markGenerationFailed(generation, err)
 		return nil, err
