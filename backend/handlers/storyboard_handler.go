@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -113,6 +114,77 @@ func (h *StoryboardHandler) GetMediaGenerations(c *gin.Context) {
 		items = []models.StoryboardMediaGeneration{}
 	}
 	response.Success(c, items)
+}
+
+func (h *StoryboardHandler) SetMediaGenerationCurrent(c *gin.Context) {
+	storyboardID, generationID, storyboard, generation, ok := h.loadMediaGenerationContext(c)
+	if !ok {
+		return
+	}
+
+	if generation.MediaType != "cover" && generation.MediaType != "video" {
+		response.Error(c, "unsupported media type")
+		return
+	}
+	if generation.Status != "succeeded" {
+		response.Error(c, "only succeeded history can be set as current")
+		return
+	}
+
+	if err := h.mediaRepo.MarkCurrent(storyboardID, generation.MediaType, generationID); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	applyGenerationToStoryboard(storyboard, generation)
+	if err := h.repo.Update(storyboard); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	h.respondWithStoryboardAndHistory(c, storyboard)
+}
+
+func (h *StoryboardHandler) DeleteMediaGeneration(c *gin.Context) {
+	storyboardID, generationID, storyboard, generation, ok := h.loadMediaGenerationContext(c)
+	if !ok {
+		return
+	}
+
+	if generation.Status == "generating" {
+		response.Error(c, "generating history cannot be deleted")
+		return
+	}
+
+	if err := h.mediaRepo.SoftDelete(generationID); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	if generation.IsCurrent {
+		fallback, err := h.mediaRepo.FindLatestSucceeded(storyboardID, generation.MediaType, generationID)
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+
+		if fallback != nil {
+			if err := h.mediaRepo.MarkCurrent(storyboardID, generation.MediaType, fallback.ID); err != nil {
+				response.Error(c, err.Error())
+				return
+			}
+			applyGenerationToStoryboard(storyboard, fallback)
+		} else {
+			clearStoryboardMedia(storyboard, generation.MediaType)
+		}
+
+		if err := h.repo.Update(storyboard); err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+	}
+
+	h.respondWithStoryboardAndHistory(c, storyboard)
 }
 
 // Create creates a new storyboard
@@ -370,4 +442,112 @@ func (h *StoryboardHandler) ensureStoryboardPreview(c *gin.Context, storyboard *
 	if err := h.repo.Update(storyboard); err != nil {
 		log.Printf("failed to persist storyboard preview for %d: %v", storyboard.ID, err)
 	}
+}
+
+func (h *StoryboardHandler) loadMediaGenerationContext(c *gin.Context) (int64, int64, *models.Storyboard, *models.StoryboardMediaGeneration, bool) {
+	storyboardID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, "invalid storyboard id")
+		return 0, 0, nil, nil, false
+	}
+	generationID, err := strconv.ParseInt(c.Param("generationId"), 10, 64)
+	if err != nil {
+		response.Error(c, "invalid generation id")
+		return 0, 0, nil, nil, false
+	}
+
+	storyboard, err := h.repo.FindByID(storyboardID)
+	if err != nil {
+		response.Error(c, err.Error())
+		return 0, 0, nil, nil, false
+	}
+	if storyboard == nil {
+		response.Error(c, "storyboard not found")
+		return 0, 0, nil, nil, false
+	}
+
+	generation, err := h.mediaRepo.FindByID(generationID)
+	if err != nil {
+		response.Error(c, err.Error())
+		return 0, 0, nil, nil, false
+	}
+	if generation == nil || generation.StoryboardID != storyboardID {
+		response.Error(c, "media generation not found")
+		return 0, 0, nil, nil, false
+	}
+
+	return storyboardID, generationID, storyboard, generation, true
+}
+
+func (h *StoryboardHandler) respondWithStoryboardAndHistory(c *gin.Context, storyboard *models.Storyboard) {
+	h.ensureStoryboardPreview(c, storyboard)
+
+	items, err := h.mediaRepo.ListByStoryboardID(storyboard.ID)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if items == nil {
+		items = []models.StoryboardMediaGeneration{}
+	}
+
+	response.Success(c, gin.H{
+		"storyboard":        storyboard,
+		"media_generations": items,
+	})
+}
+
+func applyGenerationToStoryboard(storyboard *models.Storyboard, generation *models.StoryboardMediaGeneration) {
+	if storyboard == nil || generation == nil {
+		return
+	}
+
+	switch generation.MediaType {
+	case "cover":
+		storyboard.ThumbnailURL = generation.ResultURL
+		storyboard.ThumbnailPreviewURL = generation.PreviewURL
+	case "video":
+		storyboard.VideoURL = generation.ResultURL
+		storyboard.VideoStatus = generation.Status
+		storyboard.VideoError = generation.ErrorMessage
+		if duration := extractVideoDuration(generation.MetaJSON); duration > 0 {
+			storyboard.VideoDuration = duration
+		}
+	}
+}
+
+func clearStoryboardMedia(storyboard *models.Storyboard, mediaType string) {
+	if storyboard == nil {
+		return
+	}
+
+	switch mediaType {
+	case "cover":
+		storyboard.ThumbnailURL = ""
+		storyboard.ThumbnailPreviewURL = ""
+	case "video":
+		storyboard.VideoURL = ""
+		storyboard.VideoStatus = ""
+		storyboard.VideoError = ""
+		storyboard.VideoDuration = 0
+	}
+}
+
+func extractVideoDuration(metaJSON string) float64 {
+	if strings.TrimSpace(metaJSON) == "" {
+		return 0
+	}
+
+	var meta map[string]any
+	if err := json.Unmarshal([]byte(metaJSON), &meta); err != nil {
+		return 0
+	}
+
+	switch value := meta["duration_seconds"].(type) {
+	case float64:
+		return value
+	case int:
+		return float64(value)
+	}
+	return 0
 }

@@ -12,7 +12,7 @@ type StoryboardMediaGenerationRepository struct{}
 func (r *StoryboardMediaGenerationRepository) ListByStoryboardID(storyboardID int64) ([]models.StoryboardMediaGeneration, error) {
 	rows, err := database.DB.Query(`SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
 		FROM storyboard_media_generations
-		WHERE storyboard_id = ?
+		WHERE storyboard_id = ? AND deleted_at IS NULL
 		ORDER BY created_at DESC, id DESC`, storyboardID)
 	if err != nil {
 		return nil, err
@@ -31,6 +31,50 @@ func (r *StoryboardMediaGenerationRepository) ListByStoryboardID(storyboardID in
 		return nil, err
 	}
 	return items, nil
+}
+
+func (r *StoryboardMediaGenerationRepository) FindByID(id int64) (*models.StoryboardMediaGeneration, error) {
+	var (
+		item         models.StoryboardMediaGeneration
+		resultURL    sql.NullString
+		previewURL   sql.NullString
+		sourceURL    sql.NullString
+		errorMessage sql.NullString
+		metaJSON     sql.NullString
+		isCurrent    bool
+	)
+
+	err := database.DB.QueryRow(`SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+		FROM storyboard_media_generations
+		WHERE id = ? AND deleted_at IS NULL`, id).Scan(
+		&item.ID,
+		&item.StoryboardID,
+		&item.MediaType,
+		&item.Model,
+		&item.Status,
+		&resultURL,
+		&previewURL,
+		&sourceURL,
+		&errorMessage,
+		&isCurrent,
+		&metaJSON,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	item.ResultURL = nullStringValue(resultURL)
+	item.PreviewURL = nullStringValue(previewURL)
+	item.SourceURL = nullStringValue(sourceURL)
+	item.ErrorMessage = nullStringValue(errorMessage)
+	item.MetaJSON = nullStringValue(metaJSON)
+	item.IsCurrent = isCurrent
+	return &item, nil
 }
 
 func (r *StoryboardMediaGenerationRepository) Create(item *models.StoryboardMediaGeneration) error {
@@ -86,10 +130,63 @@ func (r *StoryboardMediaGenerationRepository) MarkCurrent(storyboardID int64, me
 	if _, err := tx.Exec(`UPDATE storyboard_media_generations SET is_current = 0 WHERE storyboard_id = ? AND media_type = ?`, storyboardID, mediaType); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(`UPDATE storyboard_media_generations SET is_current = 1 WHERE id = ?`, generationID); err != nil {
+	if _, err := tx.Exec(`UPDATE storyboard_media_generations SET is_current = 1 WHERE id = ? AND deleted_at IS NULL`, generationID); err != nil {
 		return err
 	}
 	return tx.Commit()
+}
+
+func (r *StoryboardMediaGenerationRepository) SoftDelete(id int64) error {
+	_, err := database.DB.Exec(`UPDATE storyboard_media_generations
+		SET deleted_at = NOW(), is_current = 0
+		WHERE id = ? AND deleted_at IS NULL`, id)
+	return err
+}
+
+func (r *StoryboardMediaGenerationRepository) FindLatestSucceeded(storyboardID int64, mediaType string, excludeID int64) (*models.StoryboardMediaGeneration, error) {
+	var (
+		item         models.StoryboardMediaGeneration
+		resultURL    sql.NullString
+		previewURL   sql.NullString
+		sourceURL    sql.NullString
+		errorMessage sql.NullString
+		metaJSON     sql.NullString
+		isCurrent    bool
+	)
+
+	err := database.DB.QueryRow(`SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+		FROM storyboard_media_generations
+		WHERE storyboard_id = ? AND media_type = ? AND deleted_at IS NULL AND status = 'succeeded' AND id <> ?
+		ORDER BY created_at DESC, id DESC
+		LIMIT 1`, storyboardID, mediaType, excludeID).Scan(
+		&item.ID,
+		&item.StoryboardID,
+		&item.MediaType,
+		&item.Model,
+		&item.Status,
+		&resultURL,
+		&previewURL,
+		&sourceURL,
+		&errorMessage,
+		&isCurrent,
+		&metaJSON,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	item.ResultURL = nullStringValue(resultURL)
+	item.PreviewURL = nullStringValue(previewURL)
+	item.SourceURL = nullStringValue(sourceURL)
+	item.ErrorMessage = nullStringValue(errorMessage)
+	item.MetaJSON = nullStringValue(metaJSON)
+	item.IsCurrent = isCurrent
+	return &item, nil
 }
 
 func scanStoryboardMediaGeneration(scanner interface{ Scan(dest ...any) error }) (models.StoryboardMediaGeneration, error) {

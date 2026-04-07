@@ -109,8 +109,10 @@ func main() {
 		{
 			storyboards.GET("/:id", storyboardHandler.GetByID)
 			storyboards.GET("/:id/media-generations", storyboardHandler.GetMediaGenerations)
+			storyboards.POST("/:id/media-generations/:generationId/set-current", storyboardHandler.SetMediaGenerationCurrent)
 			storyboards.PUT("/:id", storyboardHandler.Update)
 			storyboards.DELETE("/:id", storyboardHandler.Delete)
+			storyboards.DELETE("/:id/media-generations/:generationId", storyboardHandler.DeleteMediaGeneration)
 			storyboards.POST("/:id/generate-cover", storyboardHandler.GenerateCover)
 			storyboards.POST("/:id/generate-video", storyboardHandler.GenerateVideo)
 		}

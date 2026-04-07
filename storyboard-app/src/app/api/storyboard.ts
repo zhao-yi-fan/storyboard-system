@@ -4,6 +4,7 @@ import type {
   GenerateStoryboardVideoResult,
   Storyboard,
   StoryboardMediaGeneration,
+  StoryboardMediaMutationResult,
 } from "../api/types";
 
 export function getStoryboardsByScene(sceneId: number) {
@@ -16,6 +17,14 @@ export function getStoryboard(id: number) {
 
 export function getStoryboardMediaGenerations(id: number) {
   return apiClient.get<StoryboardMediaGeneration[]>(`/storyboards/${id}/media-generations`);
+}
+
+export function setStoryboardMediaGenerationCurrent(storyboardId: number, generationId: number) {
+  return apiClient.post<StoryboardMediaMutationResult>(`/storyboards/${storyboardId}/media-generations/${generationId}/set-current`);
+}
+
+export function deleteStoryboardMediaGeneration(storyboardId: number, generationId: number) {
+  return apiClient.delete<StoryboardMediaMutationResult>(`/storyboards/${storyboardId}/media-generations/${generationId}`);
 }
 
 export function createStoryboard(

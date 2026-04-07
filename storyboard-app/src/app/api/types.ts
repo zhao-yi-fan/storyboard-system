@@ -104,6 +104,11 @@ export type StoryboardMediaGeneration = {
   updated_at?: string;
 };
 
+export type StoryboardMediaMutationResult = {
+  storyboard: Storyboard;
+  media_generations: StoryboardMediaGeneration[];
+};
+
 export type GenerateStoryboardCoverResult = {
   storyboard_id: number;
   thumbnail_url: string;

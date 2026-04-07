@@ -146,11 +146,12 @@ CREATE TABLE IF NOT EXISTS storyboard_media_generations (
     error_message TEXT NULL COMMENT '错误信息',
     is_current TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否当前采用版本',
     meta_json JSON NULL COMMENT '附加元数据',
+    deleted_at DATETIME NULL DEFAULT NULL COMMENT '软删除时间',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (storyboard_id) REFERENCES storyboards(id),
     INDEX idx_storyboard_media_storyboard_id (storyboard_id),
     INDEX idx_storyboard_media_type (storyboard_id, media_type),
-    INDEX idx_storyboard_media_current (storyboard_id, media_type, is_current)
+    INDEX idx_storyboard_media_current (storyboard_id, media_type, is_current),
+    INDEX idx_storyboard_media_deleted (storyboard_id, deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜媒体生成历史表';
-

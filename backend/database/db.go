@@ -54,12 +54,14 @@ func runMigrations() error {
 			error_message TEXT NULL,
 			is_current TINYINT(1) NOT NULL DEFAULT 0,
 			meta_json JSON NULL,
+			deleted_at DATETIME NULL DEFAULT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			FOREIGN KEY (storyboard_id) REFERENCES storyboards(id),
 			INDEX idx_storyboard_media_storyboard_id (storyboard_id),
 			INDEX idx_storyboard_media_type (storyboard_id, media_type),
-			INDEX idx_storyboard_media_current (storyboard_id, media_type, is_current)
+			INDEX idx_storyboard_media_current (storyboard_id, media_type, is_current),
+			INDEX idx_storyboard_media_deleted (storyboard_id, deleted_at)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜媒体生成历史表'`,
 	}
 
@@ -69,7 +71,19 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("storyboard_media_generations", "deleted_at") {
+		if _, err := DB.Exec(`ALTER TABLE storyboard_media_generations ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL AFTER meta_json`); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func columnExists(tableName, columnName string) bool {
+	var count int
+	err := DB.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`, tableName, columnName).Scan(&count)
+	return err == nil && count > 0
 }
 
 // Close closes the database connection

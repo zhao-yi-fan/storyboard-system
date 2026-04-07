@@ -104,6 +104,8 @@ export default function Workspace() {
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
+  const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
+  const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -207,6 +209,11 @@ export default function Workspace() {
   const applyStoryboardUpdate = (nextShot: Storyboard) => {
     setStoryboards((prev) => prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)));
     setSelectedShot((prev) => (prev?.id === nextShot.id ? nextShot : prev));
+  };
+
+  const applyMediaMutation = (payload: { storyboard: Storyboard; media_generations: StoryboardMediaGeneration[] }) => {
+    applyStoryboardUpdate(payload.storyboard);
+    setMediaGenerations(payload.media_generations);
   };
 
   const stopVideoPolling = () => {
@@ -465,6 +472,44 @@ export default function Workspace() {
   const confirmGenerateVideo = async () => {
     setIsVideoConfirmOpen(false);
     await runGenerateVideo();
+  };
+
+  const handleSetCurrentGeneration = async (generation: StoryboardMediaGeneration) => {
+    if (!selectedShot) {
+      return;
+    }
+    const actionKey = `set-current:${generation.id}`;
+    setActiveMediaActionKey(actionKey);
+    try {
+      const result = await storyboardApi.setStoryboardMediaGenerationCurrent(selectedShot.id, generation.id);
+      applyMediaMutation(result);
+    } catch (error) {
+      console.error("Failed to set current media generation:", error);
+    } finally {
+      setActiveMediaActionKey(null);
+    }
+  };
+
+  const handleRequestDeleteGeneration = (generation: StoryboardMediaGeneration) => {
+    setDeleteTargetGeneration(generation);
+  };
+
+  const confirmDeleteGeneration = async () => {
+    if (!selectedShot || !deleteTargetGeneration) {
+      return;
+    }
+
+    const actionKey = `delete:${deleteTargetGeneration.id}`;
+    setActiveMediaActionKey(actionKey);
+    try {
+      const result = await storyboardApi.deleteStoryboardMediaGeneration(selectedShot.id, deleteTargetGeneration.id);
+      applyMediaMutation(result);
+    } catch (error) {
+      console.error("Failed to delete media generation:", error);
+    } finally {
+      setActiveMediaActionKey(null);
+      setDeleteTargetGeneration(null);
+    }
   };
 
   const coverGenerations = mediaGenerations.filter((item) => item.media_type === "cover");
@@ -1021,6 +1066,36 @@ export default function Workspace() {
                                 {generation.error_message ? (
                                   <p className="text-[11px] leading-5 text-red-400 line-clamp-2">{generation.error_message}</p>
                                 ) : null}
+                                <div className="flex items-center gap-2 pt-1">
+                                  {!generation.is_current && generation.status === "succeeded" ? (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 border-gray-700 px-2 text-[11px] text-gray-300"
+                                      disabled={activeMediaActionKey === `set-current:${generation.id}`}
+                                      onClick={() => handleSetCurrentGeneration(generation)}
+                                    >
+                                      {activeMediaActionKey === `set-current:${generation.id}` ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        "设为当前"
+                                      )}
+                                    </Button>
+                                  ) : null}
+                                  {generation.status !== "generating" ? (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-2 text-[11px] text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                                      disabled={activeMediaActionKey === `delete:${generation.id}`}
+                                      onClick={() => handleRequestDeleteGeneration(generation)}
+                                    >
+                                      删除
+                                    </Button>
+                                  ) : null}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1073,8 +1148,36 @@ export default function Workspace() {
                                 ) : null}
                               </div>
                             </div>
-                            {generation.status === "succeeded" && generation.result_url ? (
-                              <div className="flex justify-end">
+                            <div className="flex justify-end gap-2">
+                              {!generation.is_current && generation.status === "succeeded" ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 border-gray-700 text-xs text-gray-300"
+                                  disabled={activeMediaActionKey === `set-current:${generation.id}`}
+                                  onClick={() => handleSetCurrentGeneration(generation)}
+                                >
+                                  {activeMediaActionKey === `set-current:${generation.id}` ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    "设为当前"
+                                  )}
+                                </Button>
+                              ) : null}
+                              {generation.status !== "generating" ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-xs text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                                  disabled={activeMediaActionKey === `delete:${generation.id}`}
+                                  onClick={() => handleRequestDeleteGeneration(generation)}
+                                >
+                                  删除
+                                </Button>
+                              ) : null}
+                              {generation.status === "succeeded" && generation.result_url ? (
                                 <Button
                                   type="button"
                                   size="sm"
@@ -1084,8 +1187,8 @@ export default function Workspace() {
                                 >
                                   打开视频
                                 </Button>
-                              </div>
-                            ) : null}
+                              ) : null}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1316,6 +1419,49 @@ export default function Workspace() {
           <AlertDialogFooter>
             <AlertDialogCancel className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]">取消</AlertDialogCancel>
             <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateVideo}>确认生成</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteTargetGeneration}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTargetGeneration(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除历史版本</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              该操作会从历史列表中移除当前版本记录，但不会删除服务器上的资源文件。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">类型</span>
+              <span>{deleteTargetGeneration?.media_type === "video" ? "视频" : "封面"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">模型</span>
+              <span>{deleteTargetGeneration?.model || "-"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">生成时间</span>
+              <span>{formatShanghaiDateTime(deleteTargetGeneration?.created_at)}</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={confirmDeleteGeneration}
+            >
+              确认删除
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
