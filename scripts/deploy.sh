@@ -56,7 +56,7 @@ log "commit after pull: $(git rev-parse --short HEAD)"
 run "build frontend" bash -lc "cd '$FRONTEND_DIR' && npm run build"
 run "build backend" bash -lc "cd '$BACKEND_DIR' && go build -o storyboard-backend ."
 
-existing_pids="$(pgrep -f '\./storyboard-backend$' || true)"
+existing_pids="$(pgrep -f 'storyboard-backend$' || true)"
 if [[ -n "${existing_pids}" ]]; then
   log "stopping existing backend process(es): ${existing_pids//$'\n'/, }"
   while IFS= read -r pid; do
@@ -66,9 +66,9 @@ if [[ -n "${existing_pids}" ]]; then
   sleep 1
 fi
 
-if pgrep -f '\./storyboard-backend$' >/dev/null 2>&1; then
+if pgrep -f 'storyboard-backend$' >/dev/null 2>&1; then
   echo "[deploy] backend process still running after graceful stop, forcing kill" >&2
-  pgrep -f '\./storyboard-backend$' | while IFS= read -r pid; do
+  pgrep -f 'storyboard-backend$' | while IFS= read -r pid; do
     [[ -z "$pid" ]] && continue
     sudo kill -9 "$pid" || true
   done
@@ -103,6 +103,6 @@ log "backend listening:"
 ss -ltnp | grep 8082 || true
 
 log "backend process:"
-ps -eo user=,pid=,args= | grep './storyboard-backend$' | grep -v grep || true
+ps -eo user=,pid=,args= | grep 'storyboard-backend$' | grep -v grep || true
 
 log "smoke test passed"
