@@ -123,12 +123,12 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		}
 	}
 
-	duration := generationDuration(generation)
-	prompt := buildStoryboardVideoPrompt(storyboard, scene, duration)
+	requestedDuration := generationDuration(generation)
+	prompt := buildStoryboardVideoPrompt(storyboard, scene, requestedDuration)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GlobalConfig.WanxVideoRequestTimeoutSeconds)*time.Second)
 	defer cancel()
 
-	videoURL, duration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput, generation.Model, duration)
+	videoURL, generatedDuration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput, generation.Model, requestedDuration)
 	if err != nil {
 		storyboard.VideoStatus = "failed"
 		storyboard.VideoError = err.Error()
@@ -150,7 +150,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	storyboard.VideoPreviewURL = previewPath
 	storyboard.VideoStatus = "succeeded"
 	storyboard.VideoError = ""
-	storyboard.VideoDuration = duration
+	storyboard.VideoDuration = generatedDuration
 	if err := s.storyboardRepo.Update(storyboard); err != nil {
 		s.markGenerationFailed(generation, err)
 		return nil, err
@@ -164,7 +164,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		generation.ErrorMessage = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
 			"resolution": "720P",
-			"duration":   duration,
+			"duration":   generatedDuration,
 			"audio":      true,
 			"preview_height": storyboardVideoPreviewHeight,
 		})
