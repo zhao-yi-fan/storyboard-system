@@ -274,10 +274,9 @@ func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Sce
 		b.WriteString(strings.Join(characters, "、"))
 		b.WriteString("。")
 	}
-
-	if storyboard.Content != "" {
-		b.WriteString(" 画面动作：")
-		b.WriteString(storyboard.Content)
+	if storyboard.ShotType != "" {
+		b.WriteString(" 景别：")
+		b.WriteString(storyboard.ShotType)
 		b.WriteString("。")
 	}
 	if storyboard.CameraDirection != "" {
@@ -285,8 +284,29 @@ func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Sce
 		b.WriteString(storyboard.CameraDirection)
 		b.WriteString("。")
 	}
+	if storyboard.CameraMotion != "" {
+		b.WriteString(" 镜头运动：")
+		b.WriteString(storyboard.CameraMotion)
+		b.WriteString("。")
+	}
+
+	if storyboard.Content != "" {
+		b.WriteString(" 画面动作：")
+		b.WriteString(storyboard.Content)
+		b.WriteString("。")
+	}
+	if storyboard.Mood != "" {
+		b.WriteString(" 情绪：")
+		b.WriteString(storyboard.Mood)
+		b.WriteString("。")
+	}
+	if strings.TrimSpace(storyboard.Dialogue) != "" {
+		b.WriteString(" 台词：")
+		b.WriteString(sanitizePromptText(storyboard.Dialogue))
+		b.WriteString("。")
+	}
 	if storyboard.Notes != "" {
-		b.WriteString(" 情绪与细节：")
+		b.WriteString(" 备注补充：")
 		b.WriteString(sanitizePromptText(storyboard.Notes))
 		b.WriteString("。")
 	}

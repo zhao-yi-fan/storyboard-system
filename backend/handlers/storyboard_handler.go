@@ -209,7 +209,11 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 	var req struct {
 		ShotNumber          int     `json:"shot_number"`
 		Content             string  `json:"content" binding:"required"`
+		Dialogue            string  `json:"dialogue"`
+		ShotType            string  `json:"shot_type"`
+		Mood                string  `json:"mood"`
 		CameraDirection     string  `json:"camera_direction"`
+		CameraMotion        string  `json:"camera_motion"`
 		Duration            float64 `json:"duration"`
 		Background          string  `json:"background"`
 		ThumbnailURL        string  `json:"thumbnail_url"`
@@ -238,7 +242,11 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 		ProjectID:           scene.ProjectID,
 		ShotNumber:          shotNumber,
 		Content:             req.Content,
+		Dialogue:            req.Dialogue,
+		ShotType:            req.ShotType,
+		Mood:                req.Mood,
 		CameraDirection:     req.CameraDirection,
+		CameraMotion:        req.CameraMotion,
 		Duration:            req.Duration,
 		Background:          req.Background,
 		ThumbnailURL:        req.ThumbnailURL,
@@ -277,7 +285,11 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	var req struct {
 		ShotNumber          *int     `json:"shot_number"`
 		Content             *string  `json:"content"`
+		Dialogue            *string  `json:"dialogue"`
+		ShotType            *string  `json:"shot_type"`
+		Mood                *string  `json:"mood"`
 		CameraDirection     *string  `json:"camera_direction"`
+		CameraMotion        *string  `json:"camera_motion"`
 		Duration            *float64 `json:"duration"`
 		Background          *string  `json:"background"`
 		ThumbnailURL        *string  `json:"thumbnail_url"`
@@ -302,8 +314,20 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	if req.Content != nil {
 		storyboard.Content = *req.Content
 	}
+	if req.Dialogue != nil {
+		storyboard.Dialogue = *req.Dialogue
+	}
+	if req.ShotType != nil {
+		storyboard.ShotType = *req.ShotType
+	}
+	if req.Mood != nil {
+		storyboard.Mood = *req.Mood
+	}
 	if req.CameraDirection != nil {
 		storyboard.CameraDirection = *req.CameraDirection
+	}
+	if req.CameraMotion != nil {
+		storyboard.CameraMotion = *req.CameraMotion
 	}
 	if req.Duration != nil {
 		storyboard.Duration = *req.Duration

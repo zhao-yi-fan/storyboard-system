@@ -42,7 +42,10 @@ type parsedScene struct {
 type parsedStoryboard struct {
 	Content         string
 	Dialogue        string
+	ShotType        string
+	Mood            string
 	CameraDirection string
+	CameraMotion    string
 	Duration        float64
 	Background      string
 	Notes           string
@@ -201,9 +204,9 @@ func insertScene(tx *sql.Tx, projectID, chapterID int64, scene parsedScene, sort
 
 func insertStoryboard(tx *sql.Tx, projectID, chapterID, sceneID int64, storyboard parsedStoryboard, shotNumber int) (int64, error) {
 	result, err := tx.Exec(`
-		INSERT INTO storyboards (scene_id, chapter_id, project_id, shot_number, content, camera_direction, duration, background, thumbnail_url, notes, sort_order)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)
-	`, sceneID, chapterID, projectID, shotNumber, storyboard.Content, storyboard.CameraDirection, storyboard.Duration, storyboard.Background, storyboard.Notes, shotNumber)
+		INSERT INTO storyboards (scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, camera_direction, camera_motion, duration, background, thumbnail_url, notes, sort_order)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)
+	`, sceneID, chapterID, projectID, shotNumber, storyboard.Content, storyboard.Dialogue, storyboard.ShotType, storyboard.Mood, storyboard.CameraDirection, storyboard.CameraMotion, storyboard.Duration, storyboard.Background, storyboard.Notes, shotNumber)
 	if err != nil {
 		return 0, err
 	}

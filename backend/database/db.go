@@ -83,6 +83,48 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("storyboards", "dialogue") {
+		if _, err := DB.Exec(`ALTER TABLE storyboards ADD COLUMN dialogue TEXT NULL AFTER content`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("storyboards", "shot_type") {
+		if _, err := DB.Exec(`ALTER TABLE storyboards ADD COLUMN shot_type VARCHAR(50) NULL DEFAULT NULL AFTER dialogue`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("storyboards", "mood") {
+		if _, err := DB.Exec(`ALTER TABLE storyboards ADD COLUMN mood VARCHAR(50) NULL DEFAULT NULL AFTER shot_type`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("storyboards", "camera_motion") {
+		if _, err := DB.Exec(`ALTER TABLE storyboards ADD COLUMN camera_motion VARCHAR(50) NULL DEFAULT NULL AFTER camera_direction`); err != nil {
+			return err
+		}
+	}
+
+	backfillQueries := []string{
+		`UPDATE storyboards
+		SET shot_type = TRIM(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, '景别：', -1), '\n', 1), '\r', ''))
+		WHERE (shot_type IS NULL OR shot_type = '') AND notes LIKE '%景别：%'`,
+		`UPDATE storyboards
+		SET mood = TRIM(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, '情绪：', -1), '\n', 1), '\r', ''))
+		WHERE (mood IS NULL OR mood = '') AND notes LIKE '%情绪：%'`,
+		`UPDATE storyboards
+		SET dialogue = TRIM(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, '台词：', -1), '\n', 1), '\r', ''))
+		WHERE (dialogue IS NULL OR dialogue = '') AND notes LIKE '%台词：%'`,
+	}
+
+	for _, query := range backfillQueries {
+		if _, err := DB.Exec(query); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

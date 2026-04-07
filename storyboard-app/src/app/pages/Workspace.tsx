@@ -63,6 +63,40 @@ const VIDEO_MODEL_OPTIONS = [
   { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
 ] as const;
 
+const SHOT_TYPE_OPTIONS = ["远景", "全景", "中景", "近景", "特写", "大特写"] as const;
+const CAMERA_DIRECTION_OPTIONS = ["平视", "俯视", "仰视", "侧面"] as const;
+const CAMERA_MOTION_OPTIONS = ["静止", "推镜", "拉镜", "横移", "跟拍", "手持轻晃"] as const;
+const MOOD_OPTIONS = ["压抑", "神秘", "温暖", "孤独", "紧张", "惊悚", "冷峻"] as const;
+
+type ShotFormState = {
+  content: string;
+  dialogue: string;
+  shot_type: string;
+  camera_direction: string;
+  camera_motion: string;
+  mood: string;
+  notes: string;
+};
+
+const emptyShotForm: ShotFormState = {
+  content: "",
+  dialogue: "",
+  shot_type: "",
+  camera_direction: "",
+  camera_motion: "",
+  mood: "",
+  notes: "",
+};
+
+const buildShotFormState = (shot: Storyboard | null): ShotFormState => ({
+  content: shot?.content || "",
+  dialogue: shot?.dialogue || "",
+  shot_type: shot?.shot_type || "",
+  camera_direction: shot?.camera_direction || "",
+  camera_motion: shot?.camera_motion || "",
+  mood: shot?.mood || "",
+  notes: shot?.notes || "",
+});
 
 function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
   if (!storyboard) return "";
@@ -103,6 +137,7 @@ export default function Workspace() {
   const [selectedShot, setSelectedShot] = useState<Storyboard | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSavingShot, setIsSavingShot] = useState(false);
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
@@ -113,6 +148,7 @@ export default function Workspace() {
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
+  const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -146,6 +182,10 @@ export default function Workspace() {
       setMediaGenerations([]);
     }
   }, [selectedShot?.id]);
+
+  useEffect(() => {
+    setShotForm(buildShotFormState(selectedShot));
+  }, [selectedShot]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -382,6 +422,7 @@ export default function Workspace() {
   const formatShotNumber = (num?: number) => String(num ?? 0).padStart(3, "0");
 
   const deriveShotType = (shot: Storyboard) => {
+    if (shot.shot_type) return shot.shot_type;
     const text = `${shot.content || ""} ${shot.notes || ""}`;
     if (text.includes("特写")) return "特写";
     if (text.includes("中景")) return "中景";
@@ -392,6 +433,7 @@ export default function Workspace() {
   };
 
   const deriveEmotion = (shot: Storyboard) => {
+    if (shot.mood) return shot.mood;
     const text = `${shot.content || ""} ${shot.notes || ""}`;
     if (text.includes("孤独")) return "孤独";
     if (text.includes("沉思")) return "沉思";
@@ -518,6 +560,34 @@ export default function Workspace() {
     } finally {
       setActiveMediaActionKey(null);
       setDeleteTargetGeneration(null);
+    }
+  };
+
+  const updateShotForm = <K extends keyof ShotFormState>(key: K, value: ShotFormState[K]) => {
+    setShotForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveShot = async () => {
+    if (!selectedShot) {
+      return;
+    }
+
+    setIsSavingShot(true);
+    try {
+      const nextShot = await storyboardApi.updateStoryboard(selectedShot.id, {
+        content: shotForm.content,
+        dialogue: shotForm.dialogue,
+        shot_type: shotForm.shot_type,
+        mood: shotForm.mood,
+        camera_direction: shotForm.camera_direction,
+        camera_motion: shotForm.camera_motion,
+        notes: shotForm.notes,
+      });
+      applyStoryboardUpdate(nextShot);
+    } catch (error) {
+      console.error("Failed to save storyboard:", error);
+    } finally {
+      setIsSavingShot(false);
     }
   };
 
@@ -1274,9 +1344,9 @@ export default function Workspace() {
                   <div>
                     <Label className="text-xs text-gray-400">画面描述</Label>
                     <Textarea
-                      value={selectedShot.content}
+                      value={shotForm.content}
                       className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
-                      readOnly
+                      onChange={(e) => updateShotForm("content", e.target.value)}
                     />
                   </div>
 
@@ -1284,10 +1354,10 @@ export default function Workspace() {
                   <div>
                     <Label className="text-xs text-gray-400">台词</Label>
                     <Textarea
-                      // TODO: store dialogue separately
+                      value={shotForm.dialogue}
                       placeholder="无台词"
                       className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
-                      readOnly
+                      onChange={(e) => updateShotForm("dialogue", e.target.value)}
                     />
                   </div>
 
@@ -1295,38 +1365,72 @@ export default function Workspace() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-gray-400">景别</Label>
-                      <Select value={""}>
+                      <Select value={shotForm.shot_type} onValueChange={(value) => updateShotForm("shot_type", value)}>
                         <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue />
+                          <SelectValue placeholder="选择景别" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          <SelectItem value="远景">远景</SelectItem>
-                          <SelectItem value="全景">全景</SelectItem>
-                          <SelectItem value="中景">中景</SelectItem>
-                          <SelectItem value="近景">近景</SelectItem>
-                          <SelectItem value="特写">特写</SelectItem>
-                          <SelectItem value="大特写">大特写</SelectItem>
+                          {SHOT_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div>
                       <Label className="text-xs text-gray-400">机位</Label>
-                      <Select value={selectedShot.camera_direction}>
+                      <Select value={shotForm.camera_direction} onValueChange={(value) => updateShotForm("camera_direction", value)}>
                         <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue />
+                          <SelectValue placeholder="选择机位" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          <SelectItem value="平视">平视</SelectItem>
-                          <SelectItem value="俯视">俯视</SelectItem>
-                          <SelectItem value="仰视">仰视</SelectItem>
-                          <SelectItem value="侧面">侧面</SelectItem>
+                          {CAMERA_DIRECTION_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  {/* Duration & Emotion */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-gray-400">镜头运动</Label>
+                      <Select value={shotForm.camera_motion} onValueChange={(value) => updateShotForm("camera_motion", value)}>
+                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                          <SelectValue placeholder="选择镜头运动" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                          {CAMERA_MOTION_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">情绪</Label>
+                      <Select value={shotForm.mood} onValueChange={(value) => updateShotForm("mood", value)}>
+                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                          <SelectValue placeholder="选择情绪" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                          {MOOD_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Duration */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-gray-400">时长（秒）</Label>
@@ -1337,32 +1441,32 @@ export default function Workspace() {
                       />
                     </div>
 
-                    <div>
-                      <Label className="text-xs text-gray-400">情绪</Label>
-                      <Input
-                        value={""}
-                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
-                        readOnly
-                      />
-                    </div>
+                    <div></div>
                   </div>
 
                   {/* Notes */}
                   <div>
-                    <Label className="text-xs text-gray-400">备注</Label>
+                    <Label className="text-xs text-gray-400">备注（补充细节）</Label>
                     <Textarea
-                      value={selectedShot.notes || ""}
+                      value={shotForm.notes}
                       placeholder="添加备注..."
                       className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
-                      readOnly
+                      onChange={(e) => updateShotForm("notes", e.target.value)}
                     />
                   </div>
                 </div>
               </div>
 
               <div className="p-4 border-t border-gray-800 flex gap-2">
-                <Button className="flex-1 bg-purple-600 hover:bg-purple-700">
-                  保存修改
+                <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={handleSaveShot} disabled={isSavingShot}>
+                  {isSavingShot ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      保存中...
+                    </>
+                  ) : (
+                    "保存修改"
+                  )}
                 </Button>
                 <Button variant="outline" className="border-gray-700">
                   <MoreHorizontal className="w-4 h-4" />

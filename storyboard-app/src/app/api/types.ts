@@ -71,7 +71,11 @@ export type Storyboard = {
   project_id: number;
   shot_number: number;
   content: string;
+  dialogue?: string;
+  shot_type?: string;
+  mood?: string;
   camera_direction: string;
+  camera_motion?: string;
   duration: number;
   background: string;
   thumbnail_url: string;

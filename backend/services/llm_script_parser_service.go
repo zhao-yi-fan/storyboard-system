@@ -216,7 +216,10 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 				parsedStoryboardItem := parsedStoryboard{
 					Content:         visualDescription,
 					Dialogue:        strings.TrimSpace(storyboard.Dialogue),
-					CameraDirection: nonEmpty(strings.TrimSpace(storyboard.CameraAngle), strings.TrimSpace(storyboard.ShotType), "中景"),
+					ShotType:        strings.TrimSpace(storyboard.ShotType),
+					Mood:            strings.TrimSpace(storyboard.Mood),
+					CameraDirection: nonEmpty(strings.TrimSpace(storyboard.CameraAngle), "平视"),
+					CameraMotion:    "",
 					Duration:        normalizeDuration(storyboard.DurationSeconds),
 					Background:      buildStoryboardBackground(parsedSceneItem.Title, parsedSceneItem.Location, parsedSceneItem.TimeOfDay),
 					Notes:           buildStoryboardNotes(storyboard),
@@ -267,12 +270,7 @@ func buildCharacterDescription(detail llmCharacter) string {
 }
 
 func buildStoryboardNotes(storyboard llmStoryboard) string {
-	return strings.TrimSpace(strings.Join(filterNonEmptyStrings([]string{
-		prefixIfNotEmpty("景别：", strings.TrimSpace(storyboard.ShotType)),
-		prefixIfNotEmpty("情绪：", strings.TrimSpace(storyboard.Mood)),
-		prefixIfNotEmpty("台词：", strings.TrimSpace(storyboard.Dialogue)),
-		strings.TrimSpace(storyboard.Notes),
-	}), "\n"))
+	return strings.TrimSpace(storyboard.Notes)
 }
 
 func buildStoryboardBackground(title, location, timeOfDay string) string {

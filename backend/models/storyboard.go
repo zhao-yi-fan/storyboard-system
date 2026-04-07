@@ -12,7 +12,11 @@ type Storyboard struct {
 	ProjectID           int64       `json:"project_id"`
 	ShotNumber          int         `json:"shot_number"`
 	Content             string      `json:"content"`
+	Dialogue            string      `json:"dialogue"`
+	ShotType            string      `json:"shot_type"`
+	Mood                string      `json:"mood"`
 	CameraDirection     string      `json:"camera_direction"`
+	CameraMotion        string      `json:"camera_motion"`
 	Duration            float64     `json:"duration"`
 	Background          string      `json:"background"`
 	ThumbnailURL        string      `json:"thumbnail_url"`

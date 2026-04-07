@@ -162,10 +162,9 @@ func buildStoryboardCoverPrompt(storyboard *models.Storyboard, scene *models.Sce
 		b.WriteString(strings.Join(characters, "、"))
 		b.WriteString("。")
 	}
-
-	if storyboard.Content != "" {
-		b.WriteString(" 画面主体：")
-		b.WriteString(storyboard.Content)
+	if storyboard.ShotType != "" {
+		b.WriteString(" 景别：")
+		b.WriteString(storyboard.ShotType)
 		b.WriteString("。")
 	}
 	if storyboard.CameraDirection != "" {
@@ -173,9 +172,25 @@ func buildStoryboardCoverPrompt(storyboard *models.Storyboard, scene *models.Sce
 		b.WriteString(storyboard.CameraDirection)
 		b.WriteString("。")
 	}
+
+	if storyboard.Content != "" {
+		b.WriteString(" 画面主体：")
+		b.WriteString(storyboard.Content)
+		b.WriteString("。")
+	}
+	if storyboard.Mood != "" {
+		b.WriteString(" 情绪：")
+		b.WriteString(storyboard.Mood)
+		b.WriteString("。")
+	}
 	if storyboard.Notes != "" {
 		b.WriteString(" 额外提示：")
 		b.WriteString(sanitizePromptText(storyboard.Notes))
+		b.WriteString("。")
+	}
+	if strings.TrimSpace(storyboard.Dialogue) != "" {
+		b.WriteString(" 台词语义上下文：")
+		b.WriteString(sanitizePromptText(storyboard.Dialogue))
 		b.WriteString("。")
 	}
 
