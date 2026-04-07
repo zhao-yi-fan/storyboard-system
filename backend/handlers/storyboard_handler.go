@@ -402,6 +402,23 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 		return
 	}
 
+	var req struct {
+		Model string `json:"model"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil && !strings.Contains(err.Error(), "EOF") {
+		response.Error(c, err.Error())
+		return
+	}
+
+	selectedModel := strings.TrimSpace(req.Model)
+	if selectedModel == "" {
+		selectedModel = config.GlobalConfig.WanxVideoModel
+	}
+	if !config.IsSupportedWanxVideoModel(selectedModel) {
+		response.Error(c, "unsupported video model")
+		return
+	}
+
 	service, err := services.NewStoryboardVideoService()
 	if err != nil {
 		response.Error(c, err.Error())
@@ -419,7 +436,7 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 		publicBaseURL = strings.TrimRight(config.GlobalConfig.PublicAppBaseURL, "/")
 	}
 
-	storyboard, err := service.StartGenerate(id, publicBaseURL)
+	storyboard, err := service.StartGenerate(id, publicBaseURL, selectedModel)
 	if err != nil {
 		response.Error(c, err.Error())
 		return

@@ -126,7 +126,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GlobalConfig.WanxVideoRequestTimeoutSeconds)*time.Second)
 	defer cancel()
 
-	videoURL, duration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput)
+	videoURL, duration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput, generation.Model)
 	if err != nil {
 		storyboard.VideoStatus = "failed"
 		storyboard.VideoError = err.Error()
@@ -177,13 +177,17 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	return s.storyboardRepo.FindByID(storyboard.ID)
 }
 
-func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL string) (*models.Storyboard, error) {
+func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL, model string) (*models.Storyboard, error) {
 	storyboard, err := s.storyboardRepo.FindByID(storyboardID)
 	if err != nil {
 		return nil, err
 	}
 	if storyboard == nil {
 		return nil, fmt.Errorf("storyboard not found")
+	}
+
+	if strings.TrimSpace(model) == "" {
+		model = config.GlobalConfig.WanxVideoModel
 	}
 
 	if storyboard.VideoStatus == "generating" {
@@ -193,7 +197,7 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 	generation := &models.StoryboardMediaGeneration{
 		StoryboardID: storyboard.ID,
 		MediaType:    "video",
-		Model:        config.GlobalConfig.WanxVideoModel,
+		Model:        model,
 		Status:       "generating",
 		PreviewURL:   "",
 		SourceURL:    storyboard.ThumbnailURL,

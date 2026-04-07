@@ -60,6 +60,7 @@ const COVER_MODEL_OPTIONS = [
 
 const VIDEO_MODEL_OPTIONS = [
   { value: "wan2.6-i2v-flash", label: "Wan 2.6 I2V Flash" },
+  { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
 ] as const;
 
 function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
@@ -440,7 +441,9 @@ export default function Workspace() {
 
     setGeneratingVideoId(selectedShot.id);
     try {
-      const result = await storyboardApi.generateStoryboardVideo(selectedShot.id);
+      const result = await storyboardApi.generateStoryboardVideo(selectedShot.id, {
+        model: selectedVideoModel,
+      });
       const nextShot = result.storyboard;
       applyStoryboardUpdate(nextShot);
       await loadMediaGenerations(nextShot.id);

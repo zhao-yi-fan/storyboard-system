@@ -87,6 +87,16 @@ func (c Config) ValidateWanxVideoConfig() error {
 	}
 }
 
+var SupportedWanxVideoModels = map[string]struct{}{
+	"wan2.6-i2v-flash": {},
+	"wan2.7-i2v":       {},
+}
+
+func IsSupportedWanxVideoModel(model string) bool {
+	_, ok := SupportedWanxVideoModels[model]
+	return ok
+}
+
 func (c Config) ValidateWanxConfig() error {
 	switch {
 	case c.DashScopeAPIKey == "":
