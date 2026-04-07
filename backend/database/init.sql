@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS storyboards (
     thumbnail_url VARCHAR(500) COMMENT '原图URL',
     thumbnail_preview_url VARCHAR(500) COMMENT '缩略图预览URL',
     video_url VARCHAR(500) COMMENT '视频URL',
+    video_preview_url VARCHAR(500) COMMENT '视频预览URL',
     video_status VARCHAR(50) COMMENT '视频生成状态',
     video_error TEXT COMMENT '视频生成错误信息',
     video_duration DECIMAL(8,2) COMMENT '视频时长（秒）',

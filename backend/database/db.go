@@ -77,6 +77,12 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("storyboards", "video_preview_url") {
+		if _, err := DB.Exec(`ALTER TABLE storyboards ADD COLUMN video_preview_url VARCHAR(500) NULL DEFAULT NULL AFTER video_url`); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

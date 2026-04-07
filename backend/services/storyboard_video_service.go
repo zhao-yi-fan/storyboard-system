@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -31,7 +32,13 @@ type StoryboardVideoService struct {
 	httpClient     *http.Client
 }
 
+const storyboardVideoPreviewHeight = 480
+
 func NewStoryboardVideoService() (*StoryboardVideoService, error) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		return nil, fmt.Errorf("镜头视频预览未配置：缺少 ffmpeg")
+	}
+
 	coverService, err := NewStoryboardCoverService()
 	if err != nil {
 		return nil, err
@@ -104,7 +111,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 
 	if generation != nil {
 		generation.SourceURL = storyboard.ThumbnailURL
-		generation.PreviewURL = firstNonEmpty(storyboard.ThumbnailPreviewURL, storyboard.ThumbnailURL)
+		generation.PreviewURL = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
 			"resolution": "720P",
 			"duration":   5,
@@ -128,7 +135,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		return nil, err
 	}
 
-	publicPath, err := s.downloadAndStore(ctx, storyboard.ID, videoURL)
+	publicPath, previewPath, err := s.downloadAndStore(ctx, storyboard.ID, videoURL)
 	if err != nil {
 		storyboard.VideoStatus = "failed"
 		storyboard.VideoError = err.Error()
@@ -138,6 +145,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	}
 
 	storyboard.VideoURL = publicPath
+	storyboard.VideoPreviewURL = previewPath
 	storyboard.VideoStatus = "succeeded"
 	storyboard.VideoError = ""
 	storyboard.VideoDuration = duration
@@ -149,13 +157,14 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	if generation != nil {
 		generation.Status = "succeeded"
 		generation.ResultURL = publicPath
-		generation.PreviewURL = firstNonEmpty(storyboard.ThumbnailPreviewURL, storyboard.ThumbnailURL)
+		generation.PreviewURL = previewPath
 		generation.SourceURL = storyboard.ThumbnailURL
 		generation.ErrorMessage = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
 			"resolution": "720P",
 			"duration":   duration,
 			"audio":      true,
+			"preview_height": storyboardVideoPreviewHeight,
 		})
 		if err := s.historyRepo.Update(generation); err != nil {
 			return nil, err
@@ -186,9 +195,9 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 		MediaType:    "video",
 		Model:        config.GlobalConfig.WanxVideoModel,
 		Status:       "generating",
-		PreviewURL:   firstNonEmpty(storyboard.ThumbnailPreviewURL, storyboard.ThumbnailURL),
+		PreviewURL:   "",
 		SourceURL:    storyboard.ThumbnailURL,
-		MetaJSON:     mustMarshalMediaMeta(map[string]any{"resolution": "720P", "duration": 5, "audio": true}),
+		MetaJSON:     mustMarshalMediaMeta(map[string]any{"resolution": "720P", "duration": 5, "audio": true, "preview_height": storyboardVideoPreviewHeight}),
 	}
 	if err := s.historyRepo.Create(generation); err != nil {
 		return nil, err
@@ -424,48 +433,77 @@ func resizeNearest(src image.Image, width, height int) image.Image {
 	return dst
 }
 
-func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboardID int64, sourceURL string) (string, error) {
+func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboardID int64, sourceURL string) (string, string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("下载生成视频失败: %w", err)
+		return "", "", fmt.Errorf("下载生成视频失败: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("下载生成视频失败: HTTP %d", resp.StatusCode)
+		return "", "", fmt.Errorf("下载生成视频失败: HTTP %d", resp.StatusCode)
 	}
 
 	assetRoot := config.GlobalConfig.GeneratedAssetDir
 	if !filepath.IsAbs(assetRoot) {
 		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	videosDir := filepath.Join(assetRoot, "videos")
 	if err := os.MkdirAll(videosDir, 0o755); err != nil {
-		return "", fmt.Errorf("创建视频目录失败: %w", err)
+		return "", "", fmt.Errorf("创建视频目录失败: %w", err)
 	}
 
 	filename := fmt.Sprintf("storyboard-%d-%d.mp4", storyboardID, time.Now().Unix())
 	dstPath := filepath.Join(videosDir, filename)
 	file, err := os.Create(dstPath)
 	if err != nil {
-		return "", fmt.Errorf("创建视频文件失败: %w", err)
+		return "", "", fmt.Errorf("创建视频文件失败: %w", err)
 	}
 	defer file.Close()
 
 	if _, err := io.Copy(file, resp.Body); err != nil {
-		return "", fmt.Errorf("保存视频文件失败: %w", err)
+		return "", "", fmt.Errorf("保存视频文件失败: %w", err)
+	}
+
+	previewFilename := strings.TrimSuffix(filename, ".mp4") + ".preview.mp4"
+	previewPath := filepath.Join(videosDir, previewFilename)
+	if err := generateVideoPreview(ctx, dstPath, previewPath); err != nil {
+		return "", "", err
 	}
 
 	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	return fmt.Sprintf("%s/videos/%s", basePath, filename), nil
+	return fmt.Sprintf("%s/videos/%s", basePath, filename), fmt.Sprintf("%s/videos/%s", basePath, previewFilename), nil
+}
+
+func generateVideoPreview(ctx context.Context, srcPath, previewPath string) error {
+	cmd := exec.CommandContext(
+		ctx,
+		"ffmpeg",
+		"-y",
+		"-i", srcPath,
+		"-vf", fmt.Sprintf("scale=-2:%d", storyboardVideoPreviewHeight),
+		"-c:v", "libx264",
+		"-preset", "veryfast",
+		"-crf", "32",
+		"-c:a", "aac",
+		"-b:a", "96k",
+		"-movflags", "+faststart",
+		previewPath,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("生成视频预览失败: %v: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 func mimeTypeFromPath(path string) string {

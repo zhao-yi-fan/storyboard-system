@@ -283,6 +283,7 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 		ThumbnailURL        *string  `json:"thumbnail_url"`
 		ThumbnailPreviewURL *string  `json:"thumbnail_preview_url"`
 		VideoURL            *string  `json:"video_url"`
+		VideoPreviewURL     *string  `json:"video_preview_url"`
 		VideoStatus         *string  `json:"video_status"`
 		VideoError          *string  `json:"video_error"`
 		VideoDuration       *float64 `json:"video_duration"`
@@ -318,6 +319,9 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	}
 	if req.VideoURL != nil {
 		storyboard.VideoURL = *req.VideoURL
+	}
+	if req.VideoPreviewURL != nil {
+		storyboard.VideoPreviewURL = *req.VideoPreviewURL
 	}
 	if req.VideoStatus != nil {
 		storyboard.VideoStatus = *req.VideoStatus
@@ -422,9 +426,10 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{
-		"storyboard_id": storyboard.ID,
-		"video_url":     storyboard.VideoURL,
-		"storyboard":    storyboard,
+		"storyboard_id":      storyboard.ID,
+		"video_url":          storyboard.VideoURL,
+		"video_preview_url":  storyboard.VideoPreviewURL,
+		"storyboard":         storyboard,
 	})
 }
 
@@ -508,6 +513,7 @@ func applyGenerationToStoryboard(storyboard *models.Storyboard, generation *mode
 		storyboard.ThumbnailPreviewURL = generation.PreviewURL
 	case "video":
 		storyboard.VideoURL = generation.ResultURL
+		storyboard.VideoPreviewURL = generation.PreviewURL
 		storyboard.VideoStatus = generation.Status
 		storyboard.VideoError = generation.ErrorMessage
 		if duration := extractVideoDuration(generation.MetaJSON); duration > 0 {
@@ -527,6 +533,7 @@ func clearStoryboardMedia(storyboard *models.Storyboard, mediaType string) {
 		storyboard.ThumbnailPreviewURL = ""
 	case "video":
 		storyboard.VideoURL = ""
+		storyboard.VideoPreviewURL = ""
 		storyboard.VideoStatus = ""
 		storyboard.VideoError = ""
 		storyboard.VideoDuration = 0

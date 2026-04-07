@@ -62,6 +62,11 @@ const VIDEO_MODEL_OPTIONS = [
   { value: "wan2.6-i2v-flash", label: "Wan 2.6 I2V Flash" },
 ] as const;
 
+function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
+  if (!storyboard) return "";
+  return storyboard.video_preview_url || storyboard.video_url || "";
+}
+
 const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
   shot?.thumbnail_preview_url || shot?.thumbnail_url || "";
 
@@ -1005,16 +1010,25 @@ export default function Workspace() {
                       <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-2">
                         <div className="mb-2 flex items-center justify-between">
                           <span className="text-xs text-gray-400">视频预览</span>
-                          {selectedShot.video_duration ? (
-                            <span className="text-xs text-gray-500">{selectedShot.video_duration}s</span>
-                          ) : null}
+                          <div className="flex items-center gap-3">
+                            {selectedShot.video_duration ? (
+                              <span className="text-xs text-gray-500">{selectedShot.video_duration}s</span>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="text-xs text-purple-300 hover:text-purple-200"
+                              onClick={() => window.open(selectedShot.video_url, "_blank", "noopener,noreferrer")}
+                            >
+                              打开原视频
+                            </button>
+                          </div>
                         </div>
                         <video
-                          key={selectedShot.video_url}
-                          src={selectedShot.video_url}
+                          key={getStoryboardVideoPreviewSrc(selectedShot)}
+                          src={getStoryboardVideoPreviewSrc(selectedShot)}
                           controls
                           preload="metadata"
-                          poster={selectedShot.thumbnail_url || undefined}
+                          poster={selectedShot.thumbnail_preview_url || selectedShot.thumbnail_url || undefined}
                           className="w-full rounded bg-black"
                         />
                       </div>
@@ -1120,12 +1134,12 @@ export default function Workspace() {
                           <div key={generation.id} className="rounded-md border border-gray-800 bg-[#161616] p-2 space-y-2">
                             <div className="flex gap-3">
                               <div className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]">
-                                {getGenerationPreviewSrc(generation) ? (
-                                  <img
-                                    src={getGenerationPreviewSrc(generation)}
-                                    alt=""
-                                    loading="lazy"
-                                    decoding="async"
+                                {generation.preview_url || generation.result_url ? (
+                                  <video
+                                    src={generation.preview_url || generation.result_url}
+                                    muted
+                                    playsInline
+                                    preload="metadata"
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (

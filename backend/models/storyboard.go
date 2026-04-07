@@ -18,6 +18,7 @@ type Storyboard struct {
 	ThumbnailURL        string      `json:"thumbnail_url"`
 	ThumbnailPreviewURL string      `json:"thumbnail_preview_url"`
 	VideoURL            string      `json:"video_url"`
+	VideoPreviewURL     string      `json:"video_preview_url"`
 	VideoStatus         string      `json:"video_status"`
 	VideoError          string      `json:"video_error"`
 	VideoDuration       float64     `json:"video_duration"`

@@ -77,6 +77,7 @@ export type Storyboard = {
   thumbnail_url: string;
   thumbnail_preview_url?: string;
   video_url?: string;
+  video_preview_url?: string;
   video_status?: string;
   video_error?: string;
   video_duration?: number;
@@ -119,5 +120,6 @@ export type GenerateStoryboardCoverResult = {
 export type GenerateStoryboardVideoResult = {
   storyboard_id: number;
   video_url: string;
+  video_preview_url?: string;
   storyboard: Storyboard;
 };
