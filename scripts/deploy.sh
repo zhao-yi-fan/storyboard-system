@@ -56,7 +56,7 @@ log "commit after pull: $(git rev-parse --short HEAD)"
 run "build frontend" bash -lc "cd '$FRONTEND_DIR' && npm run build"
 run "build backend" bash -lc "cd '$BACKEND_DIR' && go build -o storyboard-backend ."
 
-existing_pids="$(ps -eo pid=,args= | awk '$2 == \"./storyboard-backend\" {print $1}')"
+existing_pids="$(ps -eo pid=,args= | awk '$2 == "./storyboard-backend" {print $1}')"
 if [[ -n "${existing_pids}" ]]; then
   log "stopping existing backend process(es): ${existing_pids//$'\n'/, }"
   while IFS= read -r pid; do
