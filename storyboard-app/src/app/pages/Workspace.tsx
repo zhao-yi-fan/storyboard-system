@@ -7,6 +7,7 @@ import {
   Plus,
   Search,
   MoreHorizontal,
+  Trash2,
   Play,
   Save,
   Download,
@@ -165,6 +166,7 @@ export default function Workspace() {
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isCreatingShot, setIsCreatingShot] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
+  const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
@@ -564,6 +566,32 @@ export default function Workspace() {
     setDeleteTargetGeneration(generation);
   };
 
+  const handleRequestDeleteScene = (scene: Scene) => {
+    setDeleteTargetScene(scene);
+  };
+
+  const confirmDeleteScene = async () => {
+    if (!deleteTargetScene) {
+      return;
+    }
+
+    try {
+      await sceneApi.deleteScene(deleteTargetScene.id);
+      const deletingSelected = selectedScene?.id === deleteTargetScene.id;
+      setDeleteTargetScene(null);
+      if (selectedChapter) {
+        await loadScenes(selectedChapter.id, false);
+      }
+      if (deletingSelected) {
+        setSelectedScene(null);
+        setStoryboards([]);
+        setSelectedShot(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete scene:", error);
+    }
+  };
+
   const confirmDeleteGeneration = async () => {
     if (!selectedShot || !deleteTargetGeneration) {
       return;
@@ -838,18 +866,34 @@ export default function Workspace() {
                         {scenes
                           .filter((s) => s.chapter_id === chapter.id)
                           .map((scene) => (
-                            <button
+                            <div
                               key={scene.id}
-                              onClick={() => selectScene(scene)}
-                              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded ${
+                              className={`w-full flex items-center gap-1 px-1 py-0.5 text-sm rounded ${
                                 selectedScene?.id === scene.id
                                   ? "bg-purple-600/20 text-purple-300"
-                                  : "hover:bg-[#1a1a1a] text-gray-300"
+                                  : "text-gray-300 hover:bg-[#1a1a1a]"
                               }`}
                             >
-                              <Camera className="w-3.5 h-3.5" />
-                              <span className="flex-1 text-left truncate">{scene.title}</span>
-                            </button>
+                              <button
+                                onClick={() => selectScene(scene)}
+                                className="flex-1 flex items-center gap-2 px-1 py-1 text-sm rounded text-left"
+                              >
+                                <Camera className="w-3.5 h-3.5" />
+                                <span className="flex-1 truncate">{scene.title}</span>
+                              </button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 text-gray-500 hover:bg-red-500/10 hover:text-red-400"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleRequestDeleteScene(scene);
+                                }}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
                           ))}
                       </div>
                     )}
@@ -1651,7 +1695,6 @@ export default function Workspace() {
             <Button
               type="button"
               variant="outline"
-              className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]"
               onClick={() => {
                 setIsCreateSceneOpen(false);
                 resetNewSceneForm();
@@ -1691,7 +1734,7 @@ export default function Workspace() {
             <div className="flex justify-between gap-4"><span className="text-gray-500">输出</span><span>1 张封面图</span></div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]">取消</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateCover}>确认生成</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1712,7 +1755,7 @@ export default function Workspace() {
             <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 5秒 / 有声</span></div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]">取消</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateVideo}>确认生成</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1748,13 +1791,51 @@ export default function Workspace() {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-700 bg-transparent text-gray-300 hover:bg-[#1a1a1a]">
+            <AlertDialogCancel>
               取消
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700 text-white"
               onClick={confirmDeleteGeneration}
             >
+              确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteTargetScene}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTargetScene(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除场景</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              该操作会删除当前场景及其镜头数据，需要二次确认。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">场景标题</span>
+              <span>{deleteTargetScene?.title || '-'}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">地点</span>
+              <span>{deleteTargetScene?.location || '-'}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">时间</span>
+              <span>{deleteTargetScene?.time_of_day || '-'}</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDeleteScene}>
               确认删除
             </AlertDialogAction>
           </AlertDialogFooter>
