@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
+	"strings"
 
 	"storyboard-backend/database"
 	"storyboard-backend/models"
@@ -32,7 +34,7 @@ func (r *AssetRepository) FindByProjectID(projectID int64) ([]models.Asset, erro
 		}
 		a.CoverURL = nullStringValue(coverURL)
 		a.ThumbnailURL = nullStringValue(thumbnailURL)
-		a.Meta = nullStringValue(meta)
+		a.Meta = decodeAssetMeta(meta)
 		assets = append(assets, a)
 	}
 
@@ -61,7 +63,7 @@ func (r *AssetRepository) FindByCharacterID(characterID int64) ([]models.Asset, 
 		}
 		a.CoverURL = nullStringValue(coverURL)
 		a.ThumbnailURL = nullStringValue(thumbnailURL)
-		a.Meta = nullStringValue(meta)
+		a.Meta = decodeAssetMeta(meta)
 		assets = append(assets, a)
 	}
 
@@ -86,7 +88,7 @@ func (r *AssetRepository) FindByID(id int64) (*models.Asset, error) {
 	}
 	a.CoverURL = nullStringValue(coverURL)
 	a.ThumbnailURL = nullStringValue(thumbnailURL)
-	a.Meta = nullStringValue(meta)
+	a.Meta = decodeAssetMeta(meta)
 	return &a, nil
 }
 
@@ -95,7 +97,7 @@ func (r *AssetRepository) Create(a *models.Asset) error {
 	query := `INSERT INTO assets (project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := database.DB.Exec(query, a.ProjectID, a.CharacterID, a.Name, a.Type, a.FileURL, a.CoverURL, a.ThumbnailURL, a.Meta)
+	result, err := database.DB.Exec(query, a.ProjectID, a.CharacterID, a.Name, a.Type, a.FileURL, normalizeNullableString(a.CoverURL), normalizeNullableString(a.ThumbnailURL), normalizeAssetMetaForDB(a.Meta))
 	if err != nil {
 		return err
 	}
@@ -110,19 +112,19 @@ func (r *AssetRepository) Create(a *models.Asset) error {
 
 func (r *AssetRepository) Update(a *models.Asset) error {
 	query := `UPDATE assets SET character_id = ?, name = ?, type = ?, file_url = ?, cover_url = ?, thumbnail_url = ?, meta = ? WHERE id = ?`
-	_, err := database.DB.Exec(query, a.CharacterID, a.Name, a.Type, a.FileURL, a.CoverURL, a.ThumbnailURL, a.Meta, a.ID)
+	_, err := database.DB.Exec(query, a.CharacterID, a.Name, a.Type, a.FileURL, normalizeNullableString(a.CoverURL), normalizeNullableString(a.ThumbnailURL), normalizeAssetMetaForDB(a.Meta), a.ID)
 	return err
 }
 
 func (r *AssetRepository) UpdateThumbnailURL(id int64, thumbnailURL string) error {
 	query := `UPDATE assets SET thumbnail_url = ? WHERE id = ?`
-	_, err := database.DB.Exec(query, thumbnailURL, id)
+	_, err := database.DB.Exec(query, normalizeNullableString(thumbnailURL), id)
 	return err
 }
 
 func (r *AssetRepository) UpdateCoverURLs(id int64, coverURL, thumbnailURL string) error {
 	query := `UPDATE assets SET cover_url = ?, thumbnail_url = ? WHERE id = ?`
-	_, err := database.DB.Exec(query, coverURL, thumbnailURL, id)
+	_, err := database.DB.Exec(query, normalizeNullableString(coverURL), normalizeNullableString(thumbnailURL), id)
 	return err
 }
 
@@ -131,4 +133,34 @@ func (r *AssetRepository) Delete(id int64) error {
 	query := `UPDATE assets SET deleted_at = NOW() WHERE id = ?`
 	_, err := database.DB.Exec(query, id)
 	return err
+}
+
+func normalizeAssetMetaForDB(value string) any {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	if json.Valid([]byte(trimmed)) {
+		return trimmed
+	}
+	encoded, err := json.Marshal(trimmed)
+	if err != nil {
+		return trimmed
+	}
+	return string(encoded)
+}
+
+func decodeAssetMeta(value sql.NullString) string {
+	if !value.Valid {
+		return ""
+	}
+	trimmed := strings.TrimSpace(value.String)
+	if trimmed == "" {
+		return ""
+	}
+	var text string
+	if err := json.Unmarshal([]byte(trimmed), &text); err == nil {
+		return text
+	}
+	return trimmed
 }
