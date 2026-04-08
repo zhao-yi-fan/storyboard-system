@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
   Film,
   ChevronDown,
@@ -128,6 +129,9 @@ function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
 const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
   shot?.thumbnail_preview_url || shot?.thumbnail_url || "";
 
+const getScenePreviewSrc = (scene: Scene | null | undefined) =>
+  scene?.cover_preview_url || scene?.cover_url || "";
+
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
@@ -168,9 +172,13 @@ export default function Workspace() {
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
+  const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
+  const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
   const [isCreateSceneOpen, setIsCreateSceneOpen] = useState(false);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isCreatingShot, setIsCreatingShot] = useState(false);
+  const [isGeneratingSceneCover, setIsGeneratingSceneCover] = useState(false);
+  const [isBatchGeneratingSceneCover, setIsBatchGeneratingSceneCover] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
   const [deleteTargetShot, setDeleteTargetShot] = useState<Storyboard | null>(null);
@@ -286,6 +294,24 @@ export default function Workspace() {
     setSelectedShot((prev) => (prev?.id === nextShot.id ? nextShot : prev));
   };
 
+  const applySceneUpdate = (nextScene: Scene) => {
+    setScenes((prev) => prev.map((scene) => (scene.id === nextScene.id ? nextScene : scene)));
+    setSelectedScene((prev) => (prev?.id === nextScene.id ? nextScene : prev));
+  };
+
+  const applyStoryboardsRefresh = (nextStoryboards: Storyboard[]) => {
+    setStoryboards(nextStoryboards);
+    setSelectedShot((prev) => {
+      if (!nextStoryboards.length) {
+        return null;
+      }
+      if (!prev) {
+        return nextStoryboards[0] ?? null;
+      }
+      return nextStoryboards.find((shot) => shot.id === prev.id) || nextStoryboards[0] || null;
+    });
+  };
+
   const applyMediaMutation = (payload: { storyboard: Storyboard; media_generations: StoryboardMediaGeneration[] }) => {
     applyStoryboardUpdate(payload.storyboard);
     setMediaGenerations(payload.media_generations);
@@ -332,6 +358,11 @@ export default function Workspace() {
           setStoryboards([]);
           setSelectedShot(null);
         }
+      } else {
+        setSelectedScene((prev) => {
+          if (!prev) return prev;
+          return data.find((scene) => scene.id === prev.id) || prev;
+        });
       }
     } catch (error) {
       console.error("Failed to load scenes:", error);
@@ -552,6 +583,80 @@ export default function Workspace() {
     setIsVideoConfirmOpen(false);
     await runGenerateVideo();
   };
+  const handleGenerateSceneCover = () => {
+    if (!selectedScene || isGeneratingSceneCover) {
+      return;
+    }
+    setIsSceneCoverConfirmOpen(true);
+  };
+
+  const runGenerateSceneCover = async () => {
+    if (!selectedScene) {
+      return;
+    }
+
+    setIsGeneratingSceneCover(true);
+    try {
+      const result = await sceneApi.generateSceneCover(selectedScene.id);
+      applySceneUpdate(result.scene);
+      toast.success("场景封面生成完成");
+    } catch (error) {
+      console.error("Failed to generate scene cover:", error);
+    } finally {
+      setIsGeneratingSceneCover(false);
+    }
+  };
+
+  const confirmGenerateSceneCover = async () => {
+    setIsSceneCoverConfirmOpen(false);
+    await runGenerateSceneCover();
+  };
+
+  const handleBatchGenerateSceneCovers = () => {
+    if (!selectedScene || filteredShots.length === 0 || isBatchGeneratingSceneCover) {
+      return;
+    }
+    setIsBatchSceneCoverConfirmOpen(true);
+  };
+
+  const runBatchGenerateSceneCovers = async () => {
+    if (!selectedScene) {
+      return;
+    }
+
+    const currentShotId = selectedShot?.id ?? null;
+    setIsBatchGeneratingSceneCover(true);
+    try {
+      const result = await sceneApi.generateSceneStoryboardCovers(selectedScene.id);
+      applySceneUpdate(result.scene);
+      applyStoryboardsRefresh(result.storyboards);
+      if (currentShotId) {
+        const refreshedSelected = result.storyboards.find((shot) => shot.id === currentShotId);
+        if (refreshedSelected) {
+          setSelectedShot(refreshedSelected);
+          await loadMediaGenerations(refreshedSelected.id);
+        } else {
+          setMediaGenerations([]);
+        }
+      }
+      if (result.generated_count > 0) {
+        toast.success(`已为 ${result.generated_count} 个镜头生成封面`);
+      }
+      if (result.failed.length > 0) {
+        toast.error(`${result.failed.length} 个镜头封面生成失败`);
+      }
+    } catch (error) {
+      console.error("Failed to batch generate storyboard covers:", error);
+    } finally {
+      setIsBatchGeneratingSceneCover(false);
+    }
+  };
+
+  const confirmBatchGenerateSceneCovers = async () => {
+    setIsBatchSceneCoverConfirmOpen(false);
+    await runBatchGenerateSceneCovers();
+  };
+
 
   const handleSetCurrentGeneration = async (generation: StoryboardMediaGeneration) => {
     if (!selectedShot) {
@@ -916,10 +1021,29 @@ export default function Workspace() {
                             >
                               <button
                                 onClick={() => selectScene(scene)}
-                                className="flex-1 flex items-center gap-2 px-1 py-1 text-sm rounded text-left"
+                                className="flex-1 flex items-center gap-2 px-1 py-1 text-sm rounded text-left min-w-0"
                               >
-                                <Camera className="w-3.5 h-3.5" />
-                                <span className="flex-1 truncate">{scene.title}</span>
+                                {getScenePreviewSrc(scene) ? (
+                                  <img
+                                    src={getScenePreviewSrc(scene)}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-8 w-10 rounded border border-gray-700 object-cover bg-[#171717]"
+                                  />
+                                ) : (
+                                  <div className="flex h-8 w-10 items-center justify-center rounded border border-gray-800 bg-[#171717]">
+                                    <Camera className="w-3.5 h-3.5 text-gray-500" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate">{scene.title}</div>
+                                  {(scene.location || scene.time_of_day) ? (
+                                    <div className="truncate text-[11px] text-gray-500">
+                                      {[scene.location, scene.time_of_day].filter(Boolean).join(" · ")}
+                                    </div>
+                                  ) : null}
+                                </div>
                               </button>
                               <Button
                                 type="button"
@@ -983,13 +1107,82 @@ export default function Workspace() {
         {/* Center: Shot Cards */}
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="p-4 border-b border-gray-800 bg-[#0f0f0f] flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm">
-                {selectedScene
-                  ? `${selectedChapter?.title} · ${selectedScene.title}`
-                  : "请选择一个场景"}
-              </h3>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                {selectedScene ? (
+                  <button
+                    type="button"
+                    className="h-12 w-20 overflow-hidden rounded border border-gray-800 bg-[#171717]"
+                    onClick={() => selectedScene.cover_url && setPreviewImage({ src: selectedScene.cover_url, alt: `${selectedScene.title} 场景封面` })}
+                    disabled={!selectedScene.cover_url}
+                  >
+                    {getScenePreviewSrc(selectedScene) ? (
+                      <img
+                        src={getScenePreviewSrc(selectedScene)}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <ImageIcon className="w-5 h-5 text-gray-600" />
+                      </div>
+                    )}
+                  </button>
+                ) : null}
+                <div className="min-w-0">
+                  <h3 className="text-sm">
+                    {selectedScene
+                      ? `${selectedChapter?.title} · ${selectedScene.title}`
+                      : "请选择一个场景"}
+                  </h3>
+                  {selectedScene ? (
+                    <p className="mt-1 truncate text-xs text-gray-500">
+                      {[selectedScene.location, selectedScene.time_of_day].filter(Boolean).join(" · ") || selectedScene.description || "当前场景还没有补充描述"}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
               <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 border-gray-700 text-gray-300"
+                  onClick={handleGenerateSceneCover}
+                  disabled={!selectedScene || isGeneratingSceneCover}
+                >
+                  {isGeneratingSceneCover ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      正在生成
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                      生成场景封面
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 border-gray-700 text-gray-300"
+                  onClick={handleBatchGenerateSceneCovers}
+                  disabled={!selectedScene || filteredShots.length === 0 || isBatchGeneratingSceneCover}
+                >
+                  {isBatchGeneratingSceneCover ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      正在生成
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                      批量生成封面
+                    </>
+                  )}
+                </Button>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -1805,6 +1998,46 @@ export default function Workspace() {
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateCover}>确认生成</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isSceneCoverConfirmOpen} onOpenChange={setIsSceneCoverConfirmOpen}>
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认生成场景封面</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              会为当前场景生成 1 张场景级代表封面，并消耗图像模型额度。该封面用于场景树和当前场景头部预览。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4"><span className="text-gray-500">场景标题</span><span>{selectedScene?.title || "-"}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedCoverModel}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">输出</span><span>1 张场景封面</span></div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateSceneCover}>确认生成</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isBatchSceneCoverConfirmOpen} onOpenChange={setIsBatchSceneCoverConfirmOpen}>
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认批量生成封面</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              会为当前场景下的全部镜头串行生成新封面，并消耗图像模型额度。新结果会保留到各自镜头的封面历史中。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4"><span className="text-gray-500">场景标题</span><span>{selectedScene?.title || "-"}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">镜头数量</span><span>{filteredShots.length}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedCoverModel}</span></div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmBatchGenerateSceneCovers}>确认生成</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS scenes (
     description TEXT COMMENT '场景描述',
     location VARCHAR(255) COMMENT '地点',
     time_of_day VARCHAR(50) COMMENT '时间（白天/夜晚等）',
+    cover_url VARCHAR(500) NULL COMMENT '场景封面原图URL',
+    cover_preview_url VARCHAR(500) NULL COMMENT '场景封面缩略图URL',
     sort_order INT DEFAULT 0 COMMENT '排序',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

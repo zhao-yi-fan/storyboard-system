@@ -35,6 +35,8 @@ export type Scene = {
   description: string;
   location: string;
   time_of_day: string;
+  cover_url?: string;
+  cover_preview_url?: string;
   sort_order: number;
   created_at?: string;
   updated_at?: string;
@@ -127,4 +129,23 @@ export type GenerateStoryboardVideoResult = {
   video_url: string;
   video_preview_url?: string;
   storyboard: Storyboard;
+};
+
+export type GenerateSceneCoverResult = {
+  scene_id: number;
+  cover_url: string;
+  cover_preview_url?: string;
+  scene: Scene;
+};
+
+export type SceneBatchCoverFailure = {
+  storyboard_id: number;
+  error: string;
+};
+
+export type GenerateSceneStoryboardCoversResult = {
+  scene: Scene;
+  storyboards: Storyboard[];
+  generated_count: number;
+  failed: SceneBatchCoverFailure[];
 };

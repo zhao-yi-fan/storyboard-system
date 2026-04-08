@@ -99,6 +99,8 @@ func main() {
 			scenes.GET("/:id", sceneHandler.GetByID)
 			scenes.PUT("/:id", sceneHandler.Update)
 			scenes.DELETE("/:id", sceneHandler.Delete)
+			scenes.POST("/:id/generate-cover", sceneHandler.GenerateCover)
+			scenes.POST("/:id/generate-storyboard-covers", sceneHandler.GenerateStoryboardCovers)
 
 			// Storyboards under scene
 			scenes.GET("/:id/storyboards", storyboardHandler.GetByScene)
