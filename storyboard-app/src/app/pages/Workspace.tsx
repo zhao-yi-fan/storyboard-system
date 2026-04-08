@@ -52,6 +52,12 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import {
   projectApi,
   chapterApi,
   sceneApi,
@@ -167,6 +173,7 @@ export default function Workspace() {
   const [isCreatingShot, setIsCreatingShot] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
+  const [deleteTargetShot, setDeleteTargetShot] = useState<Storyboard | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
@@ -570,6 +577,39 @@ export default function Workspace() {
     setDeleteTargetScene(scene);
   };
 
+  const handleRequestDeleteShot = (shot: Storyboard) => {
+    setDeleteTargetShot(shot);
+  };
+
+  const confirmDeleteShot = async () => {
+    if (!deleteTargetShot || !selectedScene) {
+      return;
+    }
+
+    const sceneShots = storyboards.filter((shot) => shot.scene_id === selectedScene.id);
+    const deleteIndex = sceneShots.findIndex((shot) => shot.id === deleteTargetShot.id);
+    const fallbackShot = deleteIndex >= 0
+      ? sceneShots[deleteIndex + 1] || sceneShots[deleteIndex - 1] || null
+      : null;
+
+    try {
+      await storyboardApi.deleteStoryboard(deleteTargetShot.id);
+      setDeleteTargetShot(null);
+      setStoryboards((prev) => prev.filter((shot) => shot.id !== deleteTargetShot.id));
+
+      if (selectedShot?.id === deleteTargetShot.id) {
+        setSelectedShot(fallbackShot);
+        if (fallbackShot) {
+          await loadMediaGenerations(fallbackShot.id);
+        } else {
+          setMediaGenerations([]);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete storyboard:", error);
+    }
+  };
+
   const confirmDeleteScene = async () => {
     if (!deleteTargetScene) {
       return;
@@ -917,7 +957,7 @@ export default function Workspace() {
           </div>
 
             <div
-              className={`resize-handle resize-handle-right absolute top-0 bottom-0 right-0 w-1 ${isResizingLeft ? "dragging" : ""}`}
+              className={`resize-handle resize-handle-right absolute top-0 bottom-0 right-[-6px] w-3 z-20 ${isResizingLeft ? "dragging" : ""}`}
               onMouseDown={handleLeftMouseDown}
             />
           </aside>
@@ -1079,9 +1119,23 @@ export default function Workspace() {
               <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
                 <h3 className="text-sm">镜头详情</h3>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
+                      <DropdownMenuItem
+                        variant="destructive"
+                        className="cursor-pointer focus:bg-red-500/10 focus:text-red-300"
+                        onClick={() => handleRequestDeleteShot(selectedShot)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        删除镜头
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -1604,9 +1658,23 @@ export default function Workspace() {
                     "保存修改"
                   )}
                 </Button>
-                <Button variant="outline" className="border-gray-700">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="border-gray-700">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
+                    <DropdownMenuItem
+                      variant="destructive"
+                      className="cursor-pointer focus:bg-red-500/10 focus:text-red-300"
+                      onClick={() => handleRequestDeleteShot(selectedShot)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      删除镜头
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </>
           ) : (
@@ -1619,7 +1687,7 @@ export default function Workspace() {
           )}
 
             <div
-              className={`resize-handle resize-handle-left absolute top-0 bottom-0 left-0 w-1 ${isResizingRight ? "dragging" : ""}`}
+              className={`resize-handle resize-handle-left absolute top-0 bottom-0 left-[-6px] w-3 z-20 ${isResizingRight ? "dragging" : ""}`}
               onMouseDown={handleRightMouseDown}
             />
           </aside>
@@ -1757,6 +1825,44 @@ export default function Workspace() {
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateVideo}>确认生成</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteTargetShot}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTargetShot(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除镜头</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              该操作会删除当前镜头记录，并刷新当前场景的镜头列表。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">镜头编号</span>
+              <span>{deleteTargetShot ? formatShotNumber(deleteTargetShot.shot_number) : '-'}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">景别</span>
+              <span>{deleteTargetShot ? deriveShotType(deleteTargetShot) : '-'}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">描述</span>
+              <span className="max-w-[240px] truncate text-right">{deleteTargetShot?.content || '-'}</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDeleteShot}>
+              确认删除
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
