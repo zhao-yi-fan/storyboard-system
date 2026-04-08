@@ -956,11 +956,14 @@ export default function Workspace() {
             </Button>
           </div>
 
-            <div
-              className={`resize-handle resize-handle-right absolute top-0 bottom-0 right-0 w-4 z-20 ${isResizingLeft ? "dragging" : ""}`}
-              onMouseDown={handleLeftMouseDown}
-            />
           </aside>
+        )}
+
+        {isLeftSidebarOpen && (
+          <div
+            className={`resize-handle resize-handle-right relative flex-shrink-0 w-4 z-20 ${isResizingLeft ? "dragging" : ""}`}
+            onMouseDown={handleLeftMouseDown}
+          />
         )}
 
         {!isLeftSidebarOpen && (
@@ -1681,12 +1684,14 @@ export default function Workspace() {
               </div>
             </div>
           )}
-
-            <div
-              className={`resize-handle resize-handle-left absolute top-0 bottom-0 left-0 w-4 z-20 ${isResizingRight ? "dragging" : ""}`}
-              onMouseDown={handleRightMouseDown}
-            />
           </aside>
+        )}
+
+        {isRightSidebarOpen && (
+          <div
+            className={`resize-handle resize-handle-left relative flex-shrink-0 w-4 z-20 ${isResizingRight ? "dragging" : ""}`}
+            onMouseDown={handleRightMouseDown}
+          />
         )}
 
         {!isRightSidebarOpen && (
