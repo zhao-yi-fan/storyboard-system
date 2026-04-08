@@ -10,6 +10,11 @@ export type Project = {
   description: string;
   script_text?: string;
   scriptText?: string;
+  video_url?: string;
+  video_preview_url?: string;
+  video_status?: string;
+  video_error?: string;
+  video_duration?: number;
   chapter_count?: number;
   scene_count?: number;
   storyboard_count?: number;
@@ -163,4 +168,14 @@ export type ComposeSceneVideoResult = {
   video_error?: string;
   video_duration?: number;
   scene: Scene;
+};
+
+export type ComposeProjectVideoResult = {
+  project_id: number;
+  video_url: string;
+  video_preview_url?: string;
+  video_status?: string;
+  video_error?: string;
+  video_duration?: number;
+  project: Project;
 };

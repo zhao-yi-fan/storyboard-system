@@ -67,6 +67,7 @@ func main() {
 			projects.PUT("/:id", projectHandler.Update)
 			projects.DELETE("/:id", projectHandler.Delete)
 			projects.POST("/:id/import-script", projectHandler.ImportScript)
+			projects.POST("/:id/compose-video", projectHandler.ComposeVideo)
 
 			// Chapters under project
 			projects.GET("/:id/chapters", chapterHandler.GetByProject)

@@ -11,7 +11,7 @@ type ProjectRepository struct{}
 
 // FindAll returns all non-deleted projects with statistics
 func (r *ProjectRepository) FindAll() ([]models.ProjectWithStats, error) {
-	query := `SELECT id, name, description, script_text, created_at, updated_at 
+	query := `SELECT id, name, description, script_text, video_url, video_preview_url, video_status, video_error, video_duration, created_at, updated_at 
 	          FROM projects WHERE deleted_at IS NULL ORDER BY created_at DESC`
 	
 	rows, err := database.DB.Query(query)
@@ -23,9 +23,19 @@ func (r *ProjectRepository) FindAll() ([]models.ProjectWithStats, error) {
 	var projects []models.ProjectWithStats
 	for rows.Next() {
 		var p models.Project
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		var videoURL sql.NullString
+		var videoPreviewURL sql.NullString
+		var videoStatus sql.NullString
+		var videoError sql.NullString
+		var videoDuration sql.NullFloat64
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
+		p.VideoURL = nullStringValue(videoURL)
+		p.VideoPreviewURL = nullStringValue(videoPreviewURL)
+		p.VideoStatus = nullStringValue(videoStatus)
+		p.VideoError = nullStringValue(videoError)
+		p.VideoDuration = nullFloat64Value(videoDuration)
 
 		// Get statistics
 		chapterCount, _ := r.CountChapters(p.ID)
@@ -45,49 +55,79 @@ func (r *ProjectRepository) FindAll() ([]models.ProjectWithStats, error) {
 
 // FindByID finds a project by ID
 func (r *ProjectRepository) FindByID(id int64) (*models.Project, error) {
-	query := `SELECT id, name, description, script_text, created_at, updated_at 
+	query := `SELECT id, name, description, script_text, video_url, video_preview_url, video_status, video_error, video_duration, created_at, updated_at 
 	          FROM projects WHERE id = ? AND deleted_at IS NULL`
 	
 	var p models.Project
-	err := database.DB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &p.CreatedAt, &p.UpdatedAt)
+	var videoURL sql.NullString
+	var videoPreviewURL sql.NullString
+	var videoStatus sql.NullString
+	var videoError sql.NullString
+	var videoDuration sql.NullFloat64
+	err := database.DB.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	p.VideoURL = nullStringValue(videoURL)
+	p.VideoPreviewURL = nullStringValue(videoPreviewURL)
+	p.VideoStatus = nullStringValue(videoStatus)
+	p.VideoError = nullStringValue(videoError)
+	p.VideoDuration = nullFloat64Value(videoDuration)
 	return &p, nil
 }
 
 // FindByName finds an active project by name
 func (r *ProjectRepository) FindByName(name string) (*models.Project, error) {
-	query := `SELECT id, name, description, script_text, created_at, updated_at
+	query := `SELECT id, name, description, script_text, video_url, video_preview_url, video_status, video_error, video_duration, created_at, updated_at
 	          FROM projects WHERE name = ? AND deleted_at IS NULL LIMIT 1`
 
 	var p models.Project
-	err := database.DB.QueryRow(query, name).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &p.CreatedAt, &p.UpdatedAt)
+	var videoURL sql.NullString
+	var videoPreviewURL sql.NullString
+	var videoStatus sql.NullString
+	var videoError sql.NullString
+	var videoDuration sql.NullFloat64
+	err := database.DB.QueryRow(query, name).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	p.VideoURL = nullStringValue(videoURL)
+	p.VideoPreviewURL = nullStringValue(videoPreviewURL)
+	p.VideoStatus = nullStringValue(videoStatus)
+	p.VideoError = nullStringValue(videoError)
+	p.VideoDuration = nullFloat64Value(videoDuration)
 	return &p, nil
 }
 
 // FindByNameExceptID finds an active project by name excluding the specified ID
 func (r *ProjectRepository) FindByNameExceptID(name string, id int64) (*models.Project, error) {
-	query := `SELECT id, name, description, script_text, created_at, updated_at
+	query := `SELECT id, name, description, script_text, video_url, video_preview_url, video_status, video_error, video_duration, created_at, updated_at
 	          FROM projects WHERE name = ? AND id <> ? AND deleted_at IS NULL LIMIT 1`
 
 	var p models.Project
-	err := database.DB.QueryRow(query, name, id).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &p.CreatedAt, &p.UpdatedAt)
+	var videoURL sql.NullString
+	var videoPreviewURL sql.NullString
+	var videoStatus sql.NullString
+	var videoError sql.NullString
+	var videoDuration sql.NullFloat64
+	err := database.DB.QueryRow(query, name, id).Scan(&p.ID, &p.Name, &p.Description, &p.ScriptText, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	p.VideoURL = nullStringValue(videoURL)
+	p.VideoPreviewURL = nullStringValue(videoPreviewURL)
+	p.VideoStatus = nullStringValue(videoStatus)
+	p.VideoError = nullStringValue(videoError)
+	p.VideoDuration = nullFloat64Value(videoDuration)
 	return &p, nil
 }
 
@@ -130,6 +170,20 @@ func (r *ProjectRepository) UpdateScriptText(id int64, scriptText string) error 
 	return err
 }
 
+func (r *ProjectRepository) UpdateVideoFields(id int64, videoURL, videoPreviewURL, videoStatus, videoError string, videoDuration float64) error {
+	query := `UPDATE projects SET video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?`
+	_, err := database.DB.Exec(
+		query,
+		normalizeNullableString(videoURL),
+		normalizeNullableString(videoPreviewURL),
+		normalizeNullableString(videoStatus),
+		normalizeNullableString(videoError),
+		normalizeNullableProjectFloat64(videoDuration),
+		id,
+	)
+	return err
+}
+
 // CountChapters counts chapters for a project
 func (r *ProjectRepository) CountChapters(projectID int64) (int, error) {
 	var count int
@@ -152,4 +206,11 @@ func (r *ProjectRepository) CountStoryboards(projectID int64) (int, error) {
 	query := `SELECT COUNT(*) FROM storyboards WHERE project_id = ? AND deleted_at IS NULL`
 	err := database.DB.QueryRow(query, projectID).Scan(&count)
 	return count, err
+}
+
+func normalizeNullableProjectFloat64(value float64) any {
+	if value <= 0 {
+		return nil
+	}
+	return value
 }

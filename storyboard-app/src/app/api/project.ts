@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Project } from "./types";
+import type { ComposeProjectVideoResult, Project } from "./types";
 
 export function getProjects() {
   return apiClient.get<Project[]>("/projects");
@@ -34,4 +34,8 @@ export function importScript(id: number, scriptText: string) {
   }>(`/projects/${id}/import-script`, {
     script_text: scriptText,
   });
+}
+
+export function composeProjectVideo(id: number, data?: { regenerate?: boolean }) {
+  return apiClient.post<ComposeProjectVideoResult>(`/projects/${id}/compose-video`, data ?? {});
 }

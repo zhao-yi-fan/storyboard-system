@@ -179,6 +179,61 @@ func (h *ProjectHandler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"success": true})
 }
 
+// ComposeVideo composes a project-level rough cut from succeeded scene videos.
+func (h *ProjectHandler) ComposeVideo(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	project, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if project == nil {
+		response.Error(c, "project not found")
+		return
+	}
+
+	var req struct {
+		Regenerate *bool `json:"regenerate"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil && !strings.Contains(err.Error(), "EOF") {
+		response.Error(c, err.Error())
+		return
+	}
+
+	regenerate := true
+	if req.Regenerate != nil {
+		regenerate = *req.Regenerate
+	}
+
+	service, err := services.NewProjectVideoService()
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	project, err = service.ComposeAndAttach(id, regenerate)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"project_id":         project.ID,
+		"video_url":          project.VideoURL,
+		"video_preview_url":  project.VideoPreviewURL,
+		"video_status":       project.VideoStatus,
+		"video_error":        project.VideoError,
+		"video_duration":     project.VideoDuration,
+		"project":            project,
+	})
+}
+
 // ImportScript imports script text into a project, parses it, and persists the generated structure.
 func (h *ProjectHandler) ImportScript(c *gin.Context) {
 	idStr := c.Param("id")

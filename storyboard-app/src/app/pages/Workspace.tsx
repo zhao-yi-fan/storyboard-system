@@ -135,6 +135,9 @@ const getScenePreviewSrc = (scene: Scene | null | undefined) =>
 const getSceneVideoPreviewSrc = (scene: Scene | null | undefined) =>
   scene?.video_preview_url || scene?.video_url || "";
 
+const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
+  project?.video_preview_url || project?.video_url || "";
+
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
@@ -178,17 +181,20 @@ export default function Workspace() {
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
   const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
   const [isSceneVideoConfirmOpen, setIsSceneVideoConfirmOpen] = useState(false);
+  const [isProjectVideoConfirmOpen, setIsProjectVideoConfirmOpen] = useState(false);
   const [isCreateSceneOpen, setIsCreateSceneOpen] = useState(false);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isCreatingShot, setIsCreatingShot] = useState(false);
   const [isGeneratingSceneCover, setIsGeneratingSceneCover] = useState(false);
   const [isBatchGeneratingSceneCover, setIsBatchGeneratingSceneCover] = useState(false);
   const [isComposingSceneVideo, setIsComposingSceneVideo] = useState(false);
+  const [isComposingProjectVideo, setIsComposingProjectVideo] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
   const [deleteTargetShot, setDeleteTargetShot] = useState<Storyboard | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
   const [previewSceneVideo, setPreviewSceneVideo] = useState<{ src: string; originalSrc?: string; title: string } | null>(null);
+  const [previewProjectVideo, setPreviewProjectVideo] = useState<{ src: string; originalSrc?: string; title: string } | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
@@ -303,6 +309,11 @@ export default function Workspace() {
   const applySceneUpdate = (nextScene: Scene) => {
     setScenes((prev) => prev.map((scene) => (scene.id === nextScene.id ? nextScene : scene)));
     setSelectedScene((prev) => (prev?.id === nextScene.id ? nextScene : prev));
+  };
+
+  const applyProjectUpdate = (nextProject: Project) => {
+    setProjects((prev) => prev.map((project) => (project.id === nextProject.id ? nextProject : project)));
+    setSelectedProject((prev) => (prev?.id === nextProject.id ? nextProject : prev));
   };
 
   const applyStoryboardsRefresh = (nextStoryboards: Storyboard[]) => {
@@ -693,6 +704,35 @@ export default function Workspace() {
     await runComposeSceneVideo();
   };
 
+  const handleComposeProjectVideo = () => {
+    if (!selectedProject || isComposingProjectVideo) {
+      return;
+    }
+    setIsProjectVideoConfirmOpen(true);
+  };
+
+  const runComposeProjectVideo = async () => {
+    if (!selectedProject) {
+      return;
+    }
+
+    setIsComposingProjectVideo(true);
+    try {
+      const result = await projectApi.composeProjectVideo(selectedProject.id);
+      applyProjectUpdate(result.project);
+      toast.success("项目总片合成完成");
+    } catch (error) {
+      console.error("Failed to compose project video:", error);
+    } finally {
+      setIsComposingProjectVideo(false);
+    }
+  };
+
+  const confirmComposeProjectVideo = async () => {
+    setIsProjectVideoConfirmOpen(false);
+    await runComposeProjectVideo();
+  };
+
 
   const handleSetCurrentGeneration = async (generation: StoryboardMediaGeneration) => {
     if (!selectedShot) {
@@ -923,6 +963,42 @@ export default function Workspace() {
             <div className="h-6 w-px bg-gray-700"></div>
 
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-gray-400 hover:text-gray-200"
+                onClick={handleComposeProjectVideo}
+                disabled={!selectedProject || isComposingProjectVideo}
+              >
+                {isComposingProjectVideo ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                    合成中...
+                  </>
+                ) : (
+                  <>
+                    <Film className="w-4 h-4 mr-1.5" />
+                    生成总片
+                  </>
+                )}
+              </Button>
+              {selectedProject && getProjectVideoPreviewSrc(selectedProject) ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-gray-400 hover:text-gray-200"
+                  onClick={() =>
+                    setPreviewProjectVideo({
+                      src: getProjectVideoPreviewSrc(selectedProject),
+                      originalSrc: selectedProject.video_url || undefined,
+                      title: `《${selectedProject.name}》项目总片`,
+                    })
+                  }
+                >
+                  <Play className="w-4 h-4 mr-1.5" />
+                  播放总片
+                </Button>
+              ) : null}
               <Button
                 size="sm"
                 variant="ghost"
@@ -2136,6 +2212,27 @@ export default function Workspace() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={isProjectVideoConfirmOpen} onOpenChange={setIsProjectVideoConfirmOpen}>
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认生成项目总片</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              会自动收集当前项目内已生成成功的场景视频，按章节和场景顺序合成为一个项目级粗剪视频。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4"><span className="text-gray-500">项目名称</span><span>{selectedProject?.name || "-"}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 保留各场景原音轨</span></div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmComposeProjectVideo}>
+              确认合成
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={isVideoConfirmOpen} onOpenChange={setIsVideoConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
           <AlertDialogHeader>
@@ -2318,6 +2415,48 @@ export default function Workspace() {
                     }
                   }}
                   disabled={!previewSceneVideo.originalSrc}
+                >
+                  打开原视频
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!previewProjectVideo}
+        onOpenChange={(open) => {
+          if (!open) setPreviewProjectVideo(null);
+        }}
+      >
+        <DialogContent className="max-w-5xl border-gray-800 bg-[#111111] text-gray-100">
+          <DialogHeader>
+            <DialogTitle>{previewProjectVideo?.title || "项目总片预览"}</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              默认播放预览版项目总片。需要查看原始输出时，可在下方打开原视频。
+            </DialogDescription>
+          </DialogHeader>
+          {previewProjectVideo ? (
+            <div className="space-y-4">
+              <video
+                key={previewProjectVideo.src}
+                src={previewProjectVideo.src}
+                controls
+                preload="metadata"
+                className="w-full rounded-lg bg-black"
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-gray-700 text-gray-300"
+                  onClick={() => {
+                    if (previewProjectVideo.originalSrc) {
+                      window.open(previewProjectVideo.originalSrc, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                  disabled={!previewProjectVideo.originalSrc}
                 >
                   打开原视频
                 </Button>

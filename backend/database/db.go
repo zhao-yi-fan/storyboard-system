@@ -113,6 +113,36 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("projects", "video_url") {
+		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN video_url VARCHAR(500) NULL DEFAULT NULL AFTER script_text`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("projects", "video_preview_url") {
+		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN video_preview_url VARCHAR(500) NULL DEFAULT NULL AFTER video_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("projects", "video_status") {
+		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN video_status VARCHAR(20) NULL DEFAULT NULL AFTER video_preview_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("projects", "video_error") {
+		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN video_error TEXT NULL AFTER video_status`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("projects", "video_duration") {
+		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN video_duration DOUBLE NULL DEFAULT NULL AFTER video_error`); err != nil {
+			return err
+		}
+	}
+
 	if !columnExists("scenes", "cover_url") {
 		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN cover_url VARCHAR(500) NULL DEFAULT NULL AFTER time_of_day`); err != nil {
 			return err
