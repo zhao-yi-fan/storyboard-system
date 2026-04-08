@@ -961,7 +961,7 @@ export default function Workspace() {
 
         {isLeftSidebarOpen && (
           <div
-            className={`resize-handle resize-handle-right relative flex-shrink-0 w-4 z-20 ${isResizingLeft ? "dragging" : ""}`}
+            className={`resize-handle resize-handle-right relative flex-shrink-0 w-5 z-20 ${isResizingLeft ? "dragging" : ""}`}
             onMouseDown={handleLeftMouseDown}
           />
         )}
@@ -1689,7 +1689,7 @@ export default function Workspace() {
 
         {isRightSidebarOpen && (
           <div
-            className={`resize-handle resize-handle-left relative flex-shrink-0 w-4 z-20 ${isResizingRight ? "dragging" : ""}`}
+            className={`resize-handle resize-handle-left relative flex-shrink-0 w-5 z-20 ${isResizingRight ? "dragging" : ""}`}
             onMouseDown={handleRightMouseDown}
           />
         )}
