@@ -957,7 +957,7 @@ export default function Workspace() {
           </div>
 
             <div
-              className={`resize-handle resize-handle-right absolute top-0 bottom-0 right-[-6px] w-3 z-20 ${isResizingLeft ? "dragging" : ""}`}
+              className={`resize-handle resize-handle-right absolute top-0 bottom-0 right-0 w-4 z-20 ${isResizingLeft ? "dragging" : ""}`}
               onMouseDown={handleLeftMouseDown}
             />
           </aside>
@@ -1120,10 +1120,8 @@ export default function Workspace() {
                 <h3 className="text-sm">镜头详情</h3>
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
+                    <DropdownMenuTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-[#1f1f1f] hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40">
+                      <MoreHorizontal className="w-4 h-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
                       <DropdownMenuItem
@@ -1659,10 +1657,8 @@ export default function Workspace() {
                   )}
                 </Button>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="border-gray-700">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
+                  <DropdownMenuTrigger className="inline-flex h-9 items-center justify-center rounded-md border border-gray-700 bg-[#1a1a1a] px-3 text-gray-100 transition-colors hover:bg-[#262626] hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40">
+                    <MoreHorizontal className="w-4 h-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
                     <DropdownMenuItem
@@ -1687,7 +1683,7 @@ export default function Workspace() {
           )}
 
             <div
-              className={`resize-handle resize-handle-left absolute top-0 bottom-0 left-[-6px] w-3 z-20 ${isResizingRight ? "dragging" : ""}`}
+              className={`resize-handle resize-handle-left absolute top-0 bottom-0 left-0 w-4 z-20 ${isResizingRight ? "dragging" : ""}`}
               onMouseDown={handleRightMouseDown}
             />
           </aside>

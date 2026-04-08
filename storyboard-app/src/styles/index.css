@@ -44,12 +44,13 @@
   left: 50%;
   width: 1px;
   transform: translateX(-50%);
-  background: rgba(156, 163, 175, 0.28);
+  background: rgba(156, 163, 175, 0.34);
   transition: background 0.2s, box-shadow 0.2s, width 0.2s;
 }
 
-.resize-handle:hover {
-  background: rgba(168, 85, 247, 0.04);
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: rgba(168, 85, 247, 0.08);
 }
 
 .resize-handle:hover::before,
@@ -57,8 +58,4 @@
   width: 2px;
   background: #a855f7;
   box-shadow: 0 0 10px rgba(168, 85, 247, 0.55);
-}
-
-.resize-handle.dragging {
-  background: rgba(168, 85, 247, 0.08);
 }
