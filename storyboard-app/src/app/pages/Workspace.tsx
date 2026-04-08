@@ -961,7 +961,7 @@ export default function Workspace() {
 
         {isLeftSidebarOpen && (
           <div
-            className={`resize-handle resize-handle-right relative flex-shrink-0 w-5 z-20 ${isResizingLeft ? "dragging" : ""}`}
+            className={`resize-handle resize-handle-right relative flex-shrink-0 w-3 z-20 ${isResizingLeft ? "dragging" : ""}`}
             onMouseDown={handleLeftMouseDown}
           />
         )}
@@ -1110,6 +1110,13 @@ export default function Workspace() {
             )}
           </div>
         </main>
+
+        {isRightSidebarOpen && (
+          <div
+            className={`resize-handle resize-handle-left relative flex-shrink-0 w-3 z-20 ${isResizingRight ? "dragging" : ""}`}
+            onMouseDown={handleRightMouseDown}
+          />
+        )}
 
         {isRightSidebarOpen && (
           <aside
@@ -1685,13 +1692,6 @@ export default function Workspace() {
             </div>
           )}
           </aside>
-        )}
-
-        {isRightSidebarOpen && (
-          <div
-            className={`resize-handle resize-handle-left relative flex-shrink-0 w-5 z-20 ${isResizingRight ? "dragging" : ""}`}
-            onMouseDown={handleRightMouseDown}
-          />
         )}
 
         {!isRightSidebarOpen && (
