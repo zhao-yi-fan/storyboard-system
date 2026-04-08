@@ -122,15 +122,20 @@ func (h *SceneHandler) Create(c *gin.Context) {
 	}
 
 	scene := &models.Scene{
-		ChapterID:        chapterID,
-		ProjectID:        chapter.ProjectID,
-		Title:            req.Title,
-		Description:      req.Description,
-		Location:         req.Location,
-		TimeOfDay:        req.TimeOfDay,
-		CoverURL:         "",
-		CoverPreviewURL:  "",
-		SortOrder:        maxSort + 1,
+		ChapterID:       chapterID,
+		ProjectID:       chapter.ProjectID,
+		Title:           req.Title,
+		Description:     req.Description,
+		Location:        req.Location,
+		TimeOfDay:       req.TimeOfDay,
+		CoverURL:        "",
+		CoverPreviewURL: "",
+		VideoURL:        "",
+		VideoPreviewURL: "",
+		VideoStatus:     "",
+		VideoError:      "",
+		VideoDuration:   0,
+		SortOrder:       maxSort + 1,
 	}
 
 	if err := h.repo.Create(scene); err != nil {
@@ -229,10 +234,10 @@ func (h *SceneHandler) GenerateCover(c *gin.Context) {
 
 	h.ensureScenePreview(c, scene)
 	response.Success(c, gin.H{
-		"scene_id":           scene.ID,
-		"cover_url":          scene.CoverURL,
-		"cover_preview_url":  scene.CoverPreviewURL,
-		"scene":              scene,
+		"scene_id":          scene.ID,
+		"cover_url":         scene.CoverURL,
+		"cover_preview_url": scene.CoverPreviewURL,
+		"scene":             scene,
 	})
 }
 
@@ -286,7 +291,6 @@ func (h *SceneHandler) GenerateStoryboardCovers(c *gin.Context) {
 	}
 
 	for i := range updatedStoryboards {
-		// previews are generated eagerly on new covers, but this keeps old rows consistent
 		if strings.TrimSpace(updatedStoryboards[i].ThumbnailURL) != "" && strings.TrimSpace(updatedStoryboards[i].ThumbnailPreviewURL) == "" {
 			log.Printf("storyboard %d missing preview after batch generation", updatedStoryboards[i].ID)
 		}
@@ -298,6 +302,48 @@ func (h *SceneHandler) GenerateStoryboardCovers(c *gin.Context) {
 		"storyboards":     updatedStoryboards,
 		"generated_count": generatedCount,
 		"failed":          failed,
+	})
+}
+
+// ComposeVideo composes a scene-level video from succeeded storyboard videos.
+func (h *SceneHandler) ComposeVideo(c *gin.Context) {
+	id, _, ok := h.loadSceneContext(c)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Regenerate *bool `json:"regenerate"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil && !strings.Contains(strings.ToLower(err.Error()), "eof") {
+		response.Error(c, err.Error())
+		return
+	}
+	regenerate := true
+	if req.Regenerate != nil {
+		regenerate = *req.Regenerate
+	}
+
+	service, err := services.NewSceneVideoService()
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	scene, err := service.ComposeAndAttach(id, regenerate)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"scene_id":          scene.ID,
+		"video_url":         scene.VideoURL,
+		"video_preview_url": scene.VideoPreviewURL,
+		"video_status":      scene.VideoStatus,
+		"video_error":       scene.VideoError,
+		"video_duration":    scene.VideoDuration,
+		"scene":             scene,
 	})
 }
 

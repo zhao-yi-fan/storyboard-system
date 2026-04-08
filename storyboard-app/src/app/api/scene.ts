@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
 import type {
+  ComposeSceneVideoResult,
   GenerateSceneCoverResult,
   GenerateSceneStoryboardCoversResult,
   Scene,
@@ -37,4 +38,8 @@ export function generateSceneCover(id: number) {
 
 export function generateSceneStoryboardCovers(id: number) {
   return apiClient.post<GenerateSceneStoryboardCoversResult>(`/scenes/${id}/generate-storyboard-covers`);
+}
+
+export function composeSceneVideo(id: number, data?: { regenerate?: boolean }) {
+  return apiClient.post<ComposeSceneVideoResult>(`/scenes/${id}/compose-video`, data ?? {});
 }

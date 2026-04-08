@@ -37,6 +37,11 @@ export type Scene = {
   time_of_day: string;
   cover_url?: string;
   cover_preview_url?: string;
+  video_url?: string;
+  video_preview_url?: string;
+  video_status?: string;
+  video_error?: string;
+  video_duration?: number;
   sort_order: number;
   created_at?: string;
   updated_at?: string;
@@ -148,4 +153,14 @@ export type GenerateSceneStoryboardCoversResult = {
   storyboards: Storyboard[];
   generated_count: number;
   failed: SceneBatchCoverFailure[];
+};
+
+export type ComposeSceneVideoResult = {
+  scene_id: number;
+  video_url: string;
+  video_preview_url?: string;
+  video_status?: string;
+  video_error?: string;
+  video_duration?: number;
+  scene: Scene;
 };

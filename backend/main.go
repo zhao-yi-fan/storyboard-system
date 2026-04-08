@@ -101,6 +101,7 @@ func main() {
 			scenes.DELETE("/:id", sceneHandler.Delete)
 			scenes.POST("/:id/generate-cover", sceneHandler.GenerateCover)
 			scenes.POST("/:id/generate-storyboard-covers", sceneHandler.GenerateStoryboardCovers)
+			scenes.POST("/:id/compose-video", sceneHandler.ComposeVideo)
 
 			// Storyboards under scene
 			scenes.GET("/:id/storyboards", storyboardHandler.GetByScene)

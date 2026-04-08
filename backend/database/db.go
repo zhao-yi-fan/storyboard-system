@@ -125,6 +125,36 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("scenes", "video_url") {
+		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN video_url VARCHAR(500) NULL DEFAULT NULL AFTER cover_preview_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("scenes", "video_preview_url") {
+		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN video_preview_url VARCHAR(500) NULL DEFAULT NULL AFTER video_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("scenes", "video_status") {
+		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN video_status VARCHAR(20) NULL DEFAULT NULL AFTER video_preview_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("scenes", "video_error") {
+		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN video_error TEXT NULL AFTER video_status`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("scenes", "video_duration") {
+		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN video_duration DOUBLE NULL DEFAULT NULL AFTER video_error`); err != nil {
+			return err
+		}
+	}
+
 	backfillQueries := []string{
 		`UPDATE storyboards
 		SET shot_type = TRIM(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, '景别：', -1), '\n', 1), '\r', ''))

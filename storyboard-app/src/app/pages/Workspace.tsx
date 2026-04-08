@@ -132,6 +132,9 @@ const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
 const getScenePreviewSrc = (scene: Scene | null | undefined) =>
   scene?.cover_preview_url || scene?.cover_url || "";
 
+const getSceneVideoPreviewSrc = (scene: Scene | null | undefined) =>
+  scene?.video_preview_url || scene?.video_url || "";
+
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
@@ -174,15 +177,18 @@ export default function Workspace() {
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
   const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
+  const [isSceneVideoConfirmOpen, setIsSceneVideoConfirmOpen] = useState(false);
   const [isCreateSceneOpen, setIsCreateSceneOpen] = useState(false);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isCreatingShot, setIsCreatingShot] = useState(false);
   const [isGeneratingSceneCover, setIsGeneratingSceneCover] = useState(false);
   const [isBatchGeneratingSceneCover, setIsBatchGeneratingSceneCover] = useState(false);
+  const [isComposingSceneVideo, setIsComposingSceneVideo] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
   const [deleteTargetShot, setDeleteTargetShot] = useState<Storyboard | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
+  const [previewSceneVideo, setPreviewSceneVideo] = useState<{ src: string; originalSrc?: string; title: string } | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
@@ -473,6 +479,7 @@ export default function Workspace() {
   const filteredShots = selectedScene
     ? storyboards.filter((shot) => shot.scene_id === selectedScene.id)
     : [];
+  const composableShots = filteredShots.filter((shot) => shot.video_status === "succeeded" && !!shot.video_url);
 
   const calculateTotalDuration = () => {
     return filteredShots.reduce((sum, shot) => sum + (shot.duration || 0), 0);
@@ -655,6 +662,35 @@ export default function Workspace() {
   const confirmBatchGenerateSceneCovers = async () => {
     setIsBatchSceneCoverConfirmOpen(false);
     await runBatchGenerateSceneCovers();
+  };
+
+  const handleComposeSceneVideo = () => {
+    if (!selectedScene || isComposingSceneVideo) {
+      return;
+    }
+    setIsSceneVideoConfirmOpen(true);
+  };
+
+  const runComposeSceneVideo = async () => {
+    if (!selectedScene) {
+      return;
+    }
+
+    setIsComposingSceneVideo(true);
+    try {
+      const result = await sceneApi.composeSceneVideo(selectedScene.id);
+      applySceneUpdate(result.scene);
+      toast.success("场景视频合成完成");
+    } catch (error) {
+      console.error("Failed to compose scene video:", error);
+    } finally {
+      setIsComposingSceneVideo(false);
+    }
+  };
+
+  const confirmComposeSceneVideo = async () => {
+    setIsSceneVideoConfirmOpen(false);
+    await runComposeSceneVideo();
   };
 
 
@@ -1183,6 +1219,42 @@ export default function Workspace() {
                     </>
                   )}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 border-gray-700 text-gray-300"
+                  onClick={handleComposeSceneVideo}
+                  disabled={!selectedScene || composableShots.length === 0 || isComposingSceneVideo}
+                >
+                  {isComposingSceneVideo ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      正在合成
+                    </>
+                  ) : (
+                    <>
+                      <Film className="w-3.5 h-3.5 mr-1.5" />
+                      生成场景视频
+                    </>
+                  )}
+                </Button>
+                {selectedScene && getSceneVideoPreviewSrc(selectedScene) ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-purple-300 hover:text-purple-200"
+                    onClick={() =>
+                      setPreviewSceneVideo({
+                        src: getSceneVideoPreviewSrc(selectedScene),
+                        originalSrc: selectedScene.video_url || undefined,
+                        title: `${selectedScene.title} 场景视频`,
+                      })
+                    }
+                  >
+                    <Play className="w-3.5 h-3.5 mr-1.5" />
+                    播放场景视频
+                  </Button>
+                ) : null}
                 <Button
                   size="sm"
                   variant="ghost"
@@ -2042,6 +2114,28 @@ export default function Workspace() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={isSceneVideoConfirmOpen} onOpenChange={setIsSceneVideoConfirmOpen}>
+        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认生成场景视频</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400 leading-6">
+              会将当前场景下已有视频镜头按顺序合成为一个场景视频，并保留每个镜头原始音轨。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+            <div className="flex justify-between gap-4"><span className="text-gray-500">场景标题</span><span>{selectedScene?.title || "-"}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">可合成镜头数</span><span>{composableShots.length}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 保留原音轨</span></div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmComposeSceneVideo}>
+              确认合成
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={isVideoConfirmOpen} onOpenChange={setIsVideoConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
           <AlertDialogHeader>
@@ -2190,6 +2284,48 @@ export default function Workspace() {
         src={previewImage?.src || ""}
         alt={previewImage?.alt || "镜头预览图"}
       />
+
+      <Dialog
+        open={!!previewSceneVideo}
+        onOpenChange={(open) => {
+          if (!open) setPreviewSceneVideo(null);
+        }}
+      >
+        <DialogContent className="max-w-5xl border-gray-800 bg-[#111111] text-gray-100">
+          <DialogHeader>
+            <DialogTitle>{previewSceneVideo?.title || "场景视频预览"}</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              默认播放预览版视频。需要查看原始输出时，可在下方打开原视频。
+            </DialogDescription>
+          </DialogHeader>
+          {previewSceneVideo ? (
+            <div className="space-y-4">
+              <video
+                key={previewSceneVideo.src}
+                src={previewSceneVideo.src}
+                controls
+                preload="metadata"
+                className="w-full rounded-lg bg-black"
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-gray-700 text-gray-300"
+                  onClick={() => {
+                    if (previewSceneVideo.originalSrc) {
+                      window.open(previewSceneVideo.originalSrc, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                  disabled={!previewSceneVideo.originalSrc}
+                >
+                  打开原视频
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
