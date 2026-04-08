@@ -85,7 +85,7 @@ func (r *SceneRepository) Create(s *models.Scene) error {
 	query := `INSERT INTO scenes (chapter_id, project_id, title, description, location, time_of_day, cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := database.DB.Exec(query, s.ChapterID, s.ProjectID, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableFloat64(s.VideoDuration), s.SortOrder)
+	result, err := database.DB.Exec(query, s.ChapterID, s.ProjectID, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableSceneFloat64(s.VideoDuration), s.SortOrder)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (r *SceneRepository) Create(s *models.Scene) error {
 func (r *SceneRepository) Update(s *models.Scene) error {
 	query := `UPDATE scenes SET title = ?, description = ?, location = ?, time_of_day = ?, cover_url = ?, cover_preview_url = ?, video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ?, sort_order = ? WHERE id = ?`
 
-	_, err := database.DB.Exec(query, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableFloat64(s.VideoDuration), s.SortOrder, s.ID)
+	_, err := database.DB.Exec(query, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableSceneFloat64(s.VideoDuration), s.SortOrder, s.ID)
 	return err
 }
 
@@ -119,4 +119,11 @@ func (r *SceneRepository) GetMaxSortOrder(chapterID int64) (int, error) {
 	query := `SELECT COALESCE(MAX(sort_order), 0) FROM scenes WHERE chapter_id = ? AND deleted_at IS NULL`
 	err := database.DB.QueryRow(query, chapterID).Scan(&maxSort)
 	return maxSort, err
+}
+
+func normalizeNullableSceneFloat64(value float64) any {
+	if value <= 0 {
+		return nil
+	}
+	return value
 }
