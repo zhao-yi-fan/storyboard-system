@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router";
 import {
   Film,
@@ -166,7 +167,11 @@ export default function AssetLibrary() {
       upload_url: string;
       public_url: string;
       object_key: string;
-    }>(`/oss/sign?filename=${fileName}&content_type=${encodeURIComponent(file.type)}`);
+    } | null>(`/oss/sign?filename=${fileName}&content_type=${encodeURIComponent(file.type)}`);
+
+    if (!signature?.upload_url || !signature?.public_url) {
+      throw new Error("当前未配置文件上传服务，请直接创建空资产后再用 AI 生成封面，或先配置 OSS 上传。");
+    }
 
     await fetch(signature.upload_url, {
       method: "PUT",
@@ -191,7 +196,10 @@ export default function AssetLibrary() {
     setIsCreating(true);
     try {
       if (createMode === "character") {
-        if (!newCharacter.name.trim()) return;
+        if (!newCharacter.name.trim()) {
+          toast.error("请输入角色名称");
+          return;
+        }
         let avatarURL = newCharacter.avatar_url.trim();
         if (!avatarURL && createCharacterFile) {
           avatarURL = await handleFileUpload(createCharacterFile);
@@ -205,12 +213,14 @@ export default function AssetLibrary() {
         setActiveTab("characters");
         setSelectedAsset({ type: "character", data: created });
       } else {
-        if (!newAsset.name.trim() || !newAsset.type.trim()) return;
+        if (!newAsset.name.trim() || !newAsset.type.trim()) {
+          toast.error("请填写完整的场景资产信息");
+          return;
+        }
         let fileURL = newAsset.file_url.trim();
         if (!fileURL && createAssetFile) {
           fileURL = await handleFileUpload(createAssetFile);
         }
-        if (!fileURL) return;
         const created = await assetApi.createAsset(currentProjectId, {
           name: newAsset.name.trim(),
           type: newAsset.type.trim(),
@@ -526,7 +536,11 @@ export default function AssetLibrary() {
       </div>
 
       <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) resetCreateState(); }}>
-        <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 sm:max-w-lg">
+        <DialogContent
+          className="bg-[#121212] border-gray-800 text-gray-100 sm:max-w-lg"
+          onInteractOutside={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>新建资产</DialogTitle>
             <DialogDescription className="text-gray-400">先选择创建角色资产还是场景资产。</DialogDescription>
@@ -543,6 +557,7 @@ export default function AssetLibrary() {
               <>
                 <div><Label className="text-xs text-gray-400">名称</Label><Input value={newCharacter.name} onChange={(e) => setNewCharacter((prev) => ({ ...prev, name: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
                 <div><Label className="text-xs text-gray-400">描述</Label><Textarea value={newCharacter.description} onChange={(e) => setNewCharacter((prev) => ({ ...prev, description: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
+                <div><Label className="text-xs text-gray-400">头像地址（可选）</Label><Input value={newCharacter.avatar_url} onChange={(e) => setNewCharacter((prev) => ({ ...prev, avatar_url: e.target.value }))} placeholder="https://..." className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
                 <div><Label className="text-xs text-gray-400">头像上传（可选）</Label><Input type="file" accept="image/*" onChange={(e) => setCreateCharacterFile(e.target.files?.[0] || null)} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
               </>
             ) : (
@@ -550,12 +565,13 @@ export default function AssetLibrary() {
                 <div><Label className="text-xs text-gray-400">名称</Label><Input value={newAsset.name} onChange={(e) => setNewAsset((prev) => ({ ...prev, name: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
                 <div><Label className="text-xs text-gray-400">类型</Label><Input value={newAsset.type} onChange={(e) => setNewAsset((prev) => ({ ...prev, type: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
                 <div><Label className="text-xs text-gray-400">说明</Label><Textarea value={newAsset.meta} onChange={(e) => setNewAsset((prev) => ({ ...prev, meta: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
-                <div><Label className="text-xs text-gray-400">上传图片</Label><Input type="file" accept="image/*" onChange={(e) => setCreateAssetFile(e.target.files?.[0] || null)} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
+                <div><Label className="text-xs text-gray-400">资源地址（可选）</Label><Input value={newAsset.file_url} onChange={(e) => setNewAsset((prev) => ({ ...prev, file_url: e.target.value }))} placeholder="https://..." className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
+                <div><Label className="text-xs text-gray-400">上传图片（可选）</Label><Input type="file" accept="image/*" onChange={(e) => setCreateAssetFile(e.target.files?.[0] || null)} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
               </>
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" className="border-gray-700 text-gray-300" onClick={() => setShowCreateDialog(false)}>取消</Button>
+            <Button type="button" variant="outline" className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white" onClick={() => setShowCreateDialog(false)}>取消</Button>
             <Button type="button" className="bg-purple-600 hover:bg-purple-700" disabled={isCreating} onClick={handleCreate}>{isCreating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />创建中</> : "确认创建"}</Button>
           </DialogFooter>
         </DialogContent>
@@ -572,7 +588,7 @@ export default function AssetLibrary() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-700 text-gray-300 hover:bg-gray-900">取消</AlertDialogCancel>
+            <AlertDialogCancel className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white">取消</AlertDialogCancel>
             <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}`} onClick={confirmDelete}>
               {deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : "确认删除"}
             </AlertDialogAction>
