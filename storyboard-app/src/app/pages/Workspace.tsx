@@ -142,6 +142,14 @@ const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
+const buildCoverPreviewItems = (generations: StoryboardMediaGeneration[]) =>
+  generations
+    .filter((generation) => generation.status === "succeeded" && !!generation.result_url)
+    .map((generation) => ({
+      src: generation.result_url as string,
+      alt: `封面历史 ${generation.id}`,
+    }));
+
 const formatShanghaiDateTime = (dateStr?: string) => {
   if (!dateStr) return "";
   return new Intl.DateTimeFormat("zh-CN", {
@@ -174,7 +182,7 @@ export default function Workspace() {
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
-  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string; items?: { src: string; alt: string }[]; currentIndex?: number } | null>(null);
   const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>(COVER_MODEL_OPTIONS[0].value);
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
@@ -556,6 +564,17 @@ export default function Workspace() {
       setPendingGeneratedShotId(null);
       setCoverGenerationPreview(null);
     }
+  };
+
+  const openCoverHistoryPreview = (generation: StoryboardMediaGeneration) => {
+    const items = buildCoverPreviewItems(coverGenerations);
+    const currentIndex = items.findIndex((item) => item.src === generation.result_url);
+    setPreviewImage({
+      src: generation.result_url || "",
+      alt: `封面历史 ${generation.id}`,
+      items,
+      currentIndex: currentIndex >= 0 ? currentIndex : 0,
+    });
   };
 
   const runGenerateVideo = async () => {
@@ -1675,7 +1694,7 @@ export default function Workspace() {
                               <button
                                 type="button"
                                 className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]"
-                                onClick={() => generation.result_url && setPreviewImage({ src: generation.result_url, alt: `封面历史 ${generation.id}` })}
+                                onClick={() => generation.result_url && openCoverHistoryPreview(generation)}
                                 disabled={!generation.result_url}
                               >
                                 {getGenerationPreviewSrc(generation) ? (
@@ -2161,15 +2180,28 @@ export default function Workspace() {
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">参考图</div>
               {coverGenerationPreview?.reference_images?.length ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {coverGenerationPreview.reference_images.map((reference, index) => (
-                    <div key={`${reference.type}-${reference.name}-${index}`} className="rounded border border-gray-800 bg-[#111111] p-2 text-xs space-y-1 break-all">
-                      <div className="flex justify-between gap-4"><span className="text-gray-500">类型</span><span>{reference.type}</span></div>
-                      <div className="flex justify-between gap-4"><span className="text-gray-500">名称</span><span>{reference.name || "-"}</span></div>
-                      <div className="flex justify-between gap-4"><span className="text-gray-500">来源字段</span><span>{reference.source}</span></div>
-                      <div>
-                        <div className="text-gray-500 mb-1">URL</div>
-                        <div className="text-gray-300 break-all">{reference.url}</div>
+                    <div key={`${reference.type}-${reference.name}-${index}`} className="rounded border border-gray-800 bg-[#111111] p-2 text-xs space-y-2">
+                      <div className="grid gap-2 md:grid-cols-[96px_minmax(0,1fr)]">
+                        <div className="h-24 w-24 overflow-hidden rounded border border-gray-800 bg-black">
+                          <img
+                            src={reference.url}
+                            alt={reference.name || `${reference.type} 参考图`}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="space-y-1 break-all">
+                          <div className="flex justify-between gap-4"><span className="text-gray-500">类型</span><span>{reference.type}</span></div>
+                          <div className="flex justify-between gap-4"><span className="text-gray-500">名称</span><span>{reference.name || "-"}</span></div>
+                          <div className="flex justify-between gap-4"><span className="text-gray-500">来源字段</span><span>{reference.source}</span></div>
+                          <div>
+                            <div className="text-gray-500 mb-1">URL</div>
+                            <div className="text-gray-300 break-all">{reference.url}</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2184,7 +2216,6 @@ export default function Workspace() {
                 </div>
               )}
             </div>
-
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">结构化字段</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
@@ -2264,9 +2295,11 @@ export default function Workspace() {
       <AlertDialog open={isSceneVideoConfirmOpen} onOpenChange={setIsSceneVideoConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
           <AlertDialogHeader>
-            <AlertDialogTitle>确认生成场景视频</AlertDialogTitle>
+            <AlertDialogTitle>{selectedScene?.video_url ? "确认重新生成场景视频" : "确认生成场景视频"}</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400 leading-6">
-              会将当前场景下已有视频镜头按顺序合成为一个场景视频，并保留每个镜头原始音轨。
+              {selectedScene?.video_url
+                ? "当前场景已经有一个已生成的视频。继续后会重新合成并覆盖当前场景视频结果。"
+                : "会将当前场景下已有视频镜头按顺序合成为一个场景视频，并保留每个镜头原始音轨。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
@@ -2277,7 +2310,7 @@ export default function Workspace() {
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmComposeSceneVideo}>
-              确认合成
+              {selectedScene?.video_url ? "确认重新生成" : "确认合成"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2451,6 +2484,19 @@ export default function Workspace() {
         }}
         src={previewImage?.src || ""}
         alt={previewImage?.alt || "镜头预览图"}
+        items={previewImage?.items}
+        currentIndex={previewImage?.currentIndex}
+        onNavigate={(nextIndex) => {
+          if (!previewImage?.items?.length) return;
+          const nextItem = previewImage.items[nextIndex];
+          if (!nextItem) return;
+          setPreviewImage({
+            ...previewImage,
+            src: nextItem.src,
+            alt: nextItem.alt,
+            currentIndex: nextIndex,
+          });
+        }}
       />
 
       <Dialog
