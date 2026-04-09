@@ -67,6 +67,7 @@ import {
   type Chapter,
   type Scene,
   type Storyboard,
+  type StoryboardCoverGenerationPreview,
   type StoryboardMediaGeneration,
 } from "../api";
 
@@ -176,6 +177,8 @@ export default function Workspace() {
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>(COVER_MODEL_OPTIONS[0].value);
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
+  const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
+  const [coverGenerationPreview, setCoverGenerationPreview] = useState<StoryboardCoverGenerationPreview | null>(null);
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
@@ -531,7 +534,7 @@ export default function Workspace() {
     return [];
   };
 
-  const runGenerateCover = async () => {
+  const runGenerateCover = async (useTextOnly = false) => {
     if (!selectedShot) {
       return;
     }
@@ -539,7 +542,7 @@ export default function Workspace() {
     setGeneratingCoverId(selectedShot.id);
     setPendingGeneratedShotId(selectedShot.id);
     try {
-      const result = await storyboardApi.generateStoryboardCover(selectedShot.id);
+      const result = await storyboardApi.generateStoryboardCover(selectedShot.id, useTextOnly ? { use_text_only: true } : undefined);
       const nextShot = result.storyboard;
       setStoryboards((prev) =>
         prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)),
@@ -551,6 +554,7 @@ export default function Workspace() {
     } finally {
       setGeneratingCoverId(null);
       setPendingGeneratedShotId(null);
+      setCoverGenerationPreview(null);
     }
   };
 
@@ -578,16 +582,34 @@ export default function Workspace() {
     }
   };
 
-  const handleGenerateCover = () => {
-    if (!selectedShot || generatingCoverId === selectedShot.id) {
+  const handleGenerateCover = async () => {
+    if (!selectedShot || generatingCoverId === selectedShot.id || isLoadingCoverPreview) {
       return;
     }
-    setIsCoverConfirmOpen(true);
+
+    setIsLoadingCoverPreview(true);
+    try {
+      const preview = await storyboardApi.getStoryboardCoverGenerationPreview(selectedShot.id);
+      setCoverGenerationPreview(preview);
+      setIsCoverConfirmOpen(true);
+    } catch (error) {
+      console.error("Failed to preview storyboard cover generation:", error);
+    } finally {
+      setIsLoadingCoverPreview(false);
+    }
   };
 
-  const confirmGenerateCover = async () => {
+  const confirmGenerateCover = async (useTextOnly = false) => {
     setIsCoverConfirmOpen(false);
-    await runGenerateCover();
+    await runGenerateCover(useTextOnly);
+  };
+
+  const handleGoToAssetsForReferences = () => {
+    setIsCoverConfirmOpen(false);
+    if (!selectedProject) {
+      return;
+    }
+    navigate(`/assets?project=${selectedProject.id}`);
   };
 
   const handleGenerateVideo = () => {
@@ -1542,28 +1564,19 @@ export default function Workspace() {
                     </div>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Select value={selectedCoverModel} onValueChange={(value) => setSelectedCoverModel(value as typeof selectedCoverModel)}>
-                          <SelectTrigger className="flex-1 bg-[#1a1a1a] border-gray-700 h-10 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            {COVER_MODEL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex-1 h-10 rounded-md border border-gray-700 bg-[#1a1a1a] px-3 text-sm text-gray-300 flex items-center">
+                          自动选择模型（参考图优先）
+                        </div>
                         <Button
                           type="button"
                           onClick={handleGenerateCover}
-                          disabled={generatingCoverId === selectedShot.id}
+                          disabled={generatingCoverId === selectedShot.id || isLoadingCoverPreview}
                           className="bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100 shrink-0"
                         >
-                          {generatingCoverId === selectedShot.id ? (
+                          {generatingCoverId === selectedShot.id || isLoadingCoverPreview ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              正在生成
+                              {isLoadingCoverPreview ? "分析中" : "正在生成"}
                             </>
                           ) : (
                             <>
@@ -2130,25 +2143,83 @@ export default function Workspace() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={isCoverConfirmOpen} onOpenChange={setIsCoverConfirmOpen}>
-        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认生成封面</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400 leading-6">
-              会为当前镜头调用图像模型生成 1 张新封面，并消耗模型额度。新结果会保留到历史记录中，不会覆盖旧版本。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedCoverModel}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">输出</span><span>1 张封面图</span></div>
+      <Dialog open={isCoverConfirmOpen} onOpenChange={setIsCoverConfirmOpen}>
+        <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>确认生成封面</DialogTitle>
+            <DialogDescription className="text-gray-400 leading-6">
+              会为当前镜头调用图像模型生成 1 张新封面，并消耗模型额度。弹窗展示的是本次将实际传给大模型的参数。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div className="grid gap-3 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm md:grid-cols-2">
+              <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-gray-500">生成模式</span><span>{coverGenerationPreview?.mode === "reference" ? "参考图生成" : "纯文本生成"}</span></div>
+              <div className="flex justify-between gap-4 md:col-span-2"><span className="text-gray-500">实际模型</span><span>{coverGenerationPreview?.model || "-"}</span></div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">参考图</div>
+              {coverGenerationPreview?.reference_images?.length ? (
+                <div className="space-y-2">
+                  {coverGenerationPreview.reference_images.map((reference, index) => (
+                    <div key={`${reference.type}-${reference.name}-${index}`} className="rounded border border-gray-800 bg-[#111111] p-2 text-xs space-y-1 break-all">
+                      <div className="flex justify-between gap-4"><span className="text-gray-500">类型</span><span>{reference.type}</span></div>
+                      <div className="flex justify-between gap-4"><span className="text-gray-500">名称</span><span>{reference.name || "-"}</span></div>
+                      <div className="flex justify-between gap-4"><span className="text-gray-500">来源字段</span><span>{reference.source}</span></div>
+                      <div>
+                        <div className="text-gray-500 mb-1">URL</div>
+                        <div className="text-gray-300 break-all">{reference.url}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-amber-300">当前镜头没有任何可用参考图。</div>
+              )}
+              {!!coverGenerationPreview?.missing_references?.length && (
+                <div>
+                  <div className="text-gray-500 mb-1">缺失参考图</div>
+                  <div className="text-gray-300 text-xs break-words">{coverGenerationPreview.missing_references.join("、")}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">结构化字段</div>
+              <div className="grid gap-2 md:grid-cols-2 text-xs">
+                <div><span className="text-gray-500">场景标题：</span><span>{coverGenerationPreview?.fields.scene_title || "-"}</span></div>
+                <div><span className="text-gray-500">地点：</span><span>{coverGenerationPreview?.fields.location || "-"}</span></div>
+                <div><span className="text-gray-500">时间：</span><span>{coverGenerationPreview?.fields.time_of_day || "-"}</span></div>
+                <div><span className="text-gray-500">背景场景：</span><span>{coverGenerationPreview?.fields.background || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{coverGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
+                <div><span className="text-gray-500">景别：</span><span>{coverGenerationPreview?.fields.shot_type || "-"}</span></div>
+                <div><span className="text-gray-500">机位：</span><span>{coverGenerationPreview?.fields.camera_direction || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{coverGenerationPreview?.fields.content || "-"}</span></div>
+                <div><span className="text-gray-500">情绪：</span><span>{coverGenerationPreview?.fields.mood || "-"}</span></div>
+                <div><span className="text-gray-500">台词：</span><span>{coverGenerationPreview?.fields.dialogue || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">备注：</span><span>{coverGenerationPreview?.fields.notes || "-"}</span></div>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">最终 Prompt</div>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{coverGenerationPreview?.final_prompt || "-"}</pre>
+            </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateCover}>确认生成</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setIsCoverConfirmOpen(false)}>取消</Button>
+            {coverGenerationPreview?.reference_images?.length ? (
+              <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateCover(false)}>确认生成</Button>
+            ) : (
+              <>
+                <Button type="button" variant="outline" onClick={handleGoToAssetsForReferences}>去资产库补参考图</Button>
+                <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateCover(true)}>继续用纯文本生成</Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={isSceneCoverConfirmOpen} onOpenChange={setIsSceneCoverConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">

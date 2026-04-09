@@ -134,6 +134,37 @@ export type GenerateStoryboardCoverResult = {
   storyboard: Storyboard;
 };
 
+export type StoryboardCoverGenerationReferenceImage = {
+  type: "scene" | "character" | string;
+  name: string;
+  url: string;
+  source: string;
+};
+
+export type StoryboardCoverGenerationFields = {
+  scene_title: string;
+  location: string;
+  time_of_day: string;
+  background: string;
+  characters: string[];
+  shot_type: string;
+  camera_direction: string;
+  content: string;
+  mood: string;
+  dialogue: string;
+  notes: string;
+};
+
+export type StoryboardCoverGenerationPreview = {
+  mode: "reference" | "text-only" | string;
+  model: string;
+  reference_images: StoryboardCoverGenerationReferenceImage[];
+  missing_references: string[];
+  fields: StoryboardCoverGenerationFields;
+  final_prompt: string;
+  can_generate_without_references: boolean;
+};
+
 export type GenerateStoryboardVideoResult = {
   storyboard_id: number;
   video_url: string;

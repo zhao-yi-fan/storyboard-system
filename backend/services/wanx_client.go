@@ -13,10 +13,11 @@ import (
 )
 
 type WanxClient struct {
-	baseURL    string
-	apiKey     string
-	model      string
-	httpClient *http.Client
+	baseURL        string
+	apiKey         string
+	model          string
+	referenceModel string
+	httpClient     *http.Client
 }
 
 type wanxAsyncCreateTaskResponse struct {
@@ -68,15 +69,33 @@ type qwenImageSyncResponse struct {
 	} `json:"output"`
 }
 
+type multimodalContentItem struct {
+	Type  string `json:"type"`
+	Text  string `json:"text,omitempty"`
+	Image string `json:"image,omitempty"`
+}
+
+type multimodalImageRequest struct {
+	Model string `json:"model"`
+	Input struct {
+		Messages []struct {
+			Role    string                 `json:"role"`
+			Content []multimodalContentItem `json:"content"`
+		} `json:"messages"`
+	} `json:"input"`
+	Parameters map[string]any `json:"parameters,omitempty"`
+}
+
 func NewWanxClient() (*WanxClient, error) {
 	if err := config.GlobalConfig.ValidateWanxConfig(); err != nil {
 		return nil, err
 	}
 
 	return &WanxClient{
-		baseURL: strings.TrimRight(config.GlobalConfig.WanxBaseURL, "/"),
-		apiKey:  config.GlobalConfig.DashScopeAPIKey,
-		model:   config.GlobalConfig.WanxModel,
+		baseURL:        strings.TrimRight(config.GlobalConfig.WanxBaseURL, "/"),
+		apiKey:         config.GlobalConfig.DashScopeAPIKey,
+		model:          config.GlobalConfig.WanxModel,
+		referenceModel: config.GlobalConfig.WanxReferenceModel,
 		httpClient: &http.Client{
 			Timeout: time.Duration(config.GlobalConfig.WanxRequestTimeoutSeconds) * time.Second,
 		},
@@ -85,7 +104,7 @@ func NewWanxClient() (*WanxClient, error) {
 
 func (c *WanxClient) GenerateImage(ctx context.Context, prompt string) (string, error) {
 	if c.usesQwenSyncAPI() {
-		return c.generateQwenImageSync(ctx, prompt)
+		return c.generateMultimodalSync(ctx, prompt, nil, c.model)
 	}
 	taskID, err := c.createWanxAsyncTask(ctx, prompt)
 	if err != nil {
@@ -94,22 +113,39 @@ func (c *WanxClient) GenerateImage(ctx context.Context, prompt string) (string, 
 	return c.waitForWanxTask(ctx, taskID)
 }
 
+func (c *WanxClient) GenerateImageWithReferences(ctx context.Context, prompt string, imageURLs []string, model string) (string, error) {
+	if len(imageURLs) == 0 {
+		return c.GenerateImage(ctx, prompt)
+	}
+	selectedModel := strings.TrimSpace(model)
+	if selectedModel == "" {
+		selectedModel = strings.TrimSpace(c.referenceModel)
+	}
+	if selectedModel == "" {
+		selectedModel = "wan2.7-image-pro"
+	}
+	return c.generateMultimodalSync(ctx, prompt, imageURLs, selectedModel)
+}
+
 func (c *WanxClient) usesQwenSyncAPI() bool {
 	return strings.HasPrefix(c.model, "qwen-image-2.0") || strings.HasPrefix(c.model, "qwen-image-max")
 }
 
-func (c *WanxClient) generateQwenImageSync(ctx context.Context, prompt string) (string, error) {
-	var payload qwenImageSyncRequest
-	payload.Model = c.model
+func (c *WanxClient) generateMultimodalSync(ctx context.Context, prompt string, imageURLs []string, model string) (string, error) {
+	var payload multimodalImageRequest
+	payload.Model = model
 	message := struct {
-		Role    string `json:"role"`
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
+		Role    string                 `json:"role"`
+		Content []multimodalContentItem `json:"content"`
 	}{Role: "user"}
-	message.Content = append(message.Content, struct {
-		Text string `json:"text"`
-	}{Text: prompt})
+	for _, imageURL := range imageURLs {
+		trimmed := strings.TrimSpace(imageURL)
+		if trimmed == "" {
+			continue
+		}
+		message.Content = append(message.Content, multimodalContentItem{Type: "image", Image: trimmed})
+	}
+	message.Content = append(message.Content, multimodalContentItem{Type: "text", Text: prompt})
 	payload.Input.Messages = append(payload.Input.Messages, message)
 	payload.Parameters = map[string]any{
 		"negative_prompt": "低分辨率，低画质，构图混乱，文字模糊，水印，过度AI感，肢体畸形",
@@ -132,20 +168,20 @@ func (c *WanxClient) generateQwenImageSync(ctx context.Context, prompt string) (
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("提交千问生图请求失败: %w", err)
+		return "", fmt.Errorf("提交参考图生图请求失败: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var result qwenImageSyncResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("解析千问生图响应失败: %w", err)
+		return "", fmt.Errorf("解析参考图生图响应失败: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("提交千问生图请求失败: %s %s", result.Code, result.Message)
+		return "", fmt.Errorf("提交参考图生图请求失败: %s %s", result.Code, result.Message)
 	}
 	if len(result.Output.Choices) == 0 || len(result.Output.Choices[0].Message.Content) == 0 || result.Output.Choices[0].Message.Content[0].Image == "" {
-		return "", fmt.Errorf("千问生图成功但未返回图片 URL")
+		return "", fmt.Errorf("参考图生图成功但未返回图片 URL")
 	}
 
 	return result.Output.Choices[0].Message.Content[0].Image, nil

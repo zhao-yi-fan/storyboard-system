@@ -2,6 +2,7 @@ import { apiClient } from "./client";
 import type {
   GenerateStoryboardCoverResult,
   GenerateStoryboardVideoResult,
+  StoryboardCoverGenerationPreview,
   Storyboard,
   StoryboardMediaGeneration,
   StoryboardMediaMutationResult,
@@ -70,8 +71,12 @@ export function deleteStoryboard(id: number) {
   return apiClient.delete<{ success: boolean }>(`/storyboards/${id}`);
 }
 
-export function generateStoryboardCover(id: number) {
-  return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`);
+export function getStoryboardCoverGenerationPreview(id: number) {
+  return apiClient.get<StoryboardCoverGenerationPreview>(`/storyboards/${id}/cover-generation-preview`);
+}
+
+export function generateStoryboardCover(id: number, data?: { use_text_only?: boolean }) {
+  return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`, data ?? {});
 }
 
 export function generateStoryboardVideo(id: number, data?: { model?: string; duration?: number }) {

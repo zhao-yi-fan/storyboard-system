@@ -389,7 +389,7 @@ func (h *StoryboardHandler) Delete(c *gin.Context) {
 }
 
 // GenerateCover generates and attaches a cover image for a storyboard
-func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
+func (h *StoryboardHandler) PreviewCoverGeneration(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -403,7 +403,38 @@ func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
 		return
 	}
 
-	storyboard, err := service.GenerateAndAttach(id)
+	preview, err := service.PreviewGeneration(id, requestPublicBaseURL(c))
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, preview)
+}
+
+func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	var req struct {
+		UseTextOnly bool `json:"use_text_only"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil && !strings.Contains(strings.ToLower(err.Error()), "eof") {
+		response.Error(c, err.Error())
+		return
+	}
+
+	service, err := services.NewStoryboardCoverService()
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	storyboard, err := service.GenerateAndAttach(id, requestPublicBaseURL(c), req.UseTextOnly)
 	if err != nil {
 		response.Error(c, err.Error())
 		return
@@ -459,16 +490,7 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 		return
 	}
 
-	scheme := "http"
-	if c.Request.TLS != nil {
-		scheme = "https"
-	} else if forwardedProto := c.Request.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
-		scheme = forwardedProto
-	}
-	publicBaseURL := scheme + "://" + c.Request.Host
-	if strings.TrimSpace(config.GlobalConfig.PublicAppBaseURL) != "" {
-		publicBaseURL = strings.TrimRight(config.GlobalConfig.PublicAppBaseURL, "/")
-	}
+	publicBaseURL := requestPublicBaseURL(c)
 
 	storyboard, err := service.StartGenerate(id, publicBaseURL, selectedModel, selectedDuration)
 	if err != nil {
@@ -482,6 +504,19 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 		"video_preview_url":  storyboard.VideoPreviewURL,
 		"storyboard":         storyboard,
 	})
+}
+
+func requestPublicBaseURL(c *gin.Context) string {
+	if strings.TrimSpace(config.GlobalConfig.PublicAppBaseURL) != "" {
+		return strings.TrimRight(config.GlobalConfig.PublicAppBaseURL, "/")
+	}
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
+	} else if forwardedProto := c.Request.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
+		scheme = forwardedProto
+	}
+	return scheme + "://" + c.Request.Host
 }
 
 func (h *StoryboardHandler) ensureStoryboardPreview(c *gin.Context, storyboard *models.Storyboard) {
