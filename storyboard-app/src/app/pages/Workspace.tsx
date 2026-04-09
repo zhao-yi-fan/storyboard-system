@@ -1533,21 +1533,6 @@ export default function Workspace() {
               <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
                 <h3 className="text-sm">镜头详情</h3>
                 <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-[#1f1f1f] hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
-                      <DropdownMenuItem
-                        variant="destructive"
-                        className="cursor-pointer focus:bg-red-500/10 focus:text-red-300"
-                        onClick={() => handleRequestDeleteShot(selectedShot)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        删除镜头
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                   <Button
                     size="sm"
                     variant="ghost"
