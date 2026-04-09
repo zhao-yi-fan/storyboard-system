@@ -18,20 +18,22 @@ import (
 )
 
 type StoryboardCoverService struct {
-    storyboardRepo *repository.StoryboardRepository
-    sceneRepo      *repository.SceneRepository
-    assetRepo      *repository.AssetRepository
-    historyRepo    *repository.StoryboardMediaGenerationRepository
-    wanxClient     *WanxClient
-    httpClient     *http.Client
-    previewService *ImagePreviewService
+	storyboardRepo *repository.StoryboardRepository
+	sceneRepo      *repository.SceneRepository
+	assetRepo      *repository.AssetRepository
+	usageRepo      *repository.StoryboardAssetUsageRepository
+	historyRepo    *repository.StoryboardMediaGenerationRepository
+	wanxClient     *WanxClient
+	httpClient     *http.Client
+	previewService *ImagePreviewService
 }
 
 type StoryboardCoverReferenceImage struct {
-    Type   string `json:"type"`
-    Name   string `json:"name"`
-    URL    string `json:"url"`
-    Source string `json:"source"`
+	AssetID int64  `json:"-"`
+	Type   string `json:"type"`
+	Name   string `json:"name"`
+	URL    string `json:"url"`
+	Source string `json:"source"`
 }
 
 type StoryboardCoverGenerationFields struct {
@@ -65,11 +67,12 @@ func NewStoryboardCoverService() (*StoryboardCoverService, error) {
     }
 
     return &StoryboardCoverService{
-        storyboardRepo: &repository.StoryboardRepository{},
-        sceneRepo:      &repository.SceneRepository{},
-        assetRepo:      &repository.AssetRepository{},
-        historyRepo:    &repository.StoryboardMediaGenerationRepository{},
-        wanxClient:     wanxClient,
+		storyboardRepo: &repository.StoryboardRepository{},
+		sceneRepo:      &repository.SceneRepository{},
+		assetRepo:      &repository.AssetRepository{},
+		usageRepo:      &repository.StoryboardAssetUsageRepository{},
+		historyRepo:    &repository.StoryboardMediaGenerationRepository{},
+		wanxClient:     wanxClient,
         httpClient:     &http.Client{Timeout: 60 * time.Second},
         previewService: NewImagePreviewService(),
     }, nil
@@ -154,11 +157,14 @@ func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64, publicBas
     if err := s.historyRepo.Update(generation); err != nil {
         return nil, err
     }
-    if err := s.historyRepo.MarkCurrent(storyboard.ID, generation.MediaType, generation.ID); err != nil {
-        return nil, err
-    }
+	if err := s.historyRepo.MarkCurrent(storyboard.ID, generation.MediaType, generation.ID); err != nil {
+		return nil, err
+	}
+	if err := s.usageRepo.ReplaceStoryboardUsage(storyboard.ID, "cover_reference", referencedAssetIDs(preview.ReferenceImages)); err != nil {
+		return nil, err
+	}
 
-    return s.storyboardRepo.FindByID(storyboard.ID)
+	return s.storyboardRepo.FindByID(storyboard.ID)
 }
 
 func (s *StoryboardCoverService) loadStoryboardContext(storyboardID int64) (*models.Storyboard, *models.Scene, error) {
@@ -258,11 +264,11 @@ func (s *StoryboardCoverService) selectReferenceImages(storyboard *models.Storyb
             continue
         }
         if url := absolutizeReferenceURL(publicBaseURL, strings.TrimSpace(asset.CoverURL)); url != "" {
-            references = append(references, StoryboardCoverReferenceImage{Type: "scene", Name: strings.TrimSpace(asset.Name), URL: url, Source: "asset.cover_url"})
+            references = append(references, StoryboardCoverReferenceImage{AssetID: asset.ID, Type: "scene", Name: strings.TrimSpace(asset.Name), URL: url, Source: "asset.cover_url"})
             break
         }
         if url := absolutizeReferenceURL(publicBaseURL, strings.TrimSpace(asset.FileURL)); url != "" {
-            references = append(references, StoryboardCoverReferenceImage{Type: "scene", Name: strings.TrimSpace(asset.Name), URL: url, Source: "asset.file_url"})
+            references = append(references, StoryboardCoverReferenceImage{AssetID: asset.ID, Type: "scene", Name: strings.TrimSpace(asset.Name), URL: url, Source: "asset.file_url"})
             break
         }
     }
@@ -403,6 +409,16 @@ func collectReferenceURLs(referenceImages []StoryboardCoverReferenceImage) []str
         }
     }
     return urls
+}
+
+func referencedAssetIDs(referenceImages []StoryboardCoverReferenceImage) []int64 {
+	assetIDs := make([]int64, 0, len(referenceImages))
+	for _, ref := range referenceImages {
+		if ref.AssetID > 0 {
+			assetIDs = append(assetIDs, ref.AssetID)
+		}
+	}
+	return assetIDs
 }
 
 func firstReferenceURL(referenceImages []StoryboardCoverReferenceImage) string {

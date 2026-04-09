@@ -16,3 +16,12 @@ type Asset struct {
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
+
+type StoryboardAssetUsage struct {
+	ID          int64     `json:"id"`
+	StoryboardID int64    `json:"storyboard_id"`
+	AssetID     int64     `json:"asset_id"`
+	UsageType   string    `json:"usage_type"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}

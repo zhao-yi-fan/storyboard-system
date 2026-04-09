@@ -63,6 +63,19 @@ func runMigrations() error {
 			INDEX idx_storyboard_media_current (storyboard_id, media_type, is_current),
 			INDEX idx_storyboard_media_deleted (storyboard_id, deleted_at)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜媒体生成历史表'`,
+		`CREATE TABLE IF NOT EXISTS storyboard_asset_usages (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			storyboard_id BIGINT NOT NULL,
+			asset_id BIGINT NOT NULL,
+			usage_type VARCHAR(50) NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			FOREIGN KEY (storyboard_id) REFERENCES storyboards(id),
+			FOREIGN KEY (asset_id) REFERENCES assets(id),
+			UNIQUE KEY uk_storyboard_asset_usage (storyboard_id, asset_id, usage_type),
+			INDEX idx_storyboard_asset_usage_asset (asset_id, usage_type),
+			INDEX idx_storyboard_asset_usage_storyboard (storyboard_id, usage_type)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分镜资产使用关系表'`,
 	}
 
 	for _, query := range queries {

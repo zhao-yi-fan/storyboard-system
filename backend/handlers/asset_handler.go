@@ -16,6 +16,7 @@ import (
 // AssetHandler handles asset-related requests
 type AssetHandler struct {
 	repo                  *repository.AssetRepository
+	usageRepo             *repository.StoryboardAssetUsageRepository
 	projectRepo           *repository.ProjectRepository
 	characterRepo         *repository.CharacterRepository
 	previewService        *services.ImagePreviewService
@@ -25,6 +26,7 @@ type AssetHandler struct {
 func NewAssetHandler() *AssetHandler {
 	return &AssetHandler{
 		repo:                  &repository.AssetRepository{},
+		usageRepo:             &repository.StoryboardAssetUsageRepository{},
 		projectRepo:           &repository.ProjectRepository{},
 		characterRepo:         &repository.CharacterRepository{},
 		previewService:        services.NewImagePreviewService(),
@@ -307,6 +309,26 @@ func (h *AssetHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.Error(c, "invalid id")
+		return
+	}
+
+	asset, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if asset == nil {
+		response.Error(c, "asset not found")
+		return
+	}
+
+	usageCount, err := h.usageRepo.CountActiveStoryboardUsageByAssetID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if usageCount > 0 {
+		response.Error(c, fmt.Sprintf("该资产已被 %d 个镜头引用，暂不允许删除。请先让相关镜头改用其他资产或重新生成封面。", usageCount))
 		return
 	}
 
