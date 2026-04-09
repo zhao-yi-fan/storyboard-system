@@ -160,7 +160,11 @@ func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64, publicBas
 	if err := s.historyRepo.MarkCurrent(storyboard.ID, generation.MediaType, generation.ID); err != nil {
 		return nil, err
 	}
-	if err := s.usageRepo.ReplaceStoryboardUsage(storyboard.ID, "cover_reference", referencedAssetIDs(preview.ReferenceImages)); err != nil {
+	usageAssetIDs := []int64{}
+	if preview.Mode == "reference" {
+		usageAssetIDs = referencedAssetIDs(preview.ReferenceImages)
+	}
+	if err := s.usageRepo.ReplaceStoryboardUsage(storyboard.ID, "cover_reference", usageAssetIDs); err != nil {
 		return nil, err
 	}
 
