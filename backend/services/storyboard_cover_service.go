@@ -46,6 +46,8 @@ type StoryboardCoverGenerationFields struct {
     CameraDirection string   `json:"camera_direction"`
     Content         string   `json:"content"`
     Mood            string   `json:"mood"`
+    StylePreset     string   `json:"style_preset"`
+    StyleNotes      string   `json:"style_notes"`
     Dialogue        string   `json:"dialogue"`
     Notes           string   `json:"notes"`
 }
@@ -233,6 +235,8 @@ func buildStoryboardCoverFields(storyboard *models.Storyboard, scene *models.Sce
         CameraDirection: strings.TrimSpace(storyboard.CameraDirection),
         Content:         strings.TrimSpace(storyboard.Content),
         Mood:            strings.TrimSpace(storyboard.Mood),
+        StylePreset:     resolveStoryboardStylePreset(scene, storyboard),
+        StyleNotes:      resolveStoryboardStyleNotes(scene, storyboard),
         Dialogue:        strings.TrimSpace(storyboard.Dialogue),
         Notes:           strings.TrimSpace(storyboard.Notes),
     }
@@ -361,6 +365,16 @@ func buildStoryboardCoverPrompt(fields StoryboardCoverGenerationFields, referenc
         b.WriteString(fields.Mood)
         b.WriteString("。")
     }
+    if prompt := stylePresetPrompt(fields.StylePreset); prompt != "" {
+        b.WriteString(" 风格预设：")
+        b.WriteString(prompt)
+        b.WriteString("。")
+    }
+    if fields.StyleNotes != "" {
+        b.WriteString(" 风格补充：")
+        b.WriteString(sanitizePromptText(fields.StyleNotes))
+        b.WriteString("。")
+    }
     if fields.Dialogue != "" {
         b.WriteString(" 台词语义：")
         b.WriteString(sanitizePromptText(fields.Dialogue))
@@ -390,7 +404,7 @@ func buildStoryboardCoverPrompt(fields StoryboardCoverGenerationFields, referenc
     }
 
     b.WriteString(" 画面要求：只生成一个明确的单镜头瞬间，单主体优先，不要多主体争抢画面。")
-    b.WriteString(" 风格要求：写实电影感、叙事性强、构图清晰、景深自然、光影克制，适合做分镜封面。")
+    b.WriteString(" 风格要求：叙事性强、构图清晰、景深自然、光影克制，适合做分镜封面。")
     b.WriteString(" 输出要求：横版16:9，不要海报排版，不要文字、水印、logo、边框，不要拼贴、不要多格漫画、不要分镜条。")
     return b.String()
 }

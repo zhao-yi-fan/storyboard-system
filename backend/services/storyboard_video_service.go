@@ -300,6 +300,16 @@ func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Sce
 		b.WriteString(storyboard.Mood)
 		b.WriteString("。")
 	}
+	if prompt := stylePresetPrompt(resolveStoryboardStylePreset(scene, storyboard)); prompt != "" {
+		b.WriteString(" 风格预设：")
+		b.WriteString(prompt)
+		b.WriteString("。")
+	}
+	if styleNotes := resolveStoryboardStyleNotes(scene, storyboard); styleNotes != "" {
+		b.WriteString(" 风格补充：")
+		b.WriteString(sanitizePromptText(styleNotes))
+		b.WriteString("。")
+	}
 	if strings.TrimSpace(storyboard.Dialogue) != "" {
 		b.WriteString(" 台词：")
 		b.WriteString(sanitizePromptText(storyboard.Dialogue))
@@ -312,7 +322,7 @@ func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Sce
 	}
 
 	b.WriteString(" 保持首帧构图和主体一致，只生成单镜头连续动作，不切镜，不闪回。")
-	b.WriteString(" 风格：写实电影感、自然运动、光影克制、镜头稳定。")
+	b.WriteString(" 运动要求：自然运动、光影克制、镜头稳定。")
 	b.WriteString(" 音频：根据场景自动生成环境音和氛围声，不要旁白，不要字幕，不要水印。")
 	return b.String()
 }

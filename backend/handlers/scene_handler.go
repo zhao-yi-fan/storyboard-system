@@ -109,6 +109,8 @@ func (h *SceneHandler) Create(c *gin.Context) {
 		Description string `json:"description"`
 		Location    string `json:"location"`
 		TimeOfDay   string `json:"time_of_day"`
+		StylePreset string `json:"style_preset"`
+		StyleNotes  string `json:"style_notes"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -135,6 +137,8 @@ func (h *SceneHandler) Create(c *gin.Context) {
 		VideoStatus:     "",
 		VideoError:      "",
 		VideoDuration:   0,
+		StylePreset:     req.StylePreset,
+		StyleNotes:      req.StyleNotes,
 		SortOrder:       maxSort + 1,
 	}
 
@@ -170,6 +174,8 @@ func (h *SceneHandler) Update(c *gin.Context) {
 		Description string `json:"description"`
 		Location    string `json:"location"`
 		TimeOfDay   string `json:"time_of_day"`
+		StylePreset string `json:"style_preset"`
+		StyleNotes  string `json:"style_notes"`
 		SortOrder   int    `json:"sort_order"`
 	}
 
@@ -184,6 +190,8 @@ func (h *SceneHandler) Update(c *gin.Context) {
 	scene.Description = req.Description
 	scene.Location = req.Location
 	scene.TimeOfDay = req.TimeOfDay
+	scene.StylePreset = req.StylePreset
+	scene.StyleNotes = req.StyleNotes
 	if req.SortOrder != 0 {
 		scene.SortOrder = req.SortOrder
 	}

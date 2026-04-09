@@ -15,6 +15,8 @@ type Storyboard struct {
 	Dialogue            string      `json:"dialogue"`
 	ShotType            string      `json:"shot_type"`
 	Mood                string      `json:"mood"`
+	StylePreset         string      `json:"style_preset"`
+	StyleNotes          string      `json:"style_notes"`
 	CameraDirection     string      `json:"camera_direction"`
 	CameraMotion        string      `json:"camera_motion"`
 	Duration            float64     `json:"duration"`

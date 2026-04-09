@@ -120,6 +120,30 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("storyboards", "style_preset") {
+		if _, err := DB.Exec(`ALTER TABLE storyboards ADD COLUMN style_preset VARCHAR(50) NULL DEFAULT NULL AFTER mood`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("storyboards", "style_notes") {
+		if _, err := DB.Exec(`ALTER TABLE storyboards ADD COLUMN style_notes TEXT NULL AFTER style_preset`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("scenes", "style_preset") {
+		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN style_preset VARCHAR(50) NULL DEFAULT NULL AFTER time_of_day`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("scenes", "style_notes") {
+		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN style_notes TEXT NULL AFTER style_preset`); err != nil {
+			return err
+		}
+	}
+
 	if !columnExists("assets", "cover_url") {
 		if _, err := DB.Exec(`ALTER TABLE assets ADD COLUMN cover_url VARCHAR(500) NULL DEFAULT NULL AFTER file_url`); err != nil {
 			return err
@@ -199,6 +223,9 @@ func runMigrations() error {
 	}
 
 	backfillQueries := []string{
+		`UPDATE scenes
+		SET style_preset = 'realistic_cinematic'
+		WHERE style_preset IS NULL OR style_preset = ''`,
 		`UPDATE storyboards
 		SET shot_type = TRIM(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, '景别：', -1), '\n', 1), '\r', ''))
 		WHERE (shot_type IS NULL OR shot_type = '') AND notes LIKE '%景别：%'`,

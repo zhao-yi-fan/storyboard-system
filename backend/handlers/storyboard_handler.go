@@ -214,6 +214,8 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 		Mood                string  `json:"mood"`
 		CameraDirection     string  `json:"camera_direction"`
 		CameraMotion        string  `json:"camera_motion"`
+		StylePreset         string  `json:"style_preset"`
+		StyleNotes          string  `json:"style_notes"`
 		Duration            float64 `json:"duration"`
 		Background          string  `json:"background"`
 		ThumbnailURL        string  `json:"thumbnail_url"`
@@ -247,6 +249,8 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 		Mood:                req.Mood,
 		CameraDirection:     req.CameraDirection,
 		CameraMotion:        req.CameraMotion,
+		StylePreset:         req.StylePreset,
+		StyleNotes:          req.StyleNotes,
 		Duration:            req.Duration,
 		Background:          req.Background,
 		ThumbnailURL:        req.ThumbnailURL,
@@ -290,6 +294,8 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 		Mood                *string  `json:"mood"`
 		CameraDirection     *string  `json:"camera_direction"`
 		CameraMotion        *string  `json:"camera_motion"`
+		StylePreset         *string  `json:"style_preset"`
+		StyleNotes          *string  `json:"style_notes"`
 		Duration            *float64 `json:"duration"`
 		Background          *string  `json:"background"`
 		ThumbnailURL        *string  `json:"thumbnail_url"`
@@ -328,6 +334,12 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 	}
 	if req.CameraMotion != nil {
 		storyboard.CameraMotion = *req.CameraMotion
+	}
+	if req.StylePreset != nil {
+		storyboard.StylePreset = *req.StylePreset
+	}
+	if req.StyleNotes != nil {
+		storyboard.StyleNotes = *req.StyleNotes
 	}
 	if req.Duration != nil {
 		storyboard.Duration = *req.Duration

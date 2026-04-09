@@ -16,14 +16,14 @@ export function getScene(id: number) {
 
 export function createScene(
   chapterId: number,
-  data: { title: string; description?: string; location?: string; time_of_day?: string }
+  data: { title: string; description?: string; location?: string; time_of_day?: string; style_preset?: string; style_notes?: string }
 ) {
   return apiClient.post<Scene>(`/chapters/${chapterId}/scenes`, data);
 }
 
 export function updateScene(
   id: number,
-  data: { title?: string; description?: string; location?: string; time_of_day?: string; sort_order?: number }
+  data: { title?: string; description?: string; location?: string; time_of_day?: string; style_preset?: string; style_notes?: string; sort_order?: number }
 ) {
   return apiClient.put<Scene>(`/scenes/${id}`, data);
 }

@@ -38,6 +38,8 @@ export function createStoryboard(
     mood?: string;
     camera_direction?: string;
     camera_motion?: string;
+    style_preset?: string;
+    style_notes?: string;
     duration?: number;
     background?: string;
     thumbnail_url?: string;
@@ -57,6 +59,8 @@ export function updateStoryboard(
     mood?: string;
     camera_direction?: string;
     camera_motion?: string;
+    style_preset?: string;
+    style_notes?: string;
     duration?: number;
     background?: string;
     thumbnail_url?: string;

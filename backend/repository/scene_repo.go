@@ -11,7 +11,7 @@ type SceneRepository struct{}
 
 // FindByChapterID finds all scenes for a chapter
 func (r *SceneRepository) FindByChapterID(chapterID int64) ([]models.Scene, error) {
-	query := `SELECT id, chapter_id, project_id, title, description, location, time_of_day, cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order, created_at, updated_at
+	query := `SELECT id, chapter_id, project_id, title, description, location, time_of_day, style_preset, style_notes, cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order, created_at, updated_at
 	          FROM scenes WHERE chapter_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC`
 
 	rows, err := database.DB.Query(query, chapterID)
@@ -23,6 +23,8 @@ func (r *SceneRepository) FindByChapterID(chapterID int64) ([]models.Scene, erro
 	var scenes []models.Scene
 	for rows.Next() {
 		var s models.Scene
+		var stylePreset sql.NullString
+		var styleNotes sql.NullString
 		var coverURL sql.NullString
 		var coverPreviewURL sql.NullString
 		var videoURL sql.NullString
@@ -30,10 +32,14 @@ func (r *SceneRepository) FindByChapterID(chapterID int64) ([]models.Scene, erro
 		var videoStatus sql.NullString
 		var videoError sql.NullString
 		var videoDuration sql.NullFloat64
-		if err := rows.Scan(&s.ID, &s.ChapterID, &s.ProjectID, &s.Title, &s.Description, &s.Location, &s.TimeOfDay, &coverURL, &coverPreviewURL, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &s.SortOrder, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.ChapterID, &s.ProjectID, &s.Title, &s.Description, &s.Location, &s.TimeOfDay, &stylePreset, &styleNotes, &coverURL, &coverPreviewURL, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &s.SortOrder, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
-		s.CoverURL = nullStringValue(coverURL)
+		s.StylePreset = nullStringValue(stylePreset)
+		s.StyleNotes = nullStringValue(styleNotes)
+		s.StylePreset = nullStringValue(stylePreset)
+	s.StyleNotes = nullStringValue(styleNotes)
+	s.CoverURL = nullStringValue(coverURL)
 		s.CoverPreviewURL = nullStringValue(coverPreviewURL)
 		s.VideoURL = nullStringValue(videoURL)
 		s.VideoPreviewURL = nullStringValue(videoPreviewURL)
@@ -50,10 +56,12 @@ func (r *SceneRepository) FindByChapterID(chapterID int64) ([]models.Scene, erro
 
 // FindByID finds a scene by ID
 func (r *SceneRepository) FindByID(id int64) (*models.Scene, error) {
-	query := `SELECT id, chapter_id, project_id, title, description, location, time_of_day, cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order, created_at, updated_at
+	query := `SELECT id, chapter_id, project_id, title, description, location, time_of_day, style_preset, style_notes, cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order, created_at, updated_at
 	          FROM scenes WHERE id = ? AND deleted_at IS NULL`
 
 	var s models.Scene
+	var stylePreset sql.NullString
+	var styleNotes sql.NullString
 	var coverURL sql.NullString
 	var coverPreviewURL sql.NullString
 	var videoURL sql.NullString
@@ -61,7 +69,7 @@ func (r *SceneRepository) FindByID(id int64) (*models.Scene, error) {
 	var videoStatus sql.NullString
 	var videoError sql.NullString
 	var videoDuration sql.NullFloat64
-	err := database.DB.QueryRow(query, id).Scan(&s.ID, &s.ChapterID, &s.ProjectID, &s.Title, &s.Description, &s.Location, &s.TimeOfDay, &coverURL, &coverPreviewURL, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &s.SortOrder, &s.CreatedAt, &s.UpdatedAt)
+	err := database.DB.QueryRow(query, id).Scan(&s.ID, &s.ChapterID, &s.ProjectID, &s.Title, &s.Description, &s.Location, &s.TimeOfDay, &stylePreset, &styleNotes, &coverURL, &coverPreviewURL, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &s.SortOrder, &s.CreatedAt, &s.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -82,10 +90,10 @@ func (r *SceneRepository) FindByID(id int64) (*models.Scene, error) {
 
 // Create creates a new scene
 func (r *SceneRepository) Create(s *models.Scene) error {
-	query := `INSERT INTO scenes (chapter_id, project_id, title, description, location, time_of_day, cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO scenes (chapter_id, project_id, title, description, location, time_of_day, style_preset, style_notes, cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := database.DB.Exec(query, s.ChapterID, s.ProjectID, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableSceneFloat64(s.VideoDuration), s.SortOrder)
+	result, err := database.DB.Exec(query, s.ChapterID, s.ProjectID, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.StylePreset), normalizeNullableString(s.StyleNotes), normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableSceneFloat64(s.VideoDuration), s.SortOrder)
 	if err != nil {
 		return err
 	}
@@ -100,9 +108,9 @@ func (r *SceneRepository) Create(s *models.Scene) error {
 
 // Update updates a scene
 func (r *SceneRepository) Update(s *models.Scene) error {
-	query := `UPDATE scenes SET title = ?, description = ?, location = ?, time_of_day = ?, cover_url = ?, cover_preview_url = ?, video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ?, sort_order = ? WHERE id = ?`
+	query := `UPDATE scenes SET title = ?, description = ?, location = ?, time_of_day = ?, style_preset = ?, style_notes = ?, cover_url = ?, cover_preview_url = ?, video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ?, sort_order = ? WHERE id = ?`
 
-	_, err := database.DB.Exec(query, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableSceneFloat64(s.VideoDuration), s.SortOrder, s.ID)
+	_, err := database.DB.Exec(query, s.Title, s.Description, s.Location, s.TimeOfDay, normalizeNullableString(s.StylePreset), normalizeNullableString(s.StyleNotes), normalizeNullableString(s.CoverURL), normalizeNullableString(s.CoverPreviewURL), normalizeNullableString(s.VideoURL), normalizeNullableString(s.VideoPreviewURL), normalizeNullableString(s.VideoStatus), normalizeNullableString(s.VideoError), normalizeNullableSceneFloat64(s.VideoDuration), s.SortOrder, s.ID)
 	return err
 }
 

@@ -84,6 +84,16 @@ const SHOT_TYPE_OPTIONS = ["远景", "全景", "中景", "近景", "特写", "�
 const CAMERA_DIRECTION_OPTIONS = ["平视", "俯视", "仰视", "侧面"] as const;
 const CAMERA_MOTION_OPTIONS = ["静止", "推镜", "拉镜", "横移", "跟拍", "手持轻晃"] as const;
 const MOOD_OPTIONS = ["压抑", "神秘", "温暖", "孤独", "紧张", "惊悚", "冷峻"] as const;
+const STYLE_PRESET_OPTIONS = [
+  { value: "realistic_cinematic", label: "写实电影感" },
+  { value: "dark_realism", label: "阴郁现实主义" },
+  { value: "mystery_thriller", label: "悬疑惊悚" },
+  { value: "youthful_bright", label: "青春清透" },
+  { value: "japanese_animation", label: "日式动画感" },
+  { value: "retro_film", label: "复古胶片" },
+  { value: "warm_poetic", label: "温暖诗意" },
+  { value: "cold_noir", label: "冷峻黑色电影" },
+] as const;
 
 type ShotFormState = {
   content: string;
@@ -92,6 +102,8 @@ type ShotFormState = {
   camera_direction: string;
   camera_motion: string;
   mood: string;
+  style_preset: string;
+  style_notes: string;
   notes: string;
 };
 
@@ -102,6 +114,8 @@ const emptyShotForm: ShotFormState = {
   camera_direction: "",
   camera_motion: "",
   mood: "",
+  style_preset: "",
+  style_notes: "",
   notes: "",
 };
 
@@ -110,6 +124,8 @@ const emptySceneForm = {
   description: "",
   location: "",
   time_of_day: "",
+  style_preset: "realistic_cinematic",
+  style_notes: "",
 };
 
 const buildShotFormState = (shot: Storyboard | null): ShotFormState => ({
@@ -119,6 +135,8 @@ const buildShotFormState = (shot: Storyboard | null): ShotFormState => ({
   camera_direction: shot?.camera_direction || "",
   camera_motion: shot?.camera_motion || "",
   mood: shot?.mood || "",
+  style_preset: shot?.style_preset || "",
+  style_notes: shot?.style_notes || "",
   notes: shot?.notes || "",
 });
 
@@ -896,6 +914,8 @@ export default function Workspace() {
         description: newSceneForm.description.trim(),
         location: newSceneForm.location.trim(),
         time_of_day: newSceneForm.time_of_day.trim(),
+        style_preset: newSceneForm.style_preset,
+        style_notes: newSceneForm.style_notes.trim(),
       });
 
       await loadScenes(selectedChapter.id);
@@ -947,6 +967,8 @@ export default function Workspace() {
         mood: shotForm.mood,
         camera_direction: shotForm.camera_direction,
         camera_motion: shotForm.camera_motion,
+        style_preset: shotForm.style_preset,
+        style_notes: shotForm.style_notes,
         notes: shotForm.notes,
       });
       applyStoryboardUpdate(nextShot);
@@ -1969,6 +1991,35 @@ export default function Workspace() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
+                      <Label className="text-xs text-gray-400">风格预设</Label>
+                      <Select value={shotForm.style_preset || "__scene__"} onValueChange={(value) => updateShotForm("style_preset", value === "__scene__" ? "" : value)}>
+                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                          <SelectValue placeholder="跟随场景" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                          <SelectItem value="__scene__">跟随场景</SelectItem>
+                          {STYLE_PRESET_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">风格补充</Label>
+                      <Input
+                        value={shotForm.style_notes}
+                        placeholder="补充风格要求"
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                        onChange={(e) => updateShotForm("style_notes", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
                       <Label className="text-xs text-gray-400">镜头运动</Label>
                       <Select value={shotForm.camera_motion} onValueChange={(value) => updateShotForm("camera_motion", value)}>
                         <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
@@ -2120,6 +2171,31 @@ export default function Workspace() {
                 <Input
                   value={newSceneForm.time_of_day}
                   onChange={(e) => updateNewSceneForm("time_of_day", e.target.value)}
+                  className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-gray-400">风格预设</Label>
+                <Select value={newSceneForm.style_preset} onValueChange={(value) => updateNewSceneForm("style_preset", value)}>
+                  <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                    <SelectValue placeholder="选择风格预设" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                    {STYLE_PRESET_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-400">风格补充</Label>
+                <Input
+                  value={newSceneForm.style_notes}
+                  onChange={(e) => updateNewSceneForm("style_notes", e.target.value)}
                   className="mt-1.5 bg-[#1a1a1a] border-gray-700"
                 />
               </div>

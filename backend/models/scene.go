@@ -11,6 +11,8 @@ type Scene struct {
 	Description     string    `json:"description"`
 	Location        string    `json:"location"`
 	TimeOfDay       string    `json:"time_of_day"`
+	StylePreset     string    `json:"style_preset"`
+	StyleNotes      string    `json:"style_notes"`
 	CoverURL        string    `json:"cover_url"`
 	CoverPreviewURL string    `json:"cover_preview_url"`
 	VideoURL        string    `json:"video_url"`

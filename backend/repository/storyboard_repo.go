@@ -12,7 +12,7 @@ type StoryboardRepository struct{}
 
 // FindBySceneID finds all storyboards for a scene
 func (r *StoryboardRepository) FindBySceneID(sceneID int64) ([]models.Storyboard, error) {
-	query := `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, camera_direction, camera_motion,
+	query := `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes, camera_direction, camera_motion,
 	          duration, background, thumbnail_url, thumbnail_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, notes, sort_order, created_at, updated_at
 	          FROM storyboards WHERE scene_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC`
 
@@ -28,6 +28,8 @@ func (r *StoryboardRepository) FindBySceneID(sceneID int64) ([]models.Storyboard
 		var dialogue sql.NullString
 		var shotType sql.NullString
 		var mood sql.NullString
+		var stylePreset sql.NullString
+		var styleNotes sql.NullString
 		var cameraMotion sql.NullString
 		var thumbnailURL sql.NullString
 		var thumbnailPreviewURL sql.NullString
@@ -36,13 +38,15 @@ func (r *StoryboardRepository) FindBySceneID(sceneID int64) ([]models.Storyboard
 		var videoStatus sql.NullString
 		var videoError sql.NullString
 		var videoDuration sql.NullFloat64
-		if err := rows.Scan(&sb.ID, &sb.SceneID, &sb.ChapterID, &sb.ProjectID, &sb.ShotNumber, &sb.Content, &dialogue, &shotType, &mood, &sb.CameraDirection, &cameraMotion,
+		if err := rows.Scan(&sb.ID, &sb.SceneID, &sb.ChapterID, &sb.ProjectID, &sb.ShotNumber, &sb.Content, &dialogue, &shotType, &mood, &stylePreset, &styleNotes, &sb.CameraDirection, &cameraMotion,
 			&sb.Duration, &sb.Background, &thumbnailURL, &thumbnailPreviewURL, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &sb.Notes, &sb.SortOrder, &sb.CreatedAt, &sb.UpdatedAt); err != nil {
 			return nil, err
 		}
 		sb.Dialogue = nullStringValue(dialogue)
 		sb.ShotType = nullStringValue(shotType)
 		sb.Mood = nullStringValue(mood)
+		sb.StylePreset = nullStringValue(stylePreset)
+		sb.StyleNotes = nullStringValue(styleNotes)
 		sb.CameraMotion = nullStringValue(cameraMotion)
 		sb.ThumbnailURL = nullStringValue(thumbnailURL)
 		sb.ThumbnailPreviewURL = nullStringValue(thumbnailPreviewURL)
@@ -63,7 +67,7 @@ func (r *StoryboardRepository) FindBySceneID(sceneID int64) ([]models.Storyboard
 
 // FindByID finds a storyboard by ID
 func (r *StoryboardRepository) FindByID(id int64) (*models.Storyboard, error) {
-	query := `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, camera_direction, camera_motion,
+	query := `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes, camera_direction, camera_motion,
 	          duration, background, thumbnail_url, thumbnail_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, notes, sort_order, created_at, updated_at
 	          FROM storyboards WHERE id = ? AND deleted_at IS NULL`
 
@@ -71,6 +75,8 @@ func (r *StoryboardRepository) FindByID(id int64) (*models.Storyboard, error) {
 	var dialogue sql.NullString
 	var shotType sql.NullString
 	var mood sql.NullString
+	var stylePreset sql.NullString
+	var styleNotes sql.NullString
 	var cameraMotion sql.NullString
 	var thumbnailURL sql.NullString
 	var thumbnailPreviewURL sql.NullString
@@ -79,7 +85,7 @@ func (r *StoryboardRepository) FindByID(id int64) (*models.Storyboard, error) {
 	var videoStatus sql.NullString
 	var videoError sql.NullString
 	var videoDuration sql.NullFloat64
-	err := database.DB.QueryRow(query, id).Scan(&sb.ID, &sb.SceneID, &sb.ChapterID, &sb.ProjectID, &sb.ShotNumber, &sb.Content, &dialogue, &shotType, &mood, &sb.CameraDirection, &cameraMotion,
+	err := database.DB.QueryRow(query, id).Scan(&sb.ID, &sb.SceneID, &sb.ChapterID, &sb.ProjectID, &sb.ShotNumber, &sb.Content, &dialogue, &shotType, &mood, &stylePreset, &styleNotes, &sb.CameraDirection, &cameraMotion,
 		&sb.Duration, &sb.Background, &thumbnailURL, &thumbnailPreviewURL, &videoURL, &videoPreviewURL, &videoStatus, &videoError, &videoDuration, &sb.Notes, &sb.SortOrder, &sb.CreatedAt, &sb.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -90,6 +96,8 @@ func (r *StoryboardRepository) FindByID(id int64) (*models.Storyboard, error) {
 	sb.Dialogue = nullStringValue(dialogue)
 	sb.ShotType = nullStringValue(shotType)
 	sb.Mood = nullStringValue(mood)
+	sb.StylePreset = nullStringValue(stylePreset)
+	sb.StyleNotes = nullStringValue(styleNotes)
 	sb.CameraMotion = nullStringValue(cameraMotion)
 	sb.ThumbnailURL = nullStringValue(thumbnailURL)
 	sb.ThumbnailPreviewURL = nullStringValue(thumbnailPreviewURL)
@@ -236,11 +244,11 @@ func (r *StoryboardRepository) attachCharacterNamesToPointers(storyboards []*mod
 
 // Create creates a new storyboard
 func (r *StoryboardRepository) Create(sb *models.Storyboard) error {
-	query := `INSERT INTO storyboards (scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood,
+	query := `INSERT INTO storyboards (scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes,
 	          camera_direction, camera_motion, duration, background, thumbnail_url, thumbnail_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, notes, sort_order)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := database.DB.Exec(query, sb.SceneID, sb.ChapterID, sb.ProjectID, sb.ShotNumber, sb.Content, sb.Dialogue, sb.ShotType, sb.Mood,
+	result, err := database.DB.Exec(query, sb.SceneID, sb.ChapterID, sb.ProjectID, sb.ShotNumber, sb.Content, sb.Dialogue, sb.ShotType, sb.Mood, sb.StylePreset, sb.StyleNotes,
 		sb.CameraDirection, sb.CameraMotion, sb.Duration, sb.Background, sb.ThumbnailURL, sb.ThumbnailPreviewURL, sb.VideoURL, sb.VideoPreviewURL, sb.VideoStatus, sb.VideoError, sb.VideoDuration, sb.Notes, sb.SortOrder)
 	if err != nil {
 		return err
@@ -256,10 +264,10 @@ func (r *StoryboardRepository) Create(sb *models.Storyboard) error {
 
 // Update updates a storyboard
 func (r *StoryboardRepository) Update(sb *models.Storyboard) error {
-	query := `UPDATE storyboards SET shot_number = ?, content = ?, dialogue = ?, shot_type = ?, mood = ?, camera_direction = ?, camera_motion = ?, duration = ?,
+	query := `UPDATE storyboards SET shot_number = ?, content = ?, dialogue = ?, shot_type = ?, mood = ?, style_preset = ?, style_notes = ?, camera_direction = ?, camera_motion = ?, duration = ?,
 	          background = ?, thumbnail_url = ?, thumbnail_preview_url = ?, video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ?, notes = ?, sort_order = ? WHERE id = ?`
 
-	_, err := database.DB.Exec(query, sb.ShotNumber, sb.Content, sb.Dialogue, sb.ShotType, sb.Mood, sb.CameraDirection, sb.CameraMotion, sb.Duration,
+	_, err := database.DB.Exec(query, sb.ShotNumber, sb.Content, sb.Dialogue, sb.ShotType, sb.Mood, sb.StylePreset, sb.StyleNotes, sb.CameraDirection, sb.CameraMotion, sb.Duration,
 		sb.Background, sb.ThumbnailURL, sb.ThumbnailPreviewURL, sb.VideoURL, sb.VideoPreviewURL, sb.VideoStatus, sb.VideoError, sb.VideoDuration, sb.Notes, sb.SortOrder, sb.ID)
 	return err
 }

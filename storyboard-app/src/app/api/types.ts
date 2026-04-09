@@ -40,6 +40,8 @@ export type Scene = {
   description: string;
   location: string;
   time_of_day: string;
+  style_preset?: string;
+  style_notes?: string;
   cover_url?: string;
   cover_preview_url?: string;
   video_url?: string;
@@ -89,6 +91,8 @@ export type Storyboard = {
   mood?: string;
   camera_direction: string;
   camera_motion?: string;
+  style_preset?: string;
+  style_notes?: string;
   duration: number;
   background: string;
   thumbnail_url: string;
@@ -151,6 +155,8 @@ export type StoryboardCoverGenerationFields = {
   camera_direction: string;
   content: string;
   mood: string;
+  style_preset: string;
+  style_notes: string;
   dialogue: string;
   notes: string;
 };
