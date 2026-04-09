@@ -459,8 +459,7 @@ func (s *StoryboardCoverService) markGenerationFailed(generation *models.Storybo
 }
 
 func sanitizePromptText(input string) string {
-    replacer := strings.NewReplacer("
-", "；", "", "", "	", " ")
+    replacer := strings.NewReplacer("\n", "；", "\r", "", "\t", " ")
     return replacer.Replace(strings.TrimSpace(input))
 }
 
