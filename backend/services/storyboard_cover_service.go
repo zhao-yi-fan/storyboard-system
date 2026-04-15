@@ -139,6 +139,9 @@ func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64, publicBas
 		s.markGenerationFailed(generation, err)
 		return nil, err
 	}
+	if s.ossService.IsEnabled() {
+		defer os.Remove(localPath)
+	}
 
 	previewFilename := strings.TrimSuffix(filepath.Base(localPath), filepath.Ext(localPath)) + ".thumb.webp"
 	previewPath, err := s.previewService.CreatePreviewFromLocalPath(localPath, "covers", previewFilename, StoryboardPreviewSpec())
@@ -534,7 +537,6 @@ func (s *StoryboardCoverService) downloadAndStore(ctx context.Context, storyboar
 		if err != nil {
 			return "", "", fmt.Errorf("创建封面临时文件失败: %w", err)
 		}
-		defer os.Remove(tmp.Name())
 		if _, err := io.Copy(tmp, resp.Body); err != nil {
 			_ = tmp.Close()
 			return "", "", fmt.Errorf("保存封面文件失败: %w", err)
