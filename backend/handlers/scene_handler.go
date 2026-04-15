@@ -58,6 +58,7 @@ func (h *SceneHandler) GetByChapter(c *gin.Context) {
 	for i := range scenes {
 		h.ensureScenePreview(c, &scenes[i])
 	}
+	normalizeScenesForResponse(scenes)
 
 	response.Success(c, scenes)
 }
@@ -82,6 +83,7 @@ func (h *SceneHandler) GetByID(c *gin.Context) {
 	}
 
 	h.ensureScenePreview(c, scene)
+	normalizeSceneForResponse(scene)
 	response.Success(c, scene)
 }
 
@@ -147,6 +149,7 @@ func (h *SceneHandler) Create(c *gin.Context) {
 		return
 	}
 
+	normalizeSceneForResponse(scene)
 	response.Created(c, scene)
 }
 
@@ -201,6 +204,7 @@ func (h *SceneHandler) Update(c *gin.Context) {
 		return
 	}
 
+	normalizeSceneForResponse(scene)
 	response.Success(c, scene)
 }
 
@@ -241,6 +245,7 @@ func (h *SceneHandler) GenerateCover(c *gin.Context) {
 	}
 
 	h.ensureScenePreview(c, scene)
+	normalizeSceneForResponse(scene)
 	response.Success(c, gin.H{
 		"scene_id":          scene.ID,
 		"cover_url":         scene.CoverURL,
@@ -305,6 +310,8 @@ func (h *SceneHandler) GenerateStoryboardCovers(c *gin.Context) {
 	}
 
 	h.ensureScenePreview(c, updatedScene)
+	normalizeSceneForResponse(updatedScene)
+	normalizeStoryboardsForResponse(updatedStoryboards)
 	response.Success(c, gin.H{
 		"scene":           updatedScene,
 		"storyboards":     updatedStoryboards,
@@ -344,6 +351,7 @@ func (h *SceneHandler) ComposeVideo(c *gin.Context) {
 		return
 	}
 
+	normalizeSceneForResponse(scene)
 	response.Success(c, gin.H{
 		"scene_id":          scene.ID,
 		"video_url":         scene.VideoURL,

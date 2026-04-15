@@ -22,6 +22,7 @@ type SceneCoverService struct {
 	wanxClient     *WanxClient
 	httpClient     *http.Client
 	previewService *ImagePreviewService
+	ossService     *OSSService
 }
 
 func NewSceneCoverService() (*SceneCoverService, error) {
@@ -34,8 +35,9 @@ func NewSceneCoverService() (*SceneCoverService, error) {
 		sceneRepo:      &repository.SceneRepository{},
 		storyboardRepo: &repository.StoryboardRepository{},
 		wanxClient:     wanxClient,
-		httpClient: &http.Client{Timeout: 60 * time.Second},
+		httpClient:     &http.Client{Timeout: 60 * time.Second},
 		previewService: NewImagePreviewService(),
+		ossService:     NewOSSService(),
 	}, nil
 }
 
@@ -65,6 +67,9 @@ func (s *SceneCoverService) GenerateAndAttach(sceneID int64) (*models.Scene, err
 	publicPath, localPath, err := s.downloadAndStore(ctx, scene.ID, imageURL)
 	if err != nil {
 		return nil, err
+	}
+	if s.ossService.IsEnabled() {
+		defer os.Remove(localPath)
 	}
 
 	previewFilename := strings.TrimSuffix(filepath.Base(localPath), filepath.Ext(localPath)) + ".thumb.webp"
@@ -203,6 +208,27 @@ func (s *SceneCoverService) downloadAndStore(ctx context.Context, sceneID int64,
 		return "", "", fmt.Errorf("下载场景封面失败: HTTP %d", resp.StatusCode)
 	}
 
+	filename := fmt.Sprintf("scene-%d-%d%s", sceneID, time.Now().Unix(), inferSceneImageExtension(sourceURL))
+	publicPath := GeneratedPublicPath("scene-covers", filename)
+
+	if s.ossService.IsEnabled() {
+		tmp, err := os.CreateTemp("", "scene-cover-*"+filepath.Ext(filename))
+		if err != nil {
+			return "", "", fmt.Errorf("创建场景封面临时文件失败: %w", err)
+		}
+		if _, err := io.Copy(tmp, resp.Body); err != nil {
+			_ = tmp.Close()
+			return "", "", fmt.Errorf("保存场景封面失败: %w", err)
+		}
+		if err := tmp.Close(); err != nil {
+			return "", "", err
+		}
+		if err := s.ossService.EnsureUploaded(tmp.Name(), publicPath); err != nil {
+			return "", "", fmt.Errorf("上传场景封面到 OSS 失败: %w", err)
+		}
+		return publicPath, tmp.Name(), nil
+	}
+
 	assetRoot := config.GlobalConfig.GeneratedAssetDir
 	if !filepath.IsAbs(assetRoot) {
 		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
@@ -215,7 +241,6 @@ func (s *SceneCoverService) downloadAndStore(ctx context.Context, sceneID int64,
 		return "", "", fmt.Errorf("创建场景封面目录失败: %w", err)
 	}
 
-	filename := fmt.Sprintf("scene-%d-%d%s", sceneID, time.Now().Unix(), inferSceneImageExtension(sourceURL))
 	dstPath := filepath.Join(coversDir, filename)
 	file, err := os.Create(dstPath)
 	if err != nil {
@@ -227,8 +252,7 @@ func (s *SceneCoverService) downloadAndStore(ctx context.Context, sceneID int64,
 		return "", "", fmt.Errorf("保存场景封面失败: %w", err)
 	}
 
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	return fmt.Sprintf("%s/scene-covers/%s", basePath, filename), dstPath, nil
+	return publicPath, dstPath, nil
 }
 
 func inferSceneImageExtension(rawURL string) string {

@@ -58,6 +58,7 @@ func (h *CharacterHandler) GetByProject(c *gin.Context) {
 	for i := range characters {
 		h.ensureAvatarPreview(c, &characters[i])
 	}
+	normalizeCharactersForResponse(characters)
 
 	response.Success(c, characters)
 }
@@ -82,6 +83,7 @@ func (h *CharacterHandler) GetByID(c *gin.Context) {
 	}
 
 	h.ensureAvatarPreview(c, character)
+	normalizeCharacterForResponse(character)
 	response.Success(c, character)
 }
 
@@ -129,6 +131,7 @@ func (h *CharacterHandler) Create(c *gin.Context) {
 	}
 
 	h.ensureAvatarPreview(c, character)
+	normalizeCharacterForResponse(character)
 	response.Created(c, character)
 }
 
@@ -179,6 +182,7 @@ func (h *CharacterHandler) Update(c *gin.Context) {
 	}
 
 	h.ensureAvatarPreview(c, character)
+	normalizeCharacterForResponse(character)
 	response.Success(c, character)
 }
 
@@ -226,6 +230,7 @@ func (h *CharacterHandler) GenerateCover(c *gin.Context) {
 		return
 	}
 
+	normalizeCharacterForResponse(character)
 	response.Success(c, character)
 }
 

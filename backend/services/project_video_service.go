@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,11 +20,12 @@ type ProjectVideoService struct {
 	projectRepo *repository.ProjectRepository
 	chapterRepo *repository.ChapterRepository
 	sceneRepo   *repository.SceneRepository
+	ossService  *OSSService
 }
 
 type projectVideoInput struct {
 	sceneID    int64
-	path       string
+	source     string
 	duration   float64
 	chapterOrd int
 	sceneOrd   int
@@ -37,6 +39,7 @@ func NewProjectVideoService() (*ProjectVideoService, error) {
 		projectRepo: &repository.ProjectRepository{},
 		chapterRepo: &repository.ChapterRepository{},
 		sceneRepo:   &repository.SceneRepository{},
+		ossService:  NewOSSService(),
 	}, nil
 }
 
@@ -71,7 +74,7 @@ func (s *ProjectVideoService) ComposeAndAttach(projectID int64, regenerate bool)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GlobalConfig.WanxVideoRequestTimeoutSeconds*2)*time.Second)
 	defer cancel()
 
-	videoURL, previewURL, duration, err := composeProjectVideoFiles(ctx, projectID, inputs)
+	videoURL, previewURL, duration, err := s.composeProjectVideoFiles(ctx, projectID, inputs)
 	if err != nil {
 		_ = s.projectRepo.UpdateVideoFields(projectID, "", "", "failed", err.Error(), 0)
 		return nil, err
@@ -95,20 +98,13 @@ func (s *ProjectVideoService) collectProjectVideoInputs(chapters []models.Chapte
 			if strings.TrimSpace(scene.VideoURL) == "" || scene.VideoStatus != "succeeded" {
 				continue
 			}
-			localPath, err := generatedSceneAssetURLToLocalPath(scene.VideoURL)
-			if err != nil {
-				continue
-			}
-			if _, err := os.Stat(localPath); err != nil {
-				continue
-			}
 			duration := scene.VideoDuration
 			if duration <= 0 {
 				duration = 5
 			}
 			inputs = append(inputs, projectVideoInput{
 				sceneID:    scene.ID,
-				path:       localPath,
+				source:     strings.TrimSpace(scene.VideoURL),
 				duration:   duration,
 				chapterOrd: chapter.SortOrder,
 				sceneOrd:   scene.SortOrder,
@@ -128,22 +124,8 @@ func (s *ProjectVideoService) collectProjectVideoInputs(chapters []models.Chapte
 	return inputs, nil
 }
 
-func composeProjectVideoFiles(ctx context.Context, projectID int64, inputs []projectVideoInput) (string, string, float64, error) {
-	assetRoot := config.GlobalConfig.GeneratedAssetDir
-	var err error
-	if !filepath.IsAbs(assetRoot) {
-		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
-		if err != nil {
-			return "", "", 0, err
-		}
-	}
-
-	projectVideosDir := filepath.Join(assetRoot, "project-videos")
-	if err := os.MkdirAll(projectVideosDir, 0o755); err != nil {
-		return "", "", 0, fmt.Errorf("创建项目视频目录失败: %w", err)
-	}
-
-	workDir, err := os.MkdirTemp(projectVideosDir, fmt.Sprintf("project-%d-compose-*", projectID))
+func (s *ProjectVideoService) composeProjectVideoFiles(ctx context.Context, projectID int64, inputs []projectVideoInput) (string, string, float64, error) {
+	workDir, err := os.MkdirTemp("", fmt.Sprintf("project-%d-compose-*", projectID))
 	if err != nil {
 		return "", "", 0, fmt.Errorf("创建项目视频临时目录失败: %w", err)
 	}
@@ -152,8 +134,12 @@ func composeProjectVideoFiles(ctx context.Context, projectID int64, inputs []pro
 	transcodedPaths := make([]string, 0, len(inputs))
 	totalDuration := 0.0
 	for idx, input := range inputs {
+		materializedPath := filepath.Join(workDir, fmt.Sprintf("input-scene-%03d.mp4", idx+1))
+		if err := s.materializeInput(input.source, materializedPath); err != nil {
+			return "", "", 0, err
+		}
 		tempPath := filepath.Join(workDir, fmt.Sprintf("temp-scene-%03d.mp4", idx+1))
-		if err := transcodeProjectInput(ctx, input.path, tempPath); err != nil {
+		if err := transcodeProjectInput(ctx, materializedPath, tempPath); err != nil {
 			return "", "", 0, err
 		}
 		transcodedPaths = append(transcodedPaths, tempPath)
@@ -166,19 +152,73 @@ func composeProjectVideoFiles(ctx context.Context, projectID int64, inputs []pro
 	}
 
 	filename := fmt.Sprintf("project-%d-%d.mp4", projectID, time.Now().Unix())
-	finalPath := filepath.Join(projectVideosDir, filename)
+	finalPath := filepath.Join(workDir, filename)
 	if err := concatProjectVideos(ctx, inputsFile, finalPath); err != nil {
 		return "", "", 0, err
 	}
 
 	previewFilename := strings.TrimSuffix(filename, ".mp4") + ".preview.mp4"
-	previewPath := filepath.Join(projectVideosDir, previewFilename)
+	previewPath := filepath.Join(workDir, previewFilename)
 	if err := generateProjectVideoPreview(ctx, finalPath, previewPath); err != nil {
 		return "", "", 0, err
 	}
 
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	return fmt.Sprintf("%s/project-videos/%s", basePath, filename), fmt.Sprintf("%s/project-videos/%s", basePath, previewFilename), totalDuration, nil
+	publicPath := GeneratedPublicPath("project-videos", filename)
+	previewPublicPath := GeneratedPublicPath("project-videos", previewFilename)
+	if s.ossService.IsEnabled() {
+		if err := s.ossService.EnsureUploaded(finalPath, publicPath); err != nil {
+			return "", "", 0, fmt.Errorf("上传项目总片到 OSS 失败: %w", err)
+		}
+		if err := s.ossService.EnsureUploaded(previewPath, previewPublicPath); err != nil {
+			return "", "", 0, fmt.Errorf("上传项目总片预览到 OSS 失败: %w", err)
+		}
+		return publicPath, previewPublicPath, totalDuration, nil
+	}
+
+	assetRoot, err := resolveGeneratedAssetRoot()
+	if err != nil {
+		return "", "", 0, err
+	}
+	projectVideosDir := filepath.Join(assetRoot, "project-videos")
+	if err := os.MkdirAll(projectVideosDir, 0o755); err != nil {
+		return "", "", 0, fmt.Errorf("创建项目视频目录失败: %w", err)
+	}
+	if err := os.Rename(finalPath, filepath.Join(projectVideosDir, filename)); err != nil {
+		return "", "", 0, err
+	}
+	if err := os.Rename(previewPath, filepath.Join(projectVideosDir, previewFilename)); err != nil {
+		return "", "", 0, err
+	}
+	return publicPath, previewPublicPath, totalDuration, nil
+}
+
+func (s *ProjectVideoService) materializeInput(source, outputPath string) error {
+	if s.ossService.IsEnabled() && IsGeneratedAssetPath(source) {
+		return s.ossService.DownloadGeneratedToFile(source, outputPath)
+	}
+	if IsGeneratedAssetPath(source) {
+		objectKey, err := GeneratedObjectKey(source)
+		if err != nil {
+			return err
+		}
+		localPath, err := generatedObjectKeyToLocalPath(objectKey)
+		if err != nil {
+			return err
+		}
+		input, err := os.Open(localPath)
+		if err != nil {
+			return err
+		}
+		defer input.Close()
+		output, err := os.Create(outputPath)
+		if err != nil {
+			return err
+		}
+		defer output.Close()
+		_, err = io.Copy(output, input)
+		return err
+	}
+	return fmt.Errorf("unsupported project video input: %s", source)
 }
 
 func transcodeProjectInput(ctx context.Context, inputPath, outputPath string) error {
@@ -243,7 +283,7 @@ func generateProjectVideoPreview(ctx context.Context, srcPath, previewPath strin
 	)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("生成项目视频预览失败: %v: %s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("生成项目总片预览失败: %v: %s", err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }

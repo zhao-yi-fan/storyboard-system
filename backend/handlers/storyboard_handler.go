@@ -60,6 +60,7 @@ func (h *StoryboardHandler) GetByScene(c *gin.Context) {
 	for i := range storyboards {
 		h.ensureStoryboardPreview(c, &storyboards[i])
 	}
+	normalizeStoryboardsForResponse(storyboards)
 
 	response.Success(c, storyboards)
 }
@@ -84,6 +85,7 @@ func (h *StoryboardHandler) GetByID(c *gin.Context) {
 	}
 
 	h.ensureStoryboardPreview(c, storyboard)
+	normalizeStoryboardForResponse(storyboard)
 	response.Success(c, storyboard)
 }
 
@@ -113,6 +115,7 @@ func (h *StoryboardHandler) GetMediaGenerations(c *gin.Context) {
 	if items == nil {
 		items = []models.StoryboardMediaGeneration{}
 	}
+	normalizeMediaGenerationsForResponse(items)
 	response.Success(c, items)
 }
 
@@ -264,6 +267,7 @@ func (h *StoryboardHandler) Create(c *gin.Context) {
 		return
 	}
 
+	normalizeStoryboardForResponse(storyboard)
 	response.Created(c, storyboard)
 }
 
@@ -380,6 +384,7 @@ func (h *StoryboardHandler) Update(c *gin.Context) {
 		return
 	}
 
+	normalizeStoryboardForResponse(storyboard)
 	response.Success(c, storyboard)
 }
 
@@ -421,6 +426,9 @@ func (h *StoryboardHandler) PreviewCoverGeneration(c *gin.Context) {
 		return
 	}
 
+	for i := range preview.ReferenceImages {
+		preview.ReferenceImages[i].URL = services.NewOSSService().ResolveURL(preview.ReferenceImages[i].URL, requestPublicBaseURL(c))
+	}
 	response.Success(c, preview)
 }
 
@@ -452,6 +460,7 @@ func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
 		return
 	}
 
+	normalizeStoryboardForResponse(storyboard)
 	response.Success(c, gin.H{
 		"storyboard_id":         storyboard.ID,
 		"thumbnail_url":         storyboard.ThumbnailURL,
@@ -510,11 +519,12 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 		return
 	}
 
+	normalizeStoryboardForResponse(storyboard)
 	response.Success(c, gin.H{
-		"storyboard_id":      storyboard.ID,
-		"video_url":          storyboard.VideoURL,
-		"video_preview_url":  storyboard.VideoPreviewURL,
-		"storyboard":         storyboard,
+		"storyboard_id":     storyboard.ID,
+		"video_url":         storyboard.VideoURL,
+		"video_preview_url": storyboard.VideoPreviewURL,
+		"storyboard":        storyboard,
 	})
 }
 
@@ -594,6 +604,8 @@ func (h *StoryboardHandler) respondWithStoryboardAndHistory(c *gin.Context, stor
 		items = []models.StoryboardMediaGeneration{}
 	}
 
+	normalizeStoryboardForResponse(storyboard)
+	normalizeMediaGenerationsForResponse(items)
 	response.Success(c, gin.H{
 		"storyboard":        storyboard,
 		"media_generations": items,

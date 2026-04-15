@@ -65,6 +65,7 @@ func (h *AssetHandler) GetByProject(c *gin.Context) {
 	for i := range assets {
 		h.ensureAssetPreview(c, &assets[i])
 	}
+	normalizeAssetsForResponse(assets)
 
 	response.Success(c, assets)
 }
@@ -100,6 +101,7 @@ func (h *AssetHandler) GetByCharacter(c *gin.Context) {
 	for i := range assets {
 		h.ensureAssetPreview(c, &assets[i])
 	}
+	normalizeAssetsForResponse(assets)
 
 	response.Success(c, assets)
 }
@@ -149,14 +151,14 @@ func (h *AssetHandler) Create(c *gin.Context) {
 	}
 
 	asset := &models.Asset{
-		ProjectID:   projectID,
-		CharacterID: req.CharacterID,
-		Name:        strings.TrimSpace(req.Name),
-		Type:        strings.TrimSpace(req.Type),
-		FileURL:     strings.TrimSpace(req.FileURL),
-		CoverURL:    "",
+		ProjectID:    projectID,
+		CharacterID:  req.CharacterID,
+		Name:         strings.TrimSpace(req.Name),
+		Type:         strings.TrimSpace(req.Type),
+		FileURL:      strings.TrimSpace(req.FileURL),
+		CoverURL:     "",
 		ThumbnailURL: "",
-		Meta:        strings.TrimSpace(req.Meta),
+		Meta:         strings.TrimSpace(req.Meta),
 	}
 
 	if asset.Name == "" {
@@ -176,6 +178,7 @@ func (h *AssetHandler) Create(c *gin.Context) {
 	if asset.FileURL != "" {
 		h.ensureAssetPreview(c, asset)
 	}
+	normalizeAssetForResponse(asset)
 
 	response.Created(c, asset)
 }
@@ -247,7 +250,7 @@ func (h *AssetHandler) Update(c *gin.Context) {
 	if asset.FileURL != "" && asset.ThumbnailURL == "" {
 		h.ensureAssetPreview(c, asset)
 	}
-
+	normalizeAssetForResponse(asset)
 	response.Success(c, asset)
 }
 
@@ -300,6 +303,7 @@ func (h *AssetHandler) GenerateCover(c *gin.Context) {
 		return
 	}
 
+	normalizeAssetForResponse(asset)
 	response.Success(c, asset)
 }
 

@@ -34,11 +34,13 @@ type PreviewSpec struct {
 
 type ImagePreviewService struct {
 	httpClient *http.Client
+	ossService *OSSService
 }
 
 func NewImagePreviewService() *ImagePreviewService {
 	return &ImagePreviewService{
 		httpClient: &http.Client{Timeout: 90 * time.Second},
+		ossService: NewOSSService(),
 	}
 }
 
@@ -64,6 +66,16 @@ func (s *ImagePreviewService) CreatePreviewFromSource(ctx context.Context, sourc
 		return s.CreatePreviewFromLocalPath(localPath, subdir, previewName, spec)
 	}
 
+	if s.ossService.IsEnabled() && IsGeneratedAssetPath(source) {
+		tmp, cleanup, err := s.copyGeneratedToTempFile(source)
+		if err != nil {
+			return "", err
+		}
+		defer cleanup()
+		previewName := derivedPreviewFilename(tmp, baseName)
+		return s.CreatePreviewFromLocalPath(tmp, subdir, previewName, spec)
+	}
+
 	previewName := remotePreviewFilename(source, baseName)
 	return s.createPreviewFromRemoteURL(ctx, source, subdir, previewName, spec)
 }
@@ -80,17 +92,7 @@ func (s *ImagePreviewService) CreatePreviewFromLocalPath(localPath, subdir, prev
 		return "", fmt.Errorf("解码原图失败: %w", err)
 	}
 
-	previewImage := renderPreview(img, spec)
-	previewPath, publicPath, err := s.prepareOutput(subdir, previewFilename)
-	if err != nil {
-		return "", err
-	}
-
-	if err := writeWebP(previewPath, previewImage); err != nil {
-		return "", err
-	}
-
-	return publicPath, nil
+	return s.persistPreviewImage(img, subdir, previewFilename, spec)
 }
 
 func (s *ImagePreviewService) createPreviewFromRemoteURL(ctx context.Context, sourceURL, subdir, previewFilename string, spec PreviewSpec) (string, error) {
@@ -114,21 +116,57 @@ func (s *ImagePreviewService) createPreviewFromRemoteURL(ctx context.Context, so
 		return "", fmt.Errorf("解码原图失败: %w", err)
 	}
 
+	return s.persistPreviewImage(img, subdir, previewFilename, spec)
+}
+
+func (s *ImagePreviewService) persistPreviewImage(img image.Image, subdir, previewFilename string, spec PreviewSpec) (string, error) {
 	previewImage := renderPreview(img, spec)
-	previewPath, publicPath, err := s.prepareOutput(subdir, previewFilename)
+	publicPath := GeneratedPublicPath(subdir, previewFilename)
+
+	if s.ossService.IsEnabled() {
+		tmp, err := os.CreateTemp("", "storyboard-preview-*.webp")
+		if err != nil {
+			return "", fmt.Errorf("创建缩略图临时文件失败: %w", err)
+		}
+		tmpPath := tmp.Name()
+		_ = tmp.Close()
+		defer os.Remove(tmpPath)
+
+		if err := writeWebP(tmpPath, previewImage); err != nil {
+			return "", err
+		}
+		if err := s.ossService.EnsureUploaded(tmpPath, publicPath); err != nil {
+			return "", fmt.Errorf("上传缩略图到 OSS 失败: %w", err)
+		}
+		return publicPath, nil
+	}
+
+	previewPath, localPublicPath, err := s.prepareOutput(subdir, previewFilename)
 	if err != nil {
 		return "", err
 	}
-
 	if err := writeWebP(previewPath, previewImage); err != nil {
 		return "", err
 	}
+	return localPublicPath, nil
+}
 
-	return publicPath, nil
+func (s *ImagePreviewService) copyGeneratedToTempFile(source string) (string, func(), error) {
+	tmp, err := os.CreateTemp("", "storyboard-preview-input-*")
+	if err != nil {
+		return "", nil, err
+	}
+	_ = tmp.Close()
+	if err := s.ossService.DownloadGeneratedToFile(source, tmp.Name()); err != nil {
+		_ = os.Remove(tmp.Name())
+		return "", nil, err
+	}
+	cleanup := func() { _ = os.Remove(tmp.Name()) }
+	return tmp.Name(), cleanup, nil
 }
 
 func (s *ImagePreviewService) resolveSourceToLocalPath(source string) (string, bool) {
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
+	basePath := normalizedGeneratedBasePath()
 	assetRoot, err := resolveGeneratedAssetRoot()
 	if err != nil {
 		return "", false
@@ -159,9 +197,8 @@ func (s *ImagePreviewService) prepareOutput(subdir, previewFilename string) (str
 		return "", "", fmt.Errorf("创建缩略图目录失败: %w", err)
 	}
 
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
 	localPath := filepath.Join(outputDir, previewFilename)
-	publicPath := fmt.Sprintf("%s/%s/%s", basePath, strings.Trim(subdir, "/"), previewFilename)
+	publicPath := GeneratedPublicPath(subdir, previewFilename)
 	return localPath, publicPath, nil
 }
 

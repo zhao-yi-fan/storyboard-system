@@ -10,19 +10,19 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"storyboard-backend/config"
 )
 
 type GeneratedImageService struct {
 	httpClient     *http.Client
 	previewService *ImagePreviewService
+	ossService     *OSSService
 }
 
 func NewGeneratedImageService() *GeneratedImageService {
 	return &GeneratedImageService{
 		httpClient:     &http.Client{Timeout: 60 * time.Second},
 		previewService: NewImagePreviewService(),
+		ossService:     NewOSSService(),
 	}
 }
 
@@ -46,19 +46,45 @@ func (s *GeneratedImageService) DownloadAndStore(ctx context.Context, sourceURL,
 		return "", "", fmt.Errorf("下载生成图片失败: HTTP %d", resp.StatusCode)
 	}
 
-	assetRoot := config.GlobalConfig.GeneratedAssetDir
-	if !filepath.IsAbs(assetRoot) {
-		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
+	filename := fmt.Sprintf("%s-%d%s", filenameBase, time.Now().Unix(), inferGeneratedImageExtension(sourceURL))
+	publicPath := GeneratedPublicPath(subdir, filename)
+
+	if s.ossService.IsEnabled() {
+		tmp, err := os.CreateTemp("", "storyboard-generated-*"+filepath.Ext(filename))
+		if err != nil {
+			return "", "", fmt.Errorf("创建图片临时文件失败: %w", err)
+		}
+		tmpPath := tmp.Name()
+		defer os.Remove(tmpPath)
+
+		file := tmp
+		if _, err := io.Copy(file, resp.Body); err != nil {
+			_ = file.Close()
+			return "", "", fmt.Errorf("保存图片文件失败: %w", err)
+		}
+		if err := file.Close(); err != nil {
+			return "", "", err
+		}
+		if err := s.ossService.EnsureUploaded(tmpPath, publicPath); err != nil {
+			return "", "", fmt.Errorf("上传图片到 OSS 失败: %w", err)
+		}
+		previewFilename := strings.TrimSuffix(filename, filepath.Ext(filename)) + ".thumb.webp"
+		previewPath, err := s.previewService.CreatePreviewFromLocalPath(tmpPath, subdir, previewFilename, spec)
 		if err != nil {
 			return "", "", err
 		}
+		return publicPath, previewPath, nil
+	}
+
+	assetRoot, err := resolveGeneratedAssetRoot()
+	if err != nil {
+		return "", "", err
 	}
 	outputDir := filepath.Join(assetRoot, subdir)
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return "", "", fmt.Errorf("创建图片目录失败: %w", err)
 	}
 
-	filename := fmt.Sprintf("%s-%d%s", filenameBase, time.Now().Unix(), inferGeneratedImageExtension(sourceURL))
 	localPath := filepath.Join(outputDir, filename)
 	file, err := os.Create(localPath)
 	if err != nil {
@@ -76,8 +102,7 @@ func (s *GeneratedImageService) DownloadAndStore(ctx context.Context, sourceURL,
 		return "", "", err
 	}
 
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	return fmt.Sprintf("%s/%s/%s", basePath, strings.Trim(subdir, "/"), filename), previewPath, nil
+	return publicPath, previewPath, nil
 }
 
 func inferGeneratedImageExtension(rawURL string) string {

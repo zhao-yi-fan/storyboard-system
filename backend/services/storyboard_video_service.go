@@ -3,8 +3,8 @@ package services
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -31,6 +31,7 @@ type StoryboardVideoService struct {
 	coverService   *StoryboardCoverService
 	videoClient    *WanxVideoClient
 	httpClient     *http.Client
+	ossService     *OSSService
 }
 
 const storyboardVideoPreviewHeight = 480
@@ -58,6 +59,7 @@ func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 		httpClient: &http.Client{
 			Timeout: 90 * time.Second,
 		},
+		ossService: NewOSSService(),
 	}, nil
 }
 
@@ -164,9 +166,9 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		generation.SourceURL = storyboard.ThumbnailURL
 		generation.ErrorMessage = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
-			"resolution": "720P",
-			"duration":   generatedDuration,
-			"audio":      true,
+			"resolution":     "720P",
+			"duration":       generatedDuration,
+			"audio":          true,
 			"preview_height": storyboardVideoPreviewHeight,
 		})
 		if err := s.historyRepo.Update(generation); err != nil {
@@ -374,44 +376,32 @@ func (s *StoryboardVideoService) resolveImageInput(publicBaseURL, thumbnailURL s
 		return "", nil
 	}
 
+	if s.ossService.IsEnabled() && IsGeneratedAssetPath(thumbnailURL) {
+		return s.ossService.ResolveGeneratedURL(thumbnailURL), nil
+	}
+
 	if absolute := absolutizeGeneratedURL(publicBaseURL, thumbnailURL); strings.HasPrefix(absolute, "http://") || strings.HasPrefix(absolute, "https://") {
 		return absolute, nil
 	}
 
-	if strings.HasPrefix(thumbnailURL, "/generated/") {
-		localPath, err := generatedURLToLocalPath(thumbnailURL)
+	if IsGeneratedAssetPath(thumbnailURL) {
+		objectKey, err := GeneratedObjectKey(thumbnailURL)
 		if err == nil {
-			dataURL, err := prepareVideoInputDataURL(localPath)
+			localPath, err := generatedObjectKeyToLocalPath(objectKey)
 			if err == nil {
-				return dataURL, nil
-			}
-			dataURL, err = fileToDataURL(localPath)
-			if err == nil {
-				return dataURL, nil
+				dataURL, err := prepareVideoInputDataURL(localPath)
+				if err == nil {
+					return dataURL, nil
+				}
+				dataURL, err = fileToDataURL(localPath)
+				if err == nil {
+					return dataURL, nil
+				}
 			}
 		}
 	}
 
 	return absolutizeGeneratedURL(publicBaseURL, thumbnailURL), nil
-}
-
-func generatedURLToLocalPath(resourcePath string) (string, error) {
-	assetRoot := config.GlobalConfig.GeneratedAssetDir
-	if !filepath.IsAbs(assetRoot) {
-		var err error
-		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
-		if err != nil {
-			return "", err
-		}
-	}
-
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	if !strings.HasPrefix(resourcePath, basePath+"/") {
-		return "", fmt.Errorf("not a generated local asset")
-	}
-
-	relative := strings.TrimPrefix(resourcePath, basePath+"/")
-	return filepath.Join(assetRoot, filepath.FromSlash(relative)), nil
 }
 
 func fileToDataURL(path string) (string, error) {
@@ -515,6 +505,43 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 		return "", "", fmt.Errorf("下载生成视频失败: HTTP %d", resp.StatusCode)
 	}
 
+	filename := fmt.Sprintf("storyboard-%d-%d.mp4", storyboardID, time.Now().Unix())
+	publicPath := GeneratedPublicPath("videos", filename)
+	previewPublicPath := GeneratedPublicPath("videos", strings.TrimSuffix(filename, ".mp4")+".preview.mp4")
+
+	if s.ossService.IsEnabled() {
+		tmpVideo, err := os.CreateTemp("", "storyboard-video-*.mp4")
+		if err != nil {
+			return "", "", fmt.Errorf("创建视频临时文件失败: %w", err)
+		}
+		defer os.Remove(tmpVideo.Name())
+		if _, err := io.Copy(tmpVideo, resp.Body); err != nil {
+			_ = tmpVideo.Close()
+			return "", "", fmt.Errorf("保存视频文件失败: %w", err)
+		}
+		if err := tmpVideo.Close(); err != nil {
+			return "", "", err
+		}
+		if err := s.ossService.EnsureUploaded(tmpVideo.Name(), publicPath); err != nil {
+			return "", "", fmt.Errorf("上传视频到 OSS 失败: %w", err)
+		}
+
+		tmpPreview, err := os.CreateTemp("", "storyboard-video-preview-*.mp4")
+		if err != nil {
+			return "", "", fmt.Errorf("创建视频预览临时文件失败: %w", err)
+		}
+		tmpPreviewPath := tmpPreview.Name()
+		_ = tmpPreview.Close()
+		defer os.Remove(tmpPreviewPath)
+		if err := generateVideoPreview(ctx, tmpVideo.Name(), tmpPreviewPath); err != nil {
+			return "", "", err
+		}
+		if err := s.ossService.EnsureUploaded(tmpPreviewPath, previewPublicPath); err != nil {
+			return "", "", fmt.Errorf("上传视频预览到 OSS 失败: %w", err)
+		}
+		return publicPath, previewPublicPath, nil
+	}
+
 	assetRoot := config.GlobalConfig.GeneratedAssetDir
 	if !filepath.IsAbs(assetRoot) {
 		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
@@ -527,7 +554,6 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 		return "", "", fmt.Errorf("创建视频目录失败: %w", err)
 	}
 
-	filename := fmt.Sprintf("storyboard-%d-%d.mp4", storyboardID, time.Now().Unix())
 	dstPath := filepath.Join(videosDir, filename)
 	file, err := os.Create(dstPath)
 	if err != nil {
@@ -539,14 +565,12 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 		return "", "", fmt.Errorf("保存视频文件失败: %w", err)
 	}
 
-	previewFilename := strings.TrimSuffix(filename, ".mp4") + ".preview.mp4"
-	previewPath := filepath.Join(videosDir, previewFilename)
+	previewPath := filepath.Join(videosDir, strings.TrimSuffix(filename, ".mp4")+".preview.mp4")
 	if err := generateVideoPreview(ctx, dstPath, previewPath); err != nil {
 		return "", "", err
 	}
 
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	return fmt.Sprintf("%s/videos/%s", basePath, filename), fmt.Sprintf("%s/videos/%s", basePath, previewFilename), nil
+	return publicPath, previewPublicPath, nil
 }
 
 func generateVideoPreview(ctx context.Context, srcPath, previewPath string) error {

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,6 +26,7 @@ const (
 type SceneVideoService struct {
 	sceneRepo      *repository.SceneRepository
 	storyboardRepo *repository.StoryboardRepository
+	ossService     *OSSService
 }
 
 func NewSceneVideoService() (*SceneVideoService, error) {
@@ -34,6 +36,7 @@ func NewSceneVideoService() (*SceneVideoService, error) {
 	return &SceneVideoService{
 		sceneRepo:      &repository.SceneRepository{},
 		storyboardRepo: &repository.StoryboardRepository{},
+		ossService:     NewOSSService(),
 	}, nil
 }
 
@@ -67,7 +70,7 @@ func (s *SceneVideoService) ComposeAndAttach(sceneID int64, regenerate bool) (*m
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GlobalConfig.WanxVideoRequestTimeoutSeconds)*time.Second)
 	defer cancel()
 
-	videoURL, previewURL, duration, err := composeSceneVideoFiles(ctx, scene.ID, inputs)
+	videoURL, previewURL, duration, err := s.composeSceneVideoFiles(ctx, scene.ID, inputs)
 	if err != nil {
 		scene.VideoStatus = "failed"
 		scene.VideoError = err.Error()
@@ -88,7 +91,7 @@ func (s *SceneVideoService) ComposeAndAttach(sceneID int64, regenerate bool) (*m
 
 type sceneVideoInput struct {
 	storyboardID int64
-	path         string
+	source       string
 	duration     float64
 	sortOrder    int
 	shotNumber   int
@@ -100,20 +103,13 @@ func collectSceneVideoInputs(storyboards []models.Storyboard) []sceneVideoInput 
 		if strings.TrimSpace(storyboard.VideoURL) == "" || storyboard.VideoStatus != "succeeded" {
 			continue
 		}
-		localPath, err := generatedSceneAssetURLToLocalPath(storyboard.VideoURL)
-		if err != nil {
-			continue
-		}
-		if _, err := os.Stat(localPath); err != nil {
-			continue
-		}
 		duration := storyboard.VideoDuration
 		if duration <= 0 {
 			duration = storyboard.Duration
 		}
 		inputs = append(inputs, sceneVideoInput{
 			storyboardID: storyboard.ID,
-			path:         localPath,
+			source:       strings.TrimSpace(storyboard.VideoURL),
 			duration:     duration,
 			sortOrder:    storyboard.SortOrder,
 			shotNumber:   storyboard.ShotNumber,
@@ -128,22 +124,8 @@ func collectSceneVideoInputs(storyboards []models.Storyboard) []sceneVideoInput 
 	return inputs
 }
 
-func composeSceneVideoFiles(ctx context.Context, sceneID int64, inputs []sceneVideoInput) (string, string, float64, error) {
-	assetRoot := config.GlobalConfig.GeneratedAssetDir
-	var err error
-	if !filepath.IsAbs(assetRoot) {
-		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
-		if err != nil {
-			return "", "", 0, err
-		}
-	}
-
-	sceneVideosDir := filepath.Join(assetRoot, "scene-videos")
-	if err := os.MkdirAll(sceneVideosDir, 0o755); err != nil {
-		return "", "", 0, fmt.Errorf("创建场景视频目录失败: %w", err)
-	}
-
-	workDir, err := os.MkdirTemp(sceneVideosDir, fmt.Sprintf("scene-%d-compose-*", sceneID))
+func (s *SceneVideoService) composeSceneVideoFiles(ctx context.Context, sceneID int64, inputs []sceneVideoInput) (string, string, float64, error) {
+	workDir, err := os.MkdirTemp("", fmt.Sprintf("scene-%d-compose-*", sceneID))
 	if err != nil {
 		return "", "", 0, fmt.Errorf("创建场景视频临时目录失败: %w", err)
 	}
@@ -152,8 +134,12 @@ func composeSceneVideoFiles(ctx context.Context, sceneID int64, inputs []sceneVi
 	transcodedPaths := make([]string, 0, len(inputs))
 	totalDuration := 0.0
 	for idx, input := range inputs {
+		materializedPath := filepath.Join(workDir, fmt.Sprintf("input-shot-%03d.mp4", idx+1))
+		if err := s.materializeInput(input.source, materializedPath); err != nil {
+			return "", "", 0, err
+		}
 		tempPath := filepath.Join(workDir, fmt.Sprintf("temp-shot-%03d.mp4", idx+1))
-		if err := transcodeSceneInput(ctx, input.path, tempPath); err != nil {
+		if err := transcodeSceneInput(ctx, materializedPath, tempPath); err != nil {
 			return "", "", 0, err
 		}
 		transcodedPaths = append(transcodedPaths, tempPath)
@@ -166,36 +152,73 @@ func composeSceneVideoFiles(ctx context.Context, sceneID int64, inputs []sceneVi
 	}
 
 	filename := fmt.Sprintf("scene-%d-%d.mp4", sceneID, time.Now().Unix())
-	finalPath := filepath.Join(sceneVideosDir, filename)
+	finalPath := filepath.Join(workDir, filename)
 	if err := concatSceneVideos(ctx, inputsFile, finalPath); err != nil {
 		return "", "", 0, err
 	}
 
 	previewFilename := strings.TrimSuffix(filename, ".mp4") + ".preview.mp4"
-	previewPath := filepath.Join(sceneVideosDir, previewFilename)
+	previewPath := filepath.Join(workDir, previewFilename)
 	if err := generateSceneVideoPreview(ctx, finalPath, previewPath); err != nil {
 		return "", "", 0, err
 	}
 
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	return fmt.Sprintf("%s/scene-videos/%s", basePath, filename), fmt.Sprintf("%s/scene-videos/%s", basePath, previewFilename), totalDuration, nil
+	publicPath := GeneratedPublicPath("scene-videos", filename)
+	previewPublicPath := GeneratedPublicPath("scene-videos", previewFilename)
+	if s.ossService.IsEnabled() {
+		if err := s.ossService.EnsureUploaded(finalPath, publicPath); err != nil {
+			return "", "", 0, fmt.Errorf("上传场景视频到 OSS 失败: %w", err)
+		}
+		if err := s.ossService.EnsureUploaded(previewPath, previewPublicPath); err != nil {
+			return "", "", 0, fmt.Errorf("上传场景视频预览到 OSS 失败: %w", err)
+		}
+		return publicPath, previewPublicPath, totalDuration, nil
+	}
+
+	assetRoot, err := resolveGeneratedAssetRoot()
+	if err != nil {
+		return "", "", 0, err
+	}
+	sceneVideosDir := filepath.Join(assetRoot, "scene-videos")
+	if err := os.MkdirAll(sceneVideosDir, 0o755); err != nil {
+		return "", "", 0, fmt.Errorf("创建场景视频目录失败: %w", err)
+	}
+	if err := os.Rename(finalPath, filepath.Join(sceneVideosDir, filename)); err != nil {
+		return "", "", 0, err
+	}
+	if err := os.Rename(previewPath, filepath.Join(sceneVideosDir, previewFilename)); err != nil {
+		return "", "", 0, err
+	}
+	return publicPath, previewPublicPath, totalDuration, nil
 }
 
-func generatedSceneAssetURLToLocalPath(resourcePath string) (string, error) {
-	assetRoot := config.GlobalConfig.GeneratedAssetDir
-	var err error
-	if !filepath.IsAbs(assetRoot) {
-		assetRoot, err = filepath.Abs(filepath.Join(".", assetRoot))
+func (s *SceneVideoService) materializeInput(source, outputPath string) error {
+	if s.ossService.IsEnabled() && IsGeneratedAssetPath(source) {
+		return s.ossService.DownloadGeneratedToFile(source, outputPath)
+	}
+	if IsGeneratedAssetPath(source) {
+		objectKey, err := GeneratedObjectKey(source)
 		if err != nil {
-			return "", err
+			return err
 		}
+		localPath, err := generatedObjectKeyToLocalPath(objectKey)
+		if err != nil {
+			return err
+		}
+		input, err := os.Open(localPath)
+		if err != nil {
+			return err
+		}
+		defer input.Close()
+		output, err := os.Create(outputPath)
+		if err != nil {
+			return err
+		}
+		defer output.Close()
+		_, err = io.Copy(output, input)
+		return err
 	}
-	basePath := strings.TrimRight(config.GlobalConfig.GeneratedAssetBasePath, "/")
-	if !strings.HasPrefix(resourcePath, basePath+"/") {
-		return "", fmt.Errorf("not a generated local asset")
-	}
-	relative := strings.TrimPrefix(resourcePath, basePath+"/")
-	return filepath.Join(assetRoot, filepath.FromSlash(relative)), nil
+	return fmt.Errorf("unsupported scene video input: %s", source)
 }
 
 func transcodeSceneInput(ctx context.Context, inputPath, outputPath string) error {

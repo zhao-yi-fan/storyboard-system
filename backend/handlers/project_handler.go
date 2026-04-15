@@ -27,6 +27,7 @@ func (h *ProjectHandler) GetAll(c *gin.Context) {
 		response.Error(c, err.Error())
 		return
 	}
+	normalizeProjectsWithStatsForResponse(projects)
 	response.Success(c, projects)
 }
 
@@ -49,6 +50,7 @@ func (h *ProjectHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	normalizeProjectForResponse(project)
 	response.Success(c, project)
 }
 
@@ -95,6 +97,7 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		return
 	}
 
+	normalizeProjectForResponse(project)
 	response.Created(c, project)
 }
 
@@ -159,6 +162,7 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 		return
 	}
 
+	normalizeProjectForResponse(project)
 	response.Success(c, project)
 }
 
@@ -223,14 +227,15 @@ func (h *ProjectHandler) ComposeVideo(c *gin.Context) {
 		return
 	}
 
+	normalizeProjectForResponse(project)
 	response.Success(c, gin.H{
-		"project_id":         project.ID,
-		"video_url":          project.VideoURL,
-		"video_preview_url":  project.VideoPreviewURL,
-		"video_status":       project.VideoStatus,
-		"video_error":        project.VideoError,
-		"video_duration":     project.VideoDuration,
-		"project":            project,
+		"project_id":        project.ID,
+		"video_url":         project.VideoURL,
+		"video_preview_url": project.VideoPreviewURL,
+		"video_status":      project.VideoStatus,
+		"video_error":       project.VideoError,
+		"video_duration":    project.VideoDuration,
+		"project":           project,
 	})
 }
 
