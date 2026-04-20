@@ -229,10 +229,7 @@ func (s *OSSService) PublicObjectURL(objectKey string) string {
 }
 
 func normalizeSignedObjectURL(raw string) string {
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return raw
-	}
-	parsed.Path = strings.ReplaceAll(parsed.Path, "%2F", "/")
-	return parsed.String()
+	normalized := strings.ReplaceAll(raw, "%2F", "/")
+	normalized = strings.ReplaceAll(normalized, "%2f", "/")
+	return normalized
 }
