@@ -61,6 +61,8 @@ export type Character = {
   description: string;
   avatar_url: string;
   avatar_preview_url?: string;
+  design_sheet_url?: string;
+  design_sheet_preview_url?: string;
   created_at?: string;
   updated_at?: string;
 };

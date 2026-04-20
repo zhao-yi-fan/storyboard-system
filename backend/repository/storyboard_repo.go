@@ -132,7 +132,7 @@ func (r *StoryboardRepository) attachCharacterNames(storyboards []models.Storybo
 		}
 	}
 
-	query := `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url, c.avatar_preview_url, c.created_at, c.updated_at
+	query := `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url, c.avatar_preview_url, c.design_sheet_url, c.design_sheet_preview_url, c.created_at, c.updated_at
 		FROM storyboard_characters sc
 		JOIN characters c ON c.id = sc.character_id
 		WHERE sc.storyboard_id IN (` + string(placeholders) + `)
@@ -149,6 +149,8 @@ func (r *StoryboardRepository) attachCharacterNames(storyboards []models.Storybo
 		var character models.Character
 		var avatarURL sql.NullString
 		var avatarPreviewURL sql.NullString
+		var designSheetURL sql.NullString
+		var designSheetPreviewURL sql.NullString
 		if err := rows.Scan(
 			&storyboardID,
 			&character.ID,
@@ -157,6 +159,8 @@ func (r *StoryboardRepository) attachCharacterNames(storyboards []models.Storybo
 			&character.Description,
 			&avatarURL,
 			&avatarPreviewURL,
+			&designSheetURL,
+			&designSheetPreviewURL,
 			&character.CreatedAt,
 			&character.UpdatedAt,
 		); err != nil {
@@ -164,6 +168,8 @@ func (r *StoryboardRepository) attachCharacterNames(storyboards []models.Storybo
 		}
 		character.AvatarURL = nullStringValue(avatarURL)
 		character.AvatarPreviewURL = nullStringValue(avatarPreviewURL)
+		character.DesignSheetURL = nullStringValue(designSheetURL)
+		character.DesignSheetPreviewURL = nullStringValue(designSheetPreviewURL)
 
 		if sb, ok := index[storyboardID]; ok {
 			sb.Characters = append(sb.Characters, character)
@@ -200,7 +206,7 @@ func (r *StoryboardRepository) attachCharacterNamesToPointers(storyboards []*mod
 		return nil
 	}
 
-	query := `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url, c.avatar_preview_url, c.created_at, c.updated_at
+	query := `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url, c.avatar_preview_url, c.design_sheet_url, c.design_sheet_preview_url, c.created_at, c.updated_at
 		FROM storyboard_characters sc
 		JOIN characters c ON c.id = sc.character_id
 		WHERE sc.storyboard_id IN (` + string(placeholders) + `)
@@ -217,6 +223,8 @@ func (r *StoryboardRepository) attachCharacterNamesToPointers(storyboards []*mod
 		var character models.Character
 		var avatarURL sql.NullString
 		var avatarPreviewURL sql.NullString
+		var designSheetURL sql.NullString
+		var designSheetPreviewURL sql.NullString
 		if err := rows.Scan(
 			&storyboardID,
 			&character.ID,
@@ -225,6 +233,8 @@ func (r *StoryboardRepository) attachCharacterNamesToPointers(storyboards []*mod
 			&character.Description,
 			&avatarURL,
 			&avatarPreviewURL,
+			&designSheetURL,
+			&designSheetPreviewURL,
 			&character.CreatedAt,
 			&character.UpdatedAt,
 		); err != nil {
@@ -232,6 +242,8 @@ func (r *StoryboardRepository) attachCharacterNamesToPointers(storyboards []*mod
 		}
 		character.AvatarURL = nullStringValue(avatarURL)
 		character.AvatarPreviewURL = nullStringValue(avatarPreviewURL)
+		character.DesignSheetURL = nullStringValue(designSheetURL)
+		character.DesignSheetPreviewURL = nullStringValue(designSheetPreviewURL)
 
 		if sb, ok := index[storyboardID]; ok {
 			sb.Characters = append(sb.Characters, character)

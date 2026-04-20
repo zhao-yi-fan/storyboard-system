@@ -297,15 +297,20 @@ func (s *StoryboardCoverService) selectReferenceImages(storyboard *models.Storyb
 			continue
 		}
 		seenNames[name] = struct{}{}
-		avatarURL := s.resolveReferenceURL(publicBaseURL, strings.TrimSpace(character.AvatarURL))
-		if avatarURL == "" {
+		referenceURL := s.resolveReferenceURL(publicBaseURL, strings.TrimSpace(character.DesignSheetURL))
+		referenceSource := "character.design_sheet_url"
+		if referenceURL == "" {
+			referenceURL = s.resolveReferenceURL(publicBaseURL, strings.TrimSpace(character.AvatarURL))
+			referenceSource = "character.avatar_url"
+		}
+		if referenceURL == "" {
 			missing = append(missing, "character:"+name)
 			continue
 		}
 		if selectedCharacterRefs >= 2 {
 			continue
 		}
-		references = append(references, StoryboardCoverReferenceImage{Type: "character", Name: name, URL: avatarURL, Source: "character.avatar_url"})
+		references = append(references, StoryboardCoverReferenceImage{Type: "character", Name: name, URL: referenceURL, Source: referenceSource})
 		selectedCharacterRefs++
 	}
 	for _, name := range storyboard.CharacterNames {

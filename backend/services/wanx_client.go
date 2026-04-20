@@ -42,8 +42,8 @@ type wanxAsyncTaskResponse struct {
 }
 
 type qwenImageSyncRequest struct {
-	Model      string `json:"model"`
-	Input      struct {
+	Model string `json:"model"`
+	Input struct {
 		Messages []struct {
 			Role    string `json:"role"`
 			Content []struct {
@@ -79,7 +79,7 @@ type multimodalImageRequest struct {
 	Model string `json:"model"`
 	Input struct {
 		Messages []struct {
-			Role    string                 `json:"role"`
+			Role    string                  `json:"role"`
 			Content []multimodalContentItem `json:"content"`
 		} `json:"messages"`
 	} `json:"input"`
@@ -103,14 +103,7 @@ func NewWanxClient() (*WanxClient, error) {
 }
 
 func (c *WanxClient) GenerateImage(ctx context.Context, prompt string) (string, error) {
-	if c.usesQwenSyncAPI() {
-		return c.generateMultimodalSync(ctx, prompt, nil, c.model)
-	}
-	taskID, err := c.createWanxAsyncTask(ctx, prompt)
-	if err != nil {
-		return "", err
-	}
-	return c.waitForWanxTask(ctx, taskID)
+	return c.GenerateImageWithModel(ctx, prompt, c.model)
 }
 
 func (c *WanxClient) GenerateImageWithReferences(ctx context.Context, prompt string, imageURLs []string, model string) (string, error) {
@@ -127,15 +120,37 @@ func (c *WanxClient) GenerateImageWithReferences(ctx context.Context, prompt str
 	return c.generateMultimodalSync(ctx, prompt, imageURLs, selectedModel)
 }
 
+func (c *WanxClient) GenerateImageWithModel(ctx context.Context, prompt, model string) (string, error) {
+	selectedModel := strings.TrimSpace(model)
+	if selectedModel == "" {
+		selectedModel = strings.TrimSpace(c.model)
+	}
+	if selectedModel == "" {
+		return "", fmt.Errorf("未配置可用的生图模型")
+	}
+	if usesQwenSyncModel(selectedModel) {
+		return c.generateMultimodalSync(ctx, prompt, nil, selectedModel)
+	}
+	taskID, err := c.createWanxAsyncTaskWithModel(ctx, prompt, selectedModel)
+	if err != nil {
+		return "", err
+	}
+	return c.waitForWanxTask(ctx, taskID)
+}
+
 func (c *WanxClient) usesQwenSyncAPI() bool {
-	return strings.HasPrefix(c.model, "qwen-image-2.0") || strings.HasPrefix(c.model, "qwen-image-max")
+	return usesQwenSyncModel(c.model)
+}
+
+func usesQwenSyncModel(model string) bool {
+	return strings.HasPrefix(strings.TrimSpace(model), "qwen-image-2.0") || strings.HasPrefix(strings.TrimSpace(model), "qwen-image-max")
 }
 
 func (c *WanxClient) generateMultimodalSync(ctx context.Context, prompt string, imageURLs []string, model string) (string, error) {
 	var payload multimodalImageRequest
 	payload.Model = model
 	message := struct {
-		Role    string                 `json:"role"`
+		Role    string                  `json:"role"`
 		Content []multimodalContentItem `json:"content"`
 	}{Role: "user"}
 	for _, imageURL := range imageURLs {
@@ -188,8 +203,12 @@ func (c *WanxClient) generateMultimodalSync(ctx context.Context, prompt string, 
 }
 
 func (c *WanxClient) createWanxAsyncTask(ctx context.Context, prompt string) (string, error) {
+	return c.createWanxAsyncTaskWithModel(ctx, prompt, c.model)
+}
+
+func (c *WanxClient) createWanxAsyncTaskWithModel(ctx context.Context, prompt, model string) (string, error) {
 	payload := map[string]any{
-		"model": c.model,
+		"model": model,
 		"input": map[string]any{
 			"prompt": prompt,
 		},

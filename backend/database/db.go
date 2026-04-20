@@ -150,6 +150,18 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("characters", "design_sheet_url") {
+		if _, err := DB.Exec(`ALTER TABLE characters ADD COLUMN design_sheet_url VARCHAR(500) NULL DEFAULT NULL AFTER avatar_preview_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("characters", "design_sheet_preview_url") {
+		if _, err := DB.Exec(`ALTER TABLE characters ADD COLUMN design_sheet_preview_url VARCHAR(500) NULL DEFAULT NULL AFTER design_sheet_url`); err != nil {
+			return err
+		}
+	}
+
 	if !columnExists("projects", "video_url") {
 		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN video_url VARCHAR(500) NULL DEFAULT NULL AFTER script_text`); err != nil {
 			return err

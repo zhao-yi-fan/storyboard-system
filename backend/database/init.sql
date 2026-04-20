@@ -114,6 +114,8 @@ CREATE TABLE IF NOT EXISTS characters (
     description TEXT COMMENT '角色描述',
     avatar_url VARCHAR(500) COMMENT '头像原图URL',
     avatar_preview_url VARCHAR(500) COMMENT '头像缩略图URL',
+    design_sheet_url VARCHAR(500) COMMENT '角色主设定图原图URL',
+    design_sheet_preview_url VARCHAR(500) COMMENT '角色主设定图缩略图URL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,

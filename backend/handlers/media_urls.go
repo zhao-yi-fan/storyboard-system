@@ -46,6 +46,8 @@ func normalizeCharacterForResponse(character *models.Character) {
 	oss := services.NewOSSService()
 	character.AvatarURL = oss.ResolveGeneratedURL(character.AvatarURL)
 	character.AvatarPreviewURL = oss.ResolveGeneratedURL(character.AvatarPreviewURL)
+	character.DesignSheetURL = oss.ResolveGeneratedURL(character.DesignSheetURL)
+	character.DesignSheetPreviewURL = oss.ResolveGeneratedURL(character.DesignSheetPreviewURL)
 }
 
 func normalizeAssetForResponse(asset *models.Asset) {

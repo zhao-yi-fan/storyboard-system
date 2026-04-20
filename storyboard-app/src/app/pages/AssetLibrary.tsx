@@ -26,6 +26,7 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -65,7 +66,15 @@ type DeleteTarget =
   | null;
 
 const getCharacterPreviewSrc = (character: Character | null | undefined) =>
-  character?.avatar_preview_url || character?.avatar_url || "";
+  character?.avatar_preview_url || character?.avatar_url || character?.design_sheet_preview_url || character?.design_sheet_url || "";
+
+const getCharacterDesignSheetPreviewSrc = (character: Character | null | undefined) =>
+  character?.design_sheet_preview_url || character?.design_sheet_url || "";
+
+const CHARACTER_DESIGN_SHEET_MODE_OPTIONS = [
+  { value: "draft", label: "快速草案（Qwen 2.0）" },
+  { value: "final", label: "最终定稿（Wan 2.7 Pro）" },
+] as const;
 
 const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
@@ -97,8 +106,10 @@ export default function AssetLibrary() {
   const [isSavingCharacter, setIsSavingCharacter] = useState(false);
   const [isSavingAsset, setIsSavingAsset] = useState(false);
   const [generatingCharacterCoverId, setGeneratingCharacterCoverId] = useState<number | null>(null);
+  const [generatingCharacterDesignSheetId, setGeneratingCharacterDesignSheetId] = useState<number | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
+  const [characterDesignSheetMode, setCharacterDesignSheetMode] = useState<"draft" | "final">("final");
 
   useEffect(() => {
     if (activeTab === "characters") {
@@ -248,6 +259,7 @@ export default function AssetLibrary() {
         name: selectedAsset.data.name,
         description: selectedAsset.data.description || "",
         avatar_url: selectedAsset.data.avatar_url || "",
+        design_sheet_url: selectedAsset.data.design_sheet_url || "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
@@ -288,6 +300,22 @@ export default function AssetLibrary() {
       console.error("Failed to generate character cover:", error);
     } finally {
       setGeneratingCharacterCoverId(null);
+    }
+  };
+
+  const generateSelectedCharacterDesignSheet = async () => {
+    if (!selectedAsset || selectedAsset.type !== "character") return;
+    setGeneratingCharacterDesignSheetId(selectedAsset.data.id);
+    try {
+      const updated = await characterApi.generateCharacterDesignSheet(selectedAsset.data.id, {
+        mode: characterDesignSheetMode,
+      });
+      setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setSelectedAsset({ type: "character", data: updated });
+    } catch (error) {
+      console.error("Failed to generate character design sheet:", error);
+    } finally {
+      setGeneratingCharacterDesignSheetId(null);
     }
   };
 
@@ -412,7 +440,7 @@ export default function AssetLibrary() {
                     {filteredCharacters.map((character) => (
                       <button key={character.id} onClick={() => setSelectedAsset({ type: "character", data: character })} className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}>
                         <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 relative flex items-center justify-center">
-                          {character.avatar_url ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <Users className="w-16 h-16 text-gray-700" />}
+                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <Users className="w-16 h-16 text-gray-700" />}
                           <div className="absolute top-3 right-3"><Badge className="bg-purple-600 text-white text-xs">角色</Badge></div>
                         </div>
                         <div className="p-3 space-y-2"><h4 className="font-medium">{character.name}</h4><p className="text-xs text-gray-400 line-clamp-2">{character.description}</p></div>
@@ -424,7 +452,7 @@ export default function AssetLibrary() {
                     {filteredCharacters.map((character) => (
                       <button key={character.id} onClick={() => setSelectedAsset({ type: "character", data: character })} className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}>
                         <div className="w-16 h-16 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded flex items-center justify-center flex-shrink-0">
-                          {character.avatar_url ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" /> : <Users className="w-8 h-8 text-gray-700" />}
+                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" /> : <Users className="w-8 h-8 text-gray-700" />}
                         </div>
                         <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-1"><h4 className="font-medium">{character.name}</h4><Badge className="bg-purple-600 text-white text-xs">角色</Badge></div><p className="text-sm text-gray-400 line-clamp-1">{character.description}</p></div>
                       </button>
@@ -484,8 +512,17 @@ export default function AssetLibrary() {
                 {selectedAsset.type === "character" ? (
                   <div className="space-y-4">
                     <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
-                      {selectedAsset.data.avatar_url ? (
-                        <button type="button" className="w-full h-full" onClick={() => setPreviewImage({ src: selectedAsset.data.avatar_url, alt: selectedAsset.data.name })}>
+                      {getCharacterPreviewSrc(selectedAsset.data) ? (
+                        <button
+                          type="button"
+                          className="w-full h-full"
+                          onClick={() =>
+                            setPreviewImage({
+                              src: selectedAsset.data.avatar_url || selectedAsset.data.design_sheet_url || selectedAsset.data.avatar_preview_url || selectedAsset.data.design_sheet_preview_url || "",
+                              alt: selectedAsset.data.name,
+                            })
+                          }
+                        >
                           <img src={getCharacterPreviewSrc(selectedAsset.data)} alt={selectedAsset.data.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" />
                         </button>
                       ) : (
@@ -495,6 +532,72 @@ export default function AssetLibrary() {
                     <Button type="button" variant="outline" className="w-full border-gray-700 text-gray-200 hover:bg-gray-900" disabled={generatingCharacterCoverId === selectedAsset.data.id} onClick={generateSelectedCharacterCover}>
                       {generatingCharacterCoverId === selectedAsset.data.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />正在生成</> : <><Sparkles className="w-4 h-4 mr-2" />生成封面</>}
                     </Button>
+                    <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-gray-100">主设定图</div>
+                          <div className="text-xs text-gray-500">默认作为镜头封面生成时的人物核心参考图</div>
+                        </div>
+                        <Badge className="bg-blue-600 text-white text-xs">角色设定</Badge>
+                      </div>
+                      <div className="aspect-video bg-gradient-to-br from-slate-900/30 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
+                        {getCharacterDesignSheetPreviewSrc(selectedAsset.data) ? (
+                          <button
+                            type="button"
+                            className="w-full h-full"
+                            onClick={() =>
+                              setPreviewImage({
+                                src: selectedAsset.data.design_sheet_url || selectedAsset.data.design_sheet_preview_url || "",
+                                alt: `${selectedAsset.data.name} 主设定图`,
+                              })
+                            }
+                          >
+                            <img
+                              src={getCharacterDesignSheetPreviewSrc(selectedAsset.data)}
+                              alt={`${selectedAsset.data.name} 主设定图`}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-cover rounded"
+                            />
+                          </button>
+                        ) : (
+                          <Users className="w-16 h-16 text-gray-700" />
+                        )}
+                      </div>
+                      <div className="grid grid-cols-[1fr_auto] gap-2">
+                        <Select value={characterDesignSheetMode} onValueChange={(value) => setCharacterDesignSheetMode(value as "draft" | "final")}>
+                          <SelectTrigger className="bg-[#1a1a1a] border-gray-700 text-gray-100">
+                            <SelectValue placeholder="选择生成档位" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CHARACTER_DESIGN_SHEET_MODE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-gray-700 text-gray-200 hover:bg-gray-900"
+                          disabled={generatingCharacterDesignSheetId === selectedAsset.data.id}
+                          onClick={generateSelectedCharacterDesignSheet}
+                        >
+                          {generatingCharacterDesignSheetId === selectedAsset.data.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              生成中
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              生成主设定图
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                     <div><Label className="text-xs text-gray-400">角色名称</Label><Input value={selectedAsset.data.name} onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, name: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
                     <div><Label className="text-xs text-gray-400">角色描述</Label><Textarea value={selectedAsset.data.description || ""} onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, description: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
                     <div className="pt-4 border-t border-gray-800">

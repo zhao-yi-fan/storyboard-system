@@ -131,6 +131,7 @@ func main() {
 			characters.DELETE("/:id", characterHandler.Delete)
 
 			characters.POST("/:id/generate-cover", characterHandler.GenerateCover)
+			characters.POST("/:id/generate-design-sheet", characterHandler.GenerateDesignSheet)
 
 			// Assets under character
 			characters.GET("/:id/assets", assetHandler.GetByCharacter)
