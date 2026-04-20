@@ -96,7 +96,7 @@ func (s *OSSService) SignObjectURL(objectKey string, expireSeconds int64) string
 		log.Printf("failed to sign object URL: %v", err)
 		return ""
 	}
-	return url
+	return normalizeSignedObjectURL(url)
 }
 
 func (s *OSSService) ResolveGeneratedURL(raw string) string {
@@ -141,7 +141,7 @@ func (s *OSSService) SignUploadURL(objectKey string, contentType string) (map[st
 		return nil, err
 	}
 	return map[string]string{
-		"upload_url": url,
+		"upload_url": normalizeSignedObjectURL(url),
 		"public_url": GeneratedPublicPathFromObjectKey(cleanedKey),
 		"object_key": cleanedKey,
 	}, nil
@@ -226,4 +226,13 @@ func (s *OSSService) PublicObjectURL(objectKey string) string {
 	}
 	bucketName := strings.TrimSpace(config.GlobalConfig.AliyunOSSBucket)
 	return (&url.URL{Scheme: "https", Host: bucketName + "." + endpoint, Path: "/" + strings.TrimPrefix(objectKey, "/")}).String()
+}
+
+func normalizeSignedObjectURL(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	parsed.Path = strings.ReplaceAll(parsed.Path, "%2F", "/")
+	return parsed.String()
 }
