@@ -56,7 +56,7 @@ export function ImagePreviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-        <DialogOverlay className="bg-black/95 backdrop-blur-sm" />
+        <DialogOverlay className="bg-black/72 backdrop-blur-[2px]" />
         <DialogPrimitive.Content
           className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none sm:p-8"
           onPointerDown={(event) => {
@@ -80,16 +80,14 @@ export function ImagePreviewDialog({
             </button>
           ) : null}
 
-          <div
-            className="flex h-full w-full items-center justify-center overflow-hidden"
-            onPointerDown={(event) => event.stopPropagation()}
-          >
+          <div className="flex h-full w-full items-center justify-center overflow-hidden px-12 sm:px-20">
             <img
               src={src}
               alt={alt}
               loading="eager"
               decoding="async"
               className="max-h-full max-w-full select-none object-contain"
+              onPointerDown={(event) => event.stopPropagation()}
             />
           </div>
 
