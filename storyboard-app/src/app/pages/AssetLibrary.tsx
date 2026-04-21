@@ -110,6 +110,11 @@ export default function AssetLibrary() {
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
   const [characterDesignSheetMode, setCharacterDesignSheetMode] = useState<"draft" | "final">("final");
+  const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
+  const [isResizingDetailSidebar, setIsResizingDetailSidebar] = useState(false);
+
+  const MIN_DETAIL_SIDEBAR_WIDTH = 320;
+  const MAX_DETAIL_SIDEBAR_WIDTH = 560;
 
   useEffect(() => {
     if (activeTab === "characters") {
@@ -118,6 +123,38 @@ export default function AssetLibrary() {
       void loadAssets();
     }
   }, [activeTab, currentProjectId]);
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isResizingDetailSidebar) return;
+      const newWidth = window.innerWidth - event.clientX;
+      if (newWidth >= MIN_DETAIL_SIDEBAR_WIDTH && newWidth <= MAX_DETAIL_SIDEBAR_WIDTH) {
+        setDetailSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingDetailSidebar(false);
+    };
+
+    if (isResizingDetailSidebar) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizingDetailSidebar]);
+
+  const handleDetailSidebarMouseDown = () => {
+    setIsResizingDetailSidebar(true);
+  };
 
   const filteredCharacters = useMemo(() => {
     return characters.filter(
@@ -498,7 +535,12 @@ export default function AssetLibrary() {
           </Tabs>
         </main>
 
-        <aside className="w-96 border-l border-gray-800 bg-[#0f0f0f] flex flex-col">
+        <div
+          className={`resize-handle resize-handle-left relative flex-shrink-0 w-3 z-20 ${isResizingDetailSidebar ? "dragging" : ""}`}
+          onMouseDown={handleDetailSidebarMouseDown}
+        />
+
+        <aside style={{ width: detailSidebarWidth }} className="border-l border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0">
           {selectedAsset ? (
             <>
               <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
