@@ -1697,7 +1697,6 @@ export default function Workspace() {
                           src={getStoryboardVideoPreviewSrc(selectedShot)}
                           controls
                           preload="metadata"
-                          poster={selectedShot.thumbnail_preview_url || selectedShot.thumbnail_url || undefined}
                           className="w-full rounded bg-black"
                         />
                       </div>
