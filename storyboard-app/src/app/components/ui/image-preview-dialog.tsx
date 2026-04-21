@@ -59,7 +59,7 @@ export function ImagePreviewDialog({
         <DialogOverlay className="bg-black/72 backdrop-blur-[2px]" />
         <DialogPrimitive.Content
           className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none sm:p-8"
-          onPointerDown={(event) => {
+          onClick={(event) => {
             if (event.target === event.currentTarget) {
               onOpenChange(false);
             }
@@ -80,14 +80,16 @@ export function ImagePreviewDialog({
             </button>
           ) : null}
 
-          <div className="flex h-full w-full items-center justify-center overflow-hidden px-12 sm:px-20">
+          <div
+            className="pointer-events-auto flex max-h-full max-w-full items-center justify-center overflow-hidden px-12 sm:px-20"
+            onClick={(event) => event.stopPropagation()}
+          >
             <img
               src={src}
               alt={alt}
               loading="eager"
               decoding="async"
-              className="max-h-full max-w-full select-none object-contain"
-              onPointerDown={(event) => event.stopPropagation()}
+              className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-6rem)] select-none object-contain sm:max-h-[calc(100vh-4rem)] sm:max-w-[calc(100vw-10rem)]"
             />
           </div>
 
