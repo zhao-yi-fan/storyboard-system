@@ -1,6 +1,7 @@
 import { useEffect } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "./dialog";
+import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "./dialog";
 
 type PreviewItem = {
   src: string;
@@ -48,22 +49,41 @@ export function ImagePreviewDialog({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, canNavigate, items, currentIndex, onNavigate]);
 
+  if (!src) {
+    return null;
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-screen max-h-screen w-screen max-w-none border-0 bg-black/95 p-6 shadow-none sm:rounded-none [&>button]:top-5 [&>button]:right-5 [&>button]:bg-black/40 [&>button]:text-white [&>button]:opacity-100 [&>button]:hover:bg-black/60">
-        <DialogTitle className="sr-only">{alt}</DialogTitle>
-        <div className="flex h-full w-full items-center justify-center overflow-hidden">
+      <DialogPortal>
+        <DialogOverlay className="bg-black/95 backdrop-blur-sm" />
+        <DialogPrimitive.Content
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none sm:p-8"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) {
+              onOpenChange(false);
+            }
+          }}
+        >
+          <DialogTitle className="sr-only">{alt}</DialogTitle>
           {canNavigate ? (
             <button
               type="button"
-              className="mr-3 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-              onClick={() => onNavigate?.((currentIndex - 1 + (items?.length || 0)) % (items?.length || 1))}
+              className="absolute left-4 top-1/2 z-10 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 sm:left-6"
+              onClick={(event) => {
+                event.stopPropagation();
+                onNavigate?.((currentIndex - 1 + (items?.length || 0)) % (items?.length || 1));
+              }}
               aria-label="上一张"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
           ) : null}
-          <div className="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
+
+          <div
+            className="flex h-full w-full items-center justify-center overflow-hidden"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
             <img
               src={src}
               alt={alt}
@@ -72,18 +92,22 @@ export function ImagePreviewDialog({
               className="max-h-full max-w-full select-none object-contain"
             />
           </div>
+
           {canNavigate ? (
             <button
               type="button"
-              className="ml-3 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-              onClick={() => onNavigate?.((currentIndex + 1) % (items?.length || 1))}
+              className="absolute right-4 top-1/2 z-10 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 sm:right-6"
+              onClick={(event) => {
+                event.stopPropagation();
+                onNavigate?.((currentIndex + 1) % (items?.length || 1));
+              }}
               aria-label="下一张"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
           ) : null}
-        </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }
