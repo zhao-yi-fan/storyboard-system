@@ -128,7 +128,7 @@ func (c *WanxClient) GenerateImageWithModel(ctx context.Context, prompt, model s
 	if selectedModel == "" {
 		return "", fmt.Errorf("未配置可用的生图模型")
 	}
-	if usesQwenSyncModel(selectedModel) {
+	if usesSyncMultimodalModel(selectedModel) {
 		return c.generateMultimodalSync(ctx, prompt, nil, selectedModel)
 	}
 	taskID, err := c.createWanxAsyncTaskWithModel(ctx, prompt, selectedModel)
@@ -144,6 +144,11 @@ func (c *WanxClient) usesQwenSyncAPI() bool {
 
 func usesQwenSyncModel(model string) bool {
 	return strings.HasPrefix(strings.TrimSpace(model), "qwen-image-2.0") || strings.HasPrefix(strings.TrimSpace(model), "qwen-image-max")
+}
+
+func usesSyncMultimodalModel(model string) bool {
+	trimmed := strings.TrimSpace(model)
+	return usesQwenSyncModel(trimmed) || strings.HasPrefix(trimmed, "wan2.7-image")
 }
 
 func (c *WanxClient) generateMultimodalSync(ctx context.Context, prompt string, imageURLs []string, model string) (string, error) {
