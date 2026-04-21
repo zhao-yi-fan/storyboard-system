@@ -470,6 +470,52 @@ func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
 }
 
 // GenerateVideo generates and attaches a short video for a storyboard
+func (h *StoryboardHandler) PreviewVideoGeneration(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	selectedModel := strings.TrimSpace(c.Query("model"))
+	if selectedModel == "" {
+		selectedModel = config.GlobalConfig.WanxVideoModel
+	}
+	if !config.IsSupportedWanxVideoModel(selectedModel) {
+		response.Error(c, "unsupported video model")
+		return
+	}
+
+	selectedDuration := 5
+	if durationStr := strings.TrimSpace(c.Query("duration")); durationStr != "" {
+		durationValue, err := strconv.Atoi(durationStr)
+		if err != nil {
+			response.Error(c, "invalid duration")
+			return
+		}
+		selectedDuration = durationValue
+	}
+	if selectedDuration != 5 {
+		response.Error(c, "当前视频模型仅支持 5 秒输出")
+		return
+	}
+
+	service, err := services.NewStoryboardVideoService()
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	preview, err := service.PreviewGeneration(id, requestPublicBaseURL(c), selectedModel, selectedDuration)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	response.Success(c, preview)
+}
+
 func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

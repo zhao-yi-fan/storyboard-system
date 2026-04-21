@@ -173,6 +173,33 @@ export type StoryboardCoverGenerationPreview = {
   can_generate_without_references: boolean;
 };
 
+export type StoryboardVideoGenerationFields = {
+  scene_title: string;
+  background: string;
+  characters: string[];
+  shot_type: string;
+  camera_direction: string;
+  camera_motion: string;
+  content: string;
+  mood: string;
+  style_preset: string;
+  style_notes: string;
+  dialogue: string;
+  notes: string;
+};
+
+export type StoryboardVideoGenerationPreview = {
+  model: string;
+  duration: number;
+  resolution: string;
+  audio: boolean;
+  source_image_url: string;
+  source_image_status: "existing-cover" | "will-generate-cover" | string;
+  will_generate_cover: boolean;
+  fields: StoryboardVideoGenerationFields;
+  final_prompt: string;
+};
+
 export type GenerateStoryboardVideoResult = {
   storyboard_id: number;
   video_url: string;

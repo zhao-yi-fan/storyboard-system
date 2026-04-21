@@ -36,6 +36,33 @@ type StoryboardVideoService struct {
 
 const storyboardVideoPreviewHeight = 480
 
+type StoryboardVideoGenerationFields struct {
+	SceneTitle      string   `json:"scene_title"`
+	Background      string   `json:"background"`
+	Characters      []string `json:"characters"`
+	ShotType        string   `json:"shot_type"`
+	CameraDirection string   `json:"camera_direction"`
+	CameraMotion    string   `json:"camera_motion"`
+	Content         string   `json:"content"`
+	Mood            string   `json:"mood"`
+	StylePreset     string   `json:"style_preset"`
+	StyleNotes      string   `json:"style_notes"`
+	Dialogue        string   `json:"dialogue"`
+	Notes           string   `json:"notes"`
+}
+
+type StoryboardVideoGenerationPreview struct {
+	Model             string                          `json:"model"`
+	Duration          int                             `json:"duration"`
+	Resolution        string                          `json:"resolution"`
+	Audio             bool                            `json:"audio"`
+	SourceImageURL    string                          `json:"source_image_url"`
+	SourceImageStatus string                          `json:"source_image_status"`
+	WillGenerateCover bool                            `json:"will_generate_cover"`
+	Fields            StoryboardVideoGenerationFields `json:"fields"`
+	FinalPrompt       string                          `json:"final_prompt"`
+}
+
 func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		return nil, fmt.Errorf("镜头视频预览未配置：缺少 ffmpeg")
@@ -60,6 +87,57 @@ func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 			Timeout: 90 * time.Second,
 		},
 		ossService: NewOSSService(),
+	}, nil
+}
+
+func (s *StoryboardVideoService) PreviewGeneration(storyboardID int64, publicBaseURL, model string, duration int) (*StoryboardVideoGenerationPreview, error) {
+	storyboard, err := s.storyboardRepo.FindByID(storyboardID)
+	if err != nil {
+		return nil, err
+	}
+	if storyboard == nil {
+		return nil, fmt.Errorf("storyboard not found")
+	}
+
+	scene, err := s.sceneRepo.FindByID(storyboard.SceneID)
+	if err != nil {
+		return nil, err
+	}
+	if scene == nil {
+		return nil, fmt.Errorf("scene not found")
+	}
+
+	if strings.TrimSpace(model) == "" {
+		model = config.GlobalConfig.WanxVideoModel
+	}
+	if duration == 0 {
+		duration = 5
+	}
+	if duration != 5 {
+		return nil, fmt.Errorf("当前视频模型仅支持 5 秒输出")
+	}
+
+	sourceImageStatus := "existing-cover"
+	sourceImageURL := strings.TrimSpace(storyboard.ThumbnailURL)
+	if sourceImageURL == "" {
+		sourceImageStatus = "will-generate-cover"
+	} else if s.ossService.IsEnabled() {
+		sourceImageURL = s.ossService.ResolveURL(sourceImageURL, publicBaseURL)
+	} else {
+		sourceImageURL = absolutizeGeneratedURL(publicBaseURL, sourceImageURL)
+	}
+
+	fields := buildStoryboardVideoFields(storyboard, scene)
+	return &StoryboardVideoGenerationPreview{
+		Model:             model,
+		Duration:          duration,
+		Resolution:        "720P",
+		Audio:             true,
+		SourceImageURL:    sourceImageURL,
+		SourceImageStatus: sourceImageStatus,
+		WillGenerateCover: sourceImageStatus == "will-generate-cover",
+		Fields:            fields,
+		FinalPrompt:       buildStoryboardVideoPrompt(storyboard, scene, duration),
 	}, nil
 }
 
@@ -327,6 +405,33 @@ func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Sce
 	b.WriteString(" 运动要求：自然运动、光影克制、镜头稳定。")
 	b.WriteString(" 音频：根据场景自动生成环境音和氛围声，不要旁白，不要字幕，不要水印。")
 	return b.String()
+}
+
+func buildStoryboardVideoFields(storyboard *models.Storyboard, scene *models.Scene) StoryboardVideoGenerationFields {
+	characters := append([]string(nil), storyboard.CharacterNames...)
+	if len(characters) == 0 && len(storyboard.Characters) > 0 {
+		for _, character := range storyboard.Characters {
+			name := strings.TrimSpace(character.Name)
+			if name != "" {
+				characters = append(characters, name)
+			}
+		}
+	}
+
+	return StoryboardVideoGenerationFields{
+		SceneTitle:      strings.TrimSpace(scene.Title),
+		Background:      strings.TrimSpace(storyboard.Background),
+		Characters:      characters,
+		ShotType:        strings.TrimSpace(storyboard.ShotType),
+		CameraDirection: strings.TrimSpace(storyboard.CameraDirection),
+		CameraMotion:    strings.TrimSpace(storyboard.CameraMotion),
+		Content:         strings.TrimSpace(storyboard.Content),
+		Mood:            strings.TrimSpace(storyboard.Mood),
+		StylePreset:     strings.TrimSpace(resolveStoryboardStylePreset(scene, storyboard)),
+		StyleNotes:      strings.TrimSpace(resolveStoryboardStyleNotes(scene, storyboard)),
+		Dialogue:        strings.TrimSpace(storyboard.Dialogue),
+		Notes:           strings.TrimSpace(storyboard.Notes),
+	}
 }
 
 func generationDuration(generation *models.StoryboardMediaGeneration) int {

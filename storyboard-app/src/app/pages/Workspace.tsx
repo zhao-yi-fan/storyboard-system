@@ -68,6 +68,7 @@ import {
   type Scene,
   type Storyboard,
   type StoryboardCoverGenerationPreview,
+  type StoryboardVideoGenerationPreview,
   type StoryboardMediaGeneration,
 } from "../api";
 
@@ -204,7 +205,9 @@ export default function Workspace() {
   const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>(COVER_MODEL_OPTIONS[0].value);
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
+  const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
   const [coverGenerationPreview, setCoverGenerationPreview] = useState<StoryboardCoverGenerationPreview | null>(null);
+  const [videoGenerationPreview, setVideoGenerationPreview] = useState<StoryboardVideoGenerationPreview | null>(null);
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
@@ -650,10 +653,26 @@ export default function Workspace() {
   };
 
   const handleGenerateVideo = () => {
-    if (!selectedShot || generatingVideoId === selectedShot.id) {
+    if (!selectedShot || generatingVideoId === selectedShot.id || isLoadingVideoPreview) {
       return;
     }
-    setIsVideoConfirmOpen(true);
+
+    setIsLoadingVideoPreview(true);
+    void storyboardApi
+      .getStoryboardVideoGenerationPreview(selectedShot.id, {
+        model: selectedVideoModel,
+        duration: 5,
+      })
+      .then((preview) => {
+        setVideoGenerationPreview(preview);
+        setIsVideoConfirmOpen(true);
+      })
+      .catch((error) => {
+        console.error("Failed to preview storyboard video generation:", error);
+      })
+      .finally(() => {
+        setIsLoadingVideoPreview(false);
+      });
   };
 
   const confirmGenerateVideo = async () => {
@@ -2398,26 +2417,81 @@ export default function Workspace() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isVideoConfirmOpen} onOpenChange={setIsVideoConfirmOpen}>
-        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认生成视频</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400 leading-6">
-              会为当前镜头生成 720P、5 秒、有声视频，并消耗较高额度。新结果会保留到历史记录中，不会覆盖旧版本。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedVideoModel}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">时长</span><span>5 秒</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 5秒 / 有声</span></div>
+      <Dialog open={isVideoConfirmOpen} onOpenChange={setIsVideoConfirmOpen}>
+        <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>确认生成视频</DialogTitle>
+            <DialogDescription className="text-gray-400 leading-6">
+              会为当前镜头生成 720P、5 秒、有声视频，并消耗较高额度。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div className="grid gap-3 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm md:grid-cols-2">
+              <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-gray-500">实际模型</span><span>{videoGenerationPreview?.model || selectedVideoModel}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-gray-500">时长</span><span>{videoGenerationPreview?.duration || 5} 秒</span></div>
+              <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>{videoGenerationPreview ? `${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}` : "720P / 5秒 / 有声"}</span></div>
+              <div className="flex justify-between gap-4 md:col-span-2">
+                <span className="text-gray-500">首帧来源</span>
+                <span>{videoGenerationPreview?.will_generate_cover ? "当前无封面，后端会先自动生成封面" : "使用当前镜头封面作为首帧"}</span>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">首帧封面</div>
+              {videoGenerationPreview?.source_image_url ? (
+                <div className="grid gap-2 md:grid-cols-[112px_minmax(0,1fr)]">
+                  <div className="h-28 w-28 overflow-hidden rounded border border-gray-800 bg-black">
+                    <img
+                      src={videoGenerationPreview.source_image_url}
+                      alt={selectedShot ? `${formatShotNumber(selectedShot.shot_number)} 首帧封面` : "首帧封面"}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="space-y-2 break-all text-xs">
+                    <div className="flex justify-between gap-4"><span className="text-gray-500">状态</span><span>{videoGenerationPreview.source_image_status === "existing-cover" ? "已有封面" : "将自动补封面"}</span></div>
+                    <div>
+                      <div className="text-gray-500 mb-1">URL</div>
+                      <div className="text-gray-300 break-all">{videoGenerationPreview.source_image_url}</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-amber-300 text-sm">当前镜头还没有封面。开始生成后，后端会先自动补一张封面，再继续生成视频。</div>
+              )}
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">结构化字段</div>
+              <div className="grid gap-2 md:grid-cols-2 text-xs">
+                <div><span className="text-gray-500">场景标题：</span><span>{videoGenerationPreview?.fields.scene_title || "-"}</span></div>
+                <div><span className="text-gray-500">背景场景：</span><span>{videoGenerationPreview?.fields.background || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{videoGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
+                <div><span className="text-gray-500">景别：</span><span>{videoGenerationPreview?.fields.shot_type || "-"}</span></div>
+                <div><span className="text-gray-500">机位：</span><span>{videoGenerationPreview?.fields.camera_direction || "-"}</span></div>
+                <div><span className="text-gray-500">镜头运动：</span><span>{videoGenerationPreview?.fields.camera_motion || "-"}</span></div>
+                <div><span className="text-gray-500">情绪：</span><span>{videoGenerationPreview?.fields.mood || "-"}</span></div>
+                <div><span className="text-gray-500">风格预设：</span><span>{videoGenerationPreview?.fields.style_preset || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{videoGenerationPreview?.fields.content || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">风格补充：</span><span>{videoGenerationPreview?.fields.style_notes || "-"}</span></div>
+                <div><span className="text-gray-500">台词：</span><span>{videoGenerationPreview?.fields.dialogue || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">备注：</span><span>{videoGenerationPreview?.fields.notes || "-"}</span></div>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">最终 Prompt</div>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{videoGenerationPreview?.final_prompt || "-"}</pre>
+            </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateVideo}>确认生成</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setIsVideoConfirmOpen(false)}>取消</Button>
+            <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateVideo()}>确认生成</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={!!deleteTargetShot}

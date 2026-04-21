@@ -3,6 +3,7 @@ import type {
   GenerateStoryboardCoverResult,
   GenerateStoryboardVideoResult,
   StoryboardCoverGenerationPreview,
+  StoryboardVideoGenerationPreview,
   Storyboard,
   StoryboardMediaGeneration,
   StoryboardMediaMutationResult,
@@ -81,6 +82,18 @@ export function getStoryboardCoverGenerationPreview(id: number) {
 
 export function generateStoryboardCover(id: number, data?: { use_text_only?: boolean }) {
   return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`, data ?? {});
+}
+
+export function getStoryboardVideoGenerationPreview(id: number, data?: { model?: string; duration?: number }) {
+  const params = new URLSearchParams();
+  if (data?.model) {
+    params.set("model", data.model);
+  }
+  if (data?.duration) {
+    params.set("duration", String(data.duration));
+  }
+  const query = params.toString();
+  return apiClient.get<StoryboardVideoGenerationPreview>(`/storyboards/${id}/video-generation-preview${query ? `?${query}` : ""}`);
 }
 
 export function generateStoryboardVideo(id: number, data?: { model?: string; duration?: number }) {
