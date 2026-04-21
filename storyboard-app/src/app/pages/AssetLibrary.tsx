@@ -11,7 +11,6 @@ import {
   MoreHorizontal,
   X,
   Check,
-  Filter,
   Grid3x3,
   List,
   Trash2,
@@ -457,7 +456,6 @@ export default function AssetLibrary() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <Input placeholder="搜索资产..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-8 bg-[#1a1a1a] border-gray-700 text-sm" />
                   </div>
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><Filter className="w-4 h-4" /></Button>
                   <div className="flex bg-[#1a1a1a] rounded border border-gray-700">
                     <Button size="sm" variant="ghost" className={`h-8 w-8 p-0 rounded-none ${viewMode === "grid" ? "bg-gray-800" : ""}`} onClick={() => setViewMode("grid")}><Grid3x3 className="w-4 h-4" /></Button>
                     <Button size="sm" variant="ghost" className={`h-8 w-8 p-0 rounded-none ${viewMode === "list" ? "bg-gray-800" : ""}`} onClick={() => setViewMode("list")}><List className="w-4 h-4" /></Button>
@@ -606,9 +604,9 @@ export default function AssetLibrary() {
                           <Users className="w-16 h-16 text-gray-700" />
                         )}
                       </div>
-                      <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <div className="space-y-2">
                         <Select value={characterDesignSheetMode} onValueChange={(value) => setCharacterDesignSheetMode(value as "draft" | "final")}>
-                          <SelectTrigger className="bg-[#1a1a1a] border-gray-700 text-gray-100">
+                          <SelectTrigger className="w-full bg-[#1a1a1a] border-gray-700 text-gray-100">
                             <SelectValue placeholder="选择生成档位" />
                           </SelectTrigger>
                           <SelectContent>
@@ -622,7 +620,7 @@ export default function AssetLibrary() {
                         <Button
                           type="button"
                           variant="outline"
-                          className="border-gray-700 text-gray-200 hover:bg-gray-900"
+                          className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
                           disabled={generatingCharacterDesignSheetId === selectedAsset.data.id}
                           onClick={generateSelectedCharacterDesignSheet}
                         >
