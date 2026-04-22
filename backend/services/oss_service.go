@@ -231,5 +231,15 @@ func (s *OSSService) PublicObjectURL(objectKey string) string {
 func normalizeSignedObjectURL(raw string) string {
 	normalized := strings.ReplaceAll(raw, "%2F", "/")
 	normalized = strings.ReplaceAll(normalized, "%2f", "/")
+
+	parsed, err := url.Parse(normalized)
+	if err == nil && parsed.Scheme != "" {
+		parsed.Scheme = "https"
+		return parsed.String()
+	}
+
+	if strings.HasPrefix(normalized, "http://") {
+		return "https://" + strings.TrimPrefix(normalized, "http://")
+	}
 	return normalized
 }
