@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
   Upload,
   FileText,
@@ -182,9 +183,16 @@ export default function ImportScript() {
   }, [isParsing, previewScenes.length]);
 
   const handleGenerate = async () => {
-    if (!projectName.trim() || !scriptText.trim()) return;
+    if (!projectName.trim() || !scriptText.trim()) {
+      toast.error("请先填写项目名称并输入剧本内容");
+      return;
+    }
 
     setLoading(true);
+    parsingTargetRef.current = null;
+    setParsingStats({ chapters: 0, scenes: 0, shots: 0, characters: 0 });
+    setCurrentStage(0);
+    setIsParsing(true);
     try {
       const project = await projectApi.createProject({
         name: projectName,
@@ -193,10 +201,6 @@ export default function ImportScript() {
 
       const targetProjectId = project.id;
       window.localStorage.setItem("currentProjectId", String(targetProjectId));
-      parsingTargetRef.current = null;
-      setParsingStats({ chapters: 0, scenes: 0, shots: 0, characters: 0 });
-      setCurrentStage(0);
-      setIsParsing(true);
 
       const importResult = await projectApi.importScript(project.id, scriptText);
       const finalStats: ParsingStats = {
@@ -209,9 +213,11 @@ export default function ImportScript() {
       setCurrentStage(parsingStages.length - 1);
       setParsingStats(finalStats);
       await sleep(900);
+      toast.success("分镜草稿生成完成");
       navigate(`/workspace?project=${targetProjectId}`);
     } catch (error) {
       console.error("Failed to create project:", error);
+      toast.error(error instanceof Error ? error.message : "生成分镜草稿失败");
       setIsParsing(false);
     } finally {
       setLoading(false);
