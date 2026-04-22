@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -92,7 +94,7 @@ type arkChatResponse struct {
 func NewArkClient() *ArkClient {
 	timeout := config.GlobalConfig.ArkRequestTimeoutSeconds
 	if timeout <= 0 {
-		timeout = 60
+		timeout = 180
 	}
 
 	return &ArkClient{
@@ -140,7 +142,7 @@ func (c *ArkClient) ParseScript(ctx context.Context, scriptText string) (*llmSto
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("调用 Ark 解析失败: %w", err)
+		return nil, fmt.Errorf("调用 Ark 解析失败: %s", humanizeArkRequestError(err))
 	}
 	defer resp.Body.Close()
 
@@ -187,6 +189,28 @@ func (c *ArkClient) ParseScript(ctx context.Context, scriptText string) (*llmSto
 	}
 
 	return &document, nil
+}
+
+func humanizeArkRequestError(err error) string {
+	if err == nil {
+		return "未知错误"
+	}
+
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return "方舟响应超时，请重试"
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return "方舟响应超时，请重试"
+	}
+
+	if strings.Contains(err.Error(), "Client.Timeout") || strings.Contains(err.Error(), "context deadline exceeded") {
+		return "方舟响应超时，请重试"
+	}
+
+	return err.Error()
 }
 
 const arkStoryboardSystemPrompt = `你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你只能输出一个 JSON 对象，不要输出解释、不要输出 Markdown、不要输出代码块、不要输出额外文本。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。characters 字段只能填写人物/角色名字，绝对不能填写场景标题、地点、时间、氛围描述、镜头描述，也不能把多个信息用标点连接成一个字符串。每个 storyboard 都必须填写 visual_description，不能留空；如果原文没有直接描写，也要根据上下文补出可视化画面描述。`

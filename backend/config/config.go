@@ -60,7 +60,7 @@ func Load() {
 		ArkAPIKey:                      getEnv("ARK_API_KEY", ""),
 		ArkBaseURL:                     getEnv("ARK_BASE_URL", ""),
 		ArkModel:                       getEnv("ARK_MODEL", ""),
-		ArkRequestTimeoutSeconds:       getEnvInt("ARK_REQUEST_TIMEOUT_SECONDS", 60),
+		ArkRequestTimeoutSeconds:       getEnvInt("ARK_REQUEST_TIMEOUT_SECONDS", 180),
 		DashScopeAPIKey:                getEnv("DASHSCOPE_API_KEY", ""),
 		WanxBaseURL:                    getEnv("WANX_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
 		WanxModel:                      getEnv("WANX_MODEL", "wanx2.0-t2i-turbo"),
