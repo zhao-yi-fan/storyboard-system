@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
   Upload,
   FileText,
@@ -184,7 +185,9 @@ export default function ImportScript() {
 
   const handleGenerate = async () => {
     if (!projectName.trim() || !scriptText.trim()) {
-      setErrorMessage("请先填写项目名称并输入剧本内容");
+      const message = "请先填写项目名称并输入剧本内容";
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
 
@@ -230,7 +233,9 @@ export default function ImportScript() {
       if (parsingTimer !== null) {
         window.clearTimeout(parsingTimer);
       }
-      setErrorMessage(error instanceof Error ? error.message : "创建项目失败");
+      const message = error instanceof Error ? error.message : "创建项目失败";
+      setErrorMessage(message);
+      toast.error(message);
       setIsParsing(false);
     } finally {
       setLoading(false);
