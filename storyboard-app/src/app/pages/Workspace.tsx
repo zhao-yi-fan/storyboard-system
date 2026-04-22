@@ -201,7 +201,6 @@ export default function Workspace() {
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [selectedShot, setSelectedShot] = useState<Storyboard | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isSavingShot, setIsSavingShot] = useState(false);
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
@@ -1120,30 +1119,8 @@ export default function Workspace() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-gray-500">
-              共 {filteredShots.length} 个镜头 · 预计时长 {calculateTotalDuration().toFixed(1)}s
-            </div>
-            <Button
-              size="sm"
-              className="h-8 bg-purple-600 hover:bg-purple-700"
-              onClick={() => {
-                setIsGenerating(true);
-                setTimeout(() => setIsGenerating(false), 2000);
-              }}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-1.5" />
-                  AI 优化
-                </>
-              )}
-            </Button>
+          <div className="text-xs text-gray-500">
+            共 {filteredShots.length} 个镜头 · 预计时长 {calculateTotalDuration().toFixed(1)}s
           </div>
         </div>
       </header>
