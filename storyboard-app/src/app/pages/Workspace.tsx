@@ -146,6 +146,11 @@ function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
   return storyboard.video_preview_url || storyboard.video_url || "";
 }
 
+function hasSucceededStoryboardVideo(storyboard?: Storyboard | null) {
+  if (!storyboard) return false;
+  return storyboard.video_status === "succeeded" && !!storyboard.video_url;
+}
+
 const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
   shot?.thumbnail_preview_url || shot?.thumbnail_url || "";
 
@@ -1478,7 +1483,7 @@ export default function Workspace() {
                         {shot.duration}s
                       </div>
                     )}
-                    {shot.video_url ? (
+                    {hasSucceededStoryboardVideo(shot) ? (
                       <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs flex items-center gap-1 text-purple-200">
                         <Play className="w-3 h-3 fill-current" />
                         视频
@@ -1677,7 +1682,7 @@ export default function Workspace() {
                           </div>
                         </div>
                       </div>
-                    ) : selectedShot.video_url ? (
+                    ) : hasSucceededStoryboardVideo(selectedShot) ? (
                       <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-2">
                         <div className="mb-2 flex items-center justify-between">
                           <span className="text-xs text-gray-400">视频预览</span>

@@ -58,6 +58,7 @@ func (h *StoryboardHandler) GetByScene(c *gin.Context) {
 	}
 
 	for i := range storyboards {
+		h.ensureStoryboardVideoConsistency(&storyboards[i])
 		h.ensureStoryboardPreview(c, &storyboards[i])
 	}
 	normalizeStoryboardsForResponse(storyboards)
@@ -84,6 +85,7 @@ func (h *StoryboardHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	h.ensureStoryboardVideoConsistency(storyboard)
 	h.ensureStoryboardPreview(c, storyboard)
 	normalizeStoryboardForResponse(storyboard)
 	response.Success(c, storyboard)
@@ -107,7 +109,7 @@ func (h *StoryboardHandler) GetMediaGenerations(c *gin.Context) {
 		return
 	}
 
-	items, err := h.mediaRepo.ListByStoryboardID(id)
+	items, err := h.ensureStoryboardVideoConsistency(storyboard)
 	if err != nil {
 		response.Error(c, err.Error())
 		return
@@ -638,14 +640,85 @@ func (h *StoryboardHandler) loadMediaGenerationContext(c *gin.Context) (int64, i
 	return storyboardID, generationID, storyboard, generation, true
 }
 
-func (h *StoryboardHandler) respondWithStoryboardAndHistory(c *gin.Context, storyboard *models.Storyboard) {
-	h.ensureStoryboardPreview(c, storyboard)
+func (h *StoryboardHandler) ensureStoryboardVideoConsistency(storyboard *models.Storyboard) ([]models.StoryboardMediaGeneration, error) {
+	if storyboard == nil {
+		return []models.StoryboardMediaGeneration{}, nil
+	}
 
 	items, err := h.mediaRepo.ListByStoryboardID(storyboard.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	videoItems := make([]models.StoryboardMediaGeneration, 0)
+	var currentSucceeded *models.StoryboardMediaGeneration
+	var latestSucceeded *models.StoryboardMediaGeneration
+	for i := range items {
+		item := items[i]
+		if item.MediaType != "video" {
+			continue
+		}
+		videoItems = append(videoItems, item)
+		if item.Status == "succeeded" {
+			if currentSucceeded == nil && item.IsCurrent {
+				tmp := item
+				currentSucceeded = &tmp
+			}
+			if latestSucceeded == nil {
+				tmp := item
+				latestSucceeded = &tmp
+			}
+		}
+	}
+
+	if strings.TrimSpace(storyboard.VideoURL) != "" && storyboard.VideoStatus == "succeeded" && latestSucceeded == nil {
+		backfill := &models.StoryboardMediaGeneration{
+			StoryboardID: storyboard.ID,
+			MediaType:    "video",
+			Model:        "legacy",
+			Status:       "succeeded",
+			ResultURL:    storyboard.VideoURL,
+			PreviewURL:   storyboard.VideoPreviewURL,
+			SourceURL:    storyboard.ThumbnailURL,
+			ErrorMessage: "",
+			IsCurrent:    true,
+			MetaJSON:     mustMarshalStoryboardMediaMeta(map[string]any{"duration": storyboard.VideoDuration, "resolution": "720P"}),
+		}
+		if err := h.mediaRepo.Create(backfill); err != nil {
+			return nil, err
+		}
+		if err := h.mediaRepo.MarkCurrent(storyboard.ID, "video", backfill.ID); err != nil {
+			return nil, err
+		}
+		items, err = h.mediaRepo.ListByStoryboardID(storyboard.ID)
+		if err != nil {
+			return nil, err
+		}
+		return items, nil
+	}
+
+	repairSource := currentSucceeded
+	if repairSource == nil {
+		repairSource = latestSucceeded
+	}
+	if repairSource != nil && (storyboard.VideoStatus != "succeeded" || strings.TrimSpace(storyboard.VideoURL) == "") {
+		applyGenerationToStoryboard(storyboard, repairSource)
+		storyboard.VideoError = ""
+		if err := h.repo.Update(storyboard); err != nil {
+			return nil, err
+		}
+	}
+
+	return items, nil
+}
+
+func (h *StoryboardHandler) respondWithStoryboardAndHistory(c *gin.Context, storyboard *models.Storyboard) {
+	items, err := h.ensureStoryboardVideoConsistency(storyboard)
 	if err != nil {
 		response.Error(c, err.Error())
 		return
 	}
+	h.ensureStoryboardPreview(c, storyboard)
 	if items == nil {
 		items = []models.StoryboardMediaGeneration{}
 	}
@@ -723,4 +796,15 @@ func extractVideoDuration(metaJSON string) float64 {
 		return float64(value)
 	}
 	return 0
+}
+
+func mustMarshalStoryboardMediaMeta(meta map[string]any) string {
+	if meta == nil {
+		return ""
+	}
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }

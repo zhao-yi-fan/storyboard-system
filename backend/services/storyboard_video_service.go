@@ -210,19 +210,15 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 
 	videoURL, generatedDuration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput, generation.Model, requestedDuration)
 	if err != nil {
-		storyboard.VideoStatus = "failed"
-		storyboard.VideoError = err.Error()
-		_ = s.storyboardRepo.Update(storyboard)
 		s.markGenerationFailed(generation, err)
+		s.restoreStoryboardVideoSnapshotOnFailure(storyboard.ID, err)
 		return nil, err
 	}
 
 	publicPath, previewPath, err := s.downloadAndStore(ctx, storyboard.ID, videoURL)
 	if err != nil {
-		storyboard.VideoStatus = "failed"
-		storyboard.VideoError = err.Error()
-		_ = s.storyboardRepo.Update(storyboard)
 		s.markGenerationFailed(generation, err)
+		s.restoreStoryboardVideoSnapshotOnFailure(storyboard.ID, err)
 		return nil, err
 	}
 
@@ -305,12 +301,7 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 
 	go func(gen models.StoryboardMediaGeneration) {
 		if _, err := s.GenerateAndAttach(storyboardID, publicBaseURL, &gen); err != nil {
-			latest, findErr := s.storyboardRepo.FindByID(storyboardID)
-			if findErr == nil && latest != nil {
-				latest.VideoStatus = "failed"
-				latest.VideoError = err.Error()
-				_ = s.storyboardRepo.Update(latest)
-			}
+			s.restoreStoryboardVideoSnapshotOnFailure(storyboardID, err)
 		}
 	}(*generation)
 
@@ -324,6 +315,58 @@ func (s *StoryboardVideoService) markGenerationFailed(generation *models.Storybo
 	generation.Status = "failed"
 	generation.ErrorMessage = generationErr.Error()
 	_ = s.historyRepo.Update(generation)
+}
+
+func (s *StoryboardVideoService) restoreStoryboardVideoSnapshotOnFailure(storyboardID int64, generationErr error) {
+	latest, findErr := s.storyboardRepo.FindByID(storyboardID)
+	if findErr != nil || latest == nil {
+		return
+	}
+
+	fallback, err := s.historyRepo.FindLatestSucceeded(storyboardID, "video", 0)
+	if err == nil && fallback != nil {
+		latest.VideoURL = fallback.ResultURL
+		latest.VideoPreviewURL = fallback.PreviewURL
+		latest.VideoStatus = "succeeded"
+		latest.VideoError = ""
+		if duration := extractVideoDurationFromMeta(fallback.MetaJSON); duration > 0 {
+			latest.VideoDuration = duration
+			latest.Duration = duration
+		}
+		_ = s.storyboardRepo.Update(latest)
+		return
+	}
+
+	latest.VideoStatus = "failed"
+	latest.VideoError = generationErr.Error()
+	latest.VideoURL = ""
+	latest.VideoPreviewURL = ""
+	_ = s.storyboardRepo.Update(latest)
+}
+
+func extractVideoDurationFromMeta(metaJSON string) float64 {
+	if strings.TrimSpace(metaJSON) == "" {
+		return 0
+	}
+
+	var meta map[string]any
+	if err := json.Unmarshal([]byte(metaJSON), &meta); err != nil {
+		return 0
+	}
+
+	switch value := meta["duration"].(type) {
+	case float64:
+		return value
+	case int:
+		return float64(value)
+	}
+	switch value := meta["duration_seconds"].(type) {
+	case float64:
+		return value
+	case int:
+		return float64(value)
+	}
+	return 0
 }
 
 func buildStoryboardVideoPrompt(storyboard *models.Storyboard, scene *models.Scene, duration int) string {
