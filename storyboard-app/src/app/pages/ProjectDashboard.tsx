@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
   Film,
   Plus,
@@ -13,10 +14,27 @@ import {
   Filter,
   Grid3x3,
   List,
+  Trash2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 import { projectApi, type Project } from "../api";
 
 type ViewMode = "grid" | "list";
@@ -49,6 +67,8 @@ export default function ProjectDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
 
   useEffect(() => {
     void loadProjects();
@@ -95,6 +115,22 @@ export default function ProjectDashboard() {
       timeZone: "Asia/Shanghai",
       hour12: false,
     }).format(new Date(dateStr));
+  };
+
+  const confirmDeleteProject = async () => {
+    if (!deleteTarget) return;
+
+    setDeletingProjectId(deleteTarget.id);
+    try {
+      await projectApi.deleteProject(deleteTarget.id);
+      setProjects((prev) => prev.filter((project) => project.id !== deleteTarget.id));
+      toast.success("项目已删除");
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+    } finally {
+      setDeletingProjectId(null);
+    }
   };
 
   return (
@@ -212,9 +248,31 @@ export default function ProjectDashboard() {
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="font-medium text-base">{project.name}</h3>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 -mt-1 -mr-1">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 -mt-1 -mr-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
+                              <DropdownMenuItem
+                                variant="destructive"
+                                className="focus:bg-red-950/40 focus:text-red-200"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTarget(project);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                删除项目
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
 
                         <p className="text-xs text-gray-400 line-clamp-2 mb-3">{project.description || "暂无描述"}</p>
@@ -302,9 +360,31 @@ export default function ProjectDashboard() {
                             <FolderOpen className="w-4 h-4 mr-1.5" />
                             打开
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
+                              <DropdownMenuItem
+                                variant="destructive"
+                                className="focus:bg-red-950/40 focus:text-red-200"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTarget(project);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                删除项目
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>
@@ -329,6 +409,29 @@ export default function ProjectDashboard() {
           )}
         </div>
       </main>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="bg-[#121212] border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除项目</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              该操作会从项目列表中移除项目《{deleteTarget?.name ?? ""}》，但不会删除服务器上的原始媒体文件。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deletingProjectId === deleteTarget?.id}
+              onClick={confirmDeleteProject}
+            >
+              {deletingProjectId === deleteTarget?.id ? "删除中..." : "确认删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
