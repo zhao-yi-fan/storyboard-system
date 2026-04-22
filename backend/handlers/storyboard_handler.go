@@ -697,6 +697,15 @@ func (h *StoryboardHandler) ensureStoryboardVideoConsistency(storyboard *models.
 		return items, nil
 	}
 
+	if latestSucceeded == nil && storyboard.VideoStatus != "succeeded" && (strings.TrimSpace(storyboard.VideoURL) != "" || strings.TrimSpace(storyboard.VideoPreviewURL) != "") {
+		storyboard.VideoURL = ""
+		storyboard.VideoPreviewURL = ""
+		storyboard.VideoDuration = 0
+		if err := h.repo.Update(storyboard); err != nil {
+			return nil, err
+		}
+	}
+
 	repairSource := currentSucceeded
 	if repairSource == nil {
 		repairSource = latestSucceeded
