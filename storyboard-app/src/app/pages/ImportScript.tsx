@@ -192,7 +192,6 @@ export default function ImportScript() {
     parsingTargetRef.current = null;
     setParsingStats({ chapters: 0, scenes: 0, shots: 0, characters: 0 });
     setCurrentStage(0);
-    setIsParsing(true);
     try {
       const project = await projectApi.createProject({
         name: projectName,
@@ -201,6 +200,7 @@ export default function ImportScript() {
 
       const targetProjectId = project.id;
       window.localStorage.setItem("currentProjectId", String(targetProjectId));
+      setIsParsing(true);
 
       const importResult = await projectApi.importScript(project.id, scriptText);
       const finalStats: ParsingStats = {
@@ -217,7 +217,6 @@ export default function ImportScript() {
       navigate(`/workspace?project=${targetProjectId}`);
     } catch (error) {
       console.error("Failed to create project:", error);
-      toast.error(error instanceof Error ? error.message : "生成分镜草稿失败");
       setIsParsing(false);
     } finally {
       setLoading(false);
