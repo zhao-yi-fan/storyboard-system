@@ -5,11 +5,20 @@ import type { ApiResponse } from "./types";
 // 生产环境由 nginx 反向代理 /api 到 localhost:8082，所以使用相对路径
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
+type RequestOptions = RequestInit & {
+  suppressToast?: boolean;
+};
+
+type ToastHandledError = Error & {
+  __toastHandled?: boolean;
+};
+
 // 统一请求封装
 async function request<T = any>(
   url: string,
-  options: RequestInit = {}
+  options: RequestOptions = {}
 ): Promise<T> {
+  const { suppressToast = false, ...requestOptions } = options;
   const defaultHeaders: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -17,10 +26,10 @@ async function request<T = any>(
   const config: RequestInit = {
     headers: {
       ...defaultHeaders,
-      ...options.headers,
+      ...requestOptions.headers,
     },
     credentials: "include",
-    ...options,
+    ...requestOptions,
   };
 
   try {
@@ -34,22 +43,31 @@ async function request<T = any>(
     } else {
       // 失败时统一 toast 提示并抛出错误
       const message = result.message || "请求失败";
-      toast.error(message);
-      throw new Error(message);
+      if (!suppressToast) {
+        toast.error(message);
+      }
+      const error = new Error(message) as ToastHandledError;
+      error.__toastHandled = !suppressToast;
+      throw error;
     }
   } catch (error) {
     // 网络错误等异常也统一处理
     if (error instanceof Error) {
+      if ((error as ToastHandledError).__toastHandled || suppressToast) {
+        throw error;
+      }
       toast.error(error.message);
       throw error;
     }
-    toast.error("未知错误");
+    if (!suppressToast) {
+      toast.error("未知错误");
+    }
     throw new Error("未知错误");
   }
 }
 
 // GET 方法封装
-function get<T = any>(url: string, params?: Record<string, any>): Promise<T> {
+function get<T = any>(url: string, params?: Record<string, any>, options?: RequestOptions): Promise<T> {
   let queryString = "";
   if (params && Object.keys(params).length > 0) {
     const searchParams = new URLSearchParams();
@@ -62,29 +80,33 @@ function get<T = any>(url: string, params?: Record<string, any>): Promise<T> {
   }
   return request<T>(`${url}${queryString}`, {
     method: "GET",
+    ...options,
   });
 }
 
 // POST 方法封装
-function post<T = any>(url: string, data?: any): Promise<T> {
+function post<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
   return request<T>(url, {
     method: "POST",
     body: data ? JSON.stringify(data) : undefined,
+    ...options,
   });
 }
 
 // PUT 方法封装
-function put<T = any>(url: string, data?: any): Promise<T> {
+function put<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
   return request<T>(url, {
     method: "PUT",
     body: data ? JSON.stringify(data) : undefined,
+    ...options,
   });
 }
 
 // DELETE 方法封装
-function del<T = any>(url: string): Promise<T> {
+function del<T = any>(url: string, options?: RequestOptions): Promise<T> {
   return request<T>(url, {
     method: "DELETE",
+    ...options,
   });
 }
 

@@ -1,6 +1,10 @@
 import { apiClient } from "./client";
 import type { ComposeProjectVideoResult, Project } from "./types";
 
+type RequestBehaviorOptions = {
+  suppressToast?: boolean;
+};
+
 export function getProjects() {
   return apiClient.get<Project[]>("/projects");
 }
@@ -9,8 +13,11 @@ export function getProject(id: number) {
   return apiClient.get<Project>(`/projects/${id}`);
 }
 
-export function createProject(data: { name: string; description?: string }) {
-  return apiClient.post<Project>("/projects", data);
+export function createProject(
+  data: { name: string; description?: string },
+  options?: RequestBehaviorOptions
+) {
+  return apiClient.post<Project>("/projects", data, options);
 }
 
 export function updateProject(
@@ -24,7 +31,11 @@ export function deleteProject(id: number) {
   return apiClient.delete<{ success: boolean }>(`/projects/${id}`);
 }
 
-export function importScript(id: number, scriptText: string) {
+export function importScript(
+  id: number,
+  scriptText: string,
+  options?: RequestBehaviorOptions
+) {
   return apiClient.post<{
     project_id: number;
     chapter_count: number;
@@ -33,7 +44,7 @@ export function importScript(id: number, scriptText: string) {
     character_count: number;
   }>(`/projects/${id}/import-script`, {
     script_text: scriptText,
-  });
+  }, options);
 }
 
 export function composeProjectVideo(id: number, data?: { regenerate?: boolean }) {

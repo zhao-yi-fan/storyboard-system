@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import {
   Upload,
   FileText,
@@ -89,6 +88,7 @@ export default function ImportScript() {
   const [shotDuration, setShotDuration] = useState("3-8");
   const [loading, setLoading] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [currentStage, setCurrentStage] = useState(0);
   const [parsingStats, setParsingStats] = useState<ParsingStats>({
     chapters: 0,
@@ -184,25 +184,34 @@ export default function ImportScript() {
 
   const handleGenerate = async () => {
     if (!projectName.trim() || !scriptText.trim()) {
-      toast.error("请先填写项目名称并输入剧本内容");
+      setErrorMessage("请先填写项目名称并输入剧本内容");
       return;
     }
 
     setLoading(true);
+    setErrorMessage("");
     parsingTargetRef.current = null;
     setParsingStats({ chapters: 0, scenes: 0, shots: 0, characters: 0 });
     setCurrentStage(0);
+    let parsingShown = false;
+    let parsingTimer: number | null = null;
     try {
       const project = await projectApi.createProject({
         name: projectName,
         description: projectDescription,
-      });
+      }, { suppressToast: true });
 
       const targetProjectId = project.id;
       window.localStorage.setItem("currentProjectId", String(targetProjectId));
-      setIsParsing(true);
+      parsingTimer = window.setTimeout(() => {
+        parsingShown = true;
+        setIsParsing(true);
+      }, 300);
 
-      const importResult = await projectApi.importScript(project.id, scriptText);
+      const importResult = await projectApi.importScript(project.id, scriptText, { suppressToast: true });
+      if (parsingTimer !== null) {
+        window.clearTimeout(parsingTimer);
+      }
       const finalStats: ParsingStats = {
         chapters: importResult.chapter_count,
         scenes: importResult.scene_count,
@@ -210,13 +219,18 @@ export default function ImportScript() {
         characters: importResult.character_count,
       };
       parsingTargetRef.current = finalStats;
-      setCurrentStage(parsingStages.length - 1);
-      setParsingStats(finalStats);
-      await sleep(900);
-      toast.success("分镜草稿生成完成");
+      if (parsingShown) {
+        setCurrentStage(parsingStages.length - 1);
+        setParsingStats(finalStats);
+        await sleep(900);
+      }
       navigate(`/workspace?project=${targetProjectId}`);
     } catch (error) {
       console.error("Failed to create project:", error);
+      if (parsingTimer !== null) {
+        window.clearTimeout(parsingTimer);
+      }
+      setErrorMessage(error instanceof Error ? error.message : "创建项目失败");
       setIsParsing(false);
     } finally {
       setLoading(false);
@@ -376,6 +390,11 @@ export default function ImportScript() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8 bg-[#141414] border border-gray-800 rounded-lg p-6">
             <h2 className="text-base font-medium mb-4">项目信息</h2>
+            {errorMessage && (
+              <div className="mb-4 rounded-xl border border-red-900/70 bg-red-950/30 px-4 py-3 text-sm text-red-200">
+                {errorMessage}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm text-gray-300">项目名称</Label>
