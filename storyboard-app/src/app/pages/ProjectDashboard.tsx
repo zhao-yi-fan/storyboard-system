@@ -249,17 +249,18 @@ export default function ProjectDashboard() {
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="font-medium text-base">{project.name}</h3>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0 -mt-1 -mr-1"
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                            <DropdownMenuTrigger
+                              className="inline-flex h-7 w-7 -mt-1 -mr-1 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-[#262626] hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                                 <MoreHorizontal className="w-4 h-4" />
-                              </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
+                            <DropdownMenuContent
+                              align="end"
+                              className="bg-[#111111] border-gray-800 text-gray-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <DropdownMenuItem
                                 variant="destructive"
                                 className="focus:bg-red-950/40 focus:text-red-200"
@@ -361,17 +362,18 @@ export default function ProjectDashboard() {
                             打开
                           </Button>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                            <DropdownMenuTrigger
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-[#262626] hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                                 <MoreHorizontal className="w-4 h-4" />
-                              </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
+                            <DropdownMenuContent
+                              align="end"
+                              className="bg-[#111111] border-gray-800 text-gray-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <DropdownMenuItem
                                 variant="destructive"
                                 className="focus:bg-red-950/40 focus:text-red-200"
