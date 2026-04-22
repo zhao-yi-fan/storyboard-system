@@ -67,7 +67,7 @@ func Load() {
 		WanxReferenceModel:             getEnv("WANX_REFERENCE_MODEL", "wan2.7-image-pro"),
 		WanxRequestTimeoutSeconds:      getEnvInt("WANX_REQUEST_TIMEOUT_SECONDS", 120),
 		WanxVideoBaseURL:               getEnv("WANX_VIDEO_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
-		WanxVideoModel:                 getEnv("WANX_VIDEO_MODEL", "wan2.6-i2v-flash"),
+		WanxVideoModel:                 getEnv("WANX_VIDEO_MODEL", "wan2.7-i2v"),
 		WanxVideoRequestTimeoutSeconds: getEnvInt("WANX_VIDEO_REQUEST_TIMEOUT_SECONDS", 300),
 		PublicAppBaseURL:               getEnv("PUBLIC_APP_BASE_URL", ""),
 		GeneratedAssetDir:              getEnv("GENERATED_ASSET_DIR", "../storage"),

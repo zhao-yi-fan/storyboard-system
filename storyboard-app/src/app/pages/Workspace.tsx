@@ -77,8 +77,8 @@ const COVER_MODEL_OPTIONS = [
 ] as const;
 
 const VIDEO_MODEL_OPTIONS = [
-  { value: "wan2.6-i2v-flash", label: "Wan 2.6 I2V Flash" },
   { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
+  { value: "wan2.6-i2v-flash", label: "Wan 2.6 I2V Flash" },
 ] as const;
 
 const SHOT_TYPE_OPTIONS = ["远景", "全景", "中景", "近景", "特写", "大特写"] as const;
