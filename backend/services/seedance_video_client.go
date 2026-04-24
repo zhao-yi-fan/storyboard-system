@@ -54,7 +54,7 @@ func (c *SeedanceVideoClient) GenerateVideo(ctx context.Context, prompt, imageUR
 		return "", 0, fmt.Errorf("Seedance 图生视频缺少首帧图")
 	}
 	if duration <= 0 {
-		duration = 2
+		duration = 5
 	}
 
 	log.Printf("[seedance] generate start model=%s duration=%d image_url=%t prompt_len=%d", c.model, duration, strings.TrimSpace(imageURL) != "", len(strings.TrimSpace(prompt)))

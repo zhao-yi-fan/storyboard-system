@@ -99,7 +99,7 @@ func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 
 func storyboardVideoDurationForModel(model string) int {
 	if config.IsSeedanceVideoModel(model) {
-		return 2
+		return 5
 	}
 	return 5
 }
