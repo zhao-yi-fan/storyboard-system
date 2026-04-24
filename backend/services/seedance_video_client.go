@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -56,10 +57,14 @@ func (c *SeedanceVideoClient) GenerateVideo(ctx context.Context, prompt, imageUR
 		duration = 2
 	}
 
+	log.Printf("[seedance] generate start model=%s duration=%d image_url=%t prompt_len=%d", c.model, duration, strings.TrimSpace(imageURL) != "", len(strings.TrimSpace(prompt)))
+
 	taskID, err := c.createTask(ctx, prompt, imageURL, duration)
 	if err != nil {
+		log.Printf("[seedance] create task failed model=%s err=%v", c.model, err)
 		return "", 0, err
 	}
+	log.Printf("[seedance] task created model=%s task_id=%s duration=%d", c.model, taskID, duration)
 	return c.waitForTask(ctx, taskID, duration)
 }
 
@@ -110,6 +115,7 @@ func (c *SeedanceVideoClient) createTask(ctx context.Context, prompt, imageURL s
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Printf("[seedance] create task bad response status=%d body=%s", resp.StatusCode, compactSeedancePayload(result))
 		if result.Error != nil && strings.TrimSpace(result.Error.Message) != "" {
 			return "", fmt.Errorf("提交 Seedance 视频任务失败: %s", result.Error.Message)
 		}
@@ -126,17 +132,25 @@ func (c *SeedanceVideoClient) createTask(ctx context.Context, prompt, imageURL s
 
 func (c *SeedanceVideoClient) waitForTask(ctx context.Context, taskID string, duration int) (string, float64, error) {
 	deadline := time.Now().Add(time.Duration(config.GlobalConfig.SeedanceRequestTimeoutSeconds) * time.Second)
+	lastStatus := ""
 
 	for {
 		if time.Now().After(deadline) {
+			log.Printf("[seedance] task timeout task_id=%s", taskID)
 			return "", 0, fmt.Errorf("Seedance 视频任务超时")
 		}
 
-		videoURL, done, err := c.fetchTask(ctx, taskID)
+		videoURL, status, done, err := c.fetchTask(ctx, taskID)
 		if err != nil {
+			log.Printf("[seedance] task poll failed task_id=%s err=%v", taskID, err)
 			return "", 0, err
 		}
+		if status != "" && status != lastStatus {
+			log.Printf("[seedance] task status task_id=%s status=%s", taskID, status)
+			lastStatus = status
+		}
 		if done {
+			log.Printf("[seedance] task succeeded task_id=%s video_url=%s", taskID, videoURL)
 			return videoURL, float64(duration), nil
 		}
 
@@ -148,26 +162,27 @@ func (c *SeedanceVideoClient) waitForTask(ctx context.Context, taskID string, du
 	}
 }
 
-func (c *SeedanceVideoClient) fetchTask(ctx context.Context, taskID string) (string, bool, error) {
+func (c *SeedanceVideoClient) fetchTask(ctx context.Context, taskID string) (string, string, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/contents/generations/tasks/"+taskID, nil)
 	if err != nil {
-		return "", false, fmt.Errorf("创建 Seedance 查询请求失败: %w", err)
+		return "", "", false, fmt.Errorf("创建 Seedance 查询请求失败: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", false, fmt.Errorf("查询 Seedance 视频任务失败: %w", err)
+		return "", "", false, fmt.Errorf("查询 Seedance 视频任务失败: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var result map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", false, fmt.Errorf("解析 Seedance 查询响应失败: %w", err)
+		return "", "", false, fmt.Errorf("解析 Seedance 查询响应失败: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", false, fmt.Errorf("查询 Seedance 视频任务失败: %s", firstSeedanceMessage(result, fmt.Sprintf("HTTP %d", resp.StatusCode)))
+		log.Printf("[seedance] task query bad response task_id=%s status=%d body=%s", taskID, resp.StatusCode, compactSeedancePayload(result))
+		return "", "", false, fmt.Errorf("查询 Seedance 视频任务失败: %s", firstSeedanceMessage(result, fmt.Sprintf("HTTP %d", resp.StatusCode)))
 	}
 
 	status := strings.ToLower(strings.TrimSpace(stringValue(result["status"])))
@@ -175,14 +190,28 @@ func (c *SeedanceVideoClient) fetchTask(ctx context.Context, taskID string) (str
 	case "succeeded", "success", "completed":
 		videoURL := findFirstVideoURL(result)
 		if videoURL == "" {
-			return "", false, fmt.Errorf("Seedance 视频任务成功但未返回视频地址")
+			log.Printf("[seedance] task missing video url task_id=%s body=%s", taskID, compactSeedancePayload(result))
+			return "", status, false, fmt.Errorf("Seedance 视频任务成功但未返回视频地址")
 		}
-		return videoURL, true, nil
+		return videoURL, status, true, nil
 	case "failed", "error", "canceled", "cancelled":
-		return "", false, fmt.Errorf("Seedance 视频任务失败: %s", firstSeedanceMessage(result, "未知错误"))
+		log.Printf("[seedance] task failed task_id=%s body=%s", taskID, compactSeedancePayload(result))
+		return "", status, false, fmt.Errorf("Seedance 视频任务失败: %s", firstSeedanceMessage(result, "未知错误"))
 	default:
-		return "", false, nil
+		return "", status, false, nil
 	}
+}
+
+func compactSeedancePayload(payload any) string {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return "<marshal-error>"
+	}
+	const limit = 800
+	if len(body) > limit {
+		return string(body[:limit]) + "...(truncated)"
+	}
+	return string(body)
 }
 
 func firstSeedanceMessage(payload map[string]any, fallback string) string {

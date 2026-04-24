@@ -508,7 +508,10 @@ func (s *StoryboardCoverService) markGenerationFailed(generation *models.Storybo
 	if generation == nil {
 		return
 	}
-	_ = s.historyRepo.SoftDelete(generation.ID)
+	generation.Status = "failed"
+	generation.IsCurrent = false
+	generation.ErrorMessage = strings.TrimSpace(generationErr.Error())
+	_ = s.historyRepo.Update(generation)
 }
 
 func sanitizePromptText(input string) string {

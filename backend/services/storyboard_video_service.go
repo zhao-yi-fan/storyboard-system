@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/jpeg"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -340,6 +341,7 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 
 	go func(gen models.StoryboardMediaGeneration) {
 		if _, err := s.GenerateAndAttach(storyboardID, publicBaseURL, &gen); err != nil {
+			log.Printf("[storyboard-video] async generation failed storyboard=%d model=%s generation=%d err=%v", storyboardID, gen.Model, gen.ID, err)
 			s.restoreStoryboardVideoSnapshotOnFailure(storyboardID, err)
 		}
 	}(*generation)
@@ -351,7 +353,10 @@ func (s *StoryboardVideoService) markGenerationFailed(generation *models.Storybo
 	if generation == nil {
 		return
 	}
-	_ = s.historyRepo.SoftDelete(generation.ID)
+	generation.Status = "failed"
+	generation.IsCurrent = false
+	generation.ErrorMessage = strings.TrimSpace(generationErr.Error())
+	_ = s.historyRepo.Update(generation)
 }
 
 func (s *StoryboardVideoService) restoreStoryboardVideoSnapshotOnFailure(storyboardID int64, generationErr error) {
