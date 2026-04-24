@@ -500,10 +500,10 @@ func (h *StoryboardHandler) PreviewVideoGeneration(c *gin.Context) {
 	}
 	if config.IsSeedanceVideoModel(selectedModel) {
 		if selectedDuration == 0 {
-			selectedDuration = 2
+			selectedDuration = 5
 		}
-		if selectedDuration != 2 {
-			response.Error(c, "当前 Seedance 视频默认按最低消耗配置生成，仅支持 2 秒输出")
+		if selectedDuration != 5 {
+			response.Error(c, "当前 Seedance 视频当前按兼容配置生成，仅支持 5 秒输出")
 			return
 		}
 	} else if selectedDuration != 5 {
@@ -558,10 +558,10 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 	}
 	if config.IsSeedanceVideoModel(selectedModel) {
 		if selectedDuration == 0 {
-			selectedDuration = 2
+			selectedDuration = 5
 		}
-		if selectedDuration != 2 {
-			response.Error(c, "当前 Seedance 视频默认按最低消耗配置生成，仅支持 2 秒输出")
+		if selectedDuration != 5 {
+			response.Error(c, "当前 Seedance 视频当前按兼容配置生成，仅支持 5 秒输出")
 			return
 		}
 	} else if selectedDuration != 5 {

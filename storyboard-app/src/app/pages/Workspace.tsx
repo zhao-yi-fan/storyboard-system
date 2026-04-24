@@ -169,7 +169,7 @@ const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | 
 
 const isSeedanceVideoModel = (model: string) => model === "seedance-2.0";
 
-const getVideoGenerationDuration = (model: string) => (isSeedanceVideoModel(model) ? 2 : 5);
+const getVideoGenerationDuration = (model: string) => (isSeedanceVideoModel(model) ? 5 : 5);
 
 const getVideoGenerationResolution = (model: string) => (isSeedanceVideoModel(model) ? "480p" : "720P");
 
