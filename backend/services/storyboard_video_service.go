@@ -351,9 +351,7 @@ func (s *StoryboardVideoService) markGenerationFailed(generation *models.Storybo
 	if generation == nil {
 		return
 	}
-	generation.Status = "failed"
-	generation.ErrorMessage = generationErr.Error()
-	_ = s.historyRepo.Update(generation)
+	_ = s.historyRepo.SoftDelete(generation.ID)
 }
 
 func (s *StoryboardVideoService) restoreStoryboardVideoSnapshotOnFailure(storyboardID int64, generationErr error) {

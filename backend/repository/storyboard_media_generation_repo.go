@@ -12,7 +12,7 @@ type StoryboardMediaGenerationRepository struct{}
 func (r *StoryboardMediaGenerationRepository) ListByStoryboardID(storyboardID int64) ([]models.StoryboardMediaGeneration, error) {
 	rows, err := database.DB.Query(`SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
 		FROM storyboard_media_generations
-		WHERE storyboard_id = ? AND deleted_at IS NULL
+		WHERE storyboard_id = ? AND deleted_at IS NULL AND status <> 'failed'
 		ORDER BY created_at DESC, id DESC`, storyboardID)
 	if err != nil {
 		return nil, err
