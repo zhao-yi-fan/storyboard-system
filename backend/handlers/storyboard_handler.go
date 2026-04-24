@@ -498,7 +498,15 @@ func (h *StoryboardHandler) PreviewVideoGeneration(c *gin.Context) {
 		}
 		selectedDuration = durationValue
 	}
-	if selectedDuration != 5 {
+	if config.IsSeedanceVideoModel(selectedModel) {
+		if selectedDuration == 0 {
+			selectedDuration = 2
+		}
+		if selectedDuration != 2 {
+			response.Error(c, "当前 Seedance 视频默认按最低消耗配置生成，仅支持 2 秒输出")
+			return
+		}
+	} else if selectedDuration != 5 {
 		response.Error(c, "当前视频模型仅支持 5 秒输出")
 		return
 	}
@@ -548,7 +556,15 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 	if req.Duration != nil {
 		selectedDuration = *req.Duration
 	}
-	if selectedDuration != 5 {
+	if config.IsSeedanceVideoModel(selectedModel) {
+		if selectedDuration == 0 {
+			selectedDuration = 2
+		}
+		if selectedDuration != 2 {
+			response.Error(c, "当前 Seedance 视频默认按最低消耗配置生成，仅支持 2 秒输出")
+			return
+		}
+	} else if selectedDuration != 5 {
 		response.Error(c, "当前视频模型仅支持 5 秒输出")
 		return
 	}
@@ -682,7 +698,11 @@ func (h *StoryboardHandler) ensureStoryboardVideoConsistency(storyboard *models.
 			SourceURL:    storyboard.ThumbnailURL,
 			ErrorMessage: "",
 			IsCurrent:    true,
-			MetaJSON:     mustMarshalStoryboardMediaMeta(map[string]any{"duration": storyboard.VideoDuration, "resolution": "720P"}),
+			MetaJSON: mustMarshalStoryboardMediaMeta(map[string]any{
+				"duration":   storyboard.VideoDuration,
+				"resolution": legacyVideoResolution(storyboard.VideoDuration),
+				"audio":      legacyVideoAudio(storyboard.VideoDuration),
+			}),
 		}
 		if err := h.mediaRepo.Create(backfill); err != nil {
 			return nil, err
@@ -738,6 +758,17 @@ func (h *StoryboardHandler) respondWithStoryboardAndHistory(c *gin.Context, stor
 		"storyboard":        storyboard,
 		"media_generations": items,
 	})
+}
+
+func legacyVideoResolution(duration float64) string {
+	if duration <= 2 {
+		return "480p"
+	}
+	return "720P"
+}
+
+func legacyVideoAudio(duration float64) bool {
+	return true
 }
 
 func applyGenerationToStoryboard(storyboard *models.Storyboard, generation *models.StoryboardMediaGeneration) {

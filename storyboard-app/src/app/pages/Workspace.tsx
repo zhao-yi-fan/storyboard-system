@@ -167,6 +167,17 @@ const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
+const isSeedanceVideoModel = (model: string) => model === "seedance-2.0";
+
+const getVideoGenerationDuration = (model: string) => (isSeedanceVideoModel(model) ? 2 : 5);
+
+const getVideoGenerationResolution = (model: string) => (isSeedanceVideoModel(model) ? "480p" : "720P");
+
+const getVideoGenerationAudio = (_model: string) => true;
+
+const getVideoGenerationSpecLabel = (model: string) =>
+  `${getVideoGenerationResolution(model)} / ${getVideoGenerationDuration(model)}秒 / ${getVideoGenerationAudio(model) ? "有声" : "无声"}`;
+
 const buildCoverPreviewItems = (generations: StoryboardMediaGeneration[]) =>
   generations
     .filter((generation) => generation.status === "succeeded" && !!generation.result_url)
@@ -612,6 +623,7 @@ export default function Workspace() {
     try {
       const result = await storyboardApi.generateStoryboardVideo(selectedShot.id, {
         model: selectedVideoModel,
+        duration: getVideoGenerationDuration(selectedVideoModel),
       });
       const nextShot = result.storyboard;
       applyStoryboardUpdate(nextShot);
@@ -666,7 +678,7 @@ export default function Workspace() {
     void storyboardApi
       .getStoryboardVideoGenerationPreview(selectedShot.id, {
         model: selectedVideoModel,
-        duration: 5,
+        duration: getVideoGenerationDuration(selectedVideoModel),
       })
       .then((preview) => {
         setVideoGenerationPreview(preview);
@@ -2404,15 +2416,15 @@ export default function Workspace() {
           <DialogHeader>
             <DialogTitle>确认生成视频</DialogTitle>
             <DialogDescription className="text-gray-400 leading-6">
-              会为当前镜头生成 720P、5 秒、有声视频，并消耗较高额度。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
+              会为当前镜头生成 {getVideoGenerationSpecLabel(selectedVideoModel)} 视频。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div className="grid gap-3 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm md:grid-cols-2">
               <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
               <div className="flex justify-between gap-4"><span className="text-gray-500">实际模型</span><span>{videoGenerationPreview?.model || selectedVideoModel}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-gray-500">时长</span><span>{videoGenerationPreview?.duration || 5} 秒</span></div>
-              <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>{videoGenerationPreview ? `${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}` : "720P / 5秒 / 有声"}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-gray-500">时长</span><span>{videoGenerationPreview?.duration || getVideoGenerationDuration(selectedVideoModel)} 秒</span></div>
+              <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>{videoGenerationPreview ? `${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}` : getVideoGenerationSpecLabel(selectedVideoModel)}</span></div>
               <div className="flex justify-between gap-4 md:col-span-2">
                 <span className="text-gray-500">首帧来源</span>
                 <span>{videoGenerationPreview?.will_generate_cover ? "当前无封面，后端会先自动生成封面" : "使用当前镜头封面作为首帧"}</span>

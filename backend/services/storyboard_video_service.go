@@ -36,6 +36,10 @@ type StoryboardVideoService struct {
 }
 
 const storyboardVideoPreviewHeight = 480
+const (
+	wanxVideoResolution     = "720P"
+	seedanceVideoResolution = "480p"
+)
 
 type StoryboardVideoGenerationFields struct {
 	SceneTitle      string   `json:"scene_title"`
@@ -92,6 +96,38 @@ func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 	}, nil
 }
 
+func storyboardVideoDurationForModel(model string) int {
+	if config.IsSeedanceVideoModel(model) {
+		return 2
+	}
+	return 5
+}
+
+func storyboardVideoResolutionForModel(model string) string {
+	if config.IsSeedanceVideoModel(model) {
+		return seedanceVideoResolution
+	}
+	return wanxVideoResolution
+}
+
+func storyboardVideoAudioForModel(model string) bool {
+	return true
+}
+
+func validateStoryboardVideoDuration(model string, duration int) (int, error) {
+	expected := storyboardVideoDurationForModel(model)
+	if duration == 0 {
+		return expected, nil
+	}
+	if duration != expected {
+		if config.IsSeedanceVideoModel(model) {
+			return 0, fmt.Errorf("当前 Seedance 视频默认按最低消耗配置生成，仅支持 %d 秒输出", expected)
+		}
+		return 0, fmt.Errorf("当前视频模型仅支持 %d 秒输出", expected)
+	}
+	return duration, nil
+}
+
 func (s *StoryboardVideoService) PreviewGeneration(storyboardID int64, publicBaseURL, model string, duration int) (*StoryboardVideoGenerationPreview, error) {
 	storyboard, err := s.storyboardRepo.FindByID(storyboardID)
 	if err != nil {
@@ -112,11 +148,9 @@ func (s *StoryboardVideoService) PreviewGeneration(storyboardID int64, publicBas
 	if strings.TrimSpace(model) == "" {
 		model = config.GlobalConfig.WanxVideoModel
 	}
-	if duration == 0 {
-		duration = 5
-	}
-	if duration != 5 {
-		return nil, fmt.Errorf("当前视频模型仅支持 5 秒输出")
+	duration, err = validateStoryboardVideoDuration(model, duration)
+	if err != nil {
+		return nil, err
 	}
 
 	sourceImageStatus := "existing-cover"
@@ -133,8 +167,8 @@ func (s *StoryboardVideoService) PreviewGeneration(storyboardID int64, publicBas
 	return &StoryboardVideoGenerationPreview{
 		Model:             model,
 		Duration:          duration,
-		Resolution:        "720P",
-		Audio:             true,
+		Resolution:        storyboardVideoResolutionForModel(model),
+		Audio:             storyboardVideoAudioForModel(model),
 		SourceImageURL:    sourceImageURL,
 		SourceImageStatus: sourceImageStatus,
 		WillGenerateCover: sourceImageStatus == "will-generate-cover",
@@ -196,9 +230,9 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		generation.SourceURL = storyboard.ThumbnailURL
 		generation.PreviewURL = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
-			"resolution": "720P",
+			"resolution": storyboardVideoResolutionForModel(generation.Model),
 			"duration":   generationDuration(generation),
-			"audio":      true,
+			"audio":      storyboardVideoAudioForModel(generation.Model),
 		})
 		if err := s.historyRepo.Update(generation); err != nil {
 			return nil, err
@@ -242,9 +276,9 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		generation.SourceURL = storyboard.ThumbnailURL
 		generation.ErrorMessage = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
-			"resolution":     "720P",
+			"resolution":     storyboardVideoResolutionForModel(generation.Model),
 			"duration":       generatedDuration,
-			"audio":          true,
+			"audio":          storyboardVideoAudioForModel(generation.Model),
 			"preview_height": storyboardVideoPreviewHeight,
 		})
 		if err := s.historyRepo.Update(generation); err != nil {
@@ -274,11 +308,9 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 	if storyboard.VideoStatus == "generating" {
 		return storyboard, nil
 	}
-	if duration == 0 {
-		duration = 5
-	}
-	if duration != 5 {
-		return nil, fmt.Errorf("当前视频模型仅支持 5 秒输出")
+	duration, err = validateStoryboardVideoDuration(model, duration)
+	if err != nil {
+		return nil, err
 	}
 
 	generation := &models.StoryboardMediaGeneration{
@@ -288,7 +320,12 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 		Status:       "generating",
 		PreviewURL:   "",
 		SourceURL:    storyboard.ThumbnailURL,
-		MetaJSON:     mustMarshalMediaMeta(map[string]any{"resolution": "720P", "duration": duration, "audio": true, "preview_height": storyboardVideoPreviewHeight}),
+		MetaJSON: mustMarshalMediaMeta(map[string]any{
+			"resolution":     storyboardVideoResolutionForModel(model),
+			"duration":       duration,
+			"audio":          storyboardVideoAudioForModel(model),
+			"preview_height": storyboardVideoPreviewHeight,
+		}),
 	}
 	if err := s.historyRepo.Create(generation); err != nil {
 		return nil, err

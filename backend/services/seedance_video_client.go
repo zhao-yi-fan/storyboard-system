@@ -53,7 +53,7 @@ func (c *SeedanceVideoClient) GenerateVideo(ctx context.Context, prompt, imageUR
 		return "", 0, fmt.Errorf("Seedance 图生视频缺少首帧图")
 	}
 	if duration <= 0 {
-		duration = 5
+		duration = 2
 	}
 
 	taskID, err := c.createTask(ctx, prompt, imageURL, duration)
@@ -79,14 +79,11 @@ func (c *SeedanceVideoClient) createTask(ctx context.Context, prompt, imageURL s
 	}
 
 	payload := map[string]any{
-		"model":    c.model,
-		"content":  content,
-		"duration": duration,
-	}
-
-	// Seedance 1.5 Pro supports audio generation. Leave it on by default for parity with current UX.
-	if strings.Contains(strings.ToLower(c.model), "1-5-pro") {
-		payload["generate_audio"] = true
+		"model":          c.model,
+		"content":        content,
+		"duration":       duration,
+		"resolution":     "480p",
+		"generate_audio": true,
 	}
 
 	body, err := json.Marshal(payload)
