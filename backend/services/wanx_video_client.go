@@ -47,10 +47,6 @@ type wanxVideoTaskResponse struct {
 }
 
 func NewWanxVideoClient() (*WanxVideoClient, error) {
-	if err := config.GlobalConfig.ValidateWanxVideoConfig(); err != nil {
-		return nil, err
-	}
-
 	return &WanxVideoClient{
 		baseURL: strings.TrimRight(config.GlobalConfig.WanxVideoBaseURL, "/"),
 		apiKey:  config.GlobalConfig.DashScopeAPIKey,
@@ -62,6 +58,9 @@ func NewWanxVideoClient() (*WanxVideoClient, error) {
 }
 
 func (c *WanxVideoClient) GenerateVideo(ctx context.Context, prompt, imageURL, model string, duration int) (string, float64, error) {
+	if err := config.GlobalConfig.ValidateWanxVideoConfig(); err != nil {
+		return "", 0, err
+	}
 	taskID, err := c.createTask(ctx, prompt, imageURL, model, duration)
 	if err != nil {
 		return "", 0, err

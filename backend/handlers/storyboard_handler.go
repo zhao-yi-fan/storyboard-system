@@ -484,7 +484,7 @@ func (h *StoryboardHandler) PreviewVideoGeneration(c *gin.Context) {
 	if selectedModel == "" {
 		selectedModel = config.GlobalConfig.WanxVideoModel
 	}
-	if !config.IsSupportedWanxVideoModel(selectedModel) {
+	if !config.IsSupportedVideoModel(selectedModel) {
 		response.Error(c, "unsupported video model")
 		return
 	}
@@ -539,7 +539,7 @@ func (h *StoryboardHandler) GenerateVideo(c *gin.Context) {
 	if selectedModel == "" {
 		selectedModel = config.GlobalConfig.WanxVideoModel
 	}
-	if !config.IsSupportedWanxVideoModel(selectedModel) {
+	if !config.IsSupportedVideoModel(selectedModel) {
 		response.Error(c, "unsupported video model")
 		return
 	}

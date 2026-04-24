@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -34,6 +35,10 @@ type Config struct {
 	WanxVideoBaseURL               string
 	WanxVideoModel                 string
 	WanxVideoRequestTimeoutSeconds int
+	SeedanceAPIKey                 string
+	SeedanceBaseURL                string
+	SeedanceModel                  string
+	SeedanceRequestTimeoutSeconds  int
 	PublicAppBaseURL               string
 	GeneratedAssetDir              string
 	GeneratedAssetBasePath         string
@@ -69,6 +74,10 @@ func Load() {
 		WanxVideoBaseURL:               getEnv("WANX_VIDEO_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
 		WanxVideoModel:                 getEnv("WANX_VIDEO_MODEL", "wan2.7-i2v"),
 		WanxVideoRequestTimeoutSeconds: getEnvInt("WANX_VIDEO_REQUEST_TIMEOUT_SECONDS", 300),
+		SeedanceAPIKey:                 getEnv("SEEDANCE_API_KEY", getEnv("ARK_API_KEY", "")),
+		SeedanceBaseURL:                getEnv("SEEDANCE_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+		SeedanceModel:                  getEnv("SEEDANCE_MODEL", "doubao-seedance-1-5-pro-251215"),
+		SeedanceRequestTimeoutSeconds:  getEnvInt("SEEDANCE_REQUEST_TIMEOUT_SECONDS", 300),
 		PublicAppBaseURL:               getEnv("PUBLIC_APP_BASE_URL", ""),
 		GeneratedAssetDir:              getEnv("GENERATED_ASSET_DIR", "../storage"),
 		GeneratedAssetBasePath:         getEnv("GENERATED_ASSET_BASE_PATH", "/generated"),
@@ -90,14 +99,32 @@ func (c Config) ValidateWanxVideoConfig() error {
 	}
 }
 
-var SupportedWanxVideoModels = map[string]struct{}{
-	"wan2.6-i2v-flash": {},
-	"wan2.7-i2v":       {},
+func (c Config) ValidateSeedanceVideoConfig() error {
+	switch {
+	case c.SeedanceAPIKey == "":
+		return fmt.Errorf("镜头视频生成未配置：缺少 SEEDANCE_API_KEY")
+	case c.SeedanceBaseURL == "":
+		return fmt.Errorf("镜头视频生成未配置：缺少 SEEDANCE_BASE_URL")
+	case c.SeedanceModel == "":
+		return fmt.Errorf("镜头视频生成未配置：缺少 SEEDANCE_MODEL")
+	default:
+		return nil
+	}
 }
 
-func IsSupportedWanxVideoModel(model string) bool {
-	_, ok := SupportedWanxVideoModels[model]
+var SupportedVideoModels = map[string]struct{}{
+	"wan2.6-i2v-flash": {},
+	"wan2.7-i2v":       {},
+	"seedance-2.0":     {},
+}
+
+func IsSupportedVideoModel(model string) bool {
+	_, ok := SupportedVideoModels[model]
 	return ok
+}
+
+func IsSeedanceVideoModel(model string) bool {
+	return strings.HasPrefix(strings.TrimSpace(model), "seedance")
 }
 
 func (c Config) ValidateWanxConfig() error {

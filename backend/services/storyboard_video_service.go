@@ -30,6 +30,7 @@ type StoryboardVideoService struct {
 	historyRepo    *repository.StoryboardMediaGenerationRepository
 	coverService   *StoryboardCoverService
 	videoClient    *WanxVideoClient
+	seedanceClient *SeedanceVideoClient
 	httpClient     *http.Client
 	ossService     *OSSService
 }
@@ -83,6 +84,7 @@ func NewStoryboardVideoService() (*StoryboardVideoService, error) {
 		historyRepo:    &repository.StoryboardMediaGenerationRepository{},
 		coverService:   coverService,
 		videoClient:    videoClient,
+		seedanceClient: NewSeedanceVideoClient(),
 		httpClient: &http.Client{
 			Timeout: 90 * time.Second,
 		},
@@ -205,10 +207,10 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 
 	requestedDuration := generationDuration(generation)
 	prompt := buildStoryboardVideoPrompt(storyboard, scene, requestedDuration)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GlobalConfig.WanxVideoRequestTimeoutSeconds)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), s.generationTimeout(generation.Model))
 	defer cancel()
 
-	videoURL, generatedDuration, err := s.videoClient.GenerateVideo(ctx, prompt, imageInput, generation.Model, requestedDuration)
+	videoURL, generatedDuration, err := s.generateVideoWithProvider(ctx, prompt, imageInput, generation.Model, requestedDuration)
 	if err != nil {
 		s.markGenerationFailed(generation, err)
 		s.restoreStoryboardVideoSnapshotOnFailure(storyboard.ID, err)
@@ -753,6 +755,24 @@ func mimeTypeFromPath(path string) string {
 	default:
 		return "image/png"
 	}
+}
+
+func (s *StoryboardVideoService) generateVideoWithProvider(ctx context.Context, prompt, imageInput, model string, duration int) (string, float64, error) {
+	if config.IsSeedanceVideoModel(model) {
+		return s.seedanceClient.GenerateVideo(ctx, prompt, imageInput, model, duration)
+	}
+	return s.videoClient.GenerateVideo(ctx, prompt, imageInput, model, duration)
+}
+
+func (s *StoryboardVideoService) generationTimeout(model string) time.Duration {
+	seconds := config.GlobalConfig.WanxVideoRequestTimeoutSeconds
+	if config.IsSeedanceVideoModel(model) {
+		seconds = config.GlobalConfig.SeedanceRequestTimeoutSeconds
+	}
+	if seconds <= 0 {
+		seconds = 300
+	}
+	return time.Duration(seconds) * time.Second
 }
 
 func firstNonEmpty(values ...string) string {
