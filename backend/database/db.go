@@ -222,6 +222,12 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("projects", "pinned_at") {
+		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN pinned_at DATETIME NULL DEFAULT NULL AFTER video_duration`); err != nil {
+			return err
+		}
+	}
+
 	if !columnExists("scenes", "cover_url") {
 		if _, err := DB.Exec(`ALTER TABLE scenes ADD COLUMN cover_url VARCHAR(500) NULL DEFAULT NULL AFTER time_of_day`); err != nil {
 			return err

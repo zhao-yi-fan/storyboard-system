@@ -183,6 +183,70 @@ func (h *ProjectHandler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"success": true})
 }
 
+func (h *ProjectHandler) Pin(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	project, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if project == nil {
+		response.Error(c, "project not found")
+		return
+	}
+
+	if err := h.repo.Pin(id); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	project, err = h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	normalizeProjectForResponse(project)
+	response.Success(c, project)
+}
+
+func (h *ProjectHandler) Unpin(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	project, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if project == nil {
+		response.Error(c, "project not found")
+		return
+	}
+
+	if err := h.repo.Unpin(id); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	project, err = h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	normalizeProjectForResponse(project)
+	response.Success(c, project)
+}
+
 // ComposeVideo composes a project-level rough cut from succeeded scene videos.
 func (h *ProjectHandler) ComposeVideo(c *gin.Context) {
 	idStr := c.Param("id")

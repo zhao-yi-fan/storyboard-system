@@ -15,6 +15,8 @@ import {
   Grid3x3,
   List,
   Trash2,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -69,6 +71,7 @@ export default function ProjectDashboard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
+  const [pinningProjectId, setPinningProjectId] = useState<number | null>(null);
 
   useEffect(() => {
     void loadProjects();
@@ -103,6 +106,8 @@ export default function ProjectDashboard() {
     { value: "已完成", label: "已完成" },
   ];
 
+  const isPinned = (project: Project) => Boolean(project.is_pinned || project.pinned_at);
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "刚刚更新";
     return new Intl.DateTimeFormat("zh-CN", {
@@ -130,6 +135,24 @@ export default function ProjectDashboard() {
       console.error("Failed to delete project:", error);
     } finally {
       setDeletingProjectId(null);
+    }
+  };
+
+  const togglePinProject = async (project: Project) => {
+    setPinningProjectId(project.id);
+    try {
+      if (isPinned(project)) {
+        await projectApi.unpinProject(project.id);
+        toast.success("已取消置顶");
+      } else {
+        await projectApi.pinProject(project.id);
+        toast.success("已置顶项目");
+      }
+      await loadProjects();
+    } catch (error) {
+      console.error("Failed to toggle project pin:", error);
+    } finally {
+      setPinningProjectId(null);
     }
   };
 
@@ -247,7 +270,10 @@ export default function ProjectDashboard() {
 
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-medium text-base">{project.name}</h3>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <h3 className="truncate font-medium text-base">{project.name}</h3>
+                            {isPinned(project) ? <Badge className="bg-yellow-600/20 text-yellow-300 border border-yellow-500/30 text-[10px]">置顶</Badge> : null}
+                          </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               className="inline-flex h-7 w-7 -mt-1 -mr-1 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-[#262626] hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
@@ -261,6 +287,16 @@ export default function ProjectDashboard() {
                               className="bg-[#111111] border-gray-800 text-gray-100"
                               onClick={(e) => e.stopPropagation()}
                             >
+                              <DropdownMenuItem
+                                disabled={pinningProjectId === project.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void togglePinProject(project);
+                                }}
+                              >
+                                {isPinned(project) ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                                {pinningProjectId === project.id ? (isPinned(project) ? "取消置顶中..." : "置顶中...") : isPinned(project) ? "取消置顶" : "置顶项目"}
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 variant="destructive"
                                 className="focus:bg-red-950/40 focus:text-red-200"
@@ -337,6 +373,7 @@ export default function ProjectDashboard() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-medium">{project.name}</h3>
+                            {isPinned(project) ? <Badge className="bg-yellow-600/20 text-yellow-300 border border-yellow-500/30 text-[10px]">置顶</Badge> : null}
                             <Badge className={`${stats.statusColor} text-white text-xs`}>{stats.status}</Badge>
                           </div>
                           <p className="text-sm text-gray-400 line-clamp-1 mb-2">{project.description || "暂无描述"}</p>
@@ -374,6 +411,16 @@ export default function ProjectDashboard() {
                               className="bg-[#111111] border-gray-800 text-gray-100"
                               onClick={(e) => e.stopPropagation()}
                             >
+                              <DropdownMenuItem
+                                disabled={pinningProjectId === project.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void togglePinProject(project);
+                                }}
+                              >
+                                {isPinned(project) ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                                {pinningProjectId === project.id ? (isPinned(project) ? "取消置顶中..." : "置顶中...") : isPinned(project) ? "取消置顶" : "置顶项目"}
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 variant="destructive"
                                 className="focus:bg-red-950/40 focus:text-red-200"

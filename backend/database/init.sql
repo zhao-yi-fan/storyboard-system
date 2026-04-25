@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS projects (
     video_status VARCHAR(20) NULL COMMENT '项目总片状态',
     video_error TEXT NULL COMMENT '项目总片错误信息',
     video_duration DECIMAL(8,2) NULL COMMENT '项目总片时长（秒）',
+    pinned_at DATETIME NULL COMMENT '置顶时间（为空表示未置顶）',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,

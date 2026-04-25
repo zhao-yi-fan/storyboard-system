@@ -66,6 +66,8 @@ func main() {
 			projects.GET("/:id", projectHandler.GetByID)
 			projects.PUT("/:id", projectHandler.Update)
 			projects.DELETE("/:id", projectHandler.Delete)
+			projects.POST("/:id/pin", projectHandler.Pin)
+			projects.DELETE("/:id/pin", projectHandler.Unpin)
 			projects.POST("/:id/import-script", projectHandler.ImportScript)
 			projects.POST("/:id/compose-video", projectHandler.ComposeVideo)
 

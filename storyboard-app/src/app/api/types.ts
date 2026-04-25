@@ -18,6 +18,8 @@ export type Project = {
   chapter_count?: number;
   scene_count?: number;
   storyboard_count?: number;
+  pinned_at?: string;
+  is_pinned?: boolean;
   created_at?: string;
   updated_at?: string;
 };

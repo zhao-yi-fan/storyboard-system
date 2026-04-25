@@ -31,6 +31,14 @@ export function deleteProject(id: number) {
   return apiClient.delete<{ success: boolean }>(`/projects/${id}`);
 }
 
+export function pinProject(id: number) {
+  return apiClient.post<Project>(`/projects/${id}/pin`, {});
+}
+
+export function unpinProject(id: number) {
+  return apiClient.delete<Project>(`/projects/${id}/pin`);
+}
+
 export function importScript(
   id: number,
   scriptText: string,
