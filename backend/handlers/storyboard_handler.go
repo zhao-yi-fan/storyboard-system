@@ -717,6 +717,10 @@ func (h *StoryboardHandler) ensureStoryboardVideoConsistency(storyboard *models.
 		return items, nil
 	}
 
+	if storyboard.VideoStatus == "generating" {
+		return items, nil
+	}
+
 	if latestSucceeded == nil && storyboard.VideoStatus != "succeeded" && (strings.TrimSpace(storyboard.VideoURL) != "" || strings.TrimSpace(storyboard.VideoPreviewURL) != "") {
 		storyboard.VideoURL = ""
 		storyboard.VideoPreviewURL = ""
@@ -730,7 +734,7 @@ func (h *StoryboardHandler) ensureStoryboardVideoConsistency(storyboard *models.
 	if repairSource == nil {
 		repairSource = latestSucceeded
 	}
-	if repairSource != nil && (storyboard.VideoStatus != "succeeded" || strings.TrimSpace(storyboard.VideoURL) == "") {
+	if repairSource != nil && (storyboard.VideoStatus == "failed" || (storyboard.VideoStatus == "" && strings.TrimSpace(storyboard.VideoURL) == "")) {
 		applyGenerationToStoryboard(storyboard, repairSource)
 		storyboard.VideoError = ""
 		if err := h.repo.Update(storyboard); err != nil {
