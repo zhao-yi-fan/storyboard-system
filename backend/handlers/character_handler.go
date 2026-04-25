@@ -19,6 +19,7 @@ type CharacterHandler struct {
 	projectRepo           *repository.ProjectRepository
 	previewService        *services.ImagePreviewService
 	generatedImageService *services.GeneratedImageService
+	voiceDesignService    *services.VoiceDesignService
 }
 
 func NewCharacterHandler() *CharacterHandler {
@@ -27,6 +28,7 @@ func NewCharacterHandler() *CharacterHandler {
 		projectRepo:           &repository.ProjectRepository{},
 		previewService:        services.NewImagePreviewService(),
 		generatedImageService: services.NewGeneratedImageService(),
+		voiceDesignService:    services.NewVoiceDesignService(),
 	}
 }
 
@@ -113,6 +115,7 @@ func (h *CharacterHandler) Create(c *gin.Context) {
 		Description    string `json:"description"`
 		AvatarURL      string `json:"avatar_url"`
 		DesignSheetURL string `json:"design_sheet_url"`
+		VoicePrompt    string `json:"voice_prompt"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -128,6 +131,7 @@ func (h *CharacterHandler) Create(c *gin.Context) {
 		AvatarPreviewURL:      "",
 		DesignSheetURL:        strings.TrimSpace(req.DesignSheetURL),
 		DesignSheetPreviewURL: "",
+		VoicePrompt:           strings.TrimSpace(req.VoicePrompt),
 	}
 
 	if err := h.repo.Create(character); err != nil {
@@ -165,6 +169,7 @@ func (h *CharacterHandler) Update(c *gin.Context) {
 		Description    *string `json:"description"`
 		AvatarURL      *string `json:"avatar_url"`
 		DesignSheetURL *string `json:"design_sheet_url"`
+		VoicePrompt    *string `json:"voice_prompt"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -191,6 +196,9 @@ func (h *CharacterHandler) Update(c *gin.Context) {
 			character.DesignSheetURL = incomingDesignSheetURL
 			character.DesignSheetPreviewURL = ""
 		}
+	}
+	if req.VoicePrompt != nil {
+		character.VoicePrompt = strings.TrimSpace(*req.VoicePrompt)
 	}
 
 	if err := h.repo.Update(character); err != nil {
@@ -301,6 +309,53 @@ func (h *CharacterHandler) GenerateDesignSheet(c *gin.Context) {
 
 	character.DesignSheetURL = designSheetURL
 	character.DesignSheetPreviewURL = previewURL
+	if err := h.repo.Update(character); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	normalizeCharacterForResponse(character)
+	response.Success(c, character)
+}
+
+func (h *CharacterHandler) GenerateVoiceReference(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+
+	character, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if character == nil {
+		response.Error(c, "character not found")
+		return
+	}
+
+	var req struct {
+		VoicePrompt string `json:"voice_prompt"`
+		PreviewText string `json:"preview_text"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		response.Error(c, err.Error())
+		return
+	}
+
+	result, err := h.voiceDesignService.GenerateCharacterVoiceReference(c.Request.Context(), character, strings.TrimSpace(req.VoicePrompt), strings.TrimSpace(req.PreviewText))
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	character.VoiceReferenceURL = result.VoiceReferenceURL
+	character.VoiceReferenceDuration = result.VoiceReferenceDuration
+	character.VoiceReferenceText = result.VoiceReferenceText
+	character.VoiceName = result.VoiceName
+	character.VoicePrompt = result.VoicePrompt
 	if err := h.repo.Update(character); err != nil {
 		response.Error(c, err.Error())
 		return

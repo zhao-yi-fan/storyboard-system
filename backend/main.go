@@ -133,6 +133,7 @@ func main() {
 
 			characters.POST("/:id/generate-cover", characterHandler.GenerateCover)
 			characters.POST("/:id/generate-design-sheet", characterHandler.GenerateDesignSheet)
+			characters.POST("/:id/generate-voice-reference", characterHandler.GenerateVoiceReference)
 
 			// Assets under character
 			characters.GET("/:id/assets", assetHandler.GetByCharacter)

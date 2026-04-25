@@ -70,6 +70,9 @@ const getCharacterPreviewSrc = (character: Character | null | undefined) =>
 const getCharacterDesignSheetPreviewSrc = (character: Character | null | undefined) =>
   character?.design_sheet_preview_url || character?.design_sheet_url || "";
 
+const getCharacterVoiceReferenceSrc = (character: Character | null | undefined) =>
+  character?.voice_reference_url || "";
+
 const CHARACTER_DESIGN_SHEET_MODE_OPTIONS = [
   { value: "draft", label: "快速草案（Qwen 2.0）" },
   { value: "final", label: "最终定稿（Wan 2.7 Pro）" },
@@ -106,6 +109,7 @@ export default function AssetLibrary() {
   const [isSavingAsset, setIsSavingAsset] = useState(false);
   const [generatingCharacterCoverId, setGeneratingCharacterCoverId] = useState<number | null>(null);
   const [generatingCharacterDesignSheetId, setGeneratingCharacterDesignSheetId] = useState<number | null>(null);
+  const [generatingCharacterVoiceReferenceId, setGeneratingCharacterVoiceReferenceId] = useState<number | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
   const [characterDesignSheetMode, setCharacterDesignSheetMode] = useState<"draft" | "final">("final");
@@ -296,6 +300,7 @@ export default function AssetLibrary() {
         description: selectedAsset.data.description || "",
         avatar_url: selectedAsset.data.avatar_url || "",
         design_sheet_url: selectedAsset.data.design_sheet_url || "",
+        voice_prompt: selectedAsset.data.voice_prompt || "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
@@ -352,6 +357,25 @@ export default function AssetLibrary() {
       console.error("Failed to generate character design sheet:", error);
     } finally {
       setGeneratingCharacterDesignSheetId(null);
+    }
+  };
+
+  const generateSelectedCharacterVoiceReference = async () => {
+    if (!selectedAsset || selectedAsset.type !== "character") return;
+    setGeneratingCharacterVoiceReferenceId(selectedAsset.data.id);
+    try {
+      const updated = await characterApi.generateCharacterVoiceReference(selectedAsset.data.id, {
+        voice_prompt: selectedAsset.data.voice_prompt || "",
+        preview_text: selectedAsset.data.voice_reference_text || "",
+      });
+      setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setSelectedAsset({ type: "character", data: updated });
+      toast.success("主语音参考已生成");
+    } catch (error) {
+      console.error("Failed to generate character voice reference:", error);
+      toast.error(error instanceof Error ? error.message : "生成主语音参考失败");
+    } finally {
+      setGeneratingCharacterVoiceReferenceId(null);
     }
   };
 
@@ -640,6 +664,73 @@ export default function AssetLibrary() {
                     </div>
                     <div><Label className="text-xs text-gray-400">角色名称</Label><Input value={selectedAsset.data.name} onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, name: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
                     <div><Label className="text-xs text-gray-400">角色描述</Label><Textarea value={selectedAsset.data.description || ""} onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, description: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
+                    <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm text-gray-100">主语音参考</div>
+                          <div className="text-xs text-gray-500">由大模型生成并绑定到角色，后续对白和视频音频优先参考这段声音</div>
+                        </div>
+                        <Badge className="bg-emerald-600 text-white text-xs">角色语音</Badge>
+                      </div>
+                      {getCharacterVoiceReferenceSrc(selectedAsset.data) ? (
+                        <audio key={selectedAsset.data.voice_reference_url} controls className="w-full">
+                          <source src={getCharacterVoiceReferenceSrc(selectedAsset.data)} />
+                        </audio>
+                      ) : (
+                        <div className="rounded border border-dashed border-gray-700 px-3 py-4 text-xs text-gray-500">
+                          还没有主语音参考。生成后会自动绑定到这个角色。
+                        </div>
+                      )}
+                      <div>
+                        <Label className="text-xs text-gray-400">声音提示词</Label>
+                        <Textarea
+                          value={selectedAsset.data.voice_prompt || ""}
+                          onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, voice_prompt: e.target.value } })}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
+                          placeholder="例如：年轻男性，低沉克制，略带疲惫感，真实自然，不要播音腔。"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">参考文本</Label>
+                        <Textarea
+                          value={selectedAsset.data.voice_reference_text || ""}
+                          onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, voice_reference_text: e.target.value } })}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
+                          placeholder="不填则自动使用系统默认参考文本。"
+                        />
+                      </div>
+                      {(selectedAsset.data.voice_name || selectedAsset.data.voice_reference_duration) ? (
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                          <div className="rounded border border-gray-800 bg-[#0d0d0d] px-3 py-2">
+                            <div className="text-[11px] text-gray-500">音色名称</div>
+                            <div className="mt-1 text-gray-200 break-all">{selectedAsset.data.voice_name || "未生成"}</div>
+                          </div>
+                          <div className="rounded border border-gray-800 bg-[#0d0d0d] px-3 py-2">
+                            <div className="text-[11px] text-gray-500">音频时长</div>
+                            <div className="mt-1 text-gray-200">{selectedAsset.data.voice_reference_duration ? `${selectedAsset.data.voice_reference_duration.toFixed(1)}s` : "未生成"}</div>
+                          </div>
+                        </div>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
+                        disabled={generatingCharacterVoiceReferenceId === selectedAsset.data.id}
+                        onClick={generateSelectedCharacterVoiceReference}
+                      >
+                        {generatingCharacterVoiceReferenceId === selectedAsset.data.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            生成中
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            生成主语音参考
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     <div className="pt-4 border-t border-gray-800">
                       <Button className="w-full bg-purple-600 hover:bg-purple-700" disabled={isSavingCharacter} onClick={saveSelectedCharacter}>{isSavingCharacter ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />保存中</> : <><Save className="w-4 h-4 mr-2" />保存修改</>}</Button>
                       <Button variant="outline" className="w-full mt-2 border-red-800 text-red-400 hover:bg-red-900/20" onClick={() => setDeleteTarget({ type: "character", id: selectedAsset.data.id, name: selectedAsset.data.name })}> <Trash2 className="w-4 h-4 mr-2" /> 删除角色</Button>

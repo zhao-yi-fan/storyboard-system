@@ -63,6 +63,11 @@ export type Character = {
   avatar_preview_url?: string;
   design_sheet_url?: string;
   design_sheet_preview_url?: string;
+  voice_reference_url?: string;
+  voice_reference_duration?: number;
+  voice_reference_text?: string;
+  voice_name?: string;
+  voice_prompt?: string;
   created_at?: string;
   updated_at?: string;
 };

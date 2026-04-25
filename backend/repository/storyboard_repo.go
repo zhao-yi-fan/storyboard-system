@@ -312,3 +312,10 @@ func nullFloat64Value(value sql.NullFloat64) float64 {
 	}
 	return 0
 }
+
+func nullableFloat64(value float64) any {
+	if value <= 0 {
+		return nil
+	}
+	return value
+}

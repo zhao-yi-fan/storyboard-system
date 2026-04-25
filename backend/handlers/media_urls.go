@@ -48,6 +48,7 @@ func normalizeCharacterForResponse(character *models.Character) {
 	character.AvatarPreviewURL = oss.ResolveGeneratedURL(character.AvatarPreviewURL)
 	character.DesignSheetURL = oss.ResolveGeneratedURL(character.DesignSheetURL)
 	character.DesignSheetPreviewURL = oss.ResolveGeneratedURL(character.DesignSheetPreviewURL)
+	character.VoiceReferenceURL = oss.ResolveGeneratedURL(character.VoiceReferenceURL)
 }
 
 func normalizeAssetForResponse(asset *models.Asset) {

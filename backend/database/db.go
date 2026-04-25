@@ -162,6 +162,36 @@ func runMigrations() error {
 		}
 	}
 
+	if !columnExists("characters", "voice_reference_url") {
+		if _, err := DB.Exec(`ALTER TABLE characters ADD COLUMN voice_reference_url VARCHAR(500) NULL DEFAULT NULL AFTER design_sheet_preview_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("characters", "voice_reference_duration") {
+		if _, err := DB.Exec(`ALTER TABLE characters ADD COLUMN voice_reference_duration DOUBLE NULL DEFAULT NULL AFTER voice_reference_url`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("characters", "voice_reference_text") {
+		if _, err := DB.Exec(`ALTER TABLE characters ADD COLUMN voice_reference_text TEXT NULL AFTER voice_reference_duration`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("characters", "voice_name") {
+		if _, err := DB.Exec(`ALTER TABLE characters ADD COLUMN voice_name VARCHAR(100) NULL DEFAULT NULL AFTER voice_reference_text`); err != nil {
+			return err
+		}
+	}
+
+	if !columnExists("characters", "voice_prompt") {
+		if _, err := DB.Exec(`ALTER TABLE characters ADD COLUMN voice_prompt TEXT NULL AFTER voice_name`); err != nil {
+			return err
+		}
+	}
+
 	if !columnExists("projects", "video_url") {
 		if _, err := DB.Exec(`ALTER TABLE projects ADD COLUMN video_url VARCHAR(500) NULL DEFAULT NULL AFTER script_text`); err != nil {
 			return err
