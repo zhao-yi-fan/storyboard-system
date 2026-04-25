@@ -73,6 +73,12 @@ const getCharacterDesignSheetPreviewSrc = (character: Character | null | undefin
 const getCharacterVoiceReferenceSrc = (character: Character | null | undefined) =>
   character?.voice_reference_url || "";
 
+const hasCharacterDesignSheet = (character: Character | null | undefined) =>
+  Boolean(character?.design_sheet_url || character?.design_sheet_preview_url);
+
+const hasCharacterVoiceReference = (character: Character | null | undefined) =>
+  Boolean(character?.voice_reference_url);
+
 const CHARACTER_DESIGN_SHEET_MODE_OPTIONS = [
   { value: "draft", label: "快速草案（Qwen 2.0）" },
   { value: "final", label: "最终定稿（Wan 2.7 Pro）" },
@@ -500,9 +506,20 @@ export default function AssetLibrary() {
                       <button key={character.id} onClick={() => setSelectedAsset({ type: "character", data: character })} className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}>
                         <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 relative flex items-center justify-center">
                           {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <Users className="w-16 h-16 text-gray-700" />}
+                          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[70%]">
+                            {hasCharacterDesignSheet(character) ? <Badge className="bg-blue-600/90 text-white text-[10px]">主设定图</Badge> : null}
+                            {hasCharacterVoiceReference(character) ? <Badge className="bg-emerald-600/90 text-white text-[10px]">角色语音</Badge> : null}
+                          </div>
                           <div className="absolute top-3 right-3"><Badge className="bg-purple-600 text-white text-xs">角色</Badge></div>
                         </div>
-                        <div className="p-3 space-y-2"><h4 className="font-medium">{character.name}</h4><p className="text-xs text-gray-400 line-clamp-2">{character.description}</p></div>
+                        <div className="p-3 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="font-medium">{character.name}</h4>
+                            {hasCharacterDesignSheet(character) ? <Badge className="bg-blue-600/15 text-blue-300 border border-blue-500/30 text-[10px]">主设定图</Badge> : null}
+                            {hasCharacterVoiceReference(character) ? <Badge className="bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 text-[10px]">角色语音</Badge> : null}
+                          </div>
+                          <p className="text-xs text-gray-400 line-clamp-2">{character.description}</p>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -513,7 +530,15 @@ export default function AssetLibrary() {
                         <div className="w-16 h-16 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded flex items-center justify-center flex-shrink-0">
                           {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" /> : <Users className="w-8 h-8 text-gray-700" />}
                         </div>
-                        <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-1"><h4 className="font-medium">{character.name}</h4><Badge className="bg-purple-600 text-white text-xs">角色</Badge></div><p className="text-sm text-gray-400 line-clamp-1">{character.description}</p></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h4 className="font-medium">{character.name}</h4>
+                            <Badge className="bg-purple-600 text-white text-xs">角色</Badge>
+                            {hasCharacterDesignSheet(character) ? <Badge className="bg-blue-600/15 text-blue-300 border border-blue-500/30 text-[10px]">主设定图</Badge> : null}
+                            {hasCharacterVoiceReference(character) ? <Badge className="bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 text-[10px]">角色语音</Badge> : null}
+                          </div>
+                          <p className="text-sm text-gray-400 line-clamp-1">{character.description}</p>
+                        </div>
                       </button>
                     ))}
                   </div>

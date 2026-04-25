@@ -32,6 +32,14 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -72,6 +80,10 @@ export default function ProjectDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
   const [pinningProjectId, setPinningProjectId] = useState<number | null>(null);
+  const [renameTarget, setRenameTarget] = useState<Project | null>(null);
+  const [renameName, setRenameName] = useState("");
+  const [renameDescription, setRenameDescription] = useState("");
+  const [renamingProjectId, setRenamingProjectId] = useState<number | null>(null);
 
   useEffect(() => {
     void loadProjects();
@@ -153,6 +165,44 @@ export default function ProjectDashboard() {
       console.error("Failed to toggle project pin:", error);
     } finally {
       setPinningProjectId(null);
+    }
+  };
+
+  const openRenameDialog = (project: Project) => {
+    setRenameTarget(project);
+    setRenameName(project.name);
+    setRenameDescription(project.description ?? "");
+  };
+
+  const closeRenameDialog = () => {
+    if (renamingProjectId) return;
+    setRenameTarget(null);
+    setRenameName("");
+    setRenameDescription("");
+  };
+
+  const confirmRenameProject = async () => {
+    if (!renameTarget) return;
+
+    const trimmedName = renameName.trim();
+    if (!trimmedName) {
+      toast.error("项目名称不能为空");
+      return;
+    }
+
+    setRenamingProjectId(renameTarget.id);
+    try {
+      await projectApi.updateProject(renameTarget.id, {
+        name: trimmedName,
+        description: renameDescription.trim(),
+      });
+      toast.success("项目已重命名");
+      closeRenameDialog();
+      await loadProjects();
+    } catch (error) {
+      console.error("Failed to rename project:", error);
+    } finally {
+      setRenamingProjectId(null);
     }
   };
 
@@ -298,6 +348,15 @@ export default function ProjectDashboard() {
                                 {pinningProjectId === project.id ? (isPinned(project) ? "取消置顶中..." : "置顶中...") : isPinned(project) ? "取消置顶" : "置顶项目"}
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRenameDialog(project);
+                                }}
+                              >
+                                <FolderOpen className="w-4 h-4" />
+                                重命名项目
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 variant="destructive"
                                 className="focus:bg-red-950/40 focus:text-red-200"
                                 onClick={(e) => {
@@ -422,6 +481,15 @@ export default function ProjectDashboard() {
                                 {pinningProjectId === project.id ? (isPinned(project) ? "取消置顶中..." : "置顶中...") : isPinned(project) ? "取消置顶" : "置顶项目"}
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRenameDialog(project);
+                                }}
+                              >
+                                <FolderOpen className="w-4 h-4" />
+                                重命名项目
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 variant="destructive"
                                 className="focus:bg-red-950/40 focus:text-red-200"
                                 onClick={(e) => {
@@ -481,6 +549,61 @@ export default function ProjectDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!renameTarget} onOpenChange={(open) => { if (!open) closeRenameDialog(); }}>
+        <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>重命名项目</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              更新项目名称和描述，保存后会立即刷新项目列表。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-200">项目名称</label>
+              <Input
+                value={renameName}
+                onChange={(e) => setRenameName(e.target.value)}
+                placeholder="请输入项目名称"
+                className="bg-[#1a1a1a] border-gray-700 text-gray-100"
+                disabled={renamingProjectId === renameTarget?.id}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-200">项目描述</label>
+              <textarea
+                value={renameDescription}
+                onChange={(e) => setRenameDescription(e.target.value)}
+                placeholder="请输入项目描述"
+                className="min-h-24 w-full rounded-md border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-100 outline-none transition-colors focus:border-purple-500"
+                disabled={renamingProjectId === renameTarget?.id}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white"
+              onClick={closeRenameDialog}
+              disabled={renamingProjectId === renameTarget?.id}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={() => void confirmRenameProject()}
+              disabled={renamingProjectId === renameTarget?.id}
+            >
+              {renamingProjectId === renameTarget?.id ? "保存中..." : "保存修改"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
