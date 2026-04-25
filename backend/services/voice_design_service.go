@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -156,12 +157,17 @@ func (s *VoiceDesignService) GenerateCharacterVoiceReference(ctx context.Context
 	if err != nil {
 		return nil, fmt.Errorf("解码主语音参考音频失败: %w", err)
 	}
-	duration, err := wavDurationSeconds(audioBytes)
-	if err != nil {
-		return nil, fmt.Errorf("解析主语音参考时长失败: %w", err)
+	responseFormat := normalizeVoiceResponseFormat(parsed.Output.PreviewAudio.ResponseFormat)
+	duration := 0.0
+	if responseFormat == "wav" {
+		if parsedDuration, parseErr := wavDurationSeconds(audioBytes); parseErr != nil {
+			log.Printf("[voice-design] wav duration parse skipped: %v", parseErr)
+		} else {
+			duration = parsedDuration
+		}
 	}
 
-	publicPath, err := s.storeVoiceReference(audioBytes, fmt.Sprintf("character-voice-reference-%d-%d.wav", character.ID, time.Now().Unix()))
+	publicPath, err := s.storeVoiceReference(audioBytes, fmt.Sprintf("character-voice-reference-%d-%d.%s", character.ID, time.Now().Unix(), voiceFileExtension(responseFormat)))
 	if err != nil {
 		return nil, err
 	}
@@ -245,6 +251,28 @@ func buildCharacterVoiceReferenceText(character *models.Character) string {
 		name = "我"
 	}
 	return fmt.Sprintf("我叫%s。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。", name)
+}
+
+func normalizeVoiceResponseFormat(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "wav", "mp3", "opus", "pcm":
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return "wav"
+	}
+}
+
+func voiceFileExtension(format string) string {
+	switch normalizeVoiceResponseFormat(format) {
+	case "pcm":
+		return "pcm"
+	case "mp3":
+		return "mp3"
+	case "opus":
+		return "opus"
+	default:
+		return "wav"
+	}
 }
 
 func wavDurationSeconds(audioBytes []byte) (float64, error) {
