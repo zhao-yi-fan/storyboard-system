@@ -2640,7 +2640,7 @@ export default function Workspace() {
           if (!open) setPreviewSceneVideo(null);
         }}
       >
-        <DialogContent className="max-w-5xl border-gray-800 bg-[#111111] text-gray-100">
+        <DialogContent className="max-h-[94vh] w-[min(96vw,1600px)] max-w-[96vw] border-gray-800 bg-[#111111] text-gray-100">
           <DialogHeader>
             <DialogTitle>{previewSceneVideo?.title || "场景视频预览"}</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -2654,7 +2654,7 @@ export default function Workspace() {
                 src={previewSceneVideo.src}
                 controls
                 preload="metadata"
-                className="w-full rounded-lg bg-black"
+                className="max-h-[78vh] w-full rounded-lg bg-black"
               />
               <div className="flex justify-end">
                 <Button
@@ -2682,7 +2682,7 @@ export default function Workspace() {
           if (!open) setPreviewProjectVideo(null);
         }}
       >
-        <DialogContent className="max-w-5xl border-gray-800 bg-[#111111] text-gray-100">
+        <DialogContent className="max-h-[94vh] w-[min(96vw,1600px)] max-w-[96vw] border-gray-800 bg-[#111111] text-gray-100">
           <DialogHeader>
             <DialogTitle>{previewProjectVideo?.title || "项目总片预览"}</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -2696,7 +2696,7 @@ export default function Workspace() {
                 src={previewProjectVideo.src}
                 controls
                 preload="metadata"
-                className="w-full rounded-lg bg-black"
+                className="max-h-[78vh] w-full rounded-lg bg-black"
               />
               <div className="flex justify-end">
                 <Button
