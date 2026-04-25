@@ -1102,14 +1102,6 @@ export default function Workspace() {
                 size="sm"
                 variant="ghost"
                 className="h-8 text-gray-400 hover:text-gray-200"
-              >
-                <Save className="w-4 h-4 mr-1.5" />
-                保存
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 text-gray-400 hover:text-gray-200"
                 onClick={() =>
                   navigate(
                     selectedProject
@@ -1120,14 +1112,6 @@ export default function Workspace() {
               >
                 <Package className="w-4 h-4 mr-1.5" />
                 资产库
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 text-gray-400 hover:text-gray-200"
-              >
-                <Download className="w-4 h-4 mr-1.5" />
-                导出
               </Button>
             </div>
           </div>
@@ -1559,7 +1543,7 @@ export default function Workspace() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                <div className="space-y-4">
+                <div className="flex min-h-0 flex-1 flex-col gap-4">
                   {/* Shot Number */}
                   <div>
                     <Label className="text-xs text-gray-400">镜头编号</Label>
@@ -2640,7 +2624,7 @@ export default function Workspace() {
           if (!open) setPreviewSceneVideo(null);
         }}
       >
-        <DialogContent className="max-h-[94vh] w-[min(96vw,1600px)] max-w-[96vw] border-gray-800 bg-[#111111] text-gray-100">
+        <DialogContent className="!max-w-[98vw] h-[96vh] max-h-[96vh] w-[98vw] overflow-hidden border-gray-800 bg-[#111111] text-gray-100 flex flex-col">
           <DialogHeader>
             <DialogTitle>{previewSceneVideo?.title || "场景视频预览"}</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -2648,13 +2632,13 @@ export default function Workspace() {
             </DialogDescription>
           </DialogHeader>
           {previewSceneVideo ? (
-            <div className="space-y-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
               <video
                 key={previewSceneVideo.src}
                 src={previewSceneVideo.src}
                 controls
                 preload="metadata"
-                className="max-h-[78vh] w-full rounded-lg bg-black"
+                className="min-h-0 h-full w-full rounded-lg bg-black object-contain"
               />
               <div className="flex justify-end">
                 <Button
@@ -2682,7 +2666,7 @@ export default function Workspace() {
           if (!open) setPreviewProjectVideo(null);
         }}
       >
-        <DialogContent className="max-h-[94vh] w-[min(96vw,1600px)] max-w-[96vw] border-gray-800 bg-[#111111] text-gray-100">
+        <DialogContent className="!max-w-[98vw] h-[96vh] max-h-[96vh] w-[98vw] overflow-hidden border-gray-800 bg-[#111111] text-gray-100 flex flex-col">
           <DialogHeader>
             <DialogTitle>{previewProjectVideo?.title || "项目总片预览"}</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -2696,7 +2680,7 @@ export default function Workspace() {
                 src={previewProjectVideo.src}
                 controls
                 preload="metadata"
-                className="max-h-[78vh] w-full rounded-lg bg-black"
+                className="min-h-0 h-full w-full rounded-lg bg-black object-contain"
               />
               <div className="flex justify-end">
                 <Button
