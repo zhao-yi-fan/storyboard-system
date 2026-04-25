@@ -582,13 +582,14 @@ export default function AssetLibrary() {
           </Tabs>
         </main>
 
-        <div
-          className={`resize-handle resize-handle-left relative flex-shrink-0 w-3 z-20 ${isResizingDetailSidebar ? "dragging" : ""}`}
-          onMouseDown={handleDetailSidebarMouseDown}
-        />
+        {selectedAsset ? (
+          <>
+            <div
+              className={`resize-handle resize-handle-left relative flex-shrink-0 w-3 z-20 ${isResizingDetailSidebar ? "dragging" : ""}`}
+              onMouseDown={handleDetailSidebarMouseDown}
+            />
 
-        <aside style={{ width: detailSidebarWidth }} className="border-l border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0">
-          {selectedAsset ? (
+            <aside style={{ width: detailSidebarWidth }} className="border-l border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0">
             <>
               <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
                 <h3 className="text-sm">{selectedAsset.type === "character" ? "角色详情" : "场景详情"}</h3>
@@ -788,10 +789,9 @@ export default function AssetLibrary() {
                 )}
               </div>
             </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500"><div className="text-center px-8"><p className="text-sm">请选择一个资产</p><p className="text-xs mt-1 text-gray-600">查看详情并插入到镜头中</p></div></div>
-          )}
-        </aside>
+            </aside>
+          </>
+        ) : null}
       </div>
 
       <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) resetCreateState(); }}>

@@ -22,6 +22,8 @@ import {
   Sparkles,
   Loader2,
   ArrowLeft,
+  Grid3x3,
+  List,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -220,6 +222,7 @@ export default function Workspace() {
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string; items?: { src: string; alt: string }[]; currentIndex?: number } | null>(null);
   const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>(COVER_MODEL_OPTIONS[0].value);
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
+  const [storyboardViewMode, setStoryboardViewMode] = useState<"grid" | "list">("grid");
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
   const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
   const [coverGenerationPreview, setCoverGenerationPreview] = useState<StoryboardCoverGenerationPreview | null>(null);
@@ -1406,25 +1409,130 @@ export default function Workspace() {
                   )}
                   插入镜头
                 </Button>
+                <div className="ml-auto flex items-center overflow-hidden rounded-md border border-gray-800 bg-[#131313]">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={`h-8 w-8 rounded-none p-0 ${storyboardViewMode === "grid" ? "bg-gray-800 text-gray-100" : "text-gray-500 hover:text-gray-200"}`}
+                    onClick={() => setStoryboardViewMode("grid")}
+                  >
+                    <Grid3x3 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={`h-8 w-8 rounded-none p-0 ${storyboardViewMode === "list" ? "bg-gray-800 text-gray-100" : "text-gray-500 hover:text-gray-200"}`}
+                    onClick={() => setStoryboardViewMode("list")}
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
-            <div className="grid grid-cols-2 gap-4 pb-4">
-              {filteredShots.map((shot) => (
-                <button
-                  key={shot.id}
-                  onClick={() => setSelectedShot(shot)}
-                  className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${
-                    selectedShot?.id === shot.id
-                      ? "border-purple-500 shadow-lg shadow-purple-500/20"
-                      : "border-gray-800 hover:border-gray-700"
-                  }`}
-                >
-                  {/* Thumbnail */}
-                  <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 relative">
-                    <div className="absolute inset-0 flex items-center justify-center">
+            {storyboardViewMode === "grid" ? (
+              <div className="grid grid-cols-2 gap-4 pb-4">
+                {filteredShots.map((shot) => (
+                  <button
+                    key={shot.id}
+                    onClick={() => setSelectedShot(shot)}
+                    className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${
+                      selectedShot?.id === shot.id
+                        ? "border-purple-500 shadow-lg shadow-purple-500/20"
+                        : "border-gray-800 hover:border-gray-700"
+                    }`}
+                  >
+                    <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 relative">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        {shot.thumbnail_url ? (
+                          <img
+                            src={getStoryboardPreviewSrc(shot)}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className={`w-full h-full object-cover transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
+                          />
+                        ) : (
+                          <ImageIcon className="w-12 h-12 text-gray-700" />
+                        )}
+                        {pendingGeneratedShotId === shot.id ? (
+                          <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-2">
+                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                            <span className="text-xs text-white/90">正在生成新封面...</span>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono tracking-[0.2em]">
+                        {formatShotNumber(shot.shot_number)}
+                      </div>
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <Badge className="bg-purple-600/90 text-white text-xs px-1.5 py-0">
+                          {deriveShotType(shot)}
+                        </Badge>
+                      </div>
+                      {shot.duration > 0 && (
+                        <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {shot.duration}s
+                        </div>
+                      )}
+                      {hasSucceededStoryboardVideo(shot) ? (
+                        <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs flex items-center gap-1 text-purple-200">
+                          <Play className="w-3 h-3 fill-current" />
+                          视频
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="p-3 space-y-2">
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs border-gray-700 text-gray-400">
+                          {selectedScene?.title}
+                        </Badge>
+                        {shot.background ? (
+                          <Badge variant="outline" className="text-xs border-blue-800 text-blue-300">
+                            {shot.background}
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      <p className="text-xs text-gray-400 line-clamp-2">
+                        {shot.content}
+                      </p>
+
+                      {shot.notes && (
+                        <div className="flex items-start gap-1.5 text-xs text-gray-500">
+                          <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          <p className="line-clamp-1">{shot.notes}</p>
+                        </div>
+                      )}
+
+                      {deriveEmotion(shot) ? (
+                        <div className="flex items-center gap-1">
+                          <Badge className="text-xs bg-pink-600/20 text-pink-300 border-0">
+                            {deriveEmotion(shot)}
+                          </Badge>
+                        </div>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3 pb-4">
+                {filteredShots.map((shot) => (
+                  <button
+                    key={shot.id}
+                    onClick={() => setSelectedShot(shot)}
+                    className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-start gap-4 ${
+                      selectedShot?.id === shot.id
+                        ? "border-purple-500 shadow-lg shadow-purple-500/20"
+                        : "border-gray-800 hover:border-gray-700"
+                    }`}
+                  >
+                    <div className="w-44 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded overflow-hidden relative flex-shrink-0">
                       {shot.thumbnail_url ? (
                         <img
                           src={getStoryboardPreviewSrc(shot)}
@@ -1434,72 +1542,65 @@ export default function Workspace() {
                           className={`w-full h-full object-cover transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
                         />
                       ) : (
-                        <ImageIcon className="w-12 h-12 text-gray-700" />
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ImageIcon className="w-10 h-10 text-gray-700" />
+                        </div>
                       )}
                       {pendingGeneratedShotId === shot.id ? (
                         <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-2">
-                          <Loader2 className="w-6 h-6 text-white animate-spin" />
-                          <span className="text-xs text-white/90">正在生成新封面...</span>
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          <span className="text-[11px] text-white/90">正在生成新封面...</span>
+                        </div>
+                      ) : null}
+                      <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono tracking-[0.2em]">
+                        {formatShotNumber(shot.shot_number)}
+                      </div>
+                      {hasSucceededStoryboardVideo(shot) ? (
+                        <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs flex items-center gap-1 text-purple-200">
+                          <Play className="w-3 h-3 fill-current" />
+                          视频
                         </div>
                       ) : null}
                     </div>
-                    <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono tracking-[0.2em]">
-                      {formatShotNumber(shot.shot_number)}
-                    </div>
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <Badge className="bg-purple-600/90 text-white text-xs px-1.5 py-0">
-                        {deriveShotType(shot)}
-                      </Badge>
-                    </div>
-                    {shot.duration > 0 && (
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {shot.duration}s
-                      </div>
-                    )}
-                    {hasSucceededStoryboardVideo(shot) ? (
-                      <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs flex items-center gap-1 text-purple-200">
-                        <Play className="w-3 h-3 fill-current" />
-                        视频
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* Info */}
-                  <div className="p-3 space-y-2">
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" className="text-xs border-gray-700 text-gray-400">
-                        {selectedScene?.title}
-                      </Badge>
-                      {shot.background ? (
-                        <Badge variant="outline" className="text-xs border-blue-800 text-blue-300">
-                          {shot.background}
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="text-xs border-gray-700 text-gray-400">
+                          {selectedScene?.title}
                         </Badge>
+                        <Badge className="bg-purple-600/90 text-white text-xs px-1.5 py-0">
+                          {deriveShotType(shot)}
+                        </Badge>
+                        {shot.background ? (
+                          <Badge variant="outline" className="text-xs border-blue-800 text-blue-300">
+                            {shot.background}
+                          </Badge>
+                        ) : null}
+                        {shot.duration > 0 ? (
+                          <Badge variant="outline" className="text-xs border-gray-700 text-gray-300">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {shot.duration}s
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-sm text-gray-200 line-clamp-2">{shot.content}</p>
+                      {shot.notes ? (
+                        <div className="flex items-start gap-1.5 text-xs text-gray-500">
+                          <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          <p className="line-clamp-2">{shot.notes}</p>
+                        </div>
+                      ) : null}
+                      {deriveEmotion(shot) ? (
+                        <div className="flex items-center gap-1">
+                          <Badge className="text-xs bg-pink-600/20 text-pink-300 border-0">
+                            {deriveEmotion(shot)}
+                          </Badge>
+                        </div>
                       ) : null}
                     </div>
-
-                    <p className="text-xs text-gray-400 line-clamp-2">
-                      {shot.content}
-                    </p>
-
-                    {shot.notes && (
-                      <div className="flex items-start gap-1.5 text-xs text-gray-500">
-                        <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                        <p className="line-clamp-1">{shot.notes}</p>
-                      </div>
-                    )}
-
-                    {deriveEmotion(shot) ? (
-                      <div className="flex items-center gap-1">
-                        <Badge className="text-xs bg-pink-600/20 text-pink-300 border-0">
-                          {deriveEmotion(shot)}
-                        </Badge>
-                      </div>
-                    ) : null}
-                  </div>
-                </button>
-              ))}
-            </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {filteredShots.length === 0 && selectedScene && (
               <div className="h-full flex items-center justify-center text-gray-500">
