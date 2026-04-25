@@ -36,7 +36,6 @@ type StoryboardVideoService struct {
 	ossService     *OSSService
 }
 
-const storyboardVideoPreviewHeight = 480
 const (
 	wanxVideoResolution     = "720P"
 	seedanceVideoResolution = "480p"
@@ -277,11 +276,9 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 		generation.SourceURL = storyboard.ThumbnailURL
 		generation.ErrorMessage = ""
 		generation.MetaJSON = mustMarshalMediaMeta(map[string]any{
-			"resolution":     storyboardVideoResolutionForModel(generation.Model),
-			"duration":       generatedDuration,
-			"audio":          storyboardVideoAudioForModel(generation.Model),
-			"preview_height": storyboardVideoPreviewHeight,
-		})
+			"resolution": storyboardVideoResolutionForModel(generation.Model),
+			"duration":   generatedDuration,
+			"audio":      storyboardVideoAudioForModel(generation.Model)})
 		if err := s.historyRepo.Update(generation); err != nil {
 			return nil, err
 		}
@@ -322,11 +319,9 @@ func (s *StoryboardVideoService) StartGenerate(storyboardID int64, publicBaseURL
 		PreviewURL:   "",
 		SourceURL:    storyboard.ThumbnailURL,
 		MetaJSON: mustMarshalMediaMeta(map[string]any{
-			"resolution":     storyboardVideoResolutionForModel(model),
-			"duration":       duration,
-			"audio":          storyboardVideoAudioForModel(model),
-			"preview_height": storyboardVideoPreviewHeight,
-		}),
+			"resolution": storyboardVideoResolutionForModel(model),
+			"duration":   duration,
+			"audio":      storyboardVideoAudioForModel(model)}),
 	}
 	if err := s.historyRepo.Create(generation); err != nil {
 		return nil, err
@@ -697,7 +692,6 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 
 	filename := fmt.Sprintf("storyboard-%d-%d.mp4", storyboardID, time.Now().Unix())
 	publicPath := GeneratedPublicPath("videos", filename)
-	previewPublicPath := GeneratedPublicPath("videos", strings.TrimSuffix(filename, ".mp4")+".preview.mp4")
 
 	if s.ossService.IsEnabled() {
 		tmpVideo, err := os.CreateTemp("", "storyboard-video-*.mp4")
@@ -715,21 +709,7 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 		if err := s.ossService.EnsureUploaded(tmpVideo.Name(), publicPath); err != nil {
 			return "", "", fmt.Errorf("上传视频到 OSS 失败: %w", err)
 		}
-
-		tmpPreview, err := os.CreateTemp("", "storyboard-video-preview-*.mp4")
-		if err != nil {
-			return "", "", fmt.Errorf("创建视频预览临时文件失败: %w", err)
-		}
-		tmpPreviewPath := tmpPreview.Name()
-		_ = tmpPreview.Close()
-		defer os.Remove(tmpPreviewPath)
-		if err := generateVideoPreview(ctx, tmpVideo.Name(), tmpPreviewPath); err != nil {
-			return "", "", err
-		}
-		if err := s.ossService.EnsureUploaded(tmpPreviewPath, previewPublicPath); err != nil {
-			return "", "", fmt.Errorf("上传视频预览到 OSS 失败: %w", err)
-		}
-		return publicPath, previewPublicPath, nil
+		return publicPath, publicPath, nil
 	}
 
 	assetRoot := config.GlobalConfig.GeneratedAssetDir
@@ -755,35 +735,7 @@ func (s *StoryboardVideoService) downloadAndStore(ctx context.Context, storyboar
 		return "", "", fmt.Errorf("保存视频文件失败: %w", err)
 	}
 
-	previewPath := filepath.Join(videosDir, strings.TrimSuffix(filename, ".mp4")+".preview.mp4")
-	if err := generateVideoPreview(ctx, dstPath, previewPath); err != nil {
-		return "", "", err
-	}
-
-	return publicPath, previewPublicPath, nil
-}
-
-func generateVideoPreview(ctx context.Context, srcPath, previewPath string) error {
-	cmd := exec.CommandContext(
-		ctx,
-		"ffmpeg",
-		"-y",
-		"-i", srcPath,
-		"-vf", fmt.Sprintf("scale=-2:%d", storyboardVideoPreviewHeight),
-		"-c:v", "libx264",
-		"-preset", "veryfast",
-		"-crf", "32",
-		"-c:a", "aac",
-		"-b:a", "96k",
-		"-movflags", "+faststart",
-		previewPath,
-	)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("生成视频预览失败: %v: %s", err, strings.TrimSpace(string(output)))
-	}
-	return nil
+	return publicPath, publicPath, nil
 }
 
 func mimeTypeFromPath(path string) string {

@@ -157,22 +157,12 @@ func (s *ProjectVideoService) composeProjectVideoFiles(ctx context.Context, proj
 		return "", "", 0, err
 	}
 
-	previewFilename := strings.TrimSuffix(filename, ".mp4") + ".preview.mp4"
-	previewPath := filepath.Join(workDir, previewFilename)
-	if err := generateProjectVideoPreview(ctx, finalPath, previewPath); err != nil {
-		return "", "", 0, err
-	}
-
 	publicPath := GeneratedPublicPath("project-videos", filename)
-	previewPublicPath := GeneratedPublicPath("project-videos", previewFilename)
 	if s.ossService.IsEnabled() {
 		if err := s.ossService.EnsureUploaded(finalPath, publicPath); err != nil {
 			return "", "", 0, fmt.Errorf("上传项目总片到 OSS 失败: %w", err)
 		}
-		if err := s.ossService.EnsureUploaded(previewPath, previewPublicPath); err != nil {
-			return "", "", 0, fmt.Errorf("上传项目总片预览到 OSS 失败: %w", err)
-		}
-		return publicPath, previewPublicPath, totalDuration, nil
+		return publicPath, publicPath, totalDuration, nil
 	}
 
 	assetRoot, err := resolveGeneratedAssetRoot()
@@ -186,10 +176,7 @@ func (s *ProjectVideoService) composeProjectVideoFiles(ctx context.Context, proj
 	if err := os.Rename(finalPath, filepath.Join(projectVideosDir, filename)); err != nil {
 		return "", "", 0, err
 	}
-	if err := os.Rename(previewPath, filepath.Join(projectVideosDir, previewFilename)); err != nil {
-		return "", "", 0, err
-	}
-	return publicPath, previewPublicPath, totalDuration, nil
+	return publicPath, publicPath, totalDuration, nil
 }
 
 func (s *ProjectVideoService) materializeInput(source, outputPath string) error {
@@ -262,28 +249,6 @@ func concatProjectVideos(ctx context.Context, inputsFile, outputPath string) err
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("项目总片合成失败: %v: %s", err, strings.TrimSpace(string(output)))
-	}
-	return nil
-}
-
-func generateProjectVideoPreview(ctx context.Context, srcPath, previewPath string) error {
-	cmd := exec.CommandContext(
-		ctx,
-		"ffmpeg",
-		"-y",
-		"-i", srcPath,
-		"-vf", fmt.Sprintf("scale=-2:%d,fps=%d", sceneVideoPreviewHeight, sceneVideoFPS),
-		"-c:v", "libx264",
-		"-preset", "veryfast",
-		"-crf", "30",
-		"-c:a", "aac",
-		"-b:a", "96k",
-		"-movflags", "+faststart",
-		previewPath,
-	)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("生成项目总片预览失败: %v: %s", err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }
