@@ -1296,7 +1296,7 @@ export default function Workspace() {
         {/* Center: Shot Cards */}
         <main className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="p-4 border-b border-gray-800 bg-[#0f0f0f] flex-shrink-0">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 {selectedScene ? (
                   <button
@@ -1320,8 +1320,8 @@ export default function Workspace() {
                     )}
                   </button>
                 ) : null}
-                <div className="min-w-0">
-                  <h3 className="text-sm">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate whitespace-nowrap text-sm font-medium">
                     {selectedScene
                       ? `${selectedChapter?.title} · ${selectedScene.title}`
                       : "请选择一个场景"}
@@ -1333,7 +1333,7 @@ export default function Workspace() {
                   ) : null}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
                   variant="outline"
