@@ -1604,8 +1604,14 @@ export default function Workspace() {
                     </div>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-10 rounded-md border border-gray-700 bg-[#1a1a1a] px-3 text-sm text-gray-300 flex items-center">
-                          自动选择模型（参考图优先）
+                        <div
+                          className="flex-1 rounded-md border border-gray-700 bg-[#1a1a1a] px-3 py-2"
+                          title="自动选择：有参考图时使用 Wan 2.7 Image Pro，无参考图时使用 Qwen Image 2.0"
+                        >
+                          <div className="text-sm text-gray-200 leading-tight">自动选择模型</div>
+                          <div className="mt-1 text-[11px] leading-tight text-gray-500">
+                            参考图：Wan 2.7 Image Pro / 纯文本：Qwen Image 2.0
+                          </div>
                         </div>
                         <Button
                           type="button"
