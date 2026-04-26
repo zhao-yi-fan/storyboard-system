@@ -319,8 +319,6 @@ export default function AssetLibrary() {
       const updated = await characterApi.updateCharacter(selectedAsset.data.id, {
         name: selectedAsset.data.name,
         description: selectedAsset.data.description || "",
-        avatar_url: selectedAsset.data.avatar_url || "",
-        design_sheet_url: selectedAsset.data.design_sheet_url || "",
         voice_prompt: selectedAsset.data.voice_prompt || "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));

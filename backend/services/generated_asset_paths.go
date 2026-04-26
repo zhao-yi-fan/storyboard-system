@@ -37,6 +37,31 @@ func IsGeneratedAssetPath(raw string) bool {
 	return err == nil
 }
 
+func NormalizeGeneratedAssetReference(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	if IsGeneratedAssetPath(trimmed) {
+		return trimmed
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Host == "" || parsed.Path == "" {
+		return trimmed
+	}
+
+	if !isManagedOSSHost(parsed.Host) {
+		return trimmed
+	}
+
+	objectKey := strings.TrimPrefix(path.Clean(parsed.Path), "/")
+	if objectKey == "" || objectKey == "." {
+		return trimmed
+	}
+	return GeneratedPublicPathFromObjectKey(objectKey)
+}
+
 func GeneratedObjectKey(raw string) (string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
@@ -66,4 +91,33 @@ func generatedObjectKeyToLocalPath(objectKey string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(assetRoot, filepath.FromSlash(objectKey)), nil
+}
+
+func isManagedOSSHost(host string) bool {
+	trimmedHost := strings.TrimSpace(strings.ToLower(host))
+	if trimmedHost == "" {
+		return false
+	}
+
+	managedHosts := []string{
+		strings.ToLower(strings.TrimSpace(config.GlobalConfig.AliyunOSSEndpoint)),
+		strings.ToLower(strings.TrimSpace(config.GlobalConfig.AliyunOSSPublicEndpoint)),
+	}
+
+	bucket := strings.ToLower(strings.TrimSpace(config.GlobalConfig.AliyunOSSBucket))
+	for _, candidate := range managedHosts {
+		if candidate == "" {
+			continue
+		}
+		candidate = strings.TrimPrefix(candidate, "https://")
+		candidate = strings.TrimPrefix(candidate, "http://")
+		if trimmedHost == candidate {
+			return true
+		}
+		if bucket != "" && trimmedHost == bucket+"."+candidate {
+			return true
+		}
+	}
+
+	return false
 }

@@ -128,9 +128,9 @@ func (h *CharacterHandler) Create(c *gin.Context) {
 		ProjectID:             projectID,
 		Name:                  strings.TrimSpace(req.Name),
 		Description:           strings.TrimSpace(req.Description),
-		AvatarURL:             strings.TrimSpace(req.AvatarURL),
+		AvatarURL:             services.NormalizeGeneratedAssetReference(strings.TrimSpace(req.AvatarURL)),
 		AvatarPreviewURL:      "",
-		DesignSheetURL:        strings.TrimSpace(req.DesignSheetURL),
+		DesignSheetURL:        services.NormalizeGeneratedAssetReference(strings.TrimSpace(req.DesignSheetURL)),
 		DesignSheetPreviewURL: "",
 		VoicePrompt:           strings.TrimSpace(req.VoicePrompt),
 	}
@@ -185,14 +185,14 @@ func (h *CharacterHandler) Update(c *gin.Context) {
 		character.Description = strings.TrimSpace(*req.Description)
 	}
 	if req.AvatarURL != nil {
-		incomingAvatarURL := strings.TrimSpace(*req.AvatarURL)
+		incomingAvatarURL := services.NormalizeGeneratedAssetReference(strings.TrimSpace(*req.AvatarURL))
 		if incomingAvatarURL != character.AvatarURL {
 			character.AvatarURL = incomingAvatarURL
 			character.AvatarPreviewURL = ""
 		}
 	}
 	if req.DesignSheetURL != nil {
-		incomingDesignSheetURL := strings.TrimSpace(*req.DesignSheetURL)
+		incomingDesignSheetURL := services.NormalizeGeneratedAssetReference(strings.TrimSpace(*req.DesignSheetURL))
 		if incomingDesignSheetURL != character.DesignSheetURL {
 			character.DesignSheetURL = incomingDesignSheetURL
 			character.DesignSheetPreviewURL = ""
