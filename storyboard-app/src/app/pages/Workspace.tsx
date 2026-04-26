@@ -226,7 +226,7 @@ export default function Workspace() {
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string; items?: { src: string; alt: string }[]; currentIndex?: number } | null>(null);
   const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>("auto");
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
-  const [storyboardViewMode, setStoryboardViewMode] = useState<"grid" | "list">("grid");
+  const [storyboardViewMode, setStoryboardViewMode] = useState<"grid" | "list">("list");
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
   const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
   const [coverGenerationPreview, setCoverGenerationPreview] = useState<StoryboardCoverGenerationPreview | null>(null);
