@@ -17,6 +17,7 @@ import {
   Trash2,
   Pin,
   PinOff,
+  Info,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -39,12 +40,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
 import { projectApi, type Project } from "../api";
 
 type ViewMode = "grid" | "list";
@@ -221,10 +226,74 @@ export default function ProjectDashboard() {
               </div>
             </div>
 
-            <Button size="sm" className="h-9 bg-purple-600 hover:bg-purple-700" onClick={() => navigate("/import")}>
-              <Plus className="w-4 h-4 mr-2" />
-              新建项目
-            </Button>
+            <div className="flex items-center gap-3">
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center justify-center text-gray-400 hover:text-purple-400 cursor-help transition-colors w-9 h-9 rounded-md border border-gray-800 bg-[#1a1a1a]">
+                    <Info className="w-4 h-4" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="end" className="bg-[#111111] border-gray-800 text-gray-200 p-4 w-[500px]">
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-white border-b border-gray-800 pb-2">当前项目大模型支持列表</h4>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs">
+                      <div>
+                        <span className="text-gray-400 font-medium flex items-center gap-1.5"><Video className="w-3.5 h-3.5"/> 视频生成 (图生视频/文生视频)</span>
+                        <ul className="mt-3 space-y-3 text-purple-300/90">
+                          <li>
+                            <div className="font-medium">• Wan 2.7 I2V</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">画面连贯稳定，质感极佳，适合高精度的最终成片。</div>
+                          </li>
+                          <li>
+                            <div className="font-medium">• Wan 2.6 Flash</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">生成速度极快，成本低，适合用来快速预览和打草稿。</div>
+                          </li>
+                          <li>
+                            <div className="font-medium">• Seedance 1.5 Pro</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">人物动作幅度大，运镜丰富，视觉冲击与表现力强。</div>
+                          </li>
+                        </ul>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-medium flex items-center gap-1.5"><Camera className="w-3.5 h-3.5"/> 图像生成 (文生图/图生图)</span>
+                        <ul className="mt-3 space-y-3 text-blue-300/90">
+                          <li>
+                            <div className="font-medium">• Wan 2.7 Image Pro</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">强大的通用生图模型，色彩鲜艳，主体清晰。</div>
+                          </li>
+                          <li>
+                            <div className="font-medium">• Seedream 4.5</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">擅长电影感、复杂光影和高真实度的高清场景刻画。</div>
+                          </li>
+                          <li>
+                            <div className="font-medium">• Qwen Image 2.0</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">中英指令跟随能力强，擅长精准控制风格和复杂构图。</div>
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="col-span-2 pt-3 border-t border-gray-800/50">
+                        <span className="text-gray-400 font-medium flex items-center gap-1.5 mb-3">📝 文本处理与语音生成</span>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                          <div className="text-green-300/90">
+                            <div className="font-medium">• Doubao Pro (文本大模型)</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">用于长文本剧本的结构化拆解与分镜提示词智能扩写。</div>
+                          </div>
+                          <div className="text-green-300/90">
+                            <div className="font-medium">• Qwen Voice (语音大模型)</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">用于角色声音个性化复刻、情感音色设计与 TTS 配音。</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+
+              <Button size="sm" className="h-9 bg-purple-600 hover:bg-purple-700" onClick={() => navigate("/import")}>
+                <Plus className="w-4 h-4 mr-2" />
+                新建项目
+              </Button>
+            </div>
           </div>
         </div>
       </header>
