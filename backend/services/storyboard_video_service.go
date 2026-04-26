@@ -201,7 +201,7 @@ func (s *StoryboardVideoService) GenerateAndAttach(storyboardID int64, publicBas
 	}
 
 	if strings.TrimSpace(storyboard.ThumbnailURL) == "" {
-		storyboard, err = s.coverService.GenerateAndAttach(storyboardID, publicBaseURL, false)
+		storyboard, err = s.coverService.GenerateAndAttach(storyboardID, publicBaseURL, "", false)
 		if err != nil {
 			s.markGenerationFailed(generation, err)
 			return nil, err

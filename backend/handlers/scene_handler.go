@@ -308,7 +308,7 @@ func (h *SceneHandler) GenerateStoryboardCovers(c *gin.Context) {
 	generatedCount := 0
 
 	for _, storyboard := range storyboards {
-		if _, err := coverService.GenerateAndAttach(storyboard.ID, requestPublicBaseURL(c), false); err != nil {
+		if _, err := coverService.GenerateAndAttach(storyboard.ID, requestPublicBaseURL(c), "", false); err != nil {
 			failed = append(failed, failedItem{StoryboardID: storyboard.ID, Error: err.Error()})
 			continue
 		}

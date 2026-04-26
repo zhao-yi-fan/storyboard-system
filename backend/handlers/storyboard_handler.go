@@ -415,6 +415,11 @@ func (h *StoryboardHandler) PreviewCoverGeneration(c *gin.Context) {
 		response.Error(c, "invalid id")
 		return
 	}
+	selectedModel := strings.TrimSpace(c.Query("model"))
+	if !config.IsSupportedCoverModel(selectedModel) {
+		response.Error(c, "unsupported cover model")
+		return
+	}
 
 	service, err := services.NewStoryboardCoverService()
 	if err != nil {
@@ -422,7 +427,7 @@ func (h *StoryboardHandler) PreviewCoverGeneration(c *gin.Context) {
 		return
 	}
 
-	preview, err := service.PreviewGeneration(id, requestPublicBaseURL(c))
+	preview, err := service.PreviewGeneration(id, requestPublicBaseURL(c), selectedModel)
 	if err != nil {
 		response.Error(c, err.Error())
 		return
@@ -443,10 +448,15 @@ func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
 	}
 
 	var req struct {
-		UseTextOnly bool `json:"use_text_only"`
+		Model       string `json:"model"`
+		UseTextOnly bool   `json:"use_text_only"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil && !strings.Contains(strings.ToLower(err.Error()), "eof") {
 		response.Error(c, err.Error())
+		return
+	}
+	if !config.IsSupportedCoverModel(strings.TrimSpace(req.Model)) {
+		response.Error(c, "unsupported cover model")
 		return
 	}
 
@@ -456,7 +466,7 @@ func (h *StoryboardHandler) GenerateCover(c *gin.Context) {
 		return
 	}
 
-	storyboard, err := service.GenerateAndAttach(id, requestPublicBaseURL(c), req.UseTextOnly)
+	storyboard, err := service.GenerateAndAttach(id, requestPublicBaseURL(c), strings.TrimSpace(req.Model), req.UseTextOnly)
 	if err != nil {
 		response.Error(c, err.Error())
 		return

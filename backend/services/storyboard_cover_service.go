@@ -24,6 +24,7 @@ type StoryboardCoverService struct {
 	usageRepo      *repository.StoryboardAssetUsageRepository
 	historyRepo    *repository.StoryboardMediaGenerationRepository
 	wanxClient     *WanxClient
+	seedreamClient *SeedreamImageClient
 	httpClient     *http.Client
 	previewService *ImagePreviewService
 	ossService     *OSSService
@@ -68,6 +69,10 @@ func NewStoryboardCoverService() (*StoryboardCoverService, error) {
 	if err != nil {
 		return nil, err
 	}
+	var seedreamClient *SeedreamImageClient
+	if strings.TrimSpace(config.GlobalConfig.SeedreamImageAPIKey) != "" {
+		seedreamClient, _ = NewSeedreamImageClient()
+	}
 
 	return &StoryboardCoverService{
 		storyboardRepo: &repository.StoryboardRepository{},
@@ -76,27 +81,28 @@ func NewStoryboardCoverService() (*StoryboardCoverService, error) {
 		usageRepo:      &repository.StoryboardAssetUsageRepository{},
 		historyRepo:    &repository.StoryboardMediaGenerationRepository{},
 		wanxClient:     wanxClient,
+		seedreamClient: seedreamClient,
 		httpClient:     &http.Client{Timeout: 60 * time.Second},
 		previewService: NewImagePreviewService(),
 		ossService:     NewOSSService(),
 	}, nil
 }
 
-func (s *StoryboardCoverService) PreviewGeneration(storyboardID int64, publicBaseURL string) (*StoryboardCoverGenerationPreview, error) {
+func (s *StoryboardCoverService) PreviewGeneration(storyboardID int64, publicBaseURL, selectedModel string) (*StoryboardCoverGenerationPreview, error) {
 	storyboard, scene, err := s.loadStoryboardContext(storyboardID)
 	if err != nil {
 		return nil, err
 	}
-	return s.buildGenerationPreview(storyboard, scene, publicBaseURL, false)
+	return s.buildGenerationPreview(storyboard, scene, publicBaseURL, false, selectedModel)
 }
 
-func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64, publicBaseURL string, useTextOnly bool) (*models.Storyboard, error) {
+func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64, publicBaseURL, selectedModel string, useTextOnly bool) (*models.Storyboard, error) {
 	storyboard, scene, err := s.loadStoryboardContext(storyboardID)
 	if err != nil {
 		return nil, err
 	}
 
-	preview, err := s.buildGenerationPreview(storyboard, scene, publicBaseURL, useTextOnly)
+	preview, err := s.buildGenerationPreview(storyboard, scene, publicBaseURL, useTextOnly, selectedModel)
 	if err != nil {
 		return nil, err
 	}
@@ -124,10 +130,24 @@ func (s *StoryboardCoverService) GenerateAndAttach(storyboardID int64, publicBas
 	defer cancel()
 
 	var imageURL string
-	if preview.Mode == "reference" && len(preview.ReferenceImages) > 0 {
+	if preview.Model == s.seedreamModelName() {
+		if s.seedreamClient == nil {
+			if err := config.GlobalConfig.ValidateSeedreamImageConfig(); err != nil {
+				s.markGenerationFailed(generation, err)
+				return nil, err
+			}
+			client, err := NewSeedreamImageClient()
+			if err != nil {
+				s.markGenerationFailed(generation, err)
+				return nil, err
+			}
+			s.seedreamClient = client
+		}
+		imageURL, err = s.seedreamClient.GenerateImage(ctx, preview.FinalPrompt, collectReferenceURLs(preview.ReferenceImages))
+	} else if preview.Mode == "reference" && len(preview.ReferenceImages) > 0 {
 		imageURL, err = s.wanxClient.GenerateImageWithReferences(ctx, preview.FinalPrompt, collectReferenceURLs(preview.ReferenceImages), preview.Model)
 	} else {
-		imageURL, err = s.wanxClient.GenerateImage(ctx, preview.FinalPrompt)
+		imageURL, err = s.wanxClient.GenerateImageWithModel(ctx, preview.FinalPrompt, preview.Model)
 	}
 	if err != nil {
 		s.markGenerationFailed(generation, err)
@@ -198,24 +218,16 @@ func (s *StoryboardCoverService) loadStoryboardContext(storyboardID int64) (*mod
 	return storyboard, scene, nil
 }
 
-func (s *StoryboardCoverService) buildGenerationPreview(storyboard *models.Storyboard, scene *models.Scene, publicBaseURL string, forceTextOnly bool) (*StoryboardCoverGenerationPreview, error) {
+func (s *StoryboardCoverService) buildGenerationPreview(storyboard *models.Storyboard, scene *models.Scene, publicBaseURL string, forceTextOnly bool, selectedModel string) (*StoryboardCoverGenerationPreview, error) {
 	fields := buildStoryboardCoverFields(storyboard, scene)
 	referenceImages, missingReferences, err := s.selectReferenceImages(storyboard, scene, publicBaseURL)
 	if err != nil {
 		return nil, err
 	}
 
-	mode := "text-only"
-	model := strings.TrimSpace(config.GlobalConfig.WanxModel)
-	if model == "" {
-		model = "qwen-image-2.0"
-	}
-	if !forceTextOnly && len(referenceImages) > 0 {
-		mode = "reference"
-		model = strings.TrimSpace(config.GlobalConfig.WanxReferenceModel)
-		if model == "" {
-			model = "wan2.7-image-pro"
-		}
+	mode, model, err := s.resolveGenerationModeAndModel(forceTextOnly, selectedModel, len(referenceImages) > 0)
+	if err != nil {
+		return nil, err
 	}
 
 	return &StoryboardCoverGenerationPreview{
@@ -227,6 +239,50 @@ func (s *StoryboardCoverService) buildGenerationPreview(storyboard *models.Story
 		FinalPrompt:                  buildStoryboardCoverPrompt(fields, referenceImages),
 		CanGenerateWithoutReferences: true,
 	}, nil
+}
+
+func (s *StoryboardCoverService) resolveGenerationModeAndModel(forceTextOnly bool, selectedModel string, hasReferences bool) (string, string, error) {
+	normalized := strings.TrimSpace(selectedModel)
+	if normalized == "" || normalized == "auto" {
+		mode := "text-only"
+		model := strings.TrimSpace(config.GlobalConfig.WanxModel)
+		if model == "" {
+			model = "qwen-image-2.0"
+		}
+		if !forceTextOnly && hasReferences {
+			mode = "reference"
+			model = strings.TrimSpace(config.GlobalConfig.WanxReferenceModel)
+			if model == "" {
+				model = "wan2.7-image-pro"
+			}
+		}
+		return mode, model, nil
+	}
+
+	mode := "text-only"
+	if !forceTextOnly && hasReferences {
+		mode = "reference"
+	}
+
+	switch normalized {
+	case "qwen-image-2.0", "wan2.7-image-pro":
+		return mode, normalized, nil
+	case "seedream-4.5":
+		model := s.seedreamModelName()
+		if model == "" {
+			return "", "", fmt.Errorf("未配置 Seedream 模型")
+		}
+		return mode, model, nil
+	default:
+		return "", "", fmt.Errorf("不支持的封面模型: %s", normalized)
+	}
+}
+
+func (s *StoryboardCoverService) seedreamModelName() string {
+	if trimmed := strings.TrimSpace(config.GlobalConfig.SeedreamImageModel); trimmed != "" {
+		return trimmed
+	}
+	return "doubao-seedream-4-5-251128"
 }
 
 func buildStoryboardCoverFields(storyboard *models.Storyboard, scene *models.Scene) StoryboardCoverGenerationFields {

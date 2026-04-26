@@ -76,7 +76,10 @@ import {
 } from "../api";
 
 const COVER_MODEL_OPTIONS = [
+  { value: "auto", label: "自动选择模型" },
   { value: "qwen-image-2.0", label: "Qwen Image 2.0" },
+  { value: "wan2.7-image-pro", label: "Wan 2.7 Image Pro" },
+  { value: "seedream-4.5", label: "Seedream 4.5" },
 ] as const;
 
 const VIDEO_MODEL_OPTIONS = [
@@ -221,7 +224,7 @@ export default function Workspace() {
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string; items?: { src: string; alt: string }[]; currentIndex?: number } | null>(null);
-  const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>(COVER_MODEL_OPTIONS[0].value);
+  const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>("auto");
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
   const [storyboardViewMode, setStoryboardViewMode] = useState<"grid" | "list">("grid");
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
@@ -593,7 +596,10 @@ export default function Workspace() {
     setGeneratingCoverId(selectedShot.id);
     setPendingGeneratedShotId(selectedShot.id);
     try {
-      const result = await storyboardApi.generateStoryboardCover(selectedShot.id, useTextOnly ? { use_text_only: true } : undefined);
+      const result = await storyboardApi.generateStoryboardCover(selectedShot.id, {
+        ...(selectedCoverModel !== "auto" ? { model: selectedCoverModel } : {}),
+        ...(useTextOnly ? { use_text_only: true } : {}),
+      });
       const nextShot = result.storyboard;
       setStoryboards((prev) =>
         prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)),
@@ -652,7 +658,7 @@ export default function Workspace() {
 
     setIsLoadingCoverPreview(true);
     try {
-      const preview = await storyboardApi.getStoryboardCoverGenerationPreview(selectedShot.id);
+      const preview = await storyboardApi.getStoryboardCoverGenerationPreview(selectedShot.id, selectedCoverModel !== "auto" ? { model: selectedCoverModel } : undefined);
       setCoverGenerationPreview(preview);
       setIsCoverConfirmOpen(true);
     } catch (error) {
@@ -1705,14 +1711,24 @@ export default function Workspace() {
                     </div>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2">
-                        <div
-                          className="flex-1 rounded-md border border-gray-700 bg-[#1a1a1a] px-3 py-2"
-                          title="自动选择：有参考图时使用 Wan 2.7 Image Pro，无参考图时使用 Qwen Image 2.0"
-                        >
-                          <div className="text-sm text-gray-200 leading-tight">自动选择模型</div>
-                          <div className="mt-1 text-[11px] leading-tight text-gray-500">
-                            参考图：Wan 2.7 Image Pro / 纯文本：Qwen Image 2.0
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <Select value={selectedCoverModel} onValueChange={(value) => setSelectedCoverModel(value as typeof selectedCoverModel)}>
+                            <SelectTrigger className="w-full bg-[#1a1a1a] border-gray-700 min-h-10 h-auto text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                              {COVER_MODEL_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {selectedCoverModel === "auto" && (
+                            <div className="mt-1 px-1 text-[11px] leading-tight text-gray-500">
+                              参考图：Wan 2.7 Image Pro / 纯文本：Qwen Image 2.0
+                            </div>
+                          )}
                         </div>
                         <Button
                           type="button"
@@ -2486,7 +2502,7 @@ export default function Workspace() {
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
             <div className="flex justify-between gap-4"><span className="text-gray-500">场景标题</span><span>{selectedScene?.title || "-"}</span></div>
             <div className="flex justify-between gap-4"><span className="text-gray-500">镜头数量</span><span>{filteredShots.length}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedCoverModel}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{COVER_MODEL_OPTIONS.find((option) => option.value === selectedCoverModel)?.label || selectedCoverModel}</span></div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>

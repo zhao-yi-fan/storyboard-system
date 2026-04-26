@@ -43,6 +43,10 @@ type Config struct {
 	SeedanceBaseURL                     string
 	SeedanceModel                       string
 	SeedanceRequestTimeoutSeconds       int
+	SeedreamImageAPIKey                 string
+	SeedreamImageBaseURL                string
+	SeedreamImageModel                  string
+	SeedreamImageTimeoutSeconds         int
 	OpenAIAPIKey                        string
 	OpenAIImageBaseURL                  string
 	OpenAIImageModel                    string
@@ -90,6 +94,10 @@ func Load() {
 		SeedanceBaseURL:                     getEnv("SEEDANCE_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
 		SeedanceModel:                       getEnv("SEEDANCE_MODEL", "doubao-seedance-1-5-pro-251215"),
 		SeedanceRequestTimeoutSeconds:       getEnvInt("SEEDANCE_REQUEST_TIMEOUT_SECONDS", 300),
+		SeedreamImageAPIKey:                 getEnv("SEEDREAM_IMAGE_API_KEY", getEnv("ARK_API_KEY", "")),
+		SeedreamImageBaseURL:                getEnv("SEEDREAM_IMAGE_BASE_URL", "https://operator.las.cn-beijing.volces.com/api/v1"),
+		SeedreamImageModel:                  getEnv("SEEDREAM_IMAGE_MODEL", "doubao-seedream-4-5-251128"),
+		SeedreamImageTimeoutSeconds:         getEnvInt("SEEDREAM_IMAGE_TIMEOUT_SECONDS", 180),
 		OpenAIAPIKey:                        getEnv("OPENAI_API_KEY", ""),
 		OpenAIImageBaseURL:                  getEnv("OPENAI_IMAGE_BASE_URL", "https://api.openai.com/v1"),
 		OpenAIImageModel:                    getEnv("OPENAI_IMAGE_MODEL", "gpt-image-2"),
@@ -156,10 +164,31 @@ func (c Config) ValidateOpenAIImageConfig() error {
 	}
 }
 
+func (c Config) ValidateSeedreamImageConfig() error {
+	switch {
+	case c.SeedreamImageAPIKey == "":
+		return fmt.Errorf("Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY")
+	case c.SeedreamImageBaseURL == "":
+		return fmt.Errorf("Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_BASE_URL")
+	case c.SeedreamImageModel == "":
+		return fmt.Errorf("Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_MODEL")
+	default:
+		return nil
+	}
+}
+
 var SupportedVideoModels = map[string]struct{}{
 	"wan2.6-i2v-flash": {},
 	"wan2.7-i2v":       {},
 	"seedance-2.0":     {},
+}
+
+var SupportedCoverModels = map[string]struct{}{
+	"":                 {},
+	"auto":             {},
+	"qwen-image-2.0":   {},
+	"wan2.7-image-pro": {},
+	"seedream-4.5":     {},
 }
 
 func IsSupportedVideoModel(model string) bool {
@@ -169,6 +198,11 @@ func IsSupportedVideoModel(model string) bool {
 
 func IsSeedanceVideoModel(model string) bool {
 	return strings.HasPrefix(strings.TrimSpace(model), "seedance")
+}
+
+func IsSupportedCoverModel(model string) bool {
+	_, ok := SupportedCoverModels[strings.TrimSpace(model)]
+	return ok
 }
 
 func (c Config) ValidateWanxConfig() error {

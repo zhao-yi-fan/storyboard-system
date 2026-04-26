@@ -76,11 +76,16 @@ export function deleteStoryboard(id: number) {
   return apiClient.delete<{ success: boolean }>(`/storyboards/${id}`);
 }
 
-export function getStoryboardCoverGenerationPreview(id: number) {
-  return apiClient.get<StoryboardCoverGenerationPreview>(`/storyboards/${id}/cover-generation-preview`);
+export function getStoryboardCoverGenerationPreview(id: number, data?: { model?: string }) {
+  const params = new URLSearchParams();
+  if (data?.model) {
+    params.set("model", data.model);
+  }
+  const query = params.toString();
+  return apiClient.get<StoryboardCoverGenerationPreview>(`/storyboards/${id}/cover-generation-preview${query ? `?${query}` : ""}`);
 }
 
-export function generateStoryboardCover(id: number, data?: { use_text_only?: boolean }) {
+export function generateStoryboardCover(id: number, data?: { model?: string; use_text_only?: boolean }) {
   return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`, data ?? {});
 }
 
