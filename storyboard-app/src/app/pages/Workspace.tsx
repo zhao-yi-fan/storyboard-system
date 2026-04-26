@@ -2764,7 +2764,7 @@ export default function Workspace() {
         }}
       >
         <DialogContent className="!max-w-[98vw] h-[96vh] max-h-[96vh] w-[98vw] overflow-hidden border-gray-800 bg-[#111111] text-gray-100 flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{previewSceneVideo?.title || "场景视频预览"}</DialogTitle>
             <DialogDescription className="text-gray-400">
               默认播放预览版视频。需要查看原始输出时，可在下方打开原视频。
@@ -2772,14 +2772,16 @@ export default function Workspace() {
           </DialogHeader>
           {previewSceneVideo ? (
             <div className="flex min-h-0 flex-1 flex-col gap-4">
-              <video
-                key={previewSceneVideo.src}
-                src={previewSceneVideo.src}
-                controls
-                preload="metadata"
-                className="min-h-0 h-full w-full rounded-lg bg-black object-contain"
-              />
-              <div className="flex justify-end">
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black">
+                <video
+                  key={previewSceneVideo.src}
+                  src={previewSceneVideo.src}
+                  controls
+                  preload="metadata"
+                  className="max-h-full w-full rounded-lg bg-black object-contain"
+                />
+              </div>
+              <div className="flex flex-shrink-0 justify-end">
                 <Button
                   type="button"
                   variant="outline"
@@ -2806,22 +2808,24 @@ export default function Workspace() {
         }}
       >
         <DialogContent className="!max-w-[98vw] h-[96vh] max-h-[96vh] w-[98vw] overflow-hidden border-gray-800 bg-[#111111] text-gray-100 flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{previewProjectVideo?.title || "项目总片预览"}</DialogTitle>
             <DialogDescription className="text-gray-400">
               默认播放预览版项目总片。需要查看原始输出时，可在下方打开原视频。
             </DialogDescription>
           </DialogHeader>
           {previewProjectVideo ? (
-            <div className="space-y-4">
-              <video
-                key={previewProjectVideo.src}
-                src={previewProjectVideo.src}
-                controls
-                preload="metadata"
-                className="min-h-0 h-full w-full rounded-lg bg-black object-contain"
-              />
-              <div className="flex justify-end">
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black">
+                <video
+                  key={previewProjectVideo.src}
+                  src={previewProjectVideo.src}
+                  controls
+                  preload="metadata"
+                  className="max-h-full w-full rounded-lg bg-black object-contain"
+                />
+              </div>
+              <div className="flex flex-shrink-0 justify-end">
                 <Button
                   type="button"
                   variant="outline"
