@@ -78,7 +78,7 @@ func Load() {
 		WanxBaseURL:                         getEnv("WANX_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
 		WanxModel:                           getEnv("WANX_MODEL", "wanx2.0-t2i-turbo"),
 		WanxReferenceModel:                  getEnv("WANX_REFERENCE_MODEL", "wan2.7-image-pro"),
-		WanxRequestTimeoutSeconds:           getEnvInt("WANX_REQUEST_TIMEOUT_SECONDS", 120),
+		WanxRequestTimeoutSeconds:           getEnvInt("WANX_REQUEST_TIMEOUT_SECONDS", 300),
 		WanxVideoBaseURL:                    getEnv("WANX_VIDEO_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
 		WanxVideoModel:                      getEnv("WANX_VIDEO_MODEL", "wan2.7-i2v"),
 		WanxVideoRequestTimeoutSeconds:      getEnvInt("WANX_VIDEO_REQUEST_TIMEOUT_SECONDS", 300),
