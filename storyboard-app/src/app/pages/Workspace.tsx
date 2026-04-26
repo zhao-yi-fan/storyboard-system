@@ -2793,6 +2793,7 @@ export default function Workspace() {
                   key={previewSceneVideo.src}
                   src={previewSceneVideo.src}
                   controls
+                  autoPlay
                   preload="metadata"
                   className="max-h-full w-full rounded-lg bg-black object-contain"
                 />
@@ -2837,6 +2838,7 @@ export default function Workspace() {
                   key={previewProjectVideo.src}
                   src={previewProjectVideo.src}
                   controls
+                  autoPlay
                   preload="metadata"
                   className="max-h-full w-full rounded-lg bg-black object-contain"
                 />
