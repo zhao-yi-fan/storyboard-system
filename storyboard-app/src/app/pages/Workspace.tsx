@@ -84,7 +84,7 @@ const COVER_MODEL_OPTIONS = [
 
 const VIDEO_MODEL_OPTIONS = [
   { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
-  { value: "seedance-2.0", label: "Seedance（当前 1.5 Pro 通道）" },
+  { value: "seedance-1.5-pro", label: "Seedance 1.5 Pro" },
   { value: "wan2.6-i2v-flash", label: "Wan 2.6 I2V Flash" },
 ] as const;
 
@@ -173,7 +173,7 @@ const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
-const isSeedanceVideoModel = (model: string) => model === "seedance-2.0";
+const isSeedanceVideoModel = (model: string) => model === "seedance-1.5-pro";
 
 const getVideoGenerationDuration = (model: string) => (isSeedanceVideoModel(model) ? 5 : 5);
 

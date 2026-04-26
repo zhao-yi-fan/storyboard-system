@@ -180,7 +180,7 @@ func (c Config) ValidateSeedreamImageConfig() error {
 var SupportedVideoModels = map[string]struct{}{
 	"wan2.6-i2v-flash": {},
 	"wan2.7-i2v":       {},
-	"seedance-2.0":     {},
+	"seedance-1.5-pro": {},
 }
 
 var SupportedCoverModels = map[string]struct{}{
