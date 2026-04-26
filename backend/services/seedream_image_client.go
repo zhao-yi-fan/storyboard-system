@@ -54,7 +54,7 @@ func (c *SeedreamImageClient) GenerateImage(ctx context.Context, prompt string, 
 	payload := seedreamImageRequest{
 		Model:          c.model,
 		Prompt:         strings.TrimSpace(prompt),
-		Size:           "2048x1152",
+		Size:           "2560x1440",
 		ResponseFormat: "url",
 		Watermark:      false,
 	}
