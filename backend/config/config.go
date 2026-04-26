@@ -95,7 +95,7 @@ func Load() {
 		SeedanceModel:                       getEnv("SEEDANCE_MODEL", "doubao-seedance-1-5-pro-251215"),
 		SeedanceRequestTimeoutSeconds:       getEnvInt("SEEDANCE_REQUEST_TIMEOUT_SECONDS", 300),
 		SeedreamImageAPIKey:                 getEnv("SEEDREAM_IMAGE_API_KEY", getEnv("ARK_API_KEY", "")),
-		SeedreamImageBaseURL:                getEnv("SEEDREAM_IMAGE_BASE_URL", "https://operator.las.cn-beijing.volces.com/api/v1"),
+		SeedreamImageBaseURL:                getEnv("SEEDREAM_IMAGE_BASE_URL", getEnv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")),
 		SeedreamImageModel:                  getEnv("SEEDREAM_IMAGE_MODEL", "doubao-seedream-4-5-251128"),
 		SeedreamImageTimeoutSeconds:         getEnvInt("SEEDREAM_IMAGE_TIMEOUT_SECONDS", 180),
 		OpenAIAPIKey:                        getEnv("OPENAI_API_KEY", ""),

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -82,26 +81,11 @@ func (c *SeedreamImageClient) GenerateImage(ctx context.Context, prompt string, 
 		return "", fmt.Errorf("序列化 Seedream 4.5 请求失败: %w", err)
 	}
 
-	// Prefer the documented non-streaming endpoint first. The online endpoint can
-	// return an empty/non-JSON body for this use case, which should not stop us
-	// from falling back to the standard image generations route.
-	paths := []string{"/images/generations", "/online/images/generations"}
-	var lastErr error
-	for _, path := range paths {
-		imageURL, err := c.requestGenerate(ctx, path, body)
-		if err == nil {
-			return imageURL, nil
-		}
-		lastErr = err
-		if !seedreamShouldFallback(err) {
-			break
-		}
+	imageURL, err := c.requestGenerate(ctx, "/images/generations", body)
+	if err != nil {
+		return "", err
 	}
-
-	if lastErr == nil {
-		lastErr = fmt.Errorf("Seedream 4.5 生图失败")
-	}
-	return "", lastErr
+	return imageURL, nil
 }
 
 func (c *SeedreamImageClient) requestGenerate(ctx context.Context, path string, body []byte) (string, error) {
@@ -126,7 +110,6 @@ func (c *SeedreamImageClient) requestGenerate(ctx context.Context, path string, 
 		return "", seedreamHTTPError{
 			StatusCode: resp.StatusCode,
 			Message:    fmt.Sprintf("empty body from %s", path),
-			Fallback:   true,
 		}
 	}
 
@@ -140,7 +123,6 @@ func (c *SeedreamImageClient) requestGenerate(ctx context.Context, path string, 
 		return "", seedreamHTTPError{
 			StatusCode: resp.StatusCode,
 			Message:    fmt.Sprintf("non-json response from %s: %v", path, err),
-			Fallback:   true,
 		}
 	}
 
@@ -152,7 +134,6 @@ func (c *SeedreamImageClient) requestGenerate(ctx context.Context, path string, 
 		return "", seedreamHTTPError{
 			StatusCode: resp.StatusCode,
 			Message:    message,
-			Fallback:   resp.StatusCode == http.StatusNotFound,
 		}
 	}
 
@@ -217,7 +198,6 @@ func seedreamFirstMessage(payload map[string]any) string {
 type seedreamHTTPError struct {
 	StatusCode int
 	Message    string
-	Fallback   bool
 }
 
 func (e seedreamHTTPError) Error() string {
@@ -225,12 +205,4 @@ func (e seedreamHTTPError) Error() string {
 		return fmt.Sprintf("提交 Seedream 4.5 生图请求失败: HTTP %d %s", e.StatusCode, e.Message)
 	}
 	return fmt.Sprintf("提交 Seedream 4.5 生图请求失败: %s", e.Message)
-}
-
-func seedreamShouldFallback(err error) bool {
-	var httpErr seedreamHTTPError
-	if ok := errors.As(err, &httpErr); ok {
-		return httpErr.Fallback
-	}
-	return false
 }
