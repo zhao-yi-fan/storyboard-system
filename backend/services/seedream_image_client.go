@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -79,7 +82,10 @@ func (c *SeedreamImageClient) GenerateImage(ctx context.Context, prompt string, 
 		return "", fmt.Errorf("序列化 Seedream 4.5 请求失败: %w", err)
 	}
 
-	paths := []string{"/online/images/generations", "/images/generations"}
+	// Prefer the documented non-streaming endpoint first. The online endpoint can
+	// return an empty/non-JSON body for this use case, which should not stop us
+	// from falling back to the standard image generations route.
+	paths := []string{"/images/generations", "/online/images/generations"}
 	var lastErr error
 	for _, path := range paths {
 		imageURL, err := c.requestGenerate(ctx, path, body)
@@ -87,7 +93,7 @@ func (c *SeedreamImageClient) GenerateImage(ctx context.Context, prompt string, 
 			return imageURL, nil
 		}
 		lastErr = err
-		if !strings.Contains(err.Error(), "HTTP 404") {
+		if !seedreamShouldFallback(err) {
 			break
 		}
 	}
@@ -112,9 +118,30 @@ func (c *SeedreamImageClient) requestGenerate(ctx context.Context, path string, 
 	}
 	defer resp.Body.Close()
 
+	rawBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取 Seedream 4.5 响应失败: %w", err)
+	}
+	if len(bytes.TrimSpace(rawBody)) == 0 {
+		return "", seedreamHTTPError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("empty body from %s", path),
+			Fallback:   true,
+		}
+	}
+
 	var payload map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", fmt.Errorf("解析 Seedream 4.5 响应失败: %w", err)
+	if err := json.Unmarshal(rawBody, &payload); err != nil {
+		bodySnippet := strings.TrimSpace(string(rawBody))
+		if len(bodySnippet) > 240 {
+			bodySnippet = bodySnippet[:240] + "..."
+		}
+		log.Printf("[seedream-image] non-json response path=%s status=%d body=%q", path, resp.StatusCode, bodySnippet)
+		return "", seedreamHTTPError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("non-json response from %s: %v", path, err),
+			Fallback:   true,
+		}
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -122,7 +149,11 @@ func (c *SeedreamImageClient) requestGenerate(ctx context.Context, path string, 
 		if message == "" {
 			message = fmt.Sprintf("HTTP %d", resp.StatusCode)
 		}
-		return "", fmt.Errorf("提交 Seedream 4.5 生图请求失败: %s", message)
+		return "", seedreamHTTPError{
+			StatusCode: resp.StatusCode,
+			Message:    message,
+			Fallback:   resp.StatusCode == http.StatusNotFound,
+		}
 	}
 
 	imageURL := seedreamExtractURL(payload)
@@ -181,4 +212,25 @@ func seedreamFirstMessage(payload map[string]any) string {
 		}
 	}
 	return ""
+}
+
+type seedreamHTTPError struct {
+	StatusCode int
+	Message    string
+	Fallback   bool
+}
+
+func (e seedreamHTTPError) Error() string {
+	if e.StatusCode > 0 {
+		return fmt.Sprintf("提交 Seedream 4.5 生图请求失败: HTTP %d %s", e.StatusCode, e.Message)
+	}
+	return fmt.Sprintf("提交 Seedream 4.5 生图请求失败: %s", e.Message)
+}
+
+func seedreamShouldFallback(err error) bool {
+	var httpErr seedreamHTTPError
+	if ok := errors.As(err, &httpErr); ok {
+		return httpErr.Fallback
+	}
+	return false
 }
