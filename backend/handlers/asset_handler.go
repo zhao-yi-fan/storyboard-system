@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"storyboard-backend/config"
 	"storyboard-backend/models"
 	"storyboard-backend/pkg/response"
 	"storyboard-backend/repository"
@@ -252,6 +253,40 @@ func (h *AssetHandler) Update(c *gin.Context) {
 	}
 	normalizeAssetForResponse(asset)
 	response.Success(c, asset)
+}
+
+func (h *AssetHandler) PreviewCoverGeneration(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return
+	}
+	asset, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	if asset == nil {
+		response.Error(c, "asset not found")
+		return
+	}
+	if !canGenerateSceneAssetCover(asset.Type) {
+		response.Error(c, "当前资产类型不支持生成封面")
+		return
+	}
+	response.Success(c, AIGenerationPreview{
+		Action: "asset-cover",
+		Model:  config.GlobalConfig.WanxModel,
+		Fields: map[string]string{
+			"资产名称": strings.TrimSpace(asset.Name),
+			"资产类型": strings.TrimSpace(asset.Type),
+			"说明":   strings.TrimSpace(asset.Meta),
+			"输出":   "场景资产封面",
+		},
+		FinalPrompt: buildAssetCoverPrompt(asset),
+		Notes:       []string{"适用于场景/背景类资产，不会覆盖原始素材文件。"},
+	})
 }
 
 // GenerateCover generates a cover image for a scene/background asset.

@@ -50,6 +50,7 @@ import {
   apiClient,
   type Character,
   type Asset,
+  type AIGenerationPreview,
 } from "../api";
 
 type SelectedAsset =
@@ -63,6 +64,16 @@ type DeleteTarget =
   | { type: "character"; id: number; name: string }
   | { type: "asset"; id: number; name: string }
   | null;
+
+type AIPreviewAction = "character-cover" | "character-design-sheet" | "character-voice-reference" | "asset-cover";
+
+type AIPreviewDialogState = {
+  action: AIPreviewAction;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  preview: AIGenerationPreview;
+};
 
 const getCharacterPreviewSrc = (character: Character | null | undefined) =>
   character?.avatar_preview_url || character?.avatar_url || character?.design_sheet_preview_url || character?.design_sheet_url || "";
@@ -105,6 +116,8 @@ export default function AssetLibrary() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createMode, setCreateMode] = useState<CreateMode>("character");
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [aiPreviewDialog, setAiPreviewDialog] = useState<AIPreviewDialogState | null>(null);
+  const [isLoadingAIPreview, setIsLoadingAIPreview] = useState(false);
 
   const [newCharacter, setNewCharacter] = useState({ name: "", description: "", avatar_url: "" });
   const [newAsset, setNewAsset] = useState({ name: "", type: "scene", meta: "", file_url: "" });
@@ -336,7 +349,7 @@ export default function AssetLibrary() {
     }
   };
 
-  const generateSelectedCharacterCover = async () => {
+  const runGenerateSelectedCharacterCover = async () => {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setGeneratingCharacterCoverId(selectedAsset.data.id);
     try {
@@ -350,7 +363,7 @@ export default function AssetLibrary() {
     }
   };
 
-  const generateSelectedCharacterDesignSheet = async () => {
+  const runGenerateSelectedCharacterDesignSheet = async () => {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setGeneratingCharacterDesignSheetId(selectedAsset.data.id);
     try {
@@ -366,7 +379,7 @@ export default function AssetLibrary() {
     }
   };
 
-  const generateSelectedCharacterVoiceReference = async () => {
+  const runGenerateSelectedCharacterVoiceReference = async () => {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setGeneratingCharacterVoiceReferenceId(selectedAsset.data.id);
     try {
@@ -385,7 +398,7 @@ export default function AssetLibrary() {
     }
   };
 
-  const generateSelectedAssetCover = async () => {
+  const runGenerateSelectedAssetCover = async () => {
     if (!selectedAsset || selectedAsset.type !== "asset") return;
     setGeneratingAssetCoverId(selectedAsset.data.id);
     try {
@@ -396,6 +409,117 @@ export default function AssetLibrary() {
       console.error("Failed to generate asset cover:", error);
     } finally {
       setGeneratingAssetCoverId(null);
+    }
+  };
+
+  const openAIPreviewDialog = (state: AIPreviewDialogState) => {
+    setAiPreviewDialog(state);
+  };
+
+  const handleGenerateCharacterCover = async () => {
+    if (!selectedAsset || selectedAsset.type !== "character") return;
+    setIsLoadingAIPreview(true);
+    try {
+      const preview = await characterApi.getCharacterCoverGenerationPreview(selectedAsset.data.id);
+      openAIPreviewDialog({
+        action: "character-cover",
+        title: "确认生成角色封面",
+        description: "会为当前角色生成一张资产库展示封面。开始前可先查看本次使用的模型、结构化字段和最终 prompt。",
+        confirmLabel: "确认生成",
+        preview,
+      });
+    } catch (error) {
+      console.error("Failed to preview character cover generation:", error);
+      toast.error(error instanceof Error ? error.message : "获取角色封面预览失败");
+    } finally {
+      setIsLoadingAIPreview(false);
+    }
+  };
+
+  const handleGenerateCharacterDesignSheet = async () => {
+    if (!selectedAsset || selectedAsset.type !== "character") return;
+    setIsLoadingAIPreview(true);
+    try {
+      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(selectedAsset.data.id, {
+        mode: characterDesignSheetMode,
+      });
+      openAIPreviewDialog({
+        action: "character-design-sheet",
+        title: "确认生成主设定图",
+        description: "会为当前角色生成主设定图，并作为后续镜头封面生成的人物核心参考图。",
+        confirmLabel: "确认生成",
+        preview,
+      });
+    } catch (error) {
+      console.error("Failed to preview character design sheet generation:", error);
+      toast.error(error instanceof Error ? error.message : "获取主设定图预览失败");
+    } finally {
+      setIsLoadingAIPreview(false);
+    }
+  };
+
+  const handleGenerateCharacterVoiceReference = async () => {
+    if (!selectedAsset || selectedAsset.type !== "character") return;
+    setIsLoadingAIPreview(true);
+    try {
+      const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(selectedAsset.data.id, {
+        voice_prompt: selectedAsset.data.voice_prompt || "",
+        preview_text: selectedAsset.data.voice_reference_text || "",
+      });
+      openAIPreviewDialog({
+        action: "character-voice-reference",
+        title: "确认生成主语音参考",
+        description: "会用大模型生成当前角色的主语音参考，并绑定到角色资产上，后续对白和视频音频优先参考这段声音。",
+        confirmLabel: "确认生成",
+        preview,
+      });
+    } catch (error) {
+      console.error("Failed to preview character voice reference generation:", error);
+      toast.error(error instanceof Error ? error.message : "获取主语音参考预览失败");
+    } finally {
+      setIsLoadingAIPreview(false);
+    }
+  };
+
+  const handleGenerateAssetCover = async () => {
+    if (!selectedAsset || selectedAsset.type !== "asset") return;
+    setIsLoadingAIPreview(true);
+    try {
+      const preview = await assetApi.getAssetCoverGenerationPreview(selectedAsset.data.id);
+      openAIPreviewDialog({
+        action: "asset-cover",
+        title: "确认生成资产封面",
+        description: "会为当前场景/背景资产生成一张封面图，用于资产库预览。",
+        confirmLabel: "确认生成",
+        preview,
+      });
+    } catch (error) {
+      console.error("Failed to preview asset cover generation:", error);
+      toast.error(error instanceof Error ? error.message : "获取资产封面预览失败");
+    } finally {
+      setIsLoadingAIPreview(false);
+    }
+  };
+
+  const confirmAIPreviewGeneration = async () => {
+    if (!aiPreviewDialog) return;
+    const action = aiPreviewDialog.action;
+    setAiPreviewDialog(null);
+    switch (action) {
+      case "character-cover":
+        await runGenerateSelectedCharacterCover();
+        return;
+      case "character-design-sheet":
+        await runGenerateSelectedCharacterDesignSheet();
+        return;
+      case "character-voice-reference":
+        await runGenerateSelectedCharacterVoiceReference();
+        return;
+      case "asset-cover":
+        await runGenerateSelectedAssetCover();
+        return;
+      default:
+        return;
     }
   };
 
@@ -619,7 +743,7 @@ export default function AssetLibrary() {
                         <Users className="w-24 h-24 text-gray-700" />
                       )}
                     </div>
-                    <Button type="button" variant="outline" className="w-full border-gray-700 text-gray-200 hover:bg-gray-900" disabled={generatingCharacterCoverId === selectedAsset.data.id} onClick={generateSelectedCharacterCover}>
+                    <Button type="button" variant="outline" className="w-full border-gray-700 text-gray-200 hover:bg-gray-900" disabled={generatingCharacterCoverId === selectedAsset.data.id} onClick={() => void handleGenerateCharacterCover()}>
                       {generatingCharacterCoverId === selectedAsset.data.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />正在生成</> : <><Sparkles className="w-4 h-4 mr-2" />生成封面</>}
                     </Button>
                     <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
@@ -672,7 +796,7 @@ export default function AssetLibrary() {
                           variant="outline"
                           className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
                           disabled={generatingCharacterDesignSheetId === selectedAsset.data.id}
-                          onClick={generateSelectedCharacterDesignSheet}
+                          onClick={() => void handleGenerateCharacterDesignSheet()}
                         >
                           {generatingCharacterDesignSheetId === selectedAsset.data.id ? (
                             <>
@@ -742,7 +866,7 @@ export default function AssetLibrary() {
                         variant="outline"
                         className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
                         disabled={generatingCharacterVoiceReferenceId === selectedAsset.data.id}
-                        onClick={generateSelectedCharacterVoiceReference}
+                        onClick={() => void handleGenerateCharacterVoiceReference()}
                       >
                         {generatingCharacterVoiceReferenceId === selectedAsset.data.id ? (
                           <>
@@ -773,7 +897,7 @@ export default function AssetLibrary() {
                         <MapPin className="w-24 h-24 text-gray-700" />
                       )}
                     </div>
-                    <Button type="button" variant="outline" className="w-full border-gray-700 text-gray-200 hover:bg-gray-900" disabled={generatingAssetCoverId === selectedAsset.data.id} onClick={generateSelectedAssetCover}>
+                    <Button type="button" variant="outline" className="w-full border-gray-700 text-gray-200 hover:bg-gray-900" disabled={generatingAssetCoverId === selectedAsset.data.id} onClick={() => void handleGenerateAssetCover()}>
                       {generatingAssetCoverId === selectedAsset.data.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />正在生成</> : <><Sparkles className="w-4 h-4 mr-2" />生成封面</>}
                     </Button>
                     <div><Label className="text-xs text-gray-400">场景名称</Label><Input value={selectedAsset.data.name} onChange={(e) => setSelectedAsset({ type: "asset", data: { ...selectedAsset.data, name: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
@@ -793,6 +917,48 @@ export default function AssetLibrary() {
           </>
         ) : null}
       </div>
+
+      <Dialog open={!!aiPreviewDialog} onOpenChange={(open) => { if (!open) setAiPreviewDialog(null); }}>
+        <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{aiPreviewDialog?.title || "确认 AI 生成"}</DialogTitle>
+            <DialogDescription className="text-gray-400 leading-6">
+              {aiPreviewDialog?.description || ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="flex justify-between gap-4"><span className="text-gray-500">实际模型</span><span>{aiPreviewDialog?.preview.model || "-"}</span></div>
+              {aiPreviewDialog?.preview.notes?.length ? (
+                <div>
+                  <div className="text-gray-500 mb-1">说明</div>
+                  <ul className="space-y-1 text-xs text-gray-300 list-disc pl-5">
+                    {aiPreviewDialog.preview.notes.map((note, index) => (
+                      <li key={`${note}-${index}`}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">详细参数</div>
+              <div className="grid gap-2 md:grid-cols-2 text-xs">
+                {Object.entries(aiPreviewDialog?.preview.fields || {}).map(([key, value]) => (
+                  <div key={key}><span className="text-gray-500">{key}：</span><span>{value || "-"}</span></div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">最终 Prompt</div>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{aiPreviewDialog?.preview.final_prompt || "-"}</pre>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setAiPreviewDialog(null)}>取消</Button>
+            <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmAIPreviewGeneration()} disabled={isLoadingAIPreview}>{aiPreviewDialog?.confirmLabel || "确认生成"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) resetCreateState(); }}>
         <DialogContent

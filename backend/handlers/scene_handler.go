@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"storyboard-backend/config"
 	"storyboard-backend/models"
 	"storyboard-backend/pkg/response"
 	"storyboard-backend/repository"
@@ -223,6 +224,32 @@ func (h *SceneHandler) Delete(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"success": true})
+}
+
+func (h *SceneHandler) PreviewCoverGeneration(c *gin.Context) {
+	id, scene, ok := h.loadSceneContext(c)
+	if !ok {
+		return
+	}
+	storyboards, err := h.storyboardRepo.FindBySceneID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	response.Success(c, AIGenerationPreview{
+		Action: "scene-cover",
+		Model:  config.GlobalConfig.WanxModel,
+		Fields: map[string]string{
+			"场景标题": strings.TrimSpace(scene.Title),
+			"地点":   strings.TrimSpace(scene.Location),
+			"时间":   strings.TrimSpace(scene.TimeOfDay),
+			"场景描述": strings.TrimSpace(scene.Description),
+			"镜头数量": fmt.Sprintf("%d", len(storyboards)),
+			"输出":   "场景级代表封面",
+		},
+		FinalPrompt: services.BuildSceneCoverPrompt(scene, storyboards),
+		Notes:       []string{"场景封面用于场景树和场景头部预览，强调代表性和叙事感。"},
+	})
 }
 
 // GenerateCover generates and attaches a cover image for a scene.

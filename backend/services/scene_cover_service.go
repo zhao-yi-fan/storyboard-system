@@ -87,6 +87,10 @@ func (s *SceneCoverService) GenerateAndAttach(sceneID int64) (*models.Scene, err
 	return s.sceneRepo.FindByID(scene.ID)
 }
 
+func BuildSceneCoverPrompt(scene *models.Scene, storyboards []models.Storyboard) string {
+	return buildSceneCoverPrompt(scene, storyboards)
+}
+
 func buildSceneCoverPrompt(scene *models.Scene, storyboards []models.Storyboard) string {
 	var b strings.Builder
 	b.WriteString("为漫画场景生成一张代表性横版封面图。")

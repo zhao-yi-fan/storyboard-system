@@ -102,6 +102,7 @@ func main() {
 			scenes.GET("/:id", sceneHandler.GetByID)
 			scenes.PUT("/:id", sceneHandler.Update)
 			scenes.DELETE("/:id", sceneHandler.Delete)
+			scenes.GET("/:id/cover-generation-preview", sceneHandler.PreviewCoverGeneration)
 			scenes.POST("/:id/generate-cover", sceneHandler.GenerateCover)
 			scenes.POST("/:id/generate-storyboard-covers", sceneHandler.GenerateStoryboardCovers)
 			scenes.POST("/:id/compose-video", sceneHandler.ComposeVideo)
@@ -132,6 +133,9 @@ func main() {
 			characters.GET("/:id", characterHandler.GetByID)
 			characters.PUT("/:id", characterHandler.Update)
 			characters.DELETE("/:id", characterHandler.Delete)
+			characters.GET("/:id/cover-generation-preview", characterHandler.PreviewCoverGeneration)
+			characters.GET("/:id/design-sheet-generation-preview", characterHandler.PreviewDesignSheetGeneration)
+			characters.GET("/:id/voice-reference-generation-preview", characterHandler.PreviewVoiceReferenceGeneration)
 
 			characters.POST("/:id/generate-cover", characterHandler.GenerateCover)
 			characters.POST("/:id/generate-design-sheet", characterHandler.GenerateDesignSheet)
@@ -146,6 +150,7 @@ func main() {
 		{
 			assets.PUT("/:id", assetHandler.Update)
 			assets.DELETE("/:id", assetHandler.Delete)
+			assets.GET("/:id/cover-generation-preview", assetHandler.PreviewCoverGeneration)
 			assets.POST("/:id/generate-cover", assetHandler.GenerateCover)
 		}
 

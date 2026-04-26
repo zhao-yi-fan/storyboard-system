@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"storyboard-backend/config"
 	"storyboard-backend/models"
 	"storyboard-backend/pkg/response"
 	"storyboard-backend/repository"
@@ -210,6 +211,73 @@ func (h *CharacterHandler) Update(c *gin.Context) {
 	h.ensureDesignSheetPreview(c, character)
 	normalizeCharacterForResponse(character)
 	response.Success(c, character)
+}
+
+func (h *CharacterHandler) PreviewCoverGeneration(c *gin.Context) {
+	character, ok := h.loadCharacterContext(c)
+	if !ok {
+		return
+	}
+	response.Success(c, AIGenerationPreview{
+		Action: "character-cover",
+		Model:  config.GlobalConfig.WanxModel,
+		Fields: map[string]string{
+			"角色名称": strings.TrimSpace(character.Name),
+			"角色描述": strings.TrimSpace(character.Description),
+			"输出":   "单人角色封面头像",
+		},
+		FinalPrompt: buildCharacterCoverPrompt(character),
+		Notes:       []string{"用于资产库展示，重点是角色识别度和构图干净。"},
+	})
+}
+
+func (h *CharacterHandler) PreviewDesignSheetGeneration(c *gin.Context) {
+	character, ok := h.loadCharacterContext(c)
+	if !ok {
+		return
+	}
+	mode, model := resolveCharacterDesignSheetMode(c.DefaultQuery("mode", "final"))
+	response.Success(c, AIGenerationPreview{
+		Action: "character-design-sheet",
+		Model:  model,
+		Fields: map[string]string{
+			"角色名称": strings.TrimSpace(character.Name),
+			"角色描述": strings.TrimSpace(character.Description),
+			"生成档位": mode,
+			"输出":   "角色主设定图",
+		},
+		FinalPrompt: buildCharacterDesignSheetPrompt(character, mode),
+		Notes:       []string{"主设定图会作为后续镜头封面生成的人物核心参考图。"},
+	})
+}
+
+func (h *CharacterHandler) PreviewVoiceReferenceGeneration(c *gin.Context) {
+	character, ok := h.loadCharacterContext(c)
+	if !ok {
+		return
+	}
+	preview, err := h.voiceDesignService.BuildCharacterVoicePreview(
+		character,
+		strings.TrimSpace(c.Query("voice_prompt")),
+		strings.TrimSpace(c.Query("preview_text")),
+	)
+	if err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	response.Success(c, AIGenerationPreview{
+		Action: "character-voice-reference",
+		Model:  preview.DesignModel,
+		Fields: map[string]string{
+			"角色名称":   strings.TrimSpace(character.Name),
+			"角色描述":   strings.TrimSpace(character.Description),
+			"目标语音模型": preview.TargetModel,
+			"音色名称":   preview.PreferredVoiceName,
+			"参考文本":   preview.PreviewText,
+		},
+		FinalPrompt: preview.VoicePrompt,
+		Notes:       []string{"这段主语音参考会绑定到当前角色，后续对白和视频音频优先参考该声音。"},
+	})
 }
 
 func (h *CharacterHandler) GenerateCover(c *gin.Context) {
@@ -489,4 +557,23 @@ func resolveCharacterDesignSheetMode(raw string) (string, string) {
 	default:
 		return "final", "wan2.7-image-pro"
 	}
+}
+
+func (h *CharacterHandler) loadCharacterContext(c *gin.Context) (*models.Character, bool) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.Error(c, "invalid id")
+		return nil, false
+	}
+	character, err := h.repo.FindByID(id)
+	if err != nil {
+		response.Error(c, err.Error())
+		return nil, false
+	}
+	if character == nil {
+		response.Error(c, "character not found")
+		return nil, false
+	}
+	return character, true
 }

@@ -33,6 +33,14 @@ type VoiceDesignResult struct {
 	VoicePrompt            string
 }
 
+type VoiceDesignPreview struct {
+	DesignModel        string
+	TargetModel        string
+	VoicePrompt        string
+	PreviewText        string
+	PreferredVoiceName string
+}
+
 type dashScopeVoiceDesignRequest struct {
 	Model      string                         `json:"model"`
 	Input      dashScopeVoiceDesignInput      `json:"input"`
@@ -77,6 +85,27 @@ func NewVoiceDesignService() *VoiceDesignService {
 		httpClient: &http.Client{Timeout: timeout},
 		ossService: NewOSSService(),
 	}
+}
+
+func (s *VoiceDesignService) BuildCharacterVoicePreview(character *models.Character, customPrompt, customText string) (*VoiceDesignPreview, error) {
+	if character == nil {
+		return nil, fmt.Errorf("角色不存在")
+	}
+	voicePrompt := strings.TrimSpace(customPrompt)
+	if voicePrompt == "" {
+		voicePrompt = buildCharacterVoicePrompt(character)
+	}
+	previewText := strings.TrimSpace(customText)
+	if previewText == "" {
+		previewText = buildCharacterVoiceReferenceText(character)
+	}
+	return &VoiceDesignPreview{
+		DesignModel:        config.GlobalConfig.DashScopeVoiceDesignModel,
+		TargetModel:        config.GlobalConfig.DashScopeVoiceTargetModel,
+		VoicePrompt:        voicePrompt,
+		PreviewText:        previewText,
+		PreferredVoiceName: preferredVoiceName(character),
+	}, nil
 }
 
 func (s *VoiceDesignService) GenerateCharacterVoiceReference(ctx context.Context, character *models.Character, customPrompt, customText string) (*VoiceDesignResult, error) {

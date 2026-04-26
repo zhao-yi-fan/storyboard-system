@@ -72,6 +72,7 @@ import {
   type StoryboardCoverGenerationPreview,
   type StoryboardVideoGenerationPreview,
   type StoryboardMediaGeneration,
+  type AIGenerationPreview,
 } from "../api";
 
 const COVER_MODEL_OPTIONS = [
@@ -230,6 +231,8 @@ export default function Workspace() {
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
+  const [sceneCoverGenerationPreview, setSceneCoverGenerationPreview] = useState<AIGenerationPreview | null>(null);
+  const [isLoadingSceneCoverPreview, setIsLoadingSceneCoverPreview] = useState(false);
   const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
   const [isSceneVideoConfirmOpen, setIsSceneVideoConfirmOpen] = useState(false);
   const [isProjectVideoConfirmOpen, setIsProjectVideoConfirmOpen] = useState(false);
@@ -700,10 +703,23 @@ export default function Workspace() {
     await runGenerateVideo();
   };
   const handleGenerateSceneCover = () => {
-    if (!selectedScene || isGeneratingSceneCover) {
+    if (!selectedScene || isGeneratingSceneCover || isLoadingSceneCoverPreview) {
       return;
     }
-    setIsSceneCoverConfirmOpen(true);
+    setIsLoadingSceneCoverPreview(true);
+    void sceneApi
+      .getSceneCoverGenerationPreview(selectedScene.id)
+      .then((preview) => {
+        setSceneCoverGenerationPreview(preview);
+        setIsSceneCoverConfirmOpen(true);
+      })
+      .catch((error) => {
+        console.error("Failed to preview scene cover generation:", error);
+        toast.error(error instanceof Error ? error.message : "获取场景封面预览失败");
+      })
+      .finally(() => {
+        setIsLoadingSceneCoverPreview(false);
+      });
   };
 
   const runGenerateSceneCover = async () => {
@@ -1328,7 +1344,7 @@ export default function Workspace() {
                   onClick={handleGenerateSceneCover}
                   disabled={!selectedScene || isGeneratingSceneCover}
                 >
-                  {isGeneratingSceneCover ? (
+                  {isGeneratingSceneCover || isLoadingSceneCoverPreview ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       正在生成
@@ -2417,25 +2433,47 @@ export default function Workspace() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isSceneCoverConfirmOpen} onOpenChange={setIsSceneCoverConfirmOpen}>
-        <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认生成场景封面</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400 leading-6">
-              会为当前场景生成 1 张场景级代表封面，并消耗图像模型额度。该封面用于场景树和当前场景头部预览。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-gray-500">场景标题</span><span>{selectedScene?.title || "-"}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{selectedCoverModel}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">输出</span><span>1 张场景封面</span></div>
+      <Dialog open={isSceneCoverConfirmOpen} onOpenChange={setIsSceneCoverConfirmOpen}>
+        <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>确认生成场景封面</DialogTitle>
+            <DialogDescription className="text-gray-400 leading-6">
+              会为当前场景生成 1 张场景级代表封面。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="flex justify-between gap-4"><span className="text-gray-500">实际模型</span><span>{sceneCoverGenerationPreview?.model || "-"}</span></div>
+              {sceneCoverGenerationPreview?.notes?.length ? (
+                <div>
+                  <div className="text-gray-500 mb-1">说明</div>
+                  <ul className="space-y-1 text-xs text-gray-300 list-disc pl-5">
+                    {sceneCoverGenerationPreview.notes.map((note, index) => (
+                      <li key={`${note}-${index}`}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">详细参数</div>
+              <div className="grid gap-2 md:grid-cols-2 text-xs">
+                {Object.entries(sceneCoverGenerationPreview?.fields || {}).map(([key, value]) => (
+                  <div key={key}><span className="text-gray-500">{key}：</span><span>{value || "-"}</span></div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">最终 Prompt</div>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{sceneCoverGenerationPreview?.final_prompt || "-"}</pre>
+            </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmGenerateSceneCover}>确认生成</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setIsSceneCoverConfirmOpen(false)}>取消</Button>
+            <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateSceneCover()}>确认生成</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={isBatchSceneCoverConfirmOpen} onOpenChange={setIsBatchSceneCoverConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">

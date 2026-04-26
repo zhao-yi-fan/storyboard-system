@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
 import type {
+  AIGenerationPreview,
   ComposeSceneVideoResult,
   GenerateSceneCoverResult,
   GenerateSceneStoryboardCoversResult,
@@ -30,6 +31,10 @@ export function updateScene(
 
 export function deleteScene(id: number) {
   return apiClient.delete<{ success: boolean }>(`/scenes/${id}`);
+}
+
+export function getSceneCoverGenerationPreview(id: number) {
+  return apiClient.get<AIGenerationPreview>(`/scenes/${id}/cover-generation-preview`);
 }
 
 export function generateSceneCover(id: number) {

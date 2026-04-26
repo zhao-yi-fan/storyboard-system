@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Asset } from "./types";
+import type { AIGenerationPreview, Asset } from "./types";
 
 export function getAssetsByProject(projectId: number) {
   return apiClient.get<Asset[]>(`/projects/${projectId}/assets`);
@@ -21,6 +21,10 @@ export function updateAsset(
   data: { character_id?: number; name?: string; type?: string; file_url?: string; meta?: string }
 ) {
   return apiClient.put<Asset>(`/assets/${id}`, data);
+}
+
+export function getAssetCoverGenerationPreview(id: number) {
+  return apiClient.get<AIGenerationPreview>(`/assets/${id}/cover-generation-preview`);
 }
 
 export function generateAssetCover(id: number) {

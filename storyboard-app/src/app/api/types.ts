@@ -252,3 +252,12 @@ export type ComposeProjectVideoResult = {
   video_duration?: number;
   project: Project;
 };
+
+
+export type AIGenerationPreview = {
+  action: string;
+  model: string;
+  fields: Record<string, string>;
+  final_prompt: string;
+  notes?: string[];
+};
