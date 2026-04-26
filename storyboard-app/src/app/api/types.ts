@@ -254,6 +254,8 @@ export type ComposeProjectVideoResult = {
 };
 
 
+export type CharacterDesignSheetModel = "qwen-image-2.0" | "wan2.7-image-pro" | "gpt-image-2";
+
 export type AIGenerationPreview = {
   action: string;
   model: string;

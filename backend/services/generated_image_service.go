@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -46,7 +47,18 @@ func (s *GeneratedImageService) DownloadAndStore(ctx context.Context, sourceURL,
 		return "", "", fmt.Errorf("下载生成图片失败: HTTP %d", resp.StatusCode)
 	}
 
-	filename := fmt.Sprintf("%s-%d%s", filenameBase, time.Now().Unix(), inferGeneratedImageExtension(sourceURL))
+	return s.storeReader(resp.Body, subdir, filenameBase, inferGeneratedImageExtension(sourceURL), spec)
+}
+
+func (s *GeneratedImageService) StoreBytes(data []byte, subdir, filenameBase, ext string, spec PreviewSpec) (string, string, error) {
+	if len(data) == 0 {
+		return "", "", fmt.Errorf("生成图片内容为空")
+	}
+	return s.storeReader(bytes.NewReader(data), subdir, filenameBase, normalizeGeneratedImageExtension(ext), spec)
+}
+
+func (s *GeneratedImageService) storeReader(reader io.Reader, subdir, filenameBase, ext string, spec PreviewSpec) (string, string, error) {
+	filename := fmt.Sprintf("%s-%d%s", filenameBase, time.Now().Unix(), normalizeGeneratedImageExtension(ext))
 	publicPath := GeneratedPublicPath(subdir, filename)
 
 	if s.ossService.IsEnabled() {
@@ -57,12 +69,11 @@ func (s *GeneratedImageService) DownloadAndStore(ctx context.Context, sourceURL,
 		tmpPath := tmp.Name()
 		defer os.Remove(tmpPath)
 
-		file := tmp
-		if _, err := io.Copy(file, resp.Body); err != nil {
-			_ = file.Close()
+		if _, err := io.Copy(tmp, reader); err != nil {
+			_ = tmp.Close()
 			return "", "", fmt.Errorf("保存图片文件失败: %w", err)
 		}
-		if err := file.Close(); err != nil {
+		if err := tmp.Close(); err != nil {
 			return "", "", err
 		}
 		if err := s.ossService.EnsureUploaded(tmpPath, publicPath); err != nil {
@@ -92,7 +103,7 @@ func (s *GeneratedImageService) DownloadAndStore(ctx context.Context, sourceURL,
 	}
 	defer file.Close()
 
-	if _, err := io.Copy(file, resp.Body); err != nil {
+	if _, err := io.Copy(file, reader); err != nil {
 		return "", "", fmt.Errorf("保存图片文件失败: %w", err)
 	}
 
@@ -111,6 +122,16 @@ func inferGeneratedImageExtension(rawURL string) string {
 		return ".png"
 	}
 	ext := strings.ToLower(filepath.Ext(parsed.Path))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".webp":
+		return ext
+	default:
+		return ".png"
+	}
+}
+
+func normalizeGeneratedImageExtension(ext string) string {
+	ext = strings.ToLower(strings.TrimSpace(ext))
 	switch ext {
 	case ".jpg", ".jpeg", ".png", ".webp":
 		return ext

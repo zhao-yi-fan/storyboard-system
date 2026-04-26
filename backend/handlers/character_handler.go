@@ -236,13 +236,14 @@ func (h *CharacterHandler) PreviewDesignSheetGeneration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	mode, model := resolveCharacterDesignSheetMode(c.DefaultQuery("mode", "final"))
+	mode, model := resolveCharacterDesignSheetSelection(c.Query("model"), c.Query("mode"))
 	response.Success(c, AIGenerationPreview{
 		Action: "character-design-sheet",
 		Model:  model,
 		Fields: map[string]string{
 			"角色名称": strings.TrimSpace(character.Name),
 			"角色描述": strings.TrimSpace(character.Description),
+			"生成模型": formatCharacterDesignSheetModelLabel(model),
 			"生成档位": mode,
 			"输出":   "角色主设定图",
 		},
@@ -347,32 +348,51 @@ func (h *CharacterHandler) GenerateDesignSheet(c *gin.Context) {
 	}
 
 	var req struct {
-		Mode string `json:"mode"`
+		Mode  string `json:"mode"`
+		Model string `json:"model"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
 		response.Error(c, err.Error())
 		return
 	}
 
-	mode, model := resolveCharacterDesignSheetMode(req.Mode)
-
-	wanxClient, err := services.NewWanxClient()
-	if err != nil {
-		response.Error(c, err.Error())
-		return
-	}
-
+	mode, model := resolveCharacterDesignSheetSelection(req.Model, req.Mode)
 	prompt := buildCharacterDesignSheetPrompt(character, mode)
-	imageURL, err := wanxClient.GenerateImageWithModel(c.Request.Context(), prompt, model)
-	if err != nil {
-		response.Error(c, err.Error())
-		return
-	}
 
-	designSheetURL, previewURL, err := h.generatedImageService.DownloadAndStore(c.Request.Context(), imageURL, "characters", fmt.Sprintf("character-design-sheet-%d", character.ID), services.StoryboardPreviewSpec())
-	if err != nil {
-		response.Error(c, err.Error())
-		return
+	var designSheetURL string
+	var previewURL string
+	if isOpenAIImageModel(model) {
+		openAIClient, err := services.NewOpenAIImageClient()
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+		imageBytes, err := openAIClient.GenerateImageWithModel(c.Request.Context(), prompt, model)
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+		designSheetURL, previewURL, err = h.generatedImageService.StoreBytes(imageBytes, "characters", fmt.Sprintf("character-design-sheet-%d", character.ID), ".png", services.StoryboardPreviewSpec())
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+	} else {
+		wanxClient, err := services.NewWanxClient()
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+		imageURL, err := wanxClient.GenerateImageWithModel(c.Request.Context(), prompt, model)
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
+		designSheetURL, previewURL, err = h.generatedImageService.DownloadAndStore(c.Request.Context(), imageURL, "characters", fmt.Sprintf("character-design-sheet-%d", character.ID), services.StoryboardPreviewSpec())
+		if err != nil {
+			response.Error(c, err.Error())
+			return
+		}
 	}
 
 	character.DesignSheetURL = designSheetURL
@@ -550,12 +570,38 @@ func buildCharacterDesignSheetPrompt(character *models.Character, mode string) s
 	return b.String()
 }
 
-func resolveCharacterDesignSheetMode(raw string) (string, string) {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
+func resolveCharacterDesignSheetSelection(modelRaw, modeRaw string) (string, string) {
+	switch strings.ToLower(strings.TrimSpace(modelRaw)) {
+	case "qwen-image-2.0":
+		return "draft", "qwen-image-2.0"
+	case "gpt-image-2":
+		return "final", "gpt-image-2"
+	case "wan2.7-image-pro":
+		return "final", "wan2.7-image-pro"
+	}
+
+	switch strings.ToLower(strings.TrimSpace(modeRaw)) {
 	case "draft":
 		return "draft", "qwen-image-2.0"
 	default:
 		return "final", "wan2.7-image-pro"
+	}
+}
+
+func isOpenAIImageModel(model string) bool {
+	return strings.HasPrefix(strings.TrimSpace(model), "gpt-image-2")
+}
+
+func formatCharacterDesignSheetModelLabel(model string) string {
+	switch strings.TrimSpace(model) {
+	case "qwen-image-2.0":
+		return "Qwen Image 2.0"
+	case "wan2.7-image-pro":
+		return "Wan 2.7 Image Pro"
+	case "gpt-image-2":
+		return "GPT Image 2"
+	default:
+		return strings.TrimSpace(model)
 	}
 }
 

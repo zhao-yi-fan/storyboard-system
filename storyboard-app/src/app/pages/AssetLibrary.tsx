@@ -51,6 +51,7 @@ import {
   type Character,
   type Asset,
   type AIGenerationPreview,
+  type CharacterDesignSheetModel,
 } from "../api";
 
 type SelectedAsset =
@@ -90,10 +91,11 @@ const hasCharacterDesignSheet = (character: Character | null | undefined) =>
 const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
 
-const CHARACTER_DESIGN_SHEET_MODE_OPTIONS = [
-  { value: "draft", label: "快速草案（Qwen 2.0）" },
-  { value: "final", label: "最终定稿（Wan 2.7 Pro）" },
-] as const;
+const CHARACTER_DESIGN_SHEET_MODEL_OPTIONS: Array<{ value: CharacterDesignSheetModel; label: string }> = [
+  { value: "qwen-image-2.0", label: "Qwen Image 2.0" },
+  { value: "wan2.7-image-pro", label: "Wan 2.7 Image Pro" },
+  { value: "gpt-image-2", label: "GPT Image 2" },
+];
 
 const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
@@ -131,7 +133,7 @@ export default function AssetLibrary() {
   const [generatingCharacterVoiceReferenceId, setGeneratingCharacterVoiceReferenceId] = useState<number | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
-  const [characterDesignSheetMode, setCharacterDesignSheetMode] = useState<"draft" | "final">("final");
+  const [characterDesignSheetModel, setCharacterDesignSheetModel] = useState<CharacterDesignSheetModel>("wan2.7-image-pro");
   const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
   const [isResizingDetailSidebar, setIsResizingDetailSidebar] = useState(false);
 
@@ -368,7 +370,7 @@ export default function AssetLibrary() {
     setGeneratingCharacterDesignSheetId(selectedAsset.data.id);
     try {
       const updated = await characterApi.generateCharacterDesignSheet(selectedAsset.data.id, {
-        mode: characterDesignSheetMode,
+        model: characterDesignSheetModel,
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
@@ -441,7 +443,7 @@ export default function AssetLibrary() {
     setIsLoadingAIPreview(true);
     try {
       const preview = await characterApi.getCharacterDesignSheetGenerationPreview(selectedAsset.data.id, {
-        mode: characterDesignSheetMode,
+        model: characterDesignSheetModel,
       });
       openAIPreviewDialog({
         action: "character-design-sheet",
@@ -779,12 +781,12 @@ export default function AssetLibrary() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Select value={characterDesignSheetMode} onValueChange={(value) => setCharacterDesignSheetMode(value as "draft" | "final")}>
+                        <Select value={characterDesignSheetModel} onValueChange={(value) => setCharacterDesignSheetModel(value as CharacterDesignSheetModel)}>
                           <SelectTrigger className="w-full bg-[#1a1a1a] border-gray-700 text-gray-100">
-                            <SelectValue placeholder="选择生成档位" />
+                            <SelectValue placeholder="选择生成模型" />
                           </SelectTrigger>
                           <SelectContent>
-                            {CHARACTER_DESIGN_SHEET_MODE_OPTIONS.map((option) => (
+                            {CHARACTER_DESIGN_SHEET_MODEL_OPTIONS.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>

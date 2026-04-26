@@ -43,6 +43,10 @@ type Config struct {
 	SeedanceBaseURL                     string
 	SeedanceModel                       string
 	SeedanceRequestTimeoutSeconds       int
+	OpenAIAPIKey                        string
+	OpenAIImageBaseURL                  string
+	OpenAIImageModel                    string
+	OpenAIImageTimeoutSeconds           int
 	PublicAppBaseURL                    string
 	GeneratedAssetDir                   string
 	GeneratedAssetBasePath              string
@@ -86,6 +90,10 @@ func Load() {
 		SeedanceBaseURL:                     getEnv("SEEDANCE_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
 		SeedanceModel:                       getEnv("SEEDANCE_MODEL", "doubao-seedance-1-5-pro-251215"),
 		SeedanceRequestTimeoutSeconds:       getEnvInt("SEEDANCE_REQUEST_TIMEOUT_SECONDS", 300),
+		OpenAIAPIKey:                        getEnv("OPENAI_API_KEY", ""),
+		OpenAIImageBaseURL:                  getEnv("OPENAI_IMAGE_BASE_URL", "https://api.openai.com/v1"),
+		OpenAIImageModel:                    getEnv("OPENAI_IMAGE_MODEL", "gpt-image-2"),
+		OpenAIImageTimeoutSeconds:           getEnvInt("OPENAI_IMAGE_TIMEOUT_SECONDS", 180),
 		PublicAppBaseURL:                    getEnv("PUBLIC_APP_BASE_URL", ""),
 		GeneratedAssetDir:                   getEnv("GENERATED_ASSET_DIR", "../storage"),
 		GeneratedAssetBasePath:              getEnv("GENERATED_ASSET_BASE_PATH", "/generated"),
@@ -130,6 +138,19 @@ func (c Config) ValidateSeedanceVideoConfig() error {
 		return fmt.Errorf("镜头视频生成未配置：缺少 SEEDANCE_BASE_URL")
 	case c.SeedanceModel == "":
 		return fmt.Errorf("镜头视频生成未配置：缺少 SEEDANCE_MODEL")
+	default:
+		return nil
+	}
+}
+
+func (c Config) ValidateOpenAIImageConfig() error {
+	switch {
+	case c.OpenAIAPIKey == "":
+		return fmt.Errorf("GPT Image 2 未配置：缺少 OPENAI_API_KEY")
+	case c.OpenAIImageBaseURL == "":
+		return fmt.Errorf("GPT Image 2 未配置：缺少 OPENAI_IMAGE_BASE_URL")
+	case c.OpenAIImageModel == "":
+		return fmt.Errorf("GPT Image 2 未配置：缺少 OPENAI_IMAGE_MODEL")
 	default:
 		return nil
 	}

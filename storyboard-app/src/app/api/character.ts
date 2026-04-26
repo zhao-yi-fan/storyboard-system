@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { AIGenerationPreview, Character } from "./types";
+import type { AIGenerationPreview, Character, CharacterDesignSheetModel } from "./types";
 
 export function getCharactersByProject(projectId: number) {
   return apiClient.get<Character[]>(`/projects/${projectId}/characters`);
@@ -31,12 +31,12 @@ export function generateCharacterCover(id: number) {
   return apiClient.post<Character>(`/characters/${id}/generate-cover`);
 }
 
-export function getCharacterDesignSheetGenerationPreview(id: number, data?: { mode?: "draft" | "final" }) {
-  const mode = data?.mode ? `?mode=${encodeURIComponent(data.mode)}` : "";
-  return apiClient.get<AIGenerationPreview>(`/characters/${id}/design-sheet-generation-preview${mode}`);
+export function getCharacterDesignSheetGenerationPreview(id: number, data?: { model?: CharacterDesignSheetModel }) {
+  const model = data?.model ? `?model=${encodeURIComponent(data.model)}` : "";
+  return apiClient.get<AIGenerationPreview>(`/characters/${id}/design-sheet-generation-preview${model}`);
 }
 
-export function generateCharacterDesignSheet(id: number, data?: { mode?: "draft" | "final" }) {
+export function generateCharacterDesignSheet(id: number, data?: { model?: CharacterDesignSheetModel }) {
   return apiClient.post<Character>(`/characters/${id}/generate-design-sheet`, data ?? {});
 }
 
