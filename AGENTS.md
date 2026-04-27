@@ -19,7 +19,7 @@ The project is interest-driven, but treat it as a real product workflow tool. Pr
 
 - `storyboard-app/`: React + Vite frontend generated initially from Figma Make, then organized into maintainable app code.
 - `backend/`: Go + Gin backend with MySQL persistence and external AI/OSS/video generation integrations.
-- `docs/`: Project notes and specifications when present.
+- `specs/`: Product and workflow specifications.
 - `scripts/`: Deployment and utility scripts.
 - `DEPLOY.md`: Deployment notes for ECS.
 
@@ -66,7 +66,7 @@ go build ./...
 
 ## Specification-Driven Work
 
-When adding a feature, first look for a related spec in `docs/` or `specs/`. If no spec exists and the feature is non-trivial, create or update a concise Markdown spec before implementation.
+When adding a feature, first look for a related spec in `specs/`. If no spec exists and the feature is non-trivial, create or update a concise Markdown spec before implementation.
 
 A good spec should define:
 
