@@ -23,10 +23,6 @@ type Config struct {
 	AliyunOSSAccessKeyID                string
 	AliyunOSSAccessKeySecret            string
 	AliyunOSSBucket                     string
-	ArkAPIKey                           string
-	ArkBaseURL                          string
-	ArkModel                            string
-	ArkRequestTimeoutSeconds            int
 	DeepSeekAPIKey                      string
 	DeepSeekBaseURL                     string
 	DeepSeekModel                       string
@@ -78,14 +74,10 @@ func Load() {
 		AliyunOSSAccessKeyID:                getEnv("ALIYUN_OSS_ACCESS_KEY_ID", ""),
 		AliyunOSSAccessKeySecret:            getEnv("ALIYUN_OSS_ACCESS_KEY_SECRET", ""),
 		AliyunOSSBucket:                     getEnv("ALIYUN_OSS_BUCKET", ""),
-		ArkAPIKey:                           getEnv("ARK_API_KEY", ""),
-		ArkBaseURL:                          getEnv("ARK_BASE_URL", ""),
-		ArkModel:                            getEnv("ARK_MODEL", ""),
-		ArkRequestTimeoutSeconds:            getEnvInt("ARK_REQUEST_TIMEOUT_SECONDS", 180),
-		DeepSeekAPIKey:                      getEnv("DEEPSEEK_API_KEY", getEnv("ARK_API_KEY", "")),
-		DeepSeekBaseURL:                     getEnv("DEEPSEEK_BASE_URL", getEnv("ARK_BASE_URL", "https://api.deepseek.com")),
-		DeepSeekModel:                       getEnv("DEEPSEEK_MODEL", getEnv("ARK_MODEL", "deepseek-v4-flash")),
-		DeepSeekRequestTimeoutSeconds:       getEnvInt("DEEPSEEK_REQUEST_TIMEOUT_SECONDS", getEnvInt("ARK_REQUEST_TIMEOUT_SECONDS", 180)),
+		DeepSeekAPIKey:                      getEnv("DEEPSEEK_API_KEY", ""),
+		DeepSeekBaseURL:                     getEnv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+		DeepSeekModel:                       getEnv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+		DeepSeekRequestTimeoutSeconds:       getEnvInt("DEEPSEEK_REQUEST_TIMEOUT_SECONDS", 180),
 		DashScopeAPIKey:                     getEnv("DASHSCOPE_API_KEY", ""),
 		DashScopeVoiceBaseURL:               getEnv("DASHSCOPE_VOICE_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
 		DashScopeVoiceDesignModel:           getEnv("DASHSCOPE_VOICE_DESIGN_MODEL", "qwen-voice-design"),
@@ -250,7 +242,7 @@ func getEnvInt(key string, defaultValue int) int {
 func (c Config) ValidateDeepSeekConfig() error {
 	switch {
 	case c.DeepSeekAPIKey == "":
-		return fmt.Errorf("DeepSeek 解析未配置：缺少 DEEPSEEK_API_KEY（可临时兼容 ARK_API_KEY）")
+		return fmt.Errorf("DeepSeek 解析未配置：缺少 DEEPSEEK_API_KEY")
 	case c.DeepSeekBaseURL == "":
 		return fmt.Errorf("DeepSeek 解析未配置：缺少 DEEPSEEK_BASE_URL")
 	case c.DeepSeekModel == "":
