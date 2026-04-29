@@ -74,7 +74,7 @@ func TestNormalizeLLMStoryboardDocument_RejectsEmptyChapters(t *testing.T) {
 	}
 }
 
-func TestNormalizeLLMStoryboardDocument_RejectsMissingStoryboardDescription(t *testing.T) {
+func TestNormalizeLLMStoryboardDocument_FallsBackToSceneSummaryForMissingStoryboardDescription(t *testing.T) {
 	document := &llmStoryboardDocument{
 		Chapters: []llmChapter{
 			{
@@ -82,8 +82,8 @@ func TestNormalizeLLMStoryboardDocument_RejectsMissingStoryboardDescription(t *t
 				Summary: "摘要",
 				Scenes: []llmScene{
 					{
-						Title:      "场景1",
-						Summary:    "场景摘要",
+						Title:   "场景1",
+						Summary: "场景摘要",
 						Storyboards: []llmStoryboard{
 							{
 								Order:           1,
@@ -97,9 +97,14 @@ func TestNormalizeLLMStoryboardDocument_RejectsMissingStoryboardDescription(t *t
 		},
 	}
 
-	_, _, err := normalizeLLMStoryboardDocument(document)
-	if err == nil {
-		t.Fatalf("expected error for missing visual_description")
+	parsed, _, err := normalizeLLMStoryboardDocument(document)
+	if err != nil {
+		t.Fatalf("expected scene summary fallback, got error: %v", err)
+	}
+
+	got := parsed.Chapters[0].Scenes[0].Storyboards[0].Content
+	if got != "场景摘要" {
+		t.Fatalf("expected scene summary fallback, got %q", got)
 	}
 }
 

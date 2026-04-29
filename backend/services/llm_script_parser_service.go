@@ -19,7 +19,7 @@ type LLMScriptParserService struct {
 
 func NewLLMScriptParserService() *LLMScriptParserService {
 	return &LLMScriptParserService{
-		client:         NewArkClient(),
+		client:         NewDeepSeekClient(),
 		maxScriptRunes: defaultMaxScriptRunes,
 	}
 }
@@ -135,7 +135,7 @@ func (s *LLMScriptParserService) ParseAndImport(projectID int64, scriptText stri
 
 func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScript, map[string]llmCharacter, error) {
 	if document == nil {
-		return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：未返回结构化结果")
+		return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：未返回结构化结果")
 	}
 
 	normalizedCharacters := make(map[string]llmCharacter)
@@ -153,7 +153,7 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 	}
 
 	if len(document.Chapters) == 0 {
-		return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：未识别出章节")
+		return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：未识别出章节")
 	}
 
 	parsed := parsedScript{Chapters: make([]parsedChapter, 0, len(document.Chapters))}
@@ -161,13 +161,13 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 		chapterTitle := strings.TrimSpace(chapter.Title)
 		chapterSummary := strings.TrimSpace(chapter.Summary)
 		if chapterTitle == "" {
-			return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：第 %d 个章节缺少标题", chapterIndex+1)
+			return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：第 %d 个章节缺少标题", chapterIndex+1)
 		}
 		if chapterSummary == "" {
-			return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：章节《%s》缺少摘要", chapterTitle)
+			return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：章节《%s》缺少摘要", chapterTitle)
 		}
 		if len(chapter.Scenes) == 0 {
-			return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：章节《%s》没有场景", chapterTitle)
+			return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：章节《%s》没有场景", chapterTitle)
 		}
 
 		parsedChapterItem := parsedChapter{
@@ -181,13 +181,13 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 			sceneTitle := strings.TrimSpace(scene.Title)
 			sceneSummary := strings.TrimSpace(scene.Summary)
 			if sceneTitle == "" {
-				return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：章节《%s》的第 %d 个场景缺少标题", chapterTitle, sceneIndex+1)
+				return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：章节《%s》的第 %d 个场景缺少标题", chapterTitle, sceneIndex+1)
 			}
 			if sceneSummary == "" {
-				return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：场景《%s》缺少摘要", sceneTitle)
+				return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：场景《%s》缺少摘要", sceneTitle)
 			}
 			if len(scene.Storyboards) == 0 {
-				return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：场景《%s》没有分镜", sceneTitle)
+				return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：场景《%s》没有分镜", sceneTitle)
 			}
 
 			sceneCharacters := normalizeCharacterNames(scene.Characters)
@@ -203,7 +203,7 @@ func normalizeLLMStoryboardDocument(document *llmStoryboardDocument) (parsedScri
 			for storyboardIndex, storyboard := range scene.Storyboards {
 				visualDescription := normalizeVisualDescription(storyboard.VisualDescription, storyboard.Notes, storyboard.Dialogue, sceneSummary)
 				if visualDescription == "" {
-					return parsedScript{}, nil, fmt.Errorf("Ark 解析失败：场景《%s》的第 %d 个分镜缺少 visual_description", sceneTitle, storyboardIndex+1)
+					return parsedScript{}, nil, fmt.Errorf("DeepSeek 解析失败：场景《%s》的第 %d 个分镜缺少 visual_description", sceneTitle, storyboardIndex+1)
 				}
 
 				shotCharacters := normalizeCharacterNames(append(sceneCharacters, storyboard.Characters...))
