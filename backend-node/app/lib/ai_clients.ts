@@ -34,6 +34,7 @@ const NEGATIVE_PROMPT = '低分辨率，低画质，构图混乱，文字模糊�
 const DEFAULT_SEEDREAM_MODEL = 'doubao-seedream-4-5-251128';
 const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
 const DEFAULT_WANX_VIDEO_MODEL = 'wan2.7-i2v';
+const DEFAULT_WANX_TEXT_VIDEO_MODEL = 'wan2.7-t2v-2026-04-25';
 const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-1-5-pro-251215';
 const DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL = 'qwen-voice-design';
 const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
@@ -213,12 +214,14 @@ async function generateOpenAIImage(app, prompt, model) {
   return Buffer.from(b64, 'base64');
 }
 
-async function generateWanxVideo(app, prompt, imageUrl, model, duration) {
+async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirstFrame = true) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '镜头视频生成未配置：缺少 DASHSCOPE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.wanxVideoBaseUrl, DASHSCOPE_BASE_URL);
   const timeoutMs = resolveTimeoutMs(cfg.wanxVideoRequestTimeoutSeconds, 300, DEFAULT_VIDEO_TIMEOUT_MS);
-  const selectedModel = String(model || cfg.wanxVideoModel || DEFAULT_WANX_VIDEO_MODEL).trim();
+  const selectedModel = useFirstFrame
+    ? String(model || cfg.wanxVideoModel || DEFAULT_WANX_VIDEO_MODEL).trim()
+    : String(cfg.wanxTextVideoModel || DEFAULT_WANX_TEXT_VIDEO_MODEL).trim();
   const payload = {
     model: selectedModel,
     parameters: {
@@ -229,7 +232,9 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration) {
       audio: true,
     },
   };
-  if (selectedModel === 'wan2.7-i2v') {
+  if (!useFirstFrame) {
+    payload.input = { prompt };
+  } else if (selectedModel === 'wan2.7-i2v') {
     payload.input = {
       prompt,
       media: [{ type: 'first_frame', url: imageUrl }],
@@ -276,17 +281,18 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration) {
   throw new Error('视频生成任务超时');
 }
 
-async function generateSeedanceVideo(app, prompt, imageUrl, duration) {
+async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFrame = true) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, ARK_BASE_URL);
   const timeoutMs = resolveTimeoutMs(cfg.seedanceRequestTimeoutSeconds, 300, DEFAULT_VIDEO_TIMEOUT_MS);
+  const content = [{ type: 'text', text: prompt }];
+  if (useFirstFrame && String(imageUrl || '').trim()) {
+    content.push({ type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } });
+  }
   const payload = {
     model: String(cfg.seedanceModel || DEFAULT_SEEDANCE_MODEL).trim(),
-    content: [
-      { type: 'text', text: prompt },
-      { type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } },
-    ],
+    content,
     duration: duration || DEFAULT_IMAGE_DURATION_SECONDS,
     resolution: VIDEO_RESOLUTION_480P,
     generate_audio: true,

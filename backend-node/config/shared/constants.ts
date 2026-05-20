@@ -26,6 +26,7 @@ export const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
 export const DEFAULT_WANX_MODEL = 'wanx2.0-t2i-turbo';
 export const DEFAULT_WANX_REFERENCE_MODEL = 'wan2.7-image-pro';
 export const DEFAULT_WANX_VIDEO_MODEL = 'wan2.7-i2v';
+export const DEFAULT_WANX_TEXT_VIDEO_MODEL = 'wan2.7-t2v-2026-04-25';
 export const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-1-5-pro-251215';
 export const DEFAULT_SEEDREAM_IMAGE_MODEL = 'doubao-seedream-4-5-251128';
 export const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';

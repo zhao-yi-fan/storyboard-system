@@ -33,6 +33,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
+import { Switch } from "../components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
@@ -191,7 +192,7 @@ const buildCoverPreviewItems = (generations: StoryboardMediaGeneration[]) =>
     .filter((generation) => generation.status === "succeeded" && !!generation.result_url)
     .map((generation) => ({
       src: generation.result_url as string,
-      alt: `封面历史 ${generation.id}`,
+      alt: `首帧历史 ${generation.id}`,
     }));
 
 const formatShanghaiDateTime = (dateStr?: string) => {
@@ -228,6 +229,7 @@ export default function Workspace() {
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string; items?: { src: string; alt: string }[]; currentIndex?: number } | null>(null);
   const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>("auto");
   const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
+  const [useFirstFrameForVideo, setUseFirstFrameForVideo] = useState(true);
   const [storyboardViewMode, setStoryboardViewMode] = useState<"grid" | "list">("list");
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
   const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
@@ -640,7 +642,7 @@ export default function Workspace() {
     const currentIndex = items.findIndex((item) => item.src === generation.result_url);
     setPreviewImage({
       src: generation.result_url || "",
-      alt: `封面历史 ${generation.id}`,
+      alt: `首帧历史 ${generation.id}`,
       items,
       currentIndex: currentIndex >= 0 ? currentIndex : 0,
     });
@@ -656,6 +658,7 @@ export default function Workspace() {
       const result = await storyboardApi.generateStoryboardVideo(selectedShot.id, {
         model: selectedVideoModel,
         duration: getVideoGenerationDuration(selectedVideoModel),
+        use_first_frame: useFirstFrameForVideo,
       });
       const nextShot = result.storyboard;
       applyStoryboardUpdate(nextShot);
@@ -711,6 +714,7 @@ export default function Workspace() {
       .getStoryboardVideoGenerationPreview(selectedShot.id, {
         model: selectedVideoModel,
         duration: getVideoGenerationDuration(selectedVideoModel),
+        use_first_frame: useFirstFrameForVideo,
       })
       .then((preview) => {
         setVideoGenerationPreview(preview);
@@ -798,10 +802,10 @@ export default function Workspace() {
         }
       }
       if (result.generated_count > 0) {
-        toast.success(`已为 ${result.generated_count} 个镜头生成封面`);
+        toast.success(`已为 ${result.generated_count} 个镜头生成首帧`);
       }
       if (result.failed.length > 0) {
-        toast.error(`${result.failed.length} 个镜头封面生成失败`);
+        toast.error(`${result.failed.length} 个镜头首帧生成失败`);
       }
     } catch (error) {
       console.error("Failed to batch generate storyboard covers:", error);
@@ -1546,7 +1550,7 @@ export default function Workspace() {
                         {pendingGeneratedShotId === shot.id ? (
                           <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-2">
                             <Loader2 className="w-6 h-6 text-white animate-spin" />
-                            <span className="text-xs text-white/90">正在生成新封面...</span>
+                          <span className="text-xs text-white/90">正在生成新首帧...</span>
                           </div>
                         ) : null}
                       </div>
@@ -1635,7 +1639,7 @@ export default function Workspace() {
                       {pendingGeneratedShotId === shot.id ? (
                         <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-2">
                           <Loader2 className="w-5 h-5 text-white animate-spin" />
-                          <span className="text-[11px] text-white/90">正在生成新封面...</span>
+                            <span className="text-[11px] text-white/90">正在生成新首帧...</span>
                         </div>
                       ) : null}
                       <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono tracking-[0.2em]">
@@ -1741,9 +1745,9 @@ export default function Workspace() {
                     />
                   </div>
 
-                  {/* Preview */}
+                  {/* First frame */}
                   <div>
-                    <Label className="text-xs text-gray-400">预览图</Label>
+                    <Label className="text-xs text-gray-400">首帧图</Label>
                     <div className="mt-1.5 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
                       {selectedShot.thumbnail_url && generatingCoverId !== selectedShot.id ? (
                         <button
@@ -1752,7 +1756,7 @@ export default function Workspace() {
                           onClick={() =>
                             setPreviewImage({
                               src: selectedShot.thumbnail_url!,
-                              alt: `镜头 ${selectedShot.shot_number} 预览图`,
+                              alt: `镜头 ${selectedShot.shot_number} 首帧图`,
                             })
                           }
                         >
@@ -1767,7 +1771,7 @@ export default function Workspace() {
                       ) : generatingCoverId === selectedShot.id ? (
                         <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
                           <Loader2 className="w-8 h-8 text-purple-300 animate-spin" />
-                          <span className="text-xs text-gray-300">正在生成新封面...</span>
+                          <span className="text-xs text-gray-300">正在生成新首帧...</span>
                         </div>
                       ) : (
                         <ImageIcon className="w-16 h-16 text-gray-700" />
@@ -1808,7 +1812,7 @@ export default function Workspace() {
                           ) : (
                             <>
                               <Sparkles className="w-4 h-4 mr-2" />
-                              生成封面
+                              生成首帧
                             </>
                           )}
                         </Button>
@@ -1885,11 +1889,15 @@ export default function Workspace() {
                     ) : null}
                   </div>
 
+                  <div className="rounded-md border border-gray-800 bg-[#121212] px-3 py-2">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">共用信息</p>
+                  </div>
+
                   <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-gray-300">封面历史</p>
-                        <p className="text-[11px] text-gray-500">新生成的封面会自动成为当前版本</p>
+                        <p className="text-xs text-gray-300">首帧历史</p>
+                        <p className="text-[11px] text-gray-500">新生成的首帧会自动成为当前版本</p>
                       </div>
                       <Badge variant="outline" className="border-gray-700 text-gray-400">{coverGenerations.length}</Badge>
                     </div>
@@ -1966,7 +1974,7 @@ export default function Workspace() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-500">当前镜头还没有封面历史记录</p>
+                      <p className="text-xs text-gray-500">当前镜头还没有首帧历史记录</p>
                     )}
                   </div>
 
@@ -2152,7 +2160,55 @@ export default function Workspace() {
                     />
                   </div>
 
-                  {/* Shot Type & Camera Angle */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-gray-400">风格预设</Label>
+                      <Select value={shotForm.style_preset || "__scene__"} onValueChange={(value) => updateShotForm("style_preset", value === "__scene__" ? "" : value)}>
+                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                          <SelectValue placeholder="跟随场景" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                          <SelectItem value="__scene__">跟随场景</SelectItem>
+                          {STYLE_PRESET_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">风格补充</Label>
+                      <Input
+                        value={shotForm.style_notes}
+                        placeholder="补充风格要求"
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                        onChange={(e) => updateShotForm("style_notes", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-gray-400">情绪</Label>
+                    <Select value={shotForm.mood} onValueChange={(value) => updateShotForm("mood", value)}>
+                      <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                        <SelectValue placeholder="选择情绪" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                        {MOOD_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="rounded-md border border-gray-800 bg-[#121212] px-3 py-2">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">视频信息</p>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-gray-400">景别</Label>
@@ -2189,35 +2245,6 @@ export default function Workspace() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs text-gray-400">风格预设</Label>
-                      <Select value={shotForm.style_preset || "__scene__"} onValueChange={(value) => updateShotForm("style_preset", value === "__scene__" ? "" : value)}>
-                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue placeholder="跟随场景" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          <SelectItem value="__scene__">跟随场景</SelectItem>
-                          {STYLE_PRESET_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">风格补充</Label>
-                      <Input
-                        value={shotForm.style_notes}
-                        placeholder="补充风格要求"
-                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
-                        onChange={(e) => updateShotForm("style_notes", e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
                       <Label className="text-xs text-gray-400">镜头运动</Label>
                       <Select value={shotForm.camera_motion} onValueChange={(value) => updateShotForm("camera_motion", value)}>
                         <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
@@ -2234,25 +2261,6 @@ export default function Workspace() {
                     </div>
 
                     <div>
-                      <Label className="text-xs text-gray-400">情绪</Label>
-                      <Select value={shotForm.mood} onValueChange={(value) => updateShotForm("mood", value)}>
-                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue placeholder="选择情绪" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          {MOOD_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Duration */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
                       <Label className="text-xs text-gray-400">时长（秒）</Label>
                       <Input
                         value={selectedShot.video_duration || selectedShot.duration || ""}
@@ -2260,8 +2268,18 @@ export default function Workspace() {
                         readOnly
                       />
                     </div>
+                  </div>
 
-                    <div></div>
+                  <div className="rounded-md border border-gray-800 bg-[#151515] p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm text-gray-200">使用当前首帧</p>
+                        <p className="mt-1 text-xs leading-5 text-gray-500">
+                          关闭后将直接按文本生成视频，不依赖当前镜头首帧图。
+                        </p>
+                      </div>
+                      <Switch checked={useFirstFrameForVideo} onCheckedChange={setUseFirstFrameForVideo} />
+                    </div>
                   </div>
 
                   {/* Notes */}
@@ -2558,9 +2576,9 @@ export default function Workspace() {
       <Dialog open={isCoverConfirmOpen} onOpenChange={setIsCoverConfirmOpen}>
         <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>确认生成封面</DialogTitle>
+            <DialogTitle>确认生成首帧</DialogTitle>
             <DialogDescription className="text-gray-400 leading-6">
-              会为当前镜头调用图像模型生成 1 张新封面，并消耗模型额度。弹窗展示的是本次将实际传给大模型的参数。
+              会为当前镜头调用图像模型生成 1 张新首帧，并消耗模型额度。弹窗展示的是本次将实际传给大模型的参数。
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
@@ -2617,8 +2635,6 @@ export default function Workspace() {
                 <div><span className="text-gray-500">时间：</span><span>{coverGenerationPreview?.fields.time_of_day || "-"}</span></div>
                 <div><span className="text-gray-500">背景场景：</span><span>{coverGenerationPreview?.fields.background || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{coverGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
-                <div><span className="text-gray-500">景别：</span><span>{coverGenerationPreview?.fields.shot_type || "-"}</span></div>
-                <div><span className="text-gray-500">机位：</span><span>{coverGenerationPreview?.fields.camera_direction || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{coverGenerationPreview?.fields.content || "-"}</span></div>
                 <div><span className="text-gray-500">情绪：</span><span>{coverGenerationPreview?.fields.mood || "-"}</span></div>
                 <div><span className="text-gray-500">台词：</span><span>{coverGenerationPreview?.fields.dialogue || "-"}</span></div>
@@ -2690,9 +2706,9 @@ export default function Workspace() {
       <AlertDialog open={isBatchSceneCoverConfirmOpen} onOpenChange={setIsBatchSceneCoverConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
           <AlertDialogHeader>
-            <AlertDialogTitle>确认批量生成封面</AlertDialogTitle>
+            <AlertDialogTitle>确认批量生成首帧</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400 leading-6">
-              会为当前场景下的全部镜头串行生成新封面，并消耗图像模型额度。新结果会保留到各自镜头的封面历史中。
+              会为当前场景下的全部镜头串行生成新首帧，并消耗图像模型额度。新结果会保留到各自镜头的首帧历史中。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
@@ -2768,51 +2784,65 @@ export default function Workspace() {
               <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>{videoGenerationPreview ? `${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}` : getVideoGenerationSpecLabel(selectedVideoModel)}</span></div>
               <div className="flex justify-between gap-4 md:col-span-2">
                 <span className="text-gray-500">首帧来源</span>
-                <span>{videoGenerationPreview?.will_generate_cover ? "当前无封面，后端会先自动生成封面" : "使用当前镜头封面作为首帧"}</span>
+                <span>
+                  {videoGenerationPreview?.use_first_frame
+                    ? (videoGenerationPreview?.will_generate_cover ? "当前无首帧，后端会先自动生成首帧" : "使用当前镜头首帧作为首帧输入")
+                    : "不使用首帧，直接文生视频"}
+                </span>
               </div>
             </div>
 
-            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
-              <div className="text-gray-300 font-medium">首帧封面</div>
-              {videoGenerationPreview?.source_image_url ? (
-                <div className="grid gap-2 md:grid-cols-[112px_minmax(0,1fr)]">
-                  <div className="h-28 w-28 overflow-hidden rounded border border-gray-800 bg-black">
-                    <img
-                      src={videoGenerationPreview.source_image_url}
-                      alt={selectedShot ? `${formatShotNumber(selectedShot.shot_number)} 首帧封面` : "首帧封面"}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="space-y-2 break-all text-xs">
-                    <div className="flex justify-between gap-4"><span className="text-gray-500">状态</span><span>{videoGenerationPreview.source_image_status === "existing-cover" ? "已有封面" : "将自动补封面"}</span></div>
-                    <div>
-                      <div className="text-gray-500 mb-1">URL</div>
-                      <div className="text-gray-300 break-all">{videoGenerationPreview.source_image_url}</div>
+            {videoGenerationPreview?.use_first_frame ? (
+              <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+                <div className="text-gray-300 font-medium">首帧图</div>
+                {videoGenerationPreview?.source_image_url ? (
+                  <div className="grid gap-2 md:grid-cols-[112px_minmax(0,1fr)]">
+                    <div className="h-28 w-28 overflow-hidden rounded border border-gray-800 bg-black">
+                      <img
+                        src={videoGenerationPreview.source_image_url}
+                        alt={selectedShot ? `${formatShotNumber(selectedShot.shot_number)} 首帧图` : "首帧图"}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="space-y-2 break-all text-xs">
+                      <div className="flex justify-between gap-4"><span className="text-gray-500">状态</span><span>{videoGenerationPreview.source_image_status === "existing-cover" ? "已有首帧" : "将自动补首帧"}</span></div>
+                      <div>
+                        <div className="text-gray-500 mb-1">URL</div>
+                        <div className="text-gray-300 break-all">{videoGenerationPreview.source_image_url}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-amber-300 text-sm">当前镜头还没有封面。开始生成后，后端会先自动补一张封面，再继续生成视频。</div>
-              )}
-            </div>
+                ) : (
+                  <div className="text-amber-300 text-sm">当前镜头还没有首帧。开始生成后，后端会先自动补一张首帧，再继续生成视频。</div>
+                )}
+              </div>
+            ) : null}
 
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
-              <div className="text-gray-300 font-medium">结构化字段</div>
+              <div className="text-gray-300 font-medium">共用字段</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
                 <div><span className="text-gray-500">场景标题：</span><span>{videoGenerationPreview?.fields.scene_title || "-"}</span></div>
                 <div><span className="text-gray-500">背景场景：</span><span>{videoGenerationPreview?.fields.background || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{videoGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
-                <div><span className="text-gray-500">景别：</span><span>{videoGenerationPreview?.fields.shot_type || "-"}</span></div>
-                <div><span className="text-gray-500">机位：</span><span>{videoGenerationPreview?.fields.camera_direction || "-"}</span></div>
-                <div><span className="text-gray-500">镜头运动：</span><span>{videoGenerationPreview?.fields.camera_motion || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{videoGenerationPreview?.fields.content || "-"}</span></div>
                 <div><span className="text-gray-500">情绪：</span><span>{videoGenerationPreview?.fields.mood || "-"}</span></div>
                 <div><span className="text-gray-500">风格预设：</span><span>{videoGenerationPreview?.fields.style_preset || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{videoGenerationPreview?.fields.content || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">风格补充：</span><span>{videoGenerationPreview?.fields.style_notes || "-"}</span></div>
                 <div><span className="text-gray-500">台词：</span><span>{videoGenerationPreview?.fields.dialogue || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">备注：</span><span>{videoGenerationPreview?.fields.notes || "-"}</span></div>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
+              <div className="text-gray-300 font-medium">视频字段</div>
+              <div className="grid gap-2 md:grid-cols-2 text-xs">
+                <div><span className="text-gray-500">景别：</span><span>{videoGenerationPreview?.video_fields.shot_type || "-"}</span></div>
+                <div><span className="text-gray-500">机位：</span><span>{videoGenerationPreview?.video_fields.camera_direction || "-"}</span></div>
+                <div><span className="text-gray-500">镜头运动：</span><span>{videoGenerationPreview?.video_fields.camera_motion || "-"}</span></div>
+                <div><span className="text-gray-500">时长：</span><span>{videoGenerationPreview?.video_fields.duration || "-"}</span></div>
+                <div className="md:col-span-2"><span className="text-gray-500">使用当前首帧：</span><span>{videoGenerationPreview?.use_first_frame ? "是" : "否"}</span></div>
               </div>
             </div>
 
@@ -2884,7 +2914,7 @@ export default function Workspace() {
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">类型</span>
-              <span>{deleteTargetGeneration?.media_type === "video" ? "视频" : "封面"}</span>
+              <span>{deleteTargetGeneration?.media_type === "video" ? "视频" : "首帧"}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">模型</span>

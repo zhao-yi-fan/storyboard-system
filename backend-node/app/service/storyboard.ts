@@ -243,6 +243,14 @@ class StoryboardService extends Service {
     }, scene, duration).prompt;
   }
 
+  parseUseFirstFrame(value) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    const normalized = String(value == null ? 'true' : value).trim().toLowerCase();
+    return normalized !== 'false' && normalized !== '0' && normalized !== 'off';
+  }
+
   async selectReferenceImages(storyboard, scene) {
     const references = [];
     const missing = [];
@@ -417,7 +425,7 @@ class StoryboardService extends Service {
     }
   }
 
-  async previewVideoGeneration(id, selectedModel, duration) {
+  async previewVideoGeneration(id, selectedModel, duration, useFirstFrameRaw) {
     const storyboard = await this.findById(id);
     if (!storyboard) {
       throw new Error('storyboard not found');
@@ -431,13 +439,17 @@ class StoryboardService extends Service {
       throw new Error('unsupported video model');
     }
     const selectedDuration = Number(duration || 5) || 5;
+    const useFirstFrame = this.parseUseFirstFrame(useFirstFrameRaw);
     if (model === 'seedance-1.5-pro' && selectedDuration !== 5) {
       throw new Error('当前 Seedance 视频当前按兼容配置生成，仅支持 5 秒输出');
     }
     if (model !== 'seedance-1.5-pro' && selectedDuration !== 5) {
       throw new Error('当前视频模型仅支持 5 秒输出');
     }
-    const sourceImageUrl = storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
+    if (!useFirstFrame && model === 'wan2.6-i2v-flash') {
+      throw new Error('当前视频模型仅支持基于首帧生成，请开启“使用当前首帧”或切换模型');
+    }
+    const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
     const videoPrompt = buildStoryboardVideoPrompt({
       ...storyboard,
       style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
@@ -448,16 +460,14 @@ class StoryboardService extends Service {
       duration: selectedDuration,
       resolution: model === 'seedance-1.5-pro' ? '480p' : '720P',
       audio: true,
+      use_first_frame: useFirstFrame,
       source_image_url: sourceImageUrl,
-      source_image_status: sourceImageUrl ? 'existing-cover' : 'will-generate-cover',
-      will_generate_cover: !sourceImageUrl,
+      source_image_status: !useFirstFrame ? 'not-required' : (sourceImageUrl ? 'existing-cover' : 'will-generate-cover'),
+      will_generate_cover: useFirstFrame && !sourceImageUrl,
       fields: {
         scene_title: String(scene.title || '').trim(),
         background: String(storyboard.background || '').trim(),
         characters: storyboard.character_names.slice(),
-        shot_type: String(storyboard.shot_type || '').trim(),
-        camera_direction: String(storyboard.camera_direction || '').trim(),
-        camera_motion: String(storyboard.camera_motion || '').trim(),
         content: String(storyboard.content || '').trim(),
         mood: String(storyboard.mood || '').trim(),
         style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
@@ -465,14 +475,20 @@ class StoryboardService extends Service {
         dialogue: String(storyboard.dialogue || '').trim(),
         notes: String(storyboard.notes || '').trim(),
       },
+      video_fields: {
+        shot_type: String(storyboard.shot_type || '').trim(),
+        camera_direction: String(storyboard.camera_direction || '').trim(),
+        camera_motion: String(storyboard.camera_motion || '').trim(),
+        duration: selectedDuration,
+      },
       template: videoPrompt.template,
       prompt_blueprint: videoPrompt.blueprint,
       final_prompt: videoPrompt.prompt,
     };
   }
 
-  async generateVideo(id, selectedModel, duration) {
-    const preview = await this.previewVideoGeneration(id, selectedModel, duration);
+  async generateVideo(id, selectedModel, duration, useFirstFrameRaw) {
+    const preview = await this.previewVideoGeneration(id, selectedModel, duration, useFirstFrameRaw);
     const current = await this.findById(id);
     if (current.video_status === 'generating') {
       return {
@@ -487,8 +503,8 @@ class StoryboardService extends Service {
       media_type: 'video',
       model: preview.model,
       status: 'generating',
-      source_url: current.thumbnail_url || null,
-      meta_json: JSON.stringify({ resolution: preview.resolution, duration: preview.duration, audio: true }),
+      source_url: preview.use_first_frame ? (current.thumbnail_url || null) : null,
+      meta_json: JSON.stringify({ resolution: preview.resolution, duration: preview.duration, audio: true, use_first_frame: preview.use_first_frame }),
     });
 
     await this.update(id, {
@@ -510,19 +526,19 @@ class StoryboardService extends Service {
     const generation = await this.ctx.service.mediaGeneration.findById(generationId);
     let storyboard = await this.findById(id);
     try {
-      if (!storyboard.thumbnail_url) {
+      if (preview.use_first_frame && !storyboard.thumbnail_url) {
         await this.generateCover(id, '', false);
         storyboard = await this.findById(id);
       }
-      const imageInput = resolveMediaUrl(this.app, storyboard.thumbnail_url);
-      if (!imageInput) {
+      const imageInput = preview.use_first_frame ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
+      if (preview.use_first_frame && !imageInput) {
         throw new Error('镜头封面图不可用，无法生成视频');
       }
       const scene = await this.ctx.service.scene.findById(storyboard.scene_id);
       const prompt = this.buildVideoPrompt(storyboard, scene, preview.duration);
       const result = preview.model === 'seedance-1.5-pro'
-        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration)
-        : await generateWanxVideo(this.app, prompt, imageInput, preview.model, preview.duration);
+        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame)
+        : await generateWanxVideo(this.app, prompt, imageInput, preview.model, preview.duration, preview.use_first_frame);
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.mp4`;
       const stored = await downloadAndStore(this.app, result.videoUrl, 'videos', filename, 'video/mp4');
       await this.update(id, {
@@ -537,9 +553,9 @@ class StoryboardService extends Service {
         status: 'succeeded',
         result_url: stored.publicPath,
         preview_url: stored.publicPath,
-        source_url: storyboard.thumbnail_url,
+        source_url: preview.use_first_frame ? storyboard.thumbnail_url : '',
         error_message: null,
-        meta_json: JSON.stringify({ resolution: preview.resolution, duration: result.duration, audio: true }),
+        meta_json: JSON.stringify({ resolution: preview.resolution, duration: result.duration, audio: true, use_first_frame: preview.use_first_frame }),
       });
       await this.ctx.service.mediaGeneration.markCurrent(id, 'video', generation.id);
     } catch (error) {

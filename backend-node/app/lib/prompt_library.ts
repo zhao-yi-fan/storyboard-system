@@ -305,8 +305,6 @@ export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, refe
       fields.mood ? `情绪状态为${fields.mood}` : '',
     ]),
     camera: normalizeTextList([
-      ...expandShotType(String(fields.shot_type || '')),
-      ...expandCameraDirection(String(fields.camera_direction || '')),
       '封面图只保留一个决定性瞬间，不做多画格拼贴',
     ]),
     style: normalizeTextList([

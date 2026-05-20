@@ -97,7 +97,7 @@ export function generateStoryboardCover(id: number, data?: { model?: string; use
   return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`, data ?? {});
 }
 
-export function getStoryboardVideoGenerationPreview(id: number, data?: { model?: string; duration?: number }) {
+export function getStoryboardVideoGenerationPreview(id: number, data?: { model?: string; duration?: number; use_first_frame?: boolean }) {
   const params = new URLSearchParams();
   if (data?.model) {
     params.set("model", data.model);
@@ -105,10 +105,13 @@ export function getStoryboardVideoGenerationPreview(id: number, data?: { model?:
   if (data?.duration) {
     params.set("duration", String(data.duration));
   }
+  if (typeof data?.use_first_frame === "boolean") {
+    params.set("use_first_frame", String(data.use_first_frame));
+  }
   const query = params.toString();
   return apiClient.get<StoryboardVideoGenerationPreview>(`/storyboards/${id}/video-generation-preview${query ? `?${query}` : ""}`);
 }
 
-export function generateStoryboardVideo(id: number, data?: { model?: string; duration?: number }) {
+export function generateStoryboardVideo(id: number, data?: { model?: string; duration?: number; use_first_frame?: boolean }) {
   return apiClient.post<GenerateStoryboardVideoResult>(`/storyboards/${id}/generate-video`, data);
 }

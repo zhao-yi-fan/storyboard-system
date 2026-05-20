@@ -186,7 +186,7 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.previewVideoGeneration(id, this.ctx.query.model, this.ctx.query.duration));
+      response.success(this.ctx, await this.ctx.service.storyboard.previewVideoGeneration(id, this.ctx.query.model, this.ctx.query.duration, this.ctx.query.use_first_frame));
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -206,7 +206,7 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.generateVideo(id, (this.ctx.request.body || {}).model, (this.ctx.request.body || {}).duration));
+      response.success(this.ctx, await this.ctx.service.storyboard.generateVideo(id, (this.ctx.request.body || {}).model, (this.ctx.request.body || {}).duration, (this.ctx.request.body || {}).use_first_frame));
     } catch (err) {
       response.error(this.ctx, err.message);
     }

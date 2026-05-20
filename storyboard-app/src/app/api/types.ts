@@ -184,9 +184,6 @@ export type StoryboardVideoGenerationFields = {
   scene_title: string;
   background: string;
   characters: string[];
-  shot_type: string;
-  camera_direction: string;
-  camera_motion: string;
   content: string;
   mood: string;
   style_preset: string;
@@ -195,15 +192,24 @@ export type StoryboardVideoGenerationFields = {
   notes: string;
 };
 
+export type StoryboardVideoGenerationVideoFields = {
+  shot_type: string;
+  camera_direction: string;
+  camera_motion: string;
+  duration: number;
+};
+
 export type StoryboardVideoGenerationPreview = {
   model: string;
   duration: number;
   resolution: string;
   audio: boolean;
+  use_first_frame: boolean;
   source_image_url: string;
-  source_image_status: "existing-cover" | "will-generate-cover" | string;
+  source_image_status: "existing-cover" | "will-generate-cover" | "not-required" | string;
   will_generate_cover: boolean;
   fields: StoryboardVideoGenerationFields;
+  video_fields: StoryboardVideoGenerationVideoFields;
   final_prompt: string;
 };
 
