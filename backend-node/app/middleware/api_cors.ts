@@ -1,8 +1,14 @@
 'use strict';
-// @ts-nocheck
 
-module.exports = () => {
-  return async function apiCors(ctx, next) {
+type MiddlewareContext = {
+  method: string;
+  status: number;
+  get(name: string): string;
+  set(name: string, value: string): void;
+};
+
+module.exports = (): ((ctx: MiddlewareContext, next: () => Promise<void>) => Promise<void>) => {
+  return async function apiCors(ctx: MiddlewareContext, next: () => Promise<void>) {
     const origin = ctx.get('Origin');
     ctx.set('Access-Control-Allow-Origin', origin || '*');
     ctx.set('Access-Control-Allow-Credentials', 'true');

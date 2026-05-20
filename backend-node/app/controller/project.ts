@@ -1,11 +1,10 @@
 'use strict';
-// @ts-nocheck
 
 const Controller = require('egg').Controller;
 const response = require('../lib/response');
 
 class ProjectController extends Controller {
-  parseId() {
+  parseId(): number | null {
     const id = Number(this.ctx.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return null;
@@ -17,7 +16,7 @@ class ProjectController extends Controller {
     try {
       const projects = await this.ctx.service.project.findAll();
       response.success(this.ctx, projects);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -36,7 +35,7 @@ class ProjectController extends Controller {
         return;
       }
       response.success(this.ctx, project);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -55,7 +54,7 @@ class ProjectController extends Controller {
         description: String(description || ''),
       });
       response.success(this.ctx, project);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -70,7 +69,7 @@ class ProjectController extends Controller {
     try {
       const project = await this.ctx.service.project.update(id, this.ctx.request.body || {});
       response.success(this.ctx, project);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -85,7 +84,7 @@ class ProjectController extends Controller {
     try {
       await this.ctx.service.project.softDelete(id);
       response.success(this.ctx, { success: true });
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -100,7 +99,7 @@ class ProjectController extends Controller {
     try {
       const project = await this.ctx.service.project.pin(id);
       response.success(this.ctx, project);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -115,7 +114,7 @@ class ProjectController extends Controller {
     try {
       const project = await this.ctx.service.project.unpin(id);
       response.success(this.ctx, project);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -134,7 +133,7 @@ class ProjectController extends Controller {
     try {
       const result = await this.ctx.service.scriptImport.parseAndImport(id, script_text);
       response.success(this.ctx, result);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -157,7 +156,7 @@ class ProjectController extends Controller {
         video_duration: project.video_duration,
         project,
       });
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }

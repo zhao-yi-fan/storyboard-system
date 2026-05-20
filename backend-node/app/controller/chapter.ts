@@ -1,11 +1,10 @@
 'use strict';
-// @ts-nocheck
 
 const Controller = require('egg').Controller;
 const response = require('../lib/response');
 
 class ChapterController extends Controller {
-  parseId() {
+  parseId(): number | null {
     const id = Number(this.ctx.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return null;
@@ -23,7 +22,7 @@ class ChapterController extends Controller {
     try {
       const items = await this.ctx.service.chapter.findByProjectId(projectId);
       response.success(this.ctx, items);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -42,7 +41,7 @@ class ChapterController extends Controller {
         return;
       }
       response.success(this.ctx, chapter);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -57,7 +56,7 @@ class ChapterController extends Controller {
     try {
       const chapter = await this.ctx.service.chapter.create(projectId, this.ctx.request.body || {});
       response.success(this.ctx, chapter);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -72,7 +71,7 @@ class ChapterController extends Controller {
     try {
       const chapter = await this.ctx.service.chapter.update(id, this.ctx.request.body || {});
       response.success(this.ctx, chapter);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }
@@ -87,7 +86,7 @@ class ChapterController extends Controller {
     try {
       await this.ctx.service.chapter.softDelete(id);
       response.success(this.ctx, { success: true });
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }

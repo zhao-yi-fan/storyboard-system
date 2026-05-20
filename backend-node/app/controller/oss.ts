@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const Controller = require('egg').Controller;
 const response = require('../lib/response');
@@ -8,11 +7,11 @@ class OssController extends Controller {
   async sign() {
     try {
       const result = await this.ctx.service.oss.signUploadURL(
-        this.ctx.query.filename,
-        this.ctx.query.content_type
+        String(this.ctx.query.filename || ''),
+        String(this.ctx.query.content_type || '')
       );
       response.success(this.ctx, result);
-    } catch (err) {
+    } catch (err: any) {
       response.error(this.ctx, err.message);
     }
   }

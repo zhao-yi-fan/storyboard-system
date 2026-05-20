@@ -1,7 +1,6 @@
 'use strict';
-// @ts-nocheck
 
-module.exports = app => {
+module.exports = (app: any) => {
   const { router, controller } = app;
 
   router.get('/api/health', controller.health.index);

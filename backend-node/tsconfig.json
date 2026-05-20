@@ -6,10 +6,13 @@
     "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "outDir": "dist",
+    "rootDir": ".",
     "strict": false,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["config/**/*.ts", "app/**/*.ts"]
+  "include": ["app.ts", "app/**/*.ts", "config/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }

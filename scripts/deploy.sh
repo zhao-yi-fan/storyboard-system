@@ -59,6 +59,7 @@ log "commit after pull: $(git rev-parse --short HEAD)"
 run "build frontend" bash -lc "cd '$FRONTEND_DIR' && npm run build"
 run "build backend" bash -lc "cd '$BACKEND_DIR' && go build -o storyboard-backend ."
 run "install backend-node dependencies" bash -lc "cd '$NODE_BACKEND_DIR' && npm install"
+run "build backend-node dist" bash -lc "cd '$NODE_BACKEND_DIR' && npm run build"
 
 existing_pids="$(pgrep -f 'storyboard-backend$' || true)"
 if [[ -n "${existing_pids}" ]]; then

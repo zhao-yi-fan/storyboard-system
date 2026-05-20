@@ -1,7 +1,14 @@
 'use strict';
-// @ts-nocheck
 
-export function success(ctx: any, data: unknown) {
+type ApiContext = {
+  body: {
+    code: number;
+    data: unknown;
+    message: string;
+  };
+};
+
+export function success(ctx: ApiContext, data: unknown) {
   ctx.body = {
     code: 200,
     data,
@@ -9,7 +16,7 @@ export function success(ctx: any, data: unknown) {
   };
 }
 
-export function error(ctx: any, message: string) {
+export function error(ctx: ApiContext, message: string) {
   ctx.body = {
     code: 0,
     data: null,

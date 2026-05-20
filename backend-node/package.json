@@ -4,10 +4,14 @@
   "private": true,
   "description": "Egg.js migration backend for storyboard-system",
   "scripts": {
-    "dev": "egg-bin dev",
-    "start": "egg-scripts start --daemon --title=storyboard-backend-node",
+    "build": "node ./scripts/build.mjs",
+    "dev": "npm run build && egg-bin dev dist",
+    "start": "egg-scripts start dist --daemon --title=storyboard-backend-node",
     "stop": "egg-scripts stop --title=storyboard-backend-node",
     "test": "egg-bin test"
+  },
+  "egg": {
+    "typescript": true
   },
   "dependencies": {
     "ali-oss": "^6.23.0",
