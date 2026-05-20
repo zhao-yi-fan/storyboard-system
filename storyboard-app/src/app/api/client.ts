@@ -6,9 +6,9 @@ export type ApiBackendTarget = "go" | "node";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const API_BACKEND_STORAGE_KEY = "storyboard-api-backend-target";
 const API_BACKEND_EVENT = "storyboard-api-backend-change";
-const API_BACKEND_PORTS: Record<ApiBackendTarget, number> = {
-  go: 8082,
-  node: 8083,
+const API_BACKEND_PATHS: Record<ApiBackendTarget, string> = {
+  go: "/api-go",
+  node: "/api-node",
 };
 
 function isBrowser() {
@@ -50,14 +50,8 @@ export function subscribeApiBackendTarget(listener: (target: ApiBackendTarget) =
 }
 
 export function getApiBaseUrl() {
-  if (!isBrowser()) {
-    return BASE_URL;
-  }
-
   const target = getApiBackendTarget();
-  const protocol = window.location.protocol;
-  const hostname = window.location.hostname || "127.0.0.1";
-  return `${protocol}//${hostname}:${API_BACKEND_PORTS[target]}/api`;
+  return isBrowser() ? API_BACKEND_PATHS[target] : BASE_URL;
 }
 
 type RequestOptions = RequestInit & {
