@@ -7,9 +7,18 @@ const os = require('node:os');
 const path = require('node:path');
 const { URL } = require('node:url');
 const OSS = require('ali-oss');
+const DIST_DIR_NAME = 'dist';
 
 function storyboardConfig(app) {
   return app.config.storyboard || {};
+}
+
+function resolveBackendNodeRootDir(app) {
+  const baseDir = String(app.baseDir || '').trim();
+  if (!baseDir) {
+    return process.cwd();
+  }
+  return path.basename(baseDir) === DIST_DIR_NAME ? path.resolve(baseDir, '..') : baseDir;
 }
 
 function normalizedGeneratedBasePath(app) {
@@ -67,7 +76,7 @@ async function resolveGeneratedAssetRoot(app) {
   if (path.isAbsolute(configured)) {
     return configured;
   }
-  return path.resolve(app.baseDir, configured);
+  return path.resolve(resolveBackendNodeRootDir(app), configured);
 }
 
 async function generatedObjectKeyToLocalPath(app, objectKey) {

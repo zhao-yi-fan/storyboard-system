@@ -15,9 +15,20 @@ import { buildOssConfig } from './providers/oss';
 import { FALLBACK_GO_ENV_PATH, LOCAL_ENV_PATH } from './shared/constants';
 
 const ENV_PATHS = [ LOCAL_ENV_PATH, FALLBACK_GO_ENV_PATH ];
+const DIST_DIR_NAME = 'dist';
+
+function resolveBackendNodeRootDir(): string {
+  const candidate = path.resolve(__dirname, '..');
+  if (path.basename(candidate) === DIST_DIR_NAME) {
+    return path.resolve(candidate, '..');
+  }
+  return candidate;
+}
+
+const backendNodeRootDir = resolveBackendNodeRootDir();
 
 for (const envPath of ENV_PATHS) {
-  dotenv.config({ path: path.join(__dirname, '..', envPath) });
+  dotenv.config({ path: path.join(backendNodeRootDir, envPath) });
 }
 
 module.exports = (appInfo: { name: string }) => {
