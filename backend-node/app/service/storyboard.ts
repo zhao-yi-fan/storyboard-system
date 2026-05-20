@@ -223,30 +223,6 @@ class StoryboardService extends Service {
     return new Set([ 'wan2.6-i2v-flash', 'wan2.7-i2v', 'seedance-1.5-pro' ]);
   }
 
-  resolveVideoModel(selectedModel) {
-    const requestedModel = String(selectedModel || '').trim() || (this.app.config.storyboard.wanxVideoModel || 'wan2.7-i2v');
-    const hasDashScope = !!String(this.app.config.storyboard.dashScopeApiKey || '').trim();
-    const hasSeedance = !!String(this.app.config.storyboard.seedanceApiKey || '').trim();
-
-    if (requestedModel === 'seedance-1.5-pro') {
-      if (hasSeedance) {
-        return requestedModel;
-      }
-      if (hasDashScope) {
-        return String(this.app.config.storyboard.wanxVideoModel || 'wan2.7-i2v').trim() || 'wan2.7-i2v';
-      }
-      throw new Error('镜头视频生成未配置：缺少可用的视频模型密钥，请配置 SEEDANCE_API_KEY 或 DASHSCOPE_API_KEY');
-    }
-
-    if (hasDashScope) {
-      return requestedModel;
-    }
-    if (hasSeedance) {
-      return 'seedance-1.5-pro';
-    }
-    throw new Error('镜头视频生成未配置：缺少可用的视频模型密钥，请配置 DASHSCOPE_API_KEY 或 SEEDANCE_API_KEY');
-  }
-
   resolveStoryboardStylePreset(scene, storyboard) {
     return String(storyboard.style_preset || scene.style_preset || '').trim();
   }
@@ -450,7 +426,7 @@ class StoryboardService extends Service {
     if (!scene) {
       throw new Error('scene not found');
     }
-    const model = this.resolveVideoModel(selectedModel);
+    const model = String(selectedModel || '').trim() || (this.app.config.storyboard.wanxVideoModel || 'wan2.7-i2v');
     if (!this.supportedVideoModels().has(model)) {
       throw new Error('unsupported video model');
     }
