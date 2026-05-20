@@ -3,7 +3,7 @@
 
 const { Service } = require('egg');
 const { mapChapter } = require('../lib/entity');
-const { hasOwn, toPositiveNumber } = require('../lib/common.ts');
+const { hasOwn, toPositiveNumber } = require('../lib/common');
 
 class ChapterService extends Service {
   get pool() {

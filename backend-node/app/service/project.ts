@@ -4,7 +4,7 @@
 const { Service } = require('egg');
 const { mapProject, mapProjectWithStats } = require('../lib/project');
 const { composeVideos, sanitizeFileName } = require('../lib/media');
-const { hasOwn } = require('../lib/common.ts');
+const { hasOwn } = require('../lib/common');
 
 const EMPTY_MEDIA_FIELDS = [ '', '', 'generating', '', 0 ];
 const FAILED_MEDIA_PREFIX = [ '', '', 'failed' ];
