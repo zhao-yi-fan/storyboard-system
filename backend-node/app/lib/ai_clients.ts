@@ -28,6 +28,7 @@ const VIDEO_RESOLUTION_720P = '720P';
 const VIDEO_RESOLUTION_480P = '480p';
 const VOICE_RESPONSE_FORMAT_WAV = 'wav';
 const VOICE_LANGUAGE_ZH = 'zh';
+const { buildCharacterVoicePromptText } = require('./prompt_library');
 
 const NEGATIVE_PROMPT = '低分辨率，低画质，构图混乱，文字模糊，水印，过度AI感，肢体畸形';
 const DEFAULT_SEEDREAM_MODEL = 'doubao-seedream-4-5-251128';
@@ -422,15 +423,7 @@ function preferredVoiceName(character) {
 }
 
 function buildCharacterVoicePrompt(character) {
-  let prompt = '为漫剧角色设计一段稳定可复用的中文主语音。';
-  if (String(character?.name || '').trim()) {
-    prompt += ` 角色名：${String(character.name).trim()}。`;
-  }
-  if (String(character?.description || '').trim()) {
-    prompt += ` 人设描述：${String(character.description).trim()}。`;
-  }
-  prompt += ' 声音要求：自然真人感，吐字清晰，适合剧情对白。 说话状态：克制、真实，不要主持腔，不要广告腔。';
-  return prompt;
+  return buildCharacterVoicePromptText(character).prompt;
 }
 
 function buildCharacterVoiceReferenceText(character) {

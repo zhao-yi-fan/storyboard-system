@@ -21,6 +21,7 @@ const {
   generateSeedanceVideo,
 } = require('../lib/ai_clients');
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const { buildStoryboardCoverPrompt, buildStoryboardVideoPrompt } = require('../lib/prompt_library');
 
 class StoryboardService extends Service {
   get pool() {
@@ -231,44 +232,15 @@ class StoryboardService extends Service {
   }
 
   buildCoverPrompt(fields, references) {
-    let prompt = '为漫剧分镜系统生成单镜头封面图。';
-    if (fields.scene_title) prompt += ` 场景：${fields.scene_title}。`;
-    if (fields.location) prompt += ` 地点：${fields.location}。`;
-    if (fields.time_of_day) prompt += ` 时间：${fields.time_of_day}。`;
-    if (fields.background) prompt += ` 背景环境：${fields.background}。`;
-    if (fields.characters.length) prompt += ` 主要人物：${fields.characters.join('、')}。`;
-    if (fields.shot_type) prompt += ` 景别：${fields.shot_type}。`;
-    if (fields.camera_direction) prompt += ` 镜头机位：${fields.camera_direction}。`;
-    if (fields.content) prompt += ` 画面动作：${fields.content}。`;
-    if (fields.mood) prompt += ` 情绪：${fields.mood}。`;
-    if (fields.style_preset) prompt += ` 风格预设：${fields.style_preset}。`;
-    if (fields.style_notes) prompt += ` 风格补充：${fields.style_notes}。`;
-    if (fields.dialogue) prompt += ` 台词氛围：${fields.dialogue}。`;
-    if (fields.notes) prompt += ` 备注：${fields.notes}。`;
-    if (references.length) {
-      prompt += ' 保持参考图中的角色造型和场景材质一致。';
-    }
-    prompt += ' 输出要求：横版16比9，写实电影感，主体明确，不要文字、水印、logo、海报排版。';
-    return prompt;
+    return buildStoryboardCoverPrompt(fields, references).prompt;
   }
 
   buildVideoPrompt(storyboard, scene, duration) {
-    const characters = storyboard.character_names.length ? storyboard.character_names : storyboard.characters.map(item => item.name).filter(Boolean);
-    let prompt = `基于输入首帧图像生成一个${duration}秒的单镜头电影分镜视频。`;
-    if (scene.title) prompt += ` 场景：${scene.title}。`;
-    if (storyboard.background) prompt += ` 背景环境：${storyboard.background}。`;
-    if (characters.length) prompt += ` 主要人物：${characters.join('、')}。`;
-    if (storyboard.shot_type) prompt += ` 景别：${storyboard.shot_type}。`;
-    if (storyboard.camera_direction) prompt += ` 镜头机位：${storyboard.camera_direction}。`;
-    if (storyboard.camera_motion) prompt += ` 镜头运动：${storyboard.camera_motion}。`;
-    if (storyboard.content) prompt += ` 画面动作：${storyboard.content}。`;
-    if (storyboard.mood) prompt += ` 情绪：${storyboard.mood}。`;
-    if (this.resolveStoryboardStylePreset(scene, storyboard)) prompt += ` 风格预设：${this.resolveStoryboardStylePreset(scene, storyboard)}。`;
-    if (this.resolveStoryboardStyleNotes(scene, storyboard)) prompt += ` 风格补充：${this.resolveStoryboardStyleNotes(scene, storyboard)}。`;
-    if (storyboard.dialogue) prompt += ` 台词：${storyboard.dialogue}。`;
-    if (storyboard.notes) prompt += ` 备注补充：${storyboard.notes}。`;
-    prompt += ' 保持首帧构图和主体一致，只生成单镜头连续动作，不切镜，不闪回。运动要求：自然运动、光影克制、镜头稳定。音频：根据场景自动生成环境音和氛围声，不要旁白，不要字幕，不要水印。';
-    return prompt;
+    return buildStoryboardVideoPrompt({
+      ...storyboard,
+      style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
+      style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
+    }, scene, duration).prompt;
   }
 
   async selectReferenceImages(storyboard, scene) {
@@ -336,13 +308,16 @@ class StoryboardService extends Service {
       dialogue: String(storyboard.dialogue || '').trim(),
       notes: String(storyboard.notes || '').trim(),
     };
+    const coverPrompt = buildStoryboardCoverPrompt(fields, references);
     return {
       mode,
       model,
       reference_images: references.map(item => ({ type: item.type, name: item.name, url: item.url, source: item.source })),
       missing_references: missing,
       fields,
-      final_prompt: this.buildCoverPrompt(fields, references),
+      template: coverPrompt.template,
+      prompt_blueprint: coverPrompt.blueprint,
+      final_prompt: coverPrompt.prompt,
       can_generate_without_references: true,
     };
   }
@@ -430,6 +405,11 @@ class StoryboardService extends Service {
       throw new Error('当前视频模型仅支持 5 秒输出');
     }
     const sourceImageUrl = storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
+    const videoPrompt = buildStoryboardVideoPrompt({
+      ...storyboard,
+      style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
+      style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
+    }, scene, selectedDuration);
     return {
       model,
       duration: selectedDuration,
@@ -452,7 +432,9 @@ class StoryboardService extends Service {
         dialogue: String(storyboard.dialogue || '').trim(),
         notes: String(storyboard.notes || '').trim(),
       },
-      final_prompt: this.buildVideoPrompt(storyboard, scene, selectedDuration),
+      template: videoPrompt.template,
+      prompt_blueprint: videoPrompt.blueprint,
+      final_prompt: videoPrompt.prompt,
     };
   }
 

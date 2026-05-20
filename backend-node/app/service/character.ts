@@ -6,6 +6,7 @@ const path = require('node:path');
 const { resolveMediaUrl, createPreviewFromSource, avatarPreviewSpec, storyboardPreviewSpec, downloadAndStore, createPreviewFromLocalPath, storeBuffer, probeDuration, sanitizeFileName } = require('../lib/media');
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const { generateWanxImage, generateOpenAIImage, createCharacterVoicePreview, generateCharacterVoiceReference } = require('../lib/ai_clients');
+const { buildCharacterCoverPrompt, buildCharacterDesignPrompt } = require('../lib/prompt_library');
 
 class CharacterService extends Service {
   get pool() {
@@ -144,22 +145,11 @@ class CharacterService extends Service {
   }
 
   buildCoverPrompt(character) {
-    let prompt = '为漫剧分镜系统生成一张角色封面头像。';
-    if (character.name) prompt += ` 角色名称：${character.name}。`;
-    if (character.description) prompt += ` 角色描述：${character.description}。`;
-    prompt += ' 画面要求：单人角色肖像，主体明确，构图干净，适合在资产库中展示。风格要求：写实电影感，细节自然，避免夸张漫画化。输出要求：不要文字、水印、logo、海报排版。';
-    return prompt;
+    return buildCharacterCoverPrompt(character).prompt;
   }
 
   buildDesignPrompt(character, mode) {
-    let prompt = '为漫剧分镜系统生成角色主设定图。';
-    if (character.name) prompt += ` 角色名称：${character.name}。`;
-    if (character.description) prompt += ` 角色描述：${character.description}。`;
-    prompt += mode === 'draft'
-      ? ' 目标：快速确定角色长相、发型、服装和整体气质。'
-      : ' 目标：输出最终定稿级角色设定板，作为后续镜头封面的核心参考图。';
-    prompt += ' 画面要求：单张角色设定板，包含同一角色的正面全身、侧面全身、背面全身，以及半身近景头像。一致性要求：保持同一人物的脸型、五官、发型、发色、服装结构、配饰位置和身材比例完全一致。背景要求：纯净浅色背景或白底，不要剧情场景，不要复杂道具。输出要求：不要文字说明、不要水印、不要 logo、不要海报排版。';
-    return prompt;
+    return buildCharacterDesignPrompt(character, mode).prompt;
   }
 
   resolveDesignSelection(modelRaw, modeRaw) {
@@ -175,6 +165,7 @@ class CharacterService extends Service {
   async previewCoverGeneration(id) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
+    const coverPrompt = buildCharacterCoverPrompt(character);
     return {
       action: 'character-cover',
       model: this.app.config.storyboard.wanxModel || 'wanx2.0-t2i-turbo',
@@ -183,7 +174,9 @@ class CharacterService extends Service {
         角色描述: character.description,
         输出: '单人角色封面头像',
       },
-      final_prompt: this.buildCoverPrompt(character),
+      template: coverPrompt.template,
+      prompt_blueprint: coverPrompt.blueprint,
+      final_prompt: coverPrompt.prompt,
       notes: [ '用于资产库展示，重点是角色识别度和构图干净。' ],
     };
   }
@@ -192,6 +185,7 @@ class CharacterService extends Service {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
     const selection = this.resolveDesignSelection(modelRaw, modeRaw);
+    const designPrompt = buildCharacterDesignPrompt(character, selection.mode);
     return {
       action: 'character-design-sheet',
       model: selection.model,
@@ -202,7 +196,9 @@ class CharacterService extends Service {
         生成档位: selection.mode,
         输出: '角色主设定图',
       },
-      final_prompt: this.buildDesignPrompt(character, selection.mode),
+      template: designPrompt.template,
+      prompt_blueprint: designPrompt.blueprint,
+      final_prompt: designPrompt.prompt,
       notes: [ '主设定图会作为后续镜头封面生成的人物核心参考图。' ],
     };
   }

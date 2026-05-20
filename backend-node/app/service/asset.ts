@@ -5,6 +5,7 @@ const Service = require('egg').Service;
 const path = require('node:path');
 const { createPreviewFromSource, assetPreviewSpec, downloadAndStore, createPreviewFromLocalPath, sanitizeFileName } = require('../lib/media');
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
+const { buildAssetCoverPrompt } = require('../lib/prompt_library');
 
 class AssetService extends Service {
   get pool() {
@@ -155,12 +156,7 @@ class AssetService extends Service {
   }
 
   buildCoverPrompt(asset) {
-    let prompt = '为漫剧分镜系统生成一张场景资产封面图。';
-    if (asset.name) prompt += ` 资产名称：${asset.name}。`;
-    if (asset.type) prompt += ` 资产类型：${asset.type}。`;
-    if (asset.meta) prompt += ` 说明：${asset.meta}。`;
-    prompt += ' 画面要求：单一场景封面，构图清晰，写实电影感，适合做背景或场景资产预览。输出要求：横版16比9，不要文字、水印、logo、海报排版。';
-    return prompt;
+    return buildAssetCoverPrompt(asset).prompt;
   }
 
   async previewCoverGeneration(id) {
@@ -169,6 +165,7 @@ class AssetService extends Service {
     if (!this.canGenerateSceneAssetCover(asset.type)) {
       throw new Error('当前资产类型不支持生成封面');
     }
+    const coverPrompt = buildAssetCoverPrompt(asset);
     return {
       action: 'asset-cover',
       model: this.app.config.storyboard.wanxModel || 'wanx2.0-t2i-turbo',
@@ -178,7 +175,9 @@ class AssetService extends Service {
         说明: asset.meta,
         输出: '场景资产封面',
       },
-      final_prompt: this.buildCoverPrompt(asset),
+      template: coverPrompt.template,
+      prompt_blueprint: coverPrompt.blueprint,
+      final_prompt: coverPrompt.prompt,
       notes: [ '适用于场景/背景类资产，不会覆盖原始素材文件。' ],
     };
   }

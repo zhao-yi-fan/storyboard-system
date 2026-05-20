@@ -7,6 +7,7 @@ const { mapScene } = require('../lib/entity');
 const { sanitizeFileName, storyboardPreviewSpec, downloadAndStore, createPreviewFromLocalPath, composeVideos } = require('../lib/media');
 const { generateWanxImage } = require('../lib/ai_clients');
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const { buildSceneCoverPrompt } = require('../lib/prompt_library');
 
 class SceneService extends Service {
   get pool() {
@@ -146,21 +147,7 @@ class SceneService extends Service {
   }
 
   buildCoverPrompt(scene, storyboards) {
-    let prompt = '为漫画场景生成一张代表性横版封面图。';
-    if (scene.title) prompt += ` 场景标题：${scene.title}。`;
-    if (scene.location) prompt += ` 地点：${scene.location}。`;
-    if (scene.time_of_day) prompt += ` 时间：${scene.time_of_day}。`;
-    if (scene.description) prompt += ` 场景描述：${scene.description}。`;
-    const backgrounds = [ ...new Set(storyboards.map(item => String(item.background || '').trim()).filter(Boolean)) ].slice(0, 3);
-    const characters = [ ...new Set(storyboards.flatMap(item => item.character_names || []).filter(Boolean)) ].slice(0, 5);
-    const moods = [ ...new Set(storyboards.map(item => String(item.mood || '').trim()).filter(Boolean)) ].slice(0, 4);
-    const content = storyboards.slice(0, 4).map(item => String(item.content || '').trim()).filter(Boolean);
-    if (backgrounds.length) prompt += ` 背景环境：${backgrounds.join('；')}。`;
-    if (characters.length) prompt += ` 主要人物：${characters.join('、')}。`;
-    if (moods.length) prompt += ` 主要情绪：${moods.join('、')}。`;
-    if (content.length) prompt += ` 关键镜头摘要：${content.join('；')}。`;
-    prompt += ' 画面要求：只生成一张完整的单幅场景代表图，不要拼贴，不要多画格，不要把多个镜头机械并排。风格要求：写实电影感、叙事性强、构图克制、光影自然、适合作为场景树封面。输出要求：横版16比9，主体明确，避免文字、水印、logo、字幕、海报排版。';
-    return prompt;
+    return buildSceneCoverPrompt(scene, storyboards).prompt;
   }
 
   async previewCoverGeneration(id) {
@@ -169,6 +156,7 @@ class SceneService extends Service {
       throw new Error('scene not found');
     }
     const storyboards = await this.ctx.service.storyboard.findBySceneId(id);
+    const coverPrompt = buildSceneCoverPrompt(scene, storyboards);
     return {
       action: 'scene-cover',
       model: this.app.config.storyboard.wanxModel || 'wanx2.0-t2i-turbo',
@@ -180,7 +168,9 @@ class SceneService extends Service {
         镜头数量: String(storyboards.length),
         输出: '场景级代表封面',
       },
-      final_prompt: this.buildCoverPrompt(scene, storyboards),
+      template: coverPrompt.template,
+      prompt_blueprint: coverPrompt.blueprint,
+      final_prompt: coverPrompt.prompt,
       notes: [ '场景封面用于场景树和场景头部预览，强调代表性和叙事感。' ],
     };
   }
