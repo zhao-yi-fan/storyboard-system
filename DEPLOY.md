@@ -31,10 +31,10 @@ cd /home/admin/projects/storyboard-system
 - The deploy script handles:
   - `git fetch` + `git pull --ff-only origin main`
   - frontend build
-  - backend build
-  - stopping the previous backend process
-  - starting the new backend process
+  - Go backend build + restart on `8082`
+  - Egg backend build/runtime dependency install + restart on `8083`
   - smoke testing `http://127.0.0.1:8082/api/projects`
+  - smoke testing `http://127.0.0.1:8083/api/health`
 
 ## One-time SSH check for admin
 

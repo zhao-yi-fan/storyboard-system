@@ -1,9 +1,64 @@
 import { toast } from "sonner";
 import type { ApiResponse } from "./types";
 
-// 配置 API 基础 URL
-// 生产环境由 nginx 反向代理 /api 到 localhost:8082，所以使用相对路径
+export type ApiBackendTarget = "go" | "node";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const API_BACKEND_STORAGE_KEY = "storyboard-api-backend-target";
+const API_BACKEND_EVENT = "storyboard-api-backend-change";
+const API_BACKEND_PORTS: Record<ApiBackendTarget, number> = {
+  go: 8082,
+  node: 8083,
+};
+
+function isBrowser() {
+  return typeof window !== "undefined";
+}
+
+export function getApiBackendTarget(): ApiBackendTarget {
+  if (!isBrowser()) return "node";
+  const stored = window.localStorage.getItem(API_BACKEND_STORAGE_KEY);
+  return stored === "go" ? "go" : "node";
+}
+
+export function setApiBackendTarget(target: ApiBackendTarget) {
+  if (!isBrowser()) return;
+  window.localStorage.setItem(API_BACKEND_STORAGE_KEY, target);
+  window.dispatchEvent(new CustomEvent<ApiBackendTarget>(API_BACKEND_EVENT, { detail: target }));
+}
+
+export function subscribeApiBackendTarget(listener: (target: ApiBackendTarget) => void) {
+  if (!isBrowser()) {
+    return () => {};
+  }
+
+  const handleCustomEvent = (event: Event) => {
+    listener((event as CustomEvent<ApiBackendTarget>).detail || getApiBackendTarget());
+  };
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === API_BACKEND_STORAGE_KEY) {
+      listener(getApiBackendTarget());
+    }
+  };
+
+  window.addEventListener(API_BACKEND_EVENT, handleCustomEvent);
+  window.addEventListener("storage", handleStorage);
+  return () => {
+    window.removeEventListener(API_BACKEND_EVENT, handleCustomEvent);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
+
+export function getApiBaseUrl() {
+  if (!isBrowser()) {
+    return BASE_URL;
+  }
+
+  const target = getApiBackendTarget();
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname || "127.0.0.1";
+  return `${protocol}//${hostname}:${API_BACKEND_PORTS[target]}/api`;
+}
 
 type RequestOptions = RequestInit & {
   suppressToast?: boolean;
@@ -33,7 +88,7 @@ async function request<T = any>(
   };
 
   try {
-    const response = await fetch(`${BASE_URL}${url}`, config);
+    const response = await fetch(`${getApiBaseUrl()}${url}`, config);
     const result: ApiResponse<T> = await response.json();
 
     // 统一处理响应格式

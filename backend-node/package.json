@@ -1,0 +1,26 @@
+{
+  "name": "storyboard-backend-node",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Egg.js migration backend for storyboard-system",
+  "scripts": {
+    "dev": "egg-bin dev",
+    "start": "egg-scripts start --daemon --title=storyboard-backend-node",
+    "stop": "egg-scripts stop --title=storyboard-backend-node",
+    "test": "egg-bin test"
+  },
+  "dependencies": {
+    "ali-oss": "^6.23.0",
+    "dotenv": "^16.6.1",
+    "egg": "^3.31.0",
+    "egg-scripts": "^2.17.0",
+    "mysql2": "^3.15.3"
+  },
+  "devDependencies": {
+    "egg-bin": "^6.13.0",
+    "egg-mock": "^5.14.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

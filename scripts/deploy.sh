@@ -15,7 +15,10 @@ FRONTEND_DIR="$ROOT_DIR/storyboard-app"
 BACKEND_DIR="$ROOT_DIR/backend"
 BACKEND_BIN="$BACKEND_DIR/storyboard-backend"
 BACKEND_LOG="$BACKEND_DIR/storyboard-backend.log"
+NODE_BACKEND_DIR="$ROOT_DIR/backend-node"
+NODE_BACKEND_LOG="$NODE_BACKEND_DIR/backend-node.log"
 API_HEALTH_URL="http://127.0.0.1:8082/api/projects"
+NODE_API_HEALTH_URL="http://127.0.0.1:8083/api/health"
 
 log() {
   printf '[deploy] %s\n' "$1"
@@ -55,6 +58,7 @@ log "commit after pull: $(git rev-parse --short HEAD)"
 
 run "build frontend" bash -lc "cd '$FRONTEND_DIR' && npm run build"
 run "build backend" bash -lc "cd '$BACKEND_DIR' && go build -o storyboard-backend ."
+run "install backend-node dependencies" bash -lc "cd '$NODE_BACKEND_DIR' && npm install"
 
 existing_pids="$(pgrep -f 'storyboard-backend$' || true)"
 if [[ -n "${existing_pids}" ]]; then
@@ -75,12 +79,17 @@ if pgrep -f 'storyboard-backend$' >/dev/null 2>&1; then
   sleep 1
 fi
 
+log "stopping existing backend-node process if present"
+bash -lc "cd '$NODE_BACKEND_DIR' && npm run stop >/dev/null 2>&1 || true"
+sleep 1
+
 if [[ -e "$BACKEND_LOG" && ! -w "$BACKEND_LOG" ]]; then
   log "backend log is not writable by admin, resetting ownership"
   sudo rm -f "$BACKEND_LOG"
 fi
 
 run "start backend" bash -lc "cd '$BACKEND_DIR' && nohup '$BACKEND_BIN' > '$BACKEND_LOG' 2>&1 < /dev/null &"
+run "start backend-node" bash -lc "cd '$NODE_BACKEND_DIR' && SERVER_HOST=0.0.0.0 SERVER_PORT=8083 nohup npm run start > '$NODE_BACKEND_LOG' 2>&1 < /dev/null &"
 
 log "waiting for backend smoke test"
 smoke_ok=0
@@ -99,10 +108,29 @@ if [[ "$smoke_ok" -ne 1 ]]; then
   exit 1
 fi
 
+log "waiting for backend-node smoke test"
+node_smoke_ok=0
+for _ in {1..30}; do
+  if curl -fsS "$NODE_API_HEALTH_URL" >/dev/null 2>&1; then
+    node_smoke_ok=1
+    break
+  fi
+  sleep 1
+done
+
+if [[ "$node_smoke_ok" -ne 1 ]]; then
+  echo "[deploy] backend-node smoke test failed: $NODE_API_HEALTH_URL" >&2
+  echo "[deploy] recent backend-node log:" >&2
+  tail -n 80 "$NODE_BACKEND_LOG" >&2 || true
+  exit 1
+fi
+
 log "backend listening:"
 ss -ltnp | grep 8082 || true
+ss -ltnp | grep 8083 || true
 
 log "backend process:"
 ps -eo user=,pid=,args= | grep 'storyboard-backend$' | grep -v grep || true
+ps -eo user=,pid=,args= | grep 'storyboard-backend-node' | grep -v grep || true
 
 log "smoke test passed"
