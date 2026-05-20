@@ -76,6 +76,14 @@ export function deleteStoryboard(id: number) {
   return apiClient.delete<{ success: boolean }>(`/storyboards/${id}`);
 }
 
+export function addStoryboardCharacter(id: number, characterId: number) {
+  return apiClient.post<Storyboard>(`/storyboards/${id}/characters`, { character_id: characterId });
+}
+
+export function removeStoryboardCharacter(id: number, characterId: number) {
+  return apiClient.delete<Storyboard>(`/storyboards/${id}/characters/${characterId}`);
+}
+
 export function getStoryboardCoverGenerationPreview(id: number, data?: { model?: string }) {
   const params = new URLSearchParams();
   if (data?.model) {

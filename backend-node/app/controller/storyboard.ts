@@ -211,6 +211,34 @@ class StoryboardController extends Controller {
       response.error(this.ctx, err.message);
     }
   }
+
+  async addCharacter() {
+    const storyboardId = this.parseId();
+    const characterId = Number((this.ctx.request.body || {}).character_id);
+    if (!storyboardId || !Number.isInteger(characterId) || characterId <= 0) {
+      response.error(this.ctx, 'invalid character id');
+      return;
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.storyboard.addCharacter(storyboardId, characterId));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async removeCharacter() {
+    const storyboardId = this.parseId();
+    const characterId = Number(this.ctx.params.characterId);
+    if (!storyboardId || !Number.isInteger(characterId) || characterId <= 0) {
+      response.error(this.ctx, 'invalid character id');
+      return;
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.storyboard.removeCharacter(storyboardId, characterId));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
 }
 
 module.exports = StoryboardController;

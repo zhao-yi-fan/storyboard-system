@@ -278,6 +278,39 @@ class StoryboardService extends Service {
     return { references, missing };
   }
 
+  async addCharacter(storyboardId, characterId) {
+    const storyboard = await this.findById(storyboardId);
+    if (!storyboard) {
+      throw new Error('storyboard not found');
+    }
+    const character = await this.ctx.service.character.findById(characterId);
+    if (!character) {
+      throw new Error('character not found');
+    }
+    if (Number(character.project_id) !== Number(storyboard.project_id)) {
+      throw new Error('character does not belong to the same project');
+    }
+    await this.pool.execute(
+      `INSERT INTO storyboard_characters (storyboard_id, character_id, line)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE line = VALUES(line)`,
+      [ storyboardId, characterId, String(storyboard.dialogue || storyboard.content || '').trim() ]
+    );
+    return await this.findById(storyboardId);
+  }
+
+  async removeCharacter(storyboardId, characterId) {
+    const storyboard = await this.findById(storyboardId);
+    if (!storyboard) {
+      throw new Error('storyboard not found');
+    }
+    await this.pool.execute(
+      'DELETE FROM storyboard_characters WHERE storyboard_id = ? AND character_id = ?',
+      [ storyboardId, characterId ]
+    );
+    return await this.findById(storyboardId);
+  }
+
   async previewCoverGeneration(id, selectedModel) {
     if (!this.supportedCoverModels().has(String(selectedModel || '').trim())) {
       throw new Error('unsupported cover model');

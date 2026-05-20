@@ -65,6 +65,7 @@ import {
   chapterApi,
   sceneApi,
   storyboardApi,
+  characterApi,
   type Project,
   type Chapter,
   type Scene,
@@ -73,6 +74,7 @@ import {
   type StoryboardVideoGenerationPreview,
   type StoryboardMediaGeneration,
   type AIGenerationPreview,
+  type Character,
 } from "../api";
 
 const COVER_MODEL_OPTIONS = [
@@ -254,6 +256,10 @@ export default function Workspace() {
   const [previewProjectVideo, setPreviewProjectVideo] = useState<{ src: string; originalSrc?: string; title: string } | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
+  const [projectCharacters, setProjectCharacters] = useState<Character[]>([]);
+  const [isManageCharactersOpen, setIsManageCharactersOpen] = useState(false);
+  const [isLoadingProjectCharacters, setIsLoadingProjectCharacters] = useState(false);
+  const [activeCharacterActionKey, setActiveCharacterActionKey] = useState<string | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -389,6 +395,20 @@ export default function Workspace() {
   const applyMediaMutation = (payload: { storyboard: Storyboard; media_generations: StoryboardMediaGeneration[] }) => {
     applyStoryboardUpdate(payload.storyboard);
     setMediaGenerations(payload.media_generations);
+  };
+
+  const loadProjectCharacters = async (projectId: number) => {
+    setIsLoadingProjectCharacters(true);
+    try {
+      const data = await characterApi.getCharactersByProject(projectId);
+      setProjectCharacters(data);
+    } catch (error) {
+      console.error("Failed to load project characters:", error);
+      toast.error(error instanceof Error ? error.message : "加载项目角色失败");
+      setProjectCharacters([]);
+    } finally {
+      setIsLoadingProjectCharacters(false);
+    }
   };
 
   const stopVideoPolling = () => {
@@ -872,6 +892,50 @@ export default function Workspace() {
 
   const handleRequestDeleteGeneration = (generation: StoryboardMediaGeneration) => {
     setDeleteTargetGeneration(generation);
+  };
+
+  const handleRemoveStoryboardCharacter = async (characterId: number) => {
+    if (!selectedShot) {
+      return;
+    }
+    const actionKey = `remove-character:${characterId}`;
+    setActiveCharacterActionKey(actionKey);
+    try {
+      const nextShot = await storyboardApi.removeStoryboardCharacter(selectedShot.id, characterId);
+      applyStoryboardUpdate(nextShot);
+      toast.success("已移除镜头角色");
+    } catch (error) {
+      console.error("Failed to remove storyboard character:", error);
+      toast.error(error instanceof Error ? error.message : "移除镜头角色失败");
+    } finally {
+      setActiveCharacterActionKey(null);
+    }
+  };
+
+  const handleOpenManageCharacters = async () => {
+    if (!selectedProject) {
+      return;
+    }
+    setIsManageCharactersOpen(true);
+    await loadProjectCharacters(selectedProject.id);
+  };
+
+  const handleAddStoryboardCharacter = async (characterId: number) => {
+    if (!selectedShot) {
+      return;
+    }
+    const actionKey = `add-character:${characterId}`;
+    setActiveCharacterActionKey(actionKey);
+    try {
+      const nextShot = await storyboardApi.addStoryboardCharacter(selectedShot.id, characterId);
+      applyStoryboardUpdate(nextShot);
+      toast.success("已添加镜头角色");
+    } catch (error) {
+      console.error("Failed to add storyboard character:", error);
+      toast.error(error instanceof Error ? error.message : "添加镜头角色失败");
+    } finally {
+      setActiveCharacterActionKey(null);
+    }
   };
 
   const handleRequestDeleteScene = (scene: Scene) => {
@@ -2010,7 +2074,26 @@ export default function Workspace() {
                   <div>
                     <Label className="text-xs text-gray-400">角色</Label>
                     <div className="mt-1.5 flex flex-wrap gap-2">
-                      {deriveCharacterNames(selectedShot).length > 0 ? (
+                      {selectedShot.characters && selectedShot.characters.length > 0 ? (
+                        selectedShot.characters.map((character) => (
+                          <Badge
+                            key={character.id}
+                            variant="outline"
+                            className="flex h-7 items-center gap-1 border-purple-700 pr-1 text-purple-300"
+                          >
+                            <span>{character.name}</span>
+                            <button
+                              type="button"
+                              className="rounded-sm p-0.5 text-purple-300 transition hover:bg-purple-900/40 disabled:opacity-50"
+                              onClick={() => handleRemoveStoryboardCharacter(character.id)}
+                              disabled={activeCharacterActionKey === `remove-character:${character.id}`}
+                              aria-label={`移除角色 ${character.name}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))
+                      ) : deriveCharacterNames(selectedShot).length > 0 ? (
                         deriveCharacterNames(selectedShot).map((name) => (
                           <Badge key={name} variant="outline" className="border-purple-700 text-purple-300">
                             {name}
@@ -2025,13 +2108,7 @@ export default function Workspace() {
                         size="sm"
                         variant="outline"
                         className="h-6 px-2 text-xs border-gray-700 text-gray-400"
-                        onClick={() =>
-                          navigate(
-                            selectedProject
-                              ? `/assets?project=${selectedProject.id}`
-                              : "/assets",
-                          )
-                        }
+                        onClick={() => void handleOpenManageCharacters()}
                       >
                         <Plus className="w-3 h-3 mr-1" />
                         管理角色
@@ -2253,6 +2330,125 @@ export default function Workspace() {
           </div>
         )}
       </div>
+      <Dialog open={isManageCharactersOpen} onOpenChange={setIsManageCharactersOpen}>
+        <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>管理镜头角色</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              删除当前镜头的错误角色，或者从当前项目角色库中重新加入正确角色。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+              <div className="text-gray-300 font-medium">当前镜头</div>
+              <div className="mt-2 text-xs text-gray-400">
+                {selectedShot ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}` : "未选择镜头"}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedShot?.characters?.length ? (
+                  selectedShot.characters.map((character) => (
+                    <Badge
+                      key={character.id}
+                      variant="outline"
+                      className="flex h-7 items-center gap-1 border-purple-700 pr-1 text-purple-300"
+                    >
+                      <span>{character.name}</span>
+                      <button
+                        type="button"
+                        className="rounded-sm p-0.5 text-purple-300 transition hover:bg-purple-900/40 disabled:opacity-50"
+                        onClick={() => void handleRemoveStoryboardCharacter(character.id)}
+                        disabled={activeCharacterActionKey === `remove-character:${character.id}`}
+                        aria-label={`移除角色 ${character.name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge variant="outline" className="border-gray-700 text-gray-500">
+                    当前镜头未关联角色
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-gray-300 font-medium">项目角色库</div>
+                {selectedProject ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-gray-700 text-xs text-gray-300"
+                    onClick={() => void loadProjectCharacters(selectedProject.id)}
+                    disabled={isLoadingProjectCharacters}
+                  >
+                    {isLoadingProjectCharacters ? (
+                      <>
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        刷新中
+                      </>
+                    ) : (
+                      "刷新角色库"
+                    )}
+                  </Button>
+                ) : null}
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {isLoadingProjectCharacters ? (
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    正在加载项目角色
+                  </div>
+                ) : projectCharacters.length > 0 ? (
+                  projectCharacters.map((character) => {
+                    const alreadyAssigned = !!selectedShot?.characters?.some((item) => item.id === character.id);
+                    return (
+                      <div
+                        key={character.id}
+                        className="flex items-start justify-between gap-3 rounded-md border border-gray-800 bg-[#111111] p-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-200">{character.name}</div>
+                          <div className="mt-1 line-clamp-3 text-xs leading-5 text-gray-400">{character.description || "暂无角色描述"}</div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={alreadyAssigned ? "outline" : "default"}
+                          className={alreadyAssigned ? "h-7 border-gray-700 text-xs text-gray-400" : "h-7 bg-purple-600 px-3 text-xs text-white hover:bg-purple-700"}
+                          onClick={() => void handleAddStoryboardCharacter(character.id)}
+                          disabled={alreadyAssigned || activeCharacterActionKey === `add-character:${character.id}`}
+                        >
+                          {activeCharacterActionKey === `add-character:${character.id}` ? (
+                            <>
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              添加中
+                            </>
+                          ) : alreadyAssigned ? (
+                            "已关联"
+                          ) : (
+                            "加入镜头"
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-gray-500">当前项目还没有可选角色。</div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsManageCharactersOpen(false)}>
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={isCreateSceneOpen}
         onOpenChange={(open) => {
