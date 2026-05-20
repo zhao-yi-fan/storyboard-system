@@ -44,6 +44,12 @@ module.exports = (appInfo: { name: string }) => {
     formLimit: '10mb',
   };
 
+  config.security = {
+    csrf: {
+      enable: false,
+    },
+  };
+
   config.mysql = buildMysqlConfig();
   config.storyboard = {
     ...buildStoryboardBaseConfig(),
