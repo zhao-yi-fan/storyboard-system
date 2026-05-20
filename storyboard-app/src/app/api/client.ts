@@ -1,57 +1,14 @@
 import { toast } from "sonner";
 import type { ApiResponse } from "./types";
 
-export type ApiBackendTarget = "go" | "node";
-
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-const API_BACKEND_STORAGE_KEY = "storyboard-api-backend-target";
-const API_BACKEND_EVENT = "storyboard-api-backend-change";
-const API_BACKEND_PATHS: Record<ApiBackendTarget, string> = {
-  go: "/api-go",
-  node: "/api-node",
-};
 
 function isBrowser() {
   return typeof window !== "undefined";
 }
 
-export function getApiBackendTarget(): ApiBackendTarget {
-  if (!isBrowser()) return "node";
-  const stored = window.localStorage.getItem(API_BACKEND_STORAGE_KEY);
-  return stored === "go" ? "go" : "node";
-}
-
-export function setApiBackendTarget(target: ApiBackendTarget) {
-  if (!isBrowser()) return;
-  window.localStorage.setItem(API_BACKEND_STORAGE_KEY, target);
-  window.dispatchEvent(new CustomEvent<ApiBackendTarget>(API_BACKEND_EVENT, { detail: target }));
-}
-
-export function subscribeApiBackendTarget(listener: (target: ApiBackendTarget) => void) {
-  if (!isBrowser()) {
-    return () => {};
-  }
-
-  const handleCustomEvent = (event: Event) => {
-    listener((event as CustomEvent<ApiBackendTarget>).detail || getApiBackendTarget());
-  };
-  const handleStorage = (event: StorageEvent) => {
-    if (event.key === API_BACKEND_STORAGE_KEY) {
-      listener(getApiBackendTarget());
-    }
-  };
-
-  window.addEventListener(API_BACKEND_EVENT, handleCustomEvent);
-  window.addEventListener("storage", handleStorage);
-  return () => {
-    window.removeEventListener(API_BACKEND_EVENT, handleCustomEvent);
-    window.removeEventListener("storage", handleStorage);
-  };
-}
-
 export function getApiBaseUrl() {
-  const target = getApiBackendTarget();
-  return isBrowser() ? API_BACKEND_PATHS[target] : BASE_URL;
+  return isBrowser() ? "/api" : BASE_URL;
 }
 
 type RequestOptions = RequestInit & {
