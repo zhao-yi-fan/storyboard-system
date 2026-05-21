@@ -1114,13 +1114,23 @@ export default function Workspace() {
   };
 
   const handleCreateScene = async () => {
-    if (!activeChapterForSceneCreation || !newSceneForm.title.trim()) {
+    if (!selectedProject || !newSceneForm.title.trim()) {
       return;
     }
 
     setIsCreatingScene(true);
     try {
-      const scene = await sceneApi.createScene(activeChapterForSceneCreation.id, {
+      let targetChapter = activeChapterForSceneCreation;
+
+      if (!targetChapter) {
+        targetChapter = await chapterApi.createChapter(selectedProject.id, {
+          title: "第1章",
+          summary: "",
+        });
+        setChapters([targetChapter]);
+      }
+
+      const scene = await sceneApi.createScene(targetChapter.id, {
         title: newSceneForm.title.trim(),
         description: newSceneForm.description.trim(),
         location: newSceneForm.location.trim(),
@@ -1129,9 +1139,9 @@ export default function Workspace() {
         style_notes: newSceneForm.style_notes.trim(),
       });
 
-      setSelectedChapter(activeChapterForSceneCreation);
-      setExpandedChapters([activeChapterForSceneCreation.id]);
-      await loadScenes(activeChapterForSceneCreation.id);
+      setSelectedChapter(targetChapter);
+      setExpandedChapters([targetChapter.id]);
+      await loadScenes(targetChapter.id);
       setSelectedScene(scene);
       await loadStoryboards(scene.id);
       setIsCreateSceneOpen(false);
@@ -1423,14 +1433,16 @@ export default function Workspace() {
               variant="outline"
               className="w-full h-8 border-gray-700 text-gray-400"
               onClick={() => {
-                if (!activeChapterForSceneCreation) {
+                if (!selectedProject) {
                   return;
                 }
-                setSelectedChapter(activeChapterForSceneCreation);
-                setExpandedChapters([activeChapterForSceneCreation.id]);
+                if (activeChapterForSceneCreation) {
+                  setSelectedChapter(activeChapterForSceneCreation);
+                  setExpandedChapters([activeChapterForSceneCreation.id]);
+                }
                 setIsCreateSceneOpen(true);
               }}
-              disabled={!activeChapterForSceneCreation}
+              disabled={!selectedProject}
             >
               <Plus className="w-4 h-4 mr-1.5" />
               新建场景
@@ -2560,7 +2572,7 @@ export default function Workspace() {
           <DialogHeader>
             <DialogTitle>新建场景</DialogTitle>
             <DialogDescription className="text-gray-400">
-              在当前章节下创建一个新场景，创建后会自动切换到该场景。
+              在当前章节下创建一个新场景。若项目还没有章节，系统会先自动创建第1章。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
