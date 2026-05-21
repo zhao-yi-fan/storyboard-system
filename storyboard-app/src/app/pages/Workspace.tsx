@@ -263,13 +263,13 @@ const formatShanghaiDateTime = (dateStr?: string) => {
 
 function SelectOptionWithTooltip({ label, prompt }: { label: string; prompt: string }) {
   return (
-    <div className="flex w-full items-center justify-between gap-2">
-      <span className="truncate">{label}</span>
+    <div className="flex w-full min-w-0 items-center">
+      <span className="min-w-0 flex-1 truncate pr-3">{label}</span>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-4 w-4 flex-shrink-0 items-center justify-center text-gray-500 transition hover:text-gray-200"
+            className="ml-auto inline-flex h-4 w-4 flex-shrink-0 items-center justify-center text-gray-500 transition hover:text-gray-200"
             onPointerDown={(event) => event.preventDefault()}
             tabIndex={-1}
             aria-label={`${label} 提示词说明`}
@@ -288,6 +288,22 @@ function SelectOptionWithTooltip({ label, prompt }: { label: string; prompt: str
 function getStylePresetLabel(value?: string | null) {
   if (!value) return "";
   return STYLE_PRESET_LABEL_MAP[value as keyof typeof STYLE_PRESET_LABEL_MAP] || value;
+}
+
+function getMoodLabel(value?: string | null) {
+  return value || "";
+}
+
+function getShotTypeLabel(value?: string | null) {
+  return value || "";
+}
+
+function getCameraDirectionLabel(value?: string | null) {
+  return value || "";
+}
+
+function getCameraMotionLabel(value?: string | null) {
+  return value || "";
 }
 
 export default function Workspace() {
@@ -2266,7 +2282,9 @@ export default function Workspace() {
                         <Label className="text-xs text-gray-400">风格预设</Label>
                         <Select value={shotForm.style_preset || "__scene__"} onValueChange={(value) => updateShotForm("style_preset", value === "__scene__" ? "" : value)}>
                           <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <SelectValue placeholder="跟随场景" />
+                            <span className="block truncate">
+                              {shotForm.style_preset ? getStylePresetLabel(shotForm.style_preset) : "跟随场景"}
+                            </span>
                           </SelectTrigger>
                           <SelectContent className="bg-[#1a1a1a] border-gray-700">
                             <SelectItem value="__scene__">跟随场景</SelectItem>
@@ -2294,7 +2312,9 @@ export default function Workspace() {
                       <Label className="text-xs text-gray-400">情绪</Label>
                       <Select value={shotForm.mood} onValueChange={(value) => updateShotForm("mood", value)}>
                         <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue placeholder="选择情绪" />
+                          <span className={`block truncate ${shotForm.mood ? "" : "text-muted-foreground"}`}>
+                            {getMoodLabel(shotForm.mood) || "选择情绪"}
+                          </span>
                         </SelectTrigger>
                           <SelectContent className="bg-[#1a1a1a] border-gray-700">
                             {MOOD_OPTIONS.map((option) => (
@@ -2317,7 +2337,9 @@ export default function Workspace() {
                         <Label className="text-xs text-gray-400">景别</Label>
                         <Select value={shotForm.shot_type} onValueChange={(value) => updateShotForm("shot_type", value)}>
                           <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <SelectValue placeholder="选择景别" />
+                            <span className={`block truncate ${shotForm.shot_type ? "" : "text-muted-foreground"}`}>
+                              {getShotTypeLabel(shotForm.shot_type) || "选择景别"}
+                            </span>
                           </SelectTrigger>
                           <SelectContent className="bg-[#1a1a1a] border-gray-700">
                             {SHOT_TYPE_OPTIONS.map((option) => (
@@ -2333,7 +2355,9 @@ export default function Workspace() {
                         <Label className="text-xs text-gray-400">机位</Label>
                         <Select value={shotForm.camera_direction} onValueChange={(value) => updateShotForm("camera_direction", value)}>
                           <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <SelectValue placeholder="选择机位" />
+                            <span className={`block truncate ${shotForm.camera_direction ? "" : "text-muted-foreground"}`}>
+                              {getCameraDirectionLabel(shotForm.camera_direction) || "选择机位"}
+                            </span>
                           </SelectTrigger>
                           <SelectContent className="bg-[#1a1a1a] border-gray-700">
                             {CAMERA_DIRECTION_OPTIONS.map((option) => (
@@ -2351,7 +2375,9 @@ export default function Workspace() {
                         <Label className="text-xs text-gray-400">镜头运动</Label>
                         <Select value={shotForm.camera_motion} onValueChange={(value) => updateShotForm("camera_motion", value)}>
                           <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <SelectValue placeholder="选择镜头运动" />
+                            <span className={`block truncate ${shotForm.camera_motion ? "" : "text-muted-foreground"}`}>
+                              {getCameraMotionLabel(shotForm.camera_motion) || "选择镜头运动"}
+                            </span>
                           </SelectTrigger>
                           <SelectContent className="bg-[#1a1a1a] border-gray-700">
                             {CAMERA_MOTION_OPTIONS.map((option) => (
@@ -2607,7 +2633,7 @@ export default function Workspace() {
                 <Label className="text-xs text-gray-400">风格预设</Label>
                 <Select value={newSceneForm.style_preset} onValueChange={(value) => updateNewSceneForm("style_preset", value)}>
                   <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                    <SelectValue placeholder="选择风格预设" />
+                    <span className="block truncate">{getStylePresetLabel(newSceneForm.style_preset) || "选择风格预设"}</span>
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1a1a] border-gray-700">
                     {STYLE_PRESET_OPTIONS.map((option) => (
