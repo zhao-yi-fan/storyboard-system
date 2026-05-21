@@ -37,6 +37,7 @@ import { Switch } from "../components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,6 +106,56 @@ const STYLE_PRESET_OPTIONS = [
   { value: "warm_poetic", label: "温暖诗意" },
   { value: "cold_noir", label: "冷峻黑色电影" },
 ] as const;
+
+const STYLE_PRESET_PROMPT_MAP: Record<(typeof STYLE_PRESET_OPTIONS)[number]["value"], string> = {
+  realistic_cinematic: "写实电影质感，自然光影层次，人物与环境比例真实，整体叙事克制而稳定。",
+  dark_realism: "阴郁现实主义气质，低饱和冷色调，真实生活颗粒感，压迫而克制的空间氛围。",
+  mystery_thriller: "悬疑惊悚风格，暗部信息丰富，视觉上保留未知与压迫感，节奏紧绷。",
+  youthful_bright: "青春清透风格，明亮干净的自然光，肤色通透，画面轻盈有呼吸感。",
+  japanese_animation: "日式动画叙事感，轮廓清晰，色彩组织明确，情绪表达更直观。",
+  retro_film: "复古胶片气质，暖色颗粒与轻微褪色感，画面带旧时代电影的时间痕迹。",
+  warm_poetic: "温暖诗意风格，柔和光线与细腻色调过渡，强调情绪余韵和生活感。",
+  cold_noir: "冷峻黑色电影气质，硬朗明暗反差，人物关系紧张，都市夜色感更强。",
+};
+
+const STYLE_PRESET_LABEL_MAP: Record<(typeof STYLE_PRESET_OPTIONS)[number]["value"], string> = Object.fromEntries(
+  STYLE_PRESET_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<(typeof STYLE_PRESET_OPTIONS)[number]["value"], string>;
+
+const MOOD_PROMPT_MAP: Record<(typeof MOOD_OPTIONS)[number], string> = {
+  压抑: "情绪压抑克制，空气沉闷，人物状态收紧，画面保持低张扬度。",
+  神秘: "保留未知与隐匿感，信息不完全揭示，气氛偏冷静但不透明。",
+  温暖: "情绪温暖松弛，光线柔和，人物关系更亲近，整体氛围更可接近。",
+  孤独: "突出人物与环境的距离感，留白更明显，画面重心偏向独处状态。",
+  紧张: "节奏绷紧，人物反应敏感，构图与空间都服务于冲突临界感。",
+  惊悚: "不安感持续存在，视觉上强化危险预感与突发事件前的压迫。",
+  冷峻: "情绪冷冽克制，表达不过度外放，整体视觉保持疏离和硬度。",
+};
+
+const SHOT_TYPE_PROMPT_MAP: Record<(typeof SHOT_TYPE_OPTIONS)[number], string> = {
+  远景: "用远景交代人物与环境的整体关系，突出空间规模、位置关系与局势。",
+  全景: "用全景完整展示人物全身和场域结构，让动作与环境一起成立。",
+  中景: "用中景平衡人物表演与环境信息，适合稳定叙事和关系表达。",
+  近景: "用近景聚焦人物上半身和即时反应，强化当下情绪与动作细节。",
+  特写: "用特写强调面部、手部或关键物件，放大决定性情绪和信息。",
+  大特写: "用大特写强压视觉注意力，只保留最关键的表情、视线或动作节点。",
+};
+
+const CAMERA_DIRECTION_PROMPT_MAP: Record<(typeof CAMERA_DIRECTION_OPTIONS)[number], string> = {
+  平视: "平视机位，视角克制客观，人物关系更自然，适合稳定观察。",
+  俯视: "俯视机位，压低主体气势，强化被观察、脆弱或局势不利的感觉。",
+  仰视: "仰视机位，抬高主体压迫感与力量感，适合强调强势、神性或威慑。",
+  侧面: "侧面机位，突出人物轮廓、动作路径和视线方向，画面更有层次。",
+};
+
+const CAMERA_MOTION_PROMPT_MAP: Record<(typeof CAMERA_MOTION_OPTIONS)[number], string> = {
+  静止: "镜头保持静止，让表演、构图和环境本身承担叙事压力。",
+  推镜: "镜头缓慢前推，逐步逼近主体，把注意力收紧到关键人物或动作上。",
+  拉镜: "镜头后拉，释放更多环境信息，强化人物处境与空间关系变化。",
+  横移: "镜头横向移动，带出空间结构与人物间关系，保持流畅的观察感。",
+  跟拍: "镜头持续跟随主体动作，强调行动过程和现场沉浸感。",
+  手持轻晃: "轻微手持晃动，制造贴身在场感和不完全稳定的现实压力。",
+};
 
 type ShotFormState = {
   content: string;
@@ -208,6 +259,24 @@ const formatShanghaiDateTime = (dateStr?: string) => {
     timeZone: "Asia/Shanghai",
   }).format(new Date(dateStr));
 };
+
+function SelectOptionWithTooltip({ label, prompt }: { label: string; prompt: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="w-full cursor-default">{label}</div>
+      </TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8} className="max-w-xs text-left leading-5">
+        {prompt}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function getStylePresetLabel(value?: string | null) {
+  if (!value) return "";
+  return STYLE_PRESET_LABEL_MAP[value as keyof typeof STYLE_PRESET_LABEL_MAP] || value;
+}
 
 export default function Workspace() {
   const navigate = useNavigate();
@@ -1889,10 +1958,6 @@ export default function Workspace() {
                     ) : null}
                   </div>
 
-                  <div className="rounded-md border border-gray-800 bg-[#121212] px-3 py-2">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">共用信息</p>
-                  </div>
-
                   <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
@@ -2069,216 +2134,209 @@ export default function Workspace() {
                     )}
                   </div>
 
-                  {/* Scene */}
-                  <div>
-                    <Label className="text-xs text-gray-400">所属场景</Label>
-                    <Input
-                      value={selectedScene?.title || ""}
-                      className="mt-1.5 bg-[#1a1a1a] border-gray-700"
-                      readOnly
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-xs text-gray-400">角色</Label>
-                    <div className="mt-1.5 flex flex-wrap gap-2">
-                      {selectedShot.characters && selectedShot.characters.length > 0 ? (
-                        selectedShot.characters.map((character) => (
-                          <Badge
-                            key={character.id}
-                            variant="outline"
-                            className="flex h-7 items-center gap-1 border-purple-700 pr-1 text-purple-300"
-                          >
-                            <span>{character.name}</span>
-                            <button
-                              type="button"
-                              className="rounded-sm p-0.5 text-purple-300 transition hover:bg-purple-900/40 disabled:opacity-50"
-                              onClick={() => handleRemoveStoryboardCharacter(character.id)}
-                              disabled={activeCharacterActionKey === `remove-character:${character.id}`}
-                              aria-label={`移除角色 ${character.name}`}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))
-                      ) : deriveCharacterNames(selectedShot).length > 0 ? (
-                        deriveCharacterNames(selectedShot).map((name) => (
-                          <Badge key={name} variant="outline" className="border-purple-700 text-purple-300">
-                            {name}
-                          </Badge>
-                        ))
-                      ) : (
-                        <Badge variant="outline" className="border-gray-700 text-gray-500">
-                          待关联
-                        </Badge>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 px-2 text-xs border-gray-700 text-gray-400"
-                        onClick={() => void handleOpenManageCharacters()}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        管理角色
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs text-gray-400">背景场景</Label>
-                    <div className="mt-1.5 flex flex-wrap gap-2">
-                      {selectedShot.background ? (
-                        <Badge variant="outline" className="border-blue-700 text-blue-300">
-                          {selectedShot.background}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-gray-700 text-gray-500">
-                          未生成
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div>
-                    <Label className="text-xs text-gray-400">画面描述</Label>
-                    <Textarea
-                      value={shotForm.content}
-                      className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
-                      onChange={(e) => updateShotForm("content", e.target.value)}
-                    />
-                  </div>
-
-                  {/* Dialogue */}
-                  <div>
-                    <Label className="text-xs text-gray-400">台词</Label>
-                    <Textarea
-                      value={shotForm.dialogue}
-                      placeholder="无台词"
-                      className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
-                      onChange={(e) => updateShotForm("dialogue", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
                     <div>
-                      <Label className="text-xs text-gray-400">风格预设</Label>
-                      <Select value={shotForm.style_preset || "__scene__"} onValueChange={(value) => updateShotForm("style_preset", value === "__scene__" ? "" : value)}>
-                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue placeholder="跟随场景" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          <SelectItem value="__scene__">跟随场景</SelectItem>
-                          {STYLE_PRESET_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">共用信息</p>
                     </div>
 
                     <div>
-                      <Label className="text-xs text-gray-400">风格补充</Label>
+                      <Label className="text-xs text-gray-400">所属场景</Label>
                       <Input
-                        value={shotForm.style_notes}
-                        placeholder="补充风格要求"
-                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
-                        onChange={(e) => updateShotForm("style_notes", e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs text-gray-400">情绪</Label>
-                    <Select value={shotForm.mood} onValueChange={(value) => updateShotForm("mood", value)}>
-                      <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                        <SelectValue placeholder="选择情绪" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                        {MOOD_OPTIONS.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="rounded-md border border-gray-800 bg-[#121212] px-3 py-2">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">视频信息</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-gray-400">景别</Label>
-                      <Select value={shotForm.shot_type} onValueChange={(value) => updateShotForm("shot_type", value)}>
-                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue placeholder="选择景别" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          {SHOT_TYPE_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">机位</Label>
-                      <Select value={shotForm.camera_direction} onValueChange={(value) => updateShotForm("camera_direction", value)}>
-                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue placeholder="选择机位" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          {CAMERA_DIRECTION_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-gray-400">镜头运动</Label>
-                      <Select value={shotForm.camera_motion} onValueChange={(value) => updateShotForm("camera_motion", value)}>
-                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <SelectValue placeholder="选择镜头运动" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                          {CAMERA_MOTION_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">时长（秒）</Label>
-                      <Input
-                        value={selectedShot.video_duration || selectedShot.duration || ""}
-                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                        value={selectedScene?.title || ""}
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700"
                         readOnly
                       />
                     </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">角色</Label>
+                      <div className="mt-1.5 flex flex-wrap gap-2">
+                        {selectedShot.characters && selectedShot.characters.length > 0 ? (
+                          selectedShot.characters.map((character) => (
+                            <Badge
+                              key={character.id}
+                              variant="outline"
+                              className="flex h-7 items-center gap-1 border-purple-700 pr-1 text-purple-300"
+                            >
+                              <span>{character.name}</span>
+                              <button
+                                type="button"
+                                className="rounded-sm p-0.5 text-purple-300 transition hover:bg-purple-900/40 disabled:opacity-50"
+                                onClick={() => handleRemoveStoryboardCharacter(character.id)}
+                                disabled={activeCharacterActionKey === `remove-character:${character.id}`}
+                                aria-label={`移除角色 ${character.name}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))
+                        ) : deriveCharacterNames(selectedShot).length > 0 ? (
+                          deriveCharacterNames(selectedShot).map((name) => (
+                            <Badge key={name} variant="outline" className="border-purple-700 text-purple-300">
+                              {name}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="outline" className="border-gray-700 text-gray-500">
+                            待关联
+                          </Badge>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs border-gray-700 text-gray-400"
+                          onClick={() => void handleOpenManageCharacters()}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          管理角色
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">背景场景</Label>
+                      <div className="mt-1.5 flex flex-wrap gap-2">
+                        {selectedShot.background ? (
+                          <Badge variant="outline" className="border-blue-700 text-blue-300">
+                            {selectedShot.background}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-gray-700 text-gray-500">
+                            未生成
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">画面描述</Label>
+                      <Textarea
+                        value={shotForm.content}
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
+                        onChange={(e) => updateShotForm("content", e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">台词</Label>
+                      <Textarea
+                        value={shotForm.dialogue}
+                        placeholder="无台词"
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
+                        onChange={(e) => updateShotForm("dialogue", e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-400">风格预设</Label>
+                        <Select value={shotForm.style_preset || "__scene__"} onValueChange={(value) => updateShotForm("style_preset", value === "__scene__" ? "" : value)}>
+                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                            <SelectValue placeholder="跟随场景" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            <SelectItem value="__scene__">跟随场景</SelectItem>
+                            {STYLE_PRESET_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                <SelectOptionWithTooltip label={option.label} prompt={STYLE_PRESET_PROMPT_MAP[option.value]} />
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-gray-400">风格补充</Label>
+                        <Input
+                          value={shotForm.style_notes}
+                          placeholder="补充风格要求"
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                          onChange={(e) => updateShotForm("style_notes", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400">情绪</Label>
+                      <Select value={shotForm.mood} onValueChange={(value) => updateShotForm("mood", value)}>
+                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                          <SelectValue placeholder="选择情绪" />
+                        </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            {MOOD_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                <SelectOptionWithTooltip label={option} prompt={MOOD_PROMPT_MAP[option]} />
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="rounded-md border border-gray-800 bg-[#151515] p-3">
-                    <div className="flex items-center justify-between gap-3">
+                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">视频信息</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-sm text-gray-200">使用当前首帧</p>
-                        <p className="mt-1 text-xs leading-5 text-gray-500">
-                          关闭后将直接按文本生成视频，不依赖当前镜头首帧图。
-                        </p>
+                        <Label className="text-xs text-gray-400">景别</Label>
+                        <Select value={shotForm.shot_type} onValueChange={(value) => updateShotForm("shot_type", value)}>
+                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                            <SelectValue placeholder="选择景别" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            {SHOT_TYPE_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                <SelectOptionWithTooltip label={option} prompt={SHOT_TYPE_PROMPT_MAP[option]} />
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Switch checked={useFirstFrameForVideo} onCheckedChange={setUseFirstFrameForVideo} />
+
+                      <div>
+                        <Label className="text-xs text-gray-400">机位</Label>
+                        <Select value={shotForm.camera_direction} onValueChange={(value) => updateShotForm("camera_direction", value)}>
+                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                            <SelectValue placeholder="选择机位" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            {CAMERA_DIRECTION_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                <SelectOptionWithTooltip label={option} prompt={CAMERA_DIRECTION_PROMPT_MAP[option]} />
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-400">镜头运动</Label>
+                        <Select value={shotForm.camera_motion} onValueChange={(value) => updateShotForm("camera_motion", value)}>
+                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                            <SelectValue placeholder="选择镜头运动" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            {CAMERA_MOTION_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                <SelectOptionWithTooltip label={option} prompt={CAMERA_MOTION_PROMPT_MAP[option]} />
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-gray-400">时长（秒）</Label>
+                        <Input
+                          value={selectedShot.video_duration || selectedShot.duration || ""}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                          readOnly
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -2520,7 +2578,7 @@ export default function Workspace() {
                   <SelectContent className="bg-[#1a1a1a] border-gray-700">
                     {STYLE_PRESET_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        <SelectOptionWithTooltip label={option.label} prompt={STYLE_PRESET_PROMPT_MAP[option.value]} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -2792,6 +2850,18 @@ export default function Workspace() {
               </div>
             </div>
 
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-gray-200">使用当前首帧</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-500">
+                    关闭后将直接按文本生成视频，不依赖当前镜头首帧图。
+                  </p>
+                </div>
+                <Switch checked={useFirstFrameForVideo} onCheckedChange={setUseFirstFrameForVideo} />
+              </div>
+            </div>
+
             {videoGenerationPreview?.use_first_frame ? (
               <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
                 <div className="text-gray-300 font-medium">首帧图</div>
@@ -2828,7 +2898,7 @@ export default function Workspace() {
                 <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{videoGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{videoGenerationPreview?.fields.content || "-"}</span></div>
                 <div><span className="text-gray-500">情绪：</span><span>{videoGenerationPreview?.fields.mood || "-"}</span></div>
-                <div><span className="text-gray-500">风格预设：</span><span>{videoGenerationPreview?.fields.style_preset || "-"}</span></div>
+                <div><span className="text-gray-500">风格预设：</span><span>{getStylePresetLabel(videoGenerationPreview?.fields.style_preset) || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">风格补充：</span><span>{videoGenerationPreview?.fields.style_notes || "-"}</span></div>
                 <div><span className="text-gray-500">台词：</span><span>{videoGenerationPreview?.fields.dialogue || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">备注：</span><span>{videoGenerationPreview?.fields.notes || "-"}</span></div>
