@@ -22,6 +22,7 @@ import {
   Sparkles,
   Loader2,
   ArrowLeft,
+  CircleHelp,
   Grid3x3,
   List,
   PanelLeftClose,
@@ -262,14 +263,25 @@ const formatShanghaiDateTime = (dateStr?: string) => {
 
 function SelectOptionWithTooltip({ label, prompt }: { label: string; prompt: string }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="w-full cursor-default">{label}</div>
-      </TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8} className="max-w-xs text-left leading-5">
-        {prompt}
-      </TooltipContent>
-    </Tooltip>
+    <div className="flex w-full items-center justify-between gap-2">
+      <span className="truncate">{label}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-4 w-4 flex-shrink-0 items-center justify-center text-gray-500 transition hover:text-gray-200"
+            onPointerDown={(event) => event.preventDefault()}
+            tabIndex={-1}
+            aria-label={`${label} 提示词说明`}
+          >
+            <CircleHelp className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8} className="max-w-xs text-left leading-5">
+          {prompt}
+        </TooltipContent>
+      </Tooltip>
+    </div>
   );
 }
 
