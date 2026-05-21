@@ -1,24 +1,32 @@
 import { createBrowserRouter } from "react-router";
-import ProjectDashboard from "./pages/ProjectDashboard";
-import ImportScript from "./pages/ImportScript";
-import Workspace from "./pages/Workspace";
-import AssetLibrary from "./pages/AssetLibrary";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    Component: ProjectDashboard,
+    async lazy() {
+      const module = await import("./pages/ProjectDashboard");
+      return { Component: module.default };
+    },
   },
   {
     path: "/import",
-    Component: ImportScript,
+    async lazy() {
+      const module = await import("./pages/ImportScript");
+      return { Component: module.default };
+    },
   },
   {
     path: "/workspace",
-    Component: Workspace,
+    async lazy() {
+      const module = await import("./pages/Workspace");
+      return { Component: module.default };
+    },
   },
   {
     path: "/assets",
-    Component: AssetLibrary,
+    async lazy() {
+      const module = await import("./pages/AssetLibrary");
+      return { Component: module.default };
+    },
   },
 ]);

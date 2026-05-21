@@ -24,6 +24,56 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined
+          }
+
+          if (id.includes('/react-router')) {
+            return 'router'
+          }
+
+          if (id.includes('/@radix-ui/')) {
+            return 'radix'
+          }
+
+          if (id.includes('/recharts/') || id.includes('/date-fns/')) {
+            return 'charts'
+          }
+
+          if (
+            id.includes('/motion/') ||
+            id.includes('/canvas-confetti/') ||
+            id.includes('/embla-carousel-react/') ||
+            id.includes('/react-slick/')
+          ) {
+            return 'motion-media'
+          }
+
+          if (id.includes('/lucide-react/')) {
+            return 'icons'
+          }
+
+          if (id.includes('/react-dnd/') || id.includes('/react-dnd-html5-backend/')) {
+            return 'dnd'
+          }
+
+          if (id.includes('/sonner/')) {
+            return 'toast'
+          }
+
+          if (id.includes('/@emotion/') || id.includes('/@mui/')) {
+            return 'mui'
+          }
+
+          return 'vendor'
+        },
+      },
+    },
+  },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

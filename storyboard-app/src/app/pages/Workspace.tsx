@@ -651,6 +651,7 @@ export default function Workspace() {
     ? storyboards.filter((shot) => shot.scene_id === selectedScene.id)
     : [];
   const composableShots = filteredShots.filter((shot) => shot.video_status === "succeeded" && !!shot.video_url);
+  const activeChapterForSceneCreation = selectedChapter ?? chapters[0] ?? null;
 
   const calculateTotalDuration = () => {
     return filteredShots.reduce((sum, shot) => sum + (shot.duration || 0), 0);
@@ -1113,13 +1114,13 @@ export default function Workspace() {
   };
 
   const handleCreateScene = async () => {
-    if (!selectedChapter || !newSceneForm.title.trim()) {
+    if (!activeChapterForSceneCreation || !newSceneForm.title.trim()) {
       return;
     }
 
     setIsCreatingScene(true);
     try {
-      const scene = await sceneApi.createScene(selectedChapter.id, {
+      const scene = await sceneApi.createScene(activeChapterForSceneCreation.id, {
         title: newSceneForm.title.trim(),
         description: newSceneForm.description.trim(),
         location: newSceneForm.location.trim(),
@@ -1128,7 +1129,9 @@ export default function Workspace() {
         style_notes: newSceneForm.style_notes.trim(),
       });
 
-      await loadScenes(selectedChapter.id);
+      setSelectedChapter(activeChapterForSceneCreation);
+      setExpandedChapters([activeChapterForSceneCreation.id]);
+      await loadScenes(activeChapterForSceneCreation.id);
       setSelectedScene(scene);
       await loadStoryboards(scene.id);
       setIsCreateSceneOpen(false);
@@ -1419,8 +1422,15 @@ export default function Workspace() {
               size="sm"
               variant="outline"
               className="w-full h-8 border-gray-700 text-gray-400"
-              onClick={() => setIsCreateSceneOpen(true)}
-              disabled={!selectedChapter}
+              onClick={() => {
+                if (!activeChapterForSceneCreation) {
+                  return;
+                }
+                setSelectedChapter(activeChapterForSceneCreation);
+                setExpandedChapters([activeChapterForSceneCreation.id]);
+                setIsCreateSceneOpen(true);
+              }}
+              disabled={!activeChapterForSceneCreation}
             >
               <Plus className="w-4 h-4 mr-1.5" />
               新建场景
