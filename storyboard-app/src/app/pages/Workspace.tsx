@@ -39,6 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../components/ui/badge";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -288,6 +289,85 @@ function SelectOptionWithTooltip({ label, prompt }: { label: string; prompt: str
 function getStylePresetLabel(value?: string | null) {
   if (!value) return "";
   return STYLE_PRESET_LABEL_MAP[value as keyof typeof STYLE_PRESET_LABEL_MAP] || value;
+}
+
+function buildPromptDisplayBlocksFromBlueprint(preview?: StoryboardVideoGenerationPreview | null) {
+  if (preview?.prompt_display_blocks?.length) {
+    return preview.prompt_display_blocks;
+  }
+
+  const blueprint = preview?.prompt_blueprint;
+  if (!blueprint) {
+    return [];
+  }
+
+  const sectionMap = [
+    { section: "主体与画面核心", items: blueprint.subject || [] },
+    { section: "动作与叙事重点", items: blueprint.action || [] },
+    { section: "镜头设计", items: blueprint.camera || [] },
+    { section: "风格气质", items: blueprint.style || [] },
+    { section: "特效与氛围", items: blueprint.effects || [] },
+    { section: "一致性要求", items: blueprint.consistency || [] },
+    { section: "音频要求", items: blueprint.audio || [] },
+    { section: "画质与完成度", items: blueprint.quality || [] },
+    { section: "输出要求", items: blueprint.output || [] },
+    { section: "负向约束", items: blueprint.negative || [] },
+  ];
+
+  const blocks = sectionMap.filter((entry) => entry.items.length);
+  if (blueprint.timeline?.length) {
+    blocks.push({
+      section: "节奏分段",
+      items: blueprint.timeline.map((item) => `${item.label}：${item.description}`),
+    });
+  }
+  return blocks;
+}
+
+function buildPromptDisplayTokensFromPreview(preview?: StoryboardVideoGenerationPreview | null) {
+  if (preview?.prompt_display_tokens?.length) {
+    return preview.prompt_display_tokens;
+  }
+
+  if (!preview) {
+    return [];
+  }
+
+  const tokens: Array<{ type: "badge" | "text"; label?: string; text: string }> = [];
+  if (preview.use_first_frame) {
+    tokens.push({
+      type: "badge",
+      label: "首帧图",
+      text: preview.source_image_url ? "已使用" : "将自动补首帧",
+    });
+  }
+  if (preview.fields.scene_title) {
+    tokens.push({ type: "badge", label: "场景", text: preview.fields.scene_title });
+  }
+  if (preview.fields.characters?.length) {
+    tokens.push({ type: "badge", label: "角色", text: preview.fields.characters.join("、") });
+  }
+  if (preview.fields.style_preset) {
+    tokens.push({ type: "badge", label: "风格", text: getStylePresetLabel(preview.fields.style_preset) || preview.fields.style_preset });
+  }
+  const cameraText = [preview.video_fields.camera_direction, preview.video_fields.camera_motion].filter(Boolean).join(" / ");
+  if (cameraText) {
+    tokens.push({ type: "badge", label: "运镜", text: cameraText });
+  }
+  if (preview.audio) {
+    tokens.push({ type: "badge", label: "音频", text: "有声" });
+  }
+  if (preview.prompt_blueprint?.timeline?.length) {
+    tokens.push({
+      type: "badge",
+      label: "节奏",
+      text: preview.prompt_blueprint.timeline.map((item) => item.label).join(" / "),
+    });
+  }
+  if (preview.final_prompt) {
+    tokens.push({ type: "text", text: preview.final_prompt });
+  }
+  return tokens;
 }
 
 function getMoodLabel(value?: string | null) {
@@ -2977,8 +3057,70 @@ export default function Workspace() {
             </div>
 
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
-              <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{videoGenerationPreview?.final_prompt || "-"}</pre>
+              <div className="text-gray-300 font-medium">结构化提示词</div>
+              {buildPromptDisplayBlocksFromBlueprint(videoGenerationPreview).length ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {buildPromptDisplayBlocksFromBlueprint(videoGenerationPreview).map((block) => (
+                    <div key={block.section} className="rounded border border-gray-800 bg-[#111111] p-3">
+                      <div className="mb-2 text-xs font-medium tracking-[0.14em] text-gray-500">{block.section}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {block.items.map((item) => (
+                          <Badge
+                            key={`${block.section}-${item}`}
+                            variant="outline"
+                            className="border-gray-700 bg-[#181818] px-2.5 py-1 text-[11px] leading-5 text-gray-300"
+                          >
+                            {item}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-500">当前没有可展示的结构化提示词。</div>
+              )}
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
+              <div className="text-gray-300 font-medium">模型提示词预览</div>
+              <div className="rounded border border-gray-800 bg-[#111111] p-3 text-xs leading-7 text-gray-300">
+                <span className="mr-2 text-gray-500">Prompt:</span>
+                {buildPromptDisplayTokensFromPreview(videoGenerationPreview).length ? (
+                  buildPromptDisplayTokensFromPreview(videoGenerationPreview).map((token, index) =>
+                    token.type === "badge" ? (
+                      <Badge
+                        key={`${token.label || "badge"}-${token.text}-${index}`}
+                        className="mr-2 inline-flex align-middle bg-[#1b2336] text-[#9ec5ff] hover:bg-[#1b2336]"
+                      >
+                        {token.label ? `${token.label}${token.text ? " · " : ""}` : ""}
+                        {token.text}
+                      </Badge>
+                    ) : (
+                      <span key={`text-${index}`} className="align-middle">
+                        {token.text}
+                      </span>
+                    ),
+                  )
+                ) : (
+                  <span>-</span>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="raw-prompt" className="border-0">
+                  <AccordionTrigger className="py-0 text-gray-300 hover:no-underline">
+                    <span className="font-medium">原始 Prompt</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-3">
+                    <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">
+                      {videoGenerationPreview?.final_prompt || "-"}
+                    </pre>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">

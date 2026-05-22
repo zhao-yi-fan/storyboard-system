@@ -21,6 +21,17 @@ type PromptBlueprint = {
   timeline?: PromptBeat[];
 };
 
+type PromptDisplayBlock = {
+  section: string;
+  items: string[];
+};
+
+type PromptDisplayToken = {
+  type: 'badge' | 'text';
+  label?: string;
+  text: string;
+};
+
 const DEFAULT_TEMPLATE = 'cinematic-default';
 const DIALOGUE_TEMPLATE = 'dramatic-dialogue';
 const MYTHIC_TEMPLATE = 'mythic-awakening';
@@ -125,6 +136,10 @@ function includesAny(text: string, patterns: string[]): boolean {
 
 function normalizeTextList(values: unknown[]): string[] {
   return uniqueParts(values).slice(0, 8);
+}
+
+function toDisplayItems(values: unknown[]): string[] {
+  return uniqueParts(values);
 }
 
 function expandShotType(shotType: string): string[] {
@@ -277,6 +292,107 @@ export function renderPromptBlueprint(blueprint: PromptBlueprint): string {
     sections.push(sentence('节奏分段', blueprint.timeline.map(item => `${item.label}：${item.description}`)));
   }
   return sections.filter(Boolean).join(' ');
+}
+
+export function buildPromptDisplayBlocks(blueprint: PromptBlueprint): PromptDisplayBlock[] {
+  const blocks: PromptDisplayBlock[] = [];
+  const sectionMap: Array<{ section: string; items: unknown[] }> = [
+    { section: '主体与画面核心', items: blueprint.subject || [] },
+    { section: '动作与叙事重点', items: blueprint.action || [] },
+    { section: '镜头设计', items: blueprint.camera || [] },
+    { section: '风格气质', items: blueprint.style || [] },
+    { section: '特效与氛围', items: blueprint.effects || [] },
+    { section: '一致性要求', items: blueprint.consistency || [] },
+    { section: '音频要求', items: blueprint.audio || [] },
+    { section: '画质与完成度', items: blueprint.quality || [] },
+    { section: '输出要求', items: blueprint.output || [] },
+    { section: '负向约束', items: blueprint.negative || [] },
+  ];
+
+  for (const entry of sectionMap) {
+    const items = toDisplayItems(entry.items);
+    if (!items.length) {
+      continue;
+    }
+    blocks.push({ section: entry.section, items });
+  }
+
+  const timelineItems = Array.isArray(blueprint.timeline)
+    ? blueprint.timeline
+        .map(item => {
+          const label = String(item?.label || '').trim();
+          const description = String(item?.description || '').trim();
+          if (!label || !description) {
+            return '';
+          }
+          return `${label}：${description}`;
+        })
+        .filter(Boolean)
+    : [];
+  if (timelineItems.length) {
+    blocks.push({ section: '节奏分段', items: timelineItems });
+  }
+
+  return blocks;
+}
+
+export function buildPromptDisplayTokens(options: {
+  finalPrompt: string;
+  sceneTitle?: unknown;
+  characters?: unknown[];
+  stylePreset?: unknown;
+  cameraDirection?: unknown;
+  cameraMotion?: unknown;
+  audio?: boolean;
+  useFirstFrame?: boolean;
+  hasSourceImage?: boolean;
+  timeline?: PromptBeat[];
+}): PromptDisplayToken[] {
+  const tokens: PromptDisplayToken[] = [];
+  const sceneTitle = String(options.sceneTitle || '').trim();
+  const stylePreset = String(options.stylePreset || '').trim();
+  const cameraDirection = String(options.cameraDirection || '').trim();
+  const cameraMotion = String(options.cameraMotion || '').trim();
+  const finalPrompt = String(options.finalPrompt || '').trim();
+  const characters = uniqueParts(Array.isArray(options.characters) ? options.characters : []);
+  const timelineLabels = Array.isArray(options.timeline)
+    ? options.timeline.map(item => String(item?.label || '').trim()).filter(Boolean)
+    : [];
+
+  if (options.useFirstFrame) {
+    tokens.push({
+      type: 'badge',
+      label: '首帧图',
+      text: options.hasSourceImage ? '已使用' : '将自动补首帧',
+    });
+  }
+  if (sceneTitle) {
+    tokens.push({ type: 'badge', label: '场景', text: sceneTitle });
+  }
+  if (characters.length) {
+    tokens.push({ type: 'badge', label: '角色', text: characters.join('、') });
+  }
+  if (stylePreset) {
+    tokens.push({ type: 'badge', label: '风格', text: stylePreset });
+  }
+  if (cameraDirection || cameraMotion) {
+    tokens.push({
+      type: 'badge',
+      label: '运镜',
+      text: [ cameraDirection, cameraMotion ].filter(Boolean).join(' / '),
+    });
+  }
+  if (options.audio) {
+    tokens.push({ type: 'badge', label: '音频', text: '有声' });
+  }
+  if (timelineLabels.length) {
+    tokens.push({ type: 'badge', label: '节奏', text: timelineLabels.join(' / ') });
+  }
+  if (finalPrompt) {
+    tokens.push({ type: 'text', text: finalPrompt });
+  }
+
+  return tokens;
 }
 
 export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, references: Array<{ type: string }>) {

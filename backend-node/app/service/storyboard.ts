@@ -21,7 +21,12 @@ const {
   generateSeedanceVideo,
 } = require('../lib/ai_clients');
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
-const { buildStoryboardCoverPrompt, buildStoryboardVideoPrompt } = require('../lib/prompt_library');
+const {
+  buildStoryboardCoverPrompt,
+  buildStoryboardVideoPrompt,
+  buildPromptDisplayBlocks,
+  buildPromptDisplayTokens,
+} = require('../lib/prompt_library');
 
 class StoryboardService extends Service {
   get pool() {
@@ -483,6 +488,19 @@ class StoryboardService extends Service {
       },
       template: videoPrompt.template,
       prompt_blueprint: videoPrompt.blueprint,
+      prompt_display_blocks: buildPromptDisplayBlocks(videoPrompt.blueprint),
+      prompt_display_tokens: buildPromptDisplayTokens({
+        finalPrompt: videoPrompt.prompt,
+        sceneTitle: scene.title,
+        characters: storyboard.character_names,
+        stylePreset: this.resolveStoryboardStylePreset(scene, storyboard),
+        cameraDirection: storyboard.camera_direction,
+        cameraMotion: storyboard.camera_motion,
+        audio: true,
+        useFirstFrame,
+        hasSourceImage: !!sourceImageUrl,
+        timeline: videoPrompt.blueprint.timeline,
+      }),
       final_prompt: videoPrompt.prompt,
     };
   }

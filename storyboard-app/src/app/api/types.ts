@@ -199,6 +199,38 @@ export type StoryboardVideoGenerationVideoFields = {
   duration: number;
 };
 
+export type PromptBlueprintBeat = {
+  label: string;
+  description: string;
+};
+
+export type PromptBlueprint = {
+  template: string;
+  intro: string;
+  subject?: string[];
+  action?: string[];
+  camera?: string[];
+  style?: string[];
+  effects?: string[];
+  quality?: string[];
+  consistency?: string[];
+  audio?: string[];
+  output?: string[];
+  negative?: string[];
+  timeline?: PromptBlueprintBeat[];
+};
+
+export type PromptDisplayBlock = {
+  section: string;
+  items: string[];
+};
+
+export type PromptDisplayToken = {
+  type: "badge" | "text";
+  label?: string;
+  text: string;
+};
+
 export type StoryboardVideoGenerationPreview = {
   model: string;
   duration: number;
@@ -210,6 +242,10 @@ export type StoryboardVideoGenerationPreview = {
   will_generate_cover: boolean;
   fields: StoryboardVideoGenerationFields;
   video_fields: StoryboardVideoGenerationVideoFields;
+  template?: string;
+  prompt_blueprint?: PromptBlueprint;
+  prompt_display_blocks?: PromptDisplayBlock[];
+  prompt_display_tokens?: PromptDisplayToken[];
   final_prompt: string;
 };
 
