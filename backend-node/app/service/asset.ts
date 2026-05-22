@@ -147,7 +147,7 @@ class AssetService extends Service {
     }
     const preview = await createPreviewFromSource(this.app, source, 'assets', `asset-${asset.id}`, assetPreviewSpec());
     await this.pool.execute('UPDATE assets SET thumbnail_url = ? WHERE id = ?', [ preview, asset.id ]);
-    asset.thumbnail_url = preview;
+    asset.thumbnail_url = resolveUrl(this.app, preview, this.app.config.storyboard.publicAppBaseUrl || '');
   }
 
   canGenerateSceneAssetCover(assetType) {
