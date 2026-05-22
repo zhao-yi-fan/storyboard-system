@@ -240,6 +240,8 @@ export type StoryboardVideoGenerationPreview = {
   source_image_url: string;
   source_image_status: "existing-cover" | "will-generate-cover" | "not-required" | string;
   will_generate_cover: boolean;
+  reference_images?: StoryboardCoverGenerationReferenceImage[];
+  missing_references?: string[];
   fields: StoryboardVideoGenerationFields;
   video_fields: StoryboardVideoGenerationVideoFields;
   template?: string;

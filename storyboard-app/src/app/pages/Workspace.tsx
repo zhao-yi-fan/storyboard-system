@@ -3030,6 +3030,47 @@ export default function Workspace() {
               </div>
             ) : null}
 
+            {!!videoGenerationPreview?.reference_images?.length && (
+              <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-gray-300 font-medium">角色参考图</div>
+                  <div className="text-[11px] text-gray-500">当前仅 Seedance 会实际引用这些角色设定图</div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {videoGenerationPreview.reference_images.map((reference, index) => (
+                    <div key={`${reference.name}-${index}`} className="grid gap-2 rounded border border-gray-800 bg-[#111111] p-3 md:grid-cols-[96px_minmax(0,1fr)]">
+                      <div className="h-24 w-24 overflow-hidden rounded border border-gray-800 bg-black">
+                        <img
+                          src={reference.url}
+                          alt={reference.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 space-y-1.5 text-xs">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-[#1b2336] text-[#9ec5ff] hover:bg-[#1b2336]">{reference.type === "character" ? "角色" : reference.type}</Badge>
+                          <span className="truncate text-gray-200">{reference.name}</span>
+                        </div>
+                        <div><span className="text-gray-500">来源：</span><span className="text-gray-300">{reference.source}</span></div>
+                        <div>
+                          <div className="mb-1 text-gray-500">URL</div>
+                          <div className="break-all text-gray-300">{reference.url}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {!!videoGenerationPreview?.missing_references?.length && (
+                  <div className="rounded border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">
+                    <div className="mb-1 text-amber-300">以下角色缺少可用参考图：</div>
+                    <div className="break-words">{videoGenerationPreview.missing_references.join("、")}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">共用字段</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">

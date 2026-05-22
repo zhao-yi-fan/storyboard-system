@@ -281,7 +281,7 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
   throw new Error('视频生成任务超时');
 }
 
-async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFrame = true) {
+async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFrame = true, referenceImageUrls = []) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, ARK_BASE_URL);
@@ -289,6 +289,9 @@ async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFr
   const content = [{ type: 'text', text: prompt }];
   if (useFirstFrame && String(imageUrl || '').trim()) {
     content.push({ type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } });
+  }
+  for (const url of referenceImageUrls.filter(Boolean)) {
+    content.push({ type: 'image_url', role: 'reference_image', image_url: { url } });
   }
   const payload = {
     model: String(cfg.seedanceModel || DEFAULT_SEEDANCE_MODEL).trim(),

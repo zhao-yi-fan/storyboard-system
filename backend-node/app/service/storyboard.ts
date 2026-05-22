@@ -291,6 +291,26 @@ class StoryboardService extends Service {
     return { references, missing };
   }
 
+  selectVideoCharacterReferenceImages(storyboard) {
+    const references = [];
+    const missing = [];
+    for (const character of storyboard.characters.slice(0, 2)) {
+      const url = resolveUrl(this.app, character.design_sheet_url || character.avatar_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      if (!url) {
+        missing.push(`character:${character.name}`);
+        continue;
+      }
+      references.push({
+        asset_id: Number(character.id),
+        type: 'character',
+        name: character.name,
+        url,
+        source: character.design_sheet_url ? 'character.design_sheet_url' : 'character.avatar_url',
+      });
+    }
+    return { references, missing };
+  }
+
   async addCharacter(storyboardId, characterId) {
     const storyboard = await this.findById(storyboardId);
     if (!storyboard) {
@@ -455,6 +475,10 @@ class StoryboardService extends Service {
       throw new Error('当前视频模型仅支持基于首帧生成，请开启“使用当前首帧”或切换模型');
     }
     const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
+    const shouldUseCharacterReferences = model === 'seedance-1.5-pro';
+    const { references: rawCharacterReferenceImages, missing: rawMissingCharacterReferences } = this.selectVideoCharacterReferenceImages(storyboard);
+    const characterReferenceImages = shouldUseCharacterReferences ? rawCharacterReferenceImages : [];
+    const missingCharacterReferences = shouldUseCharacterReferences ? rawMissingCharacterReferences : [];
     const videoPrompt = buildStoryboardVideoPrompt({
       ...storyboard,
       style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
@@ -469,6 +493,8 @@ class StoryboardService extends Service {
       source_image_url: sourceImageUrl,
       source_image_status: !useFirstFrame ? 'not-required' : (sourceImageUrl ? 'existing-cover' : 'will-generate-cover'),
       will_generate_cover: useFirstFrame && !sourceImageUrl,
+      reference_images: characterReferenceImages.map(item => ({ type: item.type, name: item.name, url: item.url, source: item.source })),
+      missing_references: missingCharacterReferences,
       fields: {
         scene_title: String(scene.title || '').trim(),
         background: String(storyboard.background || '').trim(),
@@ -500,6 +526,7 @@ class StoryboardService extends Service {
         useFirstFrame,
         hasSourceImage: !!sourceImageUrl,
         timeline: videoPrompt.blueprint.timeline,
+        characters: storyboard.character_names,
       }),
       final_prompt: videoPrompt.prompt,
     };
@@ -554,8 +581,11 @@ class StoryboardService extends Service {
       }
       const scene = await this.ctx.service.scene.findById(storyboard.scene_id);
       const prompt = this.buildVideoPrompt(storyboard, scene, preview.duration);
+      const characterReferenceImageUrls = preview.model === 'seedance-1.5-pro'
+        ? (Array.isArray(preview.reference_images) ? preview.reference_images.map(item => item.url).filter(Boolean) : [])
+        : [];
       const result = preview.model === 'seedance-1.5-pro'
-        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame)
+        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame, characterReferenceImageUrls)
         : await generateWanxVideo(this.app, prompt, imageInput, preview.model, preview.duration, preview.use_first_frame);
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.mp4`;
       const stored = await downloadAndStore(this.app, result.videoUrl, 'videos', filename, 'video/mp4');
