@@ -68,4 +68,5 @@ module.exports = (app: any) => {
   router.post('/api/assets/:id/generate-cover', controller.asset.generateCover);
 
   router.get('/api/oss/sign', controller.oss.sign);
+  router.post('/api/oss/upload', controller.oss.upload);
 };

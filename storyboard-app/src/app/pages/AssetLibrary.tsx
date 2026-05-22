@@ -44,15 +44,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import {
-  characterApi,
-  assetApi,
-  apiClient,
-  type Character,
-  type Asset,
-  type AIGenerationPreview,
-  type CharacterDesignSheetModel,
-} from "../api";
+import { characterApi, assetApi, apiClient, type Character, type Asset, type AIGenerationPreview, type CharacterDesignSheetModel } from "../api";
+import { getApiBaseUrl } from "../api/client";
 
 type SelectedAsset =
   | { type: "character"; data: Character }
@@ -233,31 +226,31 @@ export default function AssetLibrary() {
   };
 
   const handleFileUpload = async (file: File): Promise<string> => {
-    const ext = file.name.split(".").pop();
-    const fileName = `assets/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const signature = await apiClient.get<{
-      upload_url: string;
-      public_url: string;
-      object_key: string;
-    } | null>(`/oss/sign?filename=${fileName}&content_type=${encodeURIComponent(file.type)}`);
-
-    if (!signature?.upload_url || !signature?.public_url) {
-      throw new Error("当前未配置文件上传服务，请直接创建空资产后再用 AI 生成封面，或先配置 OSS 上传。");
-    }
-
-    const uploadResponse = await fetch(signature.upload_url, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
+    const formData = new FormData();
+    formData.append("file", file);
+    const uploadResponse = await fetch(`${getApiBaseUrl()}/oss/upload`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
     });
+    const result = await uploadResponse.json() as {
+      code: number;
+      data: {
+        public_url: string;
+        object_key: string;
+      } | null;
+      message: string;
+    };
 
     if (!uploadResponse.ok) {
       throw new Error(`上传文件失败: HTTP ${uploadResponse.status}`);
     }
 
-    return signature.public_url;
+    if (result.code !== 200 || !result.data?.public_url) {
+      throw new Error(result.message || "上传文件失败");
+    }
+
+    return result.data.public_url;
   };
 
   const resetCreateState = () => {

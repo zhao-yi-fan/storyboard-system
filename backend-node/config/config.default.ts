@@ -43,6 +43,10 @@ module.exports = (appInfo: { name: string }) => {
     jsonLimit: '10mb',
     formLimit: '10mb',
   };
+  config.multipart = {
+    mode: 'stream',
+    fileSize: '20mb',
+  };
 
   config.security = {
     csrf: {
