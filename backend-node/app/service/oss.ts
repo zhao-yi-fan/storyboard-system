@@ -9,11 +9,15 @@ class OssService extends Service {
     return createOssClient(this.app, false);
   }
 
+  buildPublicClient() {
+    return createOssClient(this.app, true);
+  }
+
   async signUploadURL(fileName, contentType) {
     if (!fileName) {
       throw new Error('filename is required');
     }
-    const client = this.buildClient();
+    const client = this.buildPublicClient();
     const objectKey = String(fileName).replace(/^\/+/, '');
     const uploadUrl = await client.signatureUrl(objectKey, {
       method: 'PUT',

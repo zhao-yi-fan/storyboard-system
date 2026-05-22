@@ -245,13 +245,17 @@ export default function AssetLibrary() {
       throw new Error("当前未配置文件上传服务，请直接创建空资产后再用 AI 生成封面，或先配置 OSS 上传。");
     }
 
-    await fetch(signature.upload_url, {
+    const uploadResponse = await fetch(signature.upload_url, {
       method: "PUT",
       body: file,
       headers: {
         "Content-Type": file.type,
       },
     });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`上传文件失败: HTTP ${uploadResponse.status}`);
+    }
 
     return signature.public_url;
   };
