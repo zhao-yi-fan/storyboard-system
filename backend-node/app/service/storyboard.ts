@@ -550,10 +550,7 @@ class StoryboardService extends Service {
       throw new Error('当前视频模型仅支持基于首帧生成，请开启“使用当前首帧”或切换模型');
     }
     const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
-    const shouldUseReferenceImages = model === 'seedance-1.5-pro';
-    const { references: rawReferenceImages, missing: rawMissingReferences } = await this.selectVideoReferenceImages(storyboard, scene);
-    const referenceImages = shouldUseReferenceImages ? rawReferenceImages : [];
-    const missingReferences = shouldUseReferenceImages ? rawMissingReferences : [];
+    const { references: referenceImages, missing: missingReferences } = await this.selectVideoReferenceImages(storyboard, scene);
     const videoPrompt = buildStoryboardVideoPrompt({
       ...storyboard,
       style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
@@ -656,11 +653,8 @@ class StoryboardService extends Service {
       }
       const scene = await this.ctx.service.scene.findById(storyboard.scene_id);
       const prompt = this.buildVideoPrompt(storyboard, scene, preview.duration);
-      const characterReferenceImageUrls = preview.model === 'seedance-1.5-pro'
-        ? (Array.isArray(preview.reference_images) ? preview.reference_images.map(item => item.url).filter(Boolean) : [])
-        : [];
       const result = preview.model === 'seedance-1.5-pro'
-        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame, characterReferenceImageUrls)
+        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame)
         : await generateWanxVideo(this.app, prompt, imageInput, preview.model, preview.duration, preview.use_first_frame);
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.mp4`;
       const stored = await downloadAndStore(this.app, result.videoUrl, 'videos', filename, 'video/mp4');

@@ -3243,7 +3243,7 @@ export default function Workspace() {
               <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-gray-300 font-medium">参考图输入</div>
-                  <div className="text-[11px] text-gray-500">当前仅 Seedance 会实际引用这些场景背景图和角色设定图</div>
+                  <div className="text-[11px] text-gray-500">当前仅用于生成前确认；Seedance 1.5 Pro 实际仅接收首帧图</div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   {videoGenerationPreview.reference_images.map((reference, index) => (
