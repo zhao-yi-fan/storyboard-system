@@ -215,6 +215,10 @@ function buildVideoTimeline(content: string, mood: string, motion: string, durat
   const safeContent = String(content || '').trim() || '主体动作逐步展开';
   const safeMood = String(mood || '').trim() || '情绪持续累积';
   const safeMotion = String(motion || '').trim() || '镜头平稳推进';
+  const structuredBeats = parseStructuredVideoBeats(safeContent);
+  if (structuredBeats.length) {
+    return structuredBeats;
+  }
   return [
     {
       label: '开场',
@@ -229,6 +233,49 @@ function buildVideoTimeline(content: string, mood: string, motion: string, durat
       description: `${safeMood}在末段完成集中释放，给出最强视觉瞬间并稳定收束画面`,
     },
   ];
+}
+
+function parseStructuredVideoBeats(content: string): PromptBeat[] {
+  const text = String(content || '').trim();
+  if (!text) {
+    return [];
+  }
+
+  const beatPatterns: Array<{ label: string; regex: RegExp }> = [
+    { label: '开场', regex: /(?:首段|开场|0\s*[-~—至到]\s*\d+\s*秒)\s*[:：]\s*([\s\S]*?)(?=(?:中段|中场|\d+\s*[-~—至到]\s*\d+\s*秒)\s*[:：]|(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]|$)/i },
+    { label: '中段', regex: /(?:中段|中场|\d+\s*[-~—至到]\s*\d+\s*秒)\s*[:：]\s*([\s\S]*?)(?=(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]|$)/i },
+    { label: '收束', regex: /(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]\s*([\s\S]*?)$/i },
+  ];
+
+  const beats = beatPatterns
+    .map(({ label, regex }) => {
+      const match = text.match(regex);
+      const description = String(match?.[1] || '')
+        .replace(/\s+/g, ' ')
+        .replace(/[。；;，,\s]+$/g, '')
+        .trim();
+      return description ? { label, description } : null;
+    })
+    .filter(Boolean) as PromptBeat[];
+
+  return beats;
+}
+
+function summarizeVideoContent(content: string): string {
+  const text = String(content || '').trim();
+  if (!text) {
+    return '';
+  }
+  if (parseStructuredVideoBeats(text).length) {
+    const headline = text
+      .replace(/【[\s\S]*?】/g, ' ')
+      .split(/[。；;\n]/)
+      .map(item => item.trim())
+      .filter(Boolean)
+      .find(item => !/(首段|中段|尾段|开场|高潮|收束)\s*[:：]/.test(item));
+    return headline || '按分段分镜脚本推进完整动作和情绪变化';
+  }
+  return text;
 }
 
 export function selectPromptTemplate(values: unknown[]): string {
@@ -456,6 +503,7 @@ export function buildStoryboardVideoPrompt(storyboard: Record<string, unknown>, 
     storyboard.dialogue,
     storyboard.notes,
   ]);
+  const summarizedContent = summarizeVideoContent(String(storyboard.content || ''));
   const blueprint = buildPromptBlueprint({
     template,
     intro: `基于输入首帧图像生成一个${duration}秒的单镜头电影分镜视频`,
@@ -465,7 +513,7 @@ export function buildStoryboardVideoPrompt(storyboard: Record<string, unknown>, 
       characters.length ? `主要人物包括${characters.join('、')}` : '',
     ]),
     action: normalizeTextList([
-      storyboard.content ? `核心动作是${storyboard.content}` : '',
+      summarizedContent ? `核心动作是${summarizedContent}` : '',
       storyboard.dialogue ? `人物对白或台词氛围围绕${storyboard.dialogue}` : '',
       storyboard.notes ? `补充动作提示${storyboard.notes}` : '',
       storyboard.mood ? `情绪推进围绕${storyboard.mood}` : '',
