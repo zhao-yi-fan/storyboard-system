@@ -1580,7 +1580,7 @@ export default function Workspace() {
                                     alt=""
                                     loading="lazy"
                                     decoding="async"
-                                    className="h-8 w-10 rounded border border-gray-700 object-cover bg-[#171717]"
+                                    className="h-8 w-10 rounded border border-gray-700 object-contain bg-[#171717]"
                                   />
                                 ) : (
                                   <div className="flex h-8 w-10 items-center justify-center rounded border border-gray-800 bg-[#171717]">
@@ -1682,7 +1682,7 @@ export default function Workspace() {
                         alt=""
                         loading="lazy"
                         decoding="async"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-contain"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
@@ -1836,7 +1836,7 @@ export default function Workspace() {
                             alt=""
                             loading="lazy"
                             decoding="async"
-                            className={`w-full h-full object-cover transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
+                            className={`w-full h-full object-contain transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
                           />
                         ) : (
                           <ImageIcon className="w-12 h-12 text-gray-700" />
@@ -1923,7 +1923,7 @@ export default function Workspace() {
                           alt=""
                           loading="lazy"
                           decoding="async"
-                          className={`w-full h-full object-cover transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
+                          className={`w-full h-full object-contain transition-opacity ${pendingGeneratedShotId === shot.id ? "opacity-40" : "opacity-100"}`}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -2071,7 +2071,7 @@ export default function Workspace() {
                             alt=""
                             loading="lazy"
                             decoding="async"
-                            className="w-full h-full object-cover rounded"
+                            className="w-full h-full object-contain rounded"
                           />
                         </button>
                       ) : generatingCoverId === selectedShot.id ? (
@@ -2238,7 +2238,7 @@ export default function Workspace() {
                                     alt=""
                                     loading="lazy"
                                     decoding="async"
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain"
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
@@ -2318,7 +2318,7 @@ export default function Workspace() {
                                     muted
                                     playsInline
                                     preload="metadata"
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain"
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
@@ -3067,7 +3067,7 @@ export default function Workspace() {
                             alt={reference.name || `${reference.type} 参考图`}
                             loading="lazy"
                             decoding="async"
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                           />
                         </div>
                         <div className="space-y-1 break-all">
@@ -3280,7 +3280,7 @@ export default function Workspace() {
                         alt={selectedShot ? `${formatShotNumber(selectedShot.shot_number)} 首帧图` : "首帧图"}
                         loading="lazy"
                         decoding="async"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-contain"
                       />
                     </div>
                     <div className="space-y-2 break-all text-xs">
@@ -3312,7 +3312,7 @@ export default function Workspace() {
                           alt={reference.name}
                           loading="lazy"
                           decoding="async"
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain"
                         />
                       </div>
                       <div className="min-w-0 space-y-1.5 text-xs">

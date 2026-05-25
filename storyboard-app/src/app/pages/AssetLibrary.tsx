@@ -608,7 +608,7 @@ export default function AssetLibrary() {
                     {filteredCharacters.map((character) => (
                       <button key={character.id} onClick={() => setSelectedAsset({ type: "character", data: character })} className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}>
                         <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 relative flex items-center justify-center">
-                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <Users className="w-16 h-16 text-gray-700" />}
+                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-contain" /> : <Users className="w-16 h-16 text-gray-700" />}
                           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[70%]">
                             {hasCharacterDesignSheet(character) ? <Badge className="bg-blue-600/90 text-white text-[10px]">主设定图</Badge> : null}
                             {hasCharacterVoiceReference(character) ? <Badge className="bg-emerald-600/90 text-white text-[10px]">角色语音</Badge> : null}
@@ -631,7 +631,7 @@ export default function AssetLibrary() {
                     {filteredCharacters.map((character) => (
                       <button key={character.id} onClick={() => setSelectedAsset({ type: "character", data: character })} className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}>
                         <div className="w-16 h-16 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded flex items-center justify-center flex-shrink-0">
-                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" /> : <Users className="w-8 h-8 text-gray-700" />}
+                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-contain rounded" /> : <Users className="w-8 h-8 text-gray-700" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -660,7 +660,7 @@ export default function AssetLibrary() {
                     {filteredAssets.map((asset) => (
                       <button key={asset.id} onClick={() => setSelectedAsset({ type: "asset", data: asset })} className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}>
                         <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 relative flex items-center justify-center">
-                          {getAssetPreviewSrc(asset) ? <img src={getAssetPreviewSrc(asset)} alt={asset.name} loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <MapPin className="w-16 h-16 text-gray-700" />}
+                          {getAssetPreviewSrc(asset) ? <img src={getAssetPreviewSrc(asset)} alt={asset.name} loading="lazy" decoding="async" className="w-full h-full object-contain" /> : <MapPin className="w-16 h-16 text-gray-700" />}
                           <div className="absolute top-3 left-3"><Badge className="bg-green-600 text-white text-xs">{deriveAssetPrimaryTag(asset)}</Badge></div>
                           <div className="absolute top-3 right-3"><Badge className="bg-blue-600 text-white text-xs">{deriveAssetSecondaryTag(asset)}</Badge></div>
                         </div>
@@ -673,7 +673,7 @@ export default function AssetLibrary() {
                     {filteredAssets.map((asset) => (
                       <button key={asset.id} onClick={() => setSelectedAsset({ type: "asset", data: asset })} className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}>
                         <div className="w-20 h-14 bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded flex items-center justify-center flex-shrink-0">
-                          {getAssetPreviewSrc(asset) ? <img src={getAssetPreviewSrc(asset)} alt={asset.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" /> : <MapPin className="w-8 h-8 text-gray-700" />}
+                          {getAssetPreviewSrc(asset) ? <img src={getAssetPreviewSrc(asset)} alt={asset.name} loading="lazy" decoding="async" className="w-full h-full object-contain rounded" /> : <MapPin className="w-8 h-8 text-gray-700" />}
                         </div>
                         <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-1"><h4 className="font-medium">{asset.name}</h4><Badge className="bg-green-600 text-white text-xs">{deriveAssetPrimaryTag(asset)}</Badge></div><p className="text-sm text-gray-400 line-clamp-1">{deriveAssetDescription(asset)}</p></div>
                       </button>
@@ -716,7 +716,7 @@ export default function AssetLibrary() {
                             })
                           }
                         >
-                          <img src={getCharacterPreviewSrc(selectedAsset.data)} alt={selectedAsset.data.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" />
+                          <img src={getCharacterPreviewSrc(selectedAsset.data)} alt={selectedAsset.data.name} loading="lazy" decoding="async" className="w-full h-full object-contain rounded" />
                         </button>
                       ) : (
                         <Users className="w-24 h-24 text-gray-700" />
@@ -750,7 +750,7 @@ export default function AssetLibrary() {
                               alt={`${selectedAsset.data.name} 主设定图`}
                               loading="lazy"
                               decoding="async"
-                              className="w-full h-full object-cover rounded"
+                              className="w-full h-full object-contain rounded"
                             />
                           </button>
                         ) : (
@@ -870,7 +870,7 @@ export default function AssetLibrary() {
                     <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
                       {getAssetPreviewSrc(selectedAsset.data) ? (
                         <button type="button" className="w-full h-full" onClick={() => setPreviewImage({ src: getAssetOriginalSrc(selectedAsset.data), alt: selectedAsset.data.name })}>
-                          <img src={getAssetPreviewSrc(selectedAsset.data)} alt={selectedAsset.data.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded" />
+                          <img src={getAssetPreviewSrc(selectedAsset.data)} alt={selectedAsset.data.name} loading="lazy" decoding="async" className="w-full h-full object-contain rounded" />
                         </button>
                       ) : (
                         <MapPin className="w-24 h-24 text-gray-700" />
