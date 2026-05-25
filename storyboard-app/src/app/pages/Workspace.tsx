@@ -2127,31 +2127,19 @@ export default function Workspace() {
                             </>
                           )}
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              disabled={uploadingCoverId === selectedShot.id || generatingCoverId === selectedShot.id || isLoadingCoverPreview}
-                              className="bg-[#1a1a1a] hover:bg-[#202020] border-gray-700 text-gray-100 shrink-0 px-2"
-                            >
-                              {uploadingCoverId === selectedShot.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-[#1a1a1a] border-gray-700 text-gray-100 min-w-40">
-                            <DropdownMenuItem
-                              onClick={handleRequestUploadShotCover}
-                              className="cursor-pointer focus:bg-[#242424]"
-                            >
-                              <Upload className="w-4 h-4 mr-2" />
-                              上传首帧
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleRequestUploadShotCover}
+                          disabled={uploadingCoverId === selectedShot.id || generatingCoverId === selectedShot.id || isLoadingCoverPreview}
+                          className="bg-[#1a1a1a] hover:bg-[#202020] border-gray-700 text-gray-100 shrink-0 px-2"
+                        >
+                          {uploadingCoverId === selectedShot.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                        </Button>
                       </div>
                       <div className="flex items-center gap-2">
                         <Select value={selectedVideoModel} onValueChange={(value) => setSelectedVideoModel(value as typeof selectedVideoModel)}>
