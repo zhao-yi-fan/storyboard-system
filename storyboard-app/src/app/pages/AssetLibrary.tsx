@@ -134,14 +134,6 @@ export default function AssetLibrary() {
   const MAX_DETAIL_SIDEBAR_WIDTH = 560;
 
   useEffect(() => {
-    if (activeTab === "characters") {
-      void loadCharacters();
-    } else {
-      void loadAssets();
-    }
-  }, [activeTab, currentProjectId]);
-
-  useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
       if (!isResizingDetailSidebar) return;
       const newWidth = window.innerWidth - event.clientX;
@@ -186,7 +178,6 @@ export default function AssetLibrary() {
   }, [assets, searchQuery]);
 
   const loadCharacters = async () => {
-    setLoading(true);
     try {
       if (!currentProjectId) {
         setCharacters([]);
@@ -196,13 +187,10 @@ export default function AssetLibrary() {
       setCharacters(data ?? []);
     } catch (error) {
       console.error("Failed to load characters:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const loadAssets = async () => {
-    setLoading(true);
     try {
       if (!currentProjectId) {
         setAssets([]);
@@ -212,10 +200,33 @@ export default function AssetLibrary() {
       setAssets(data ?? []);
     } catch (error) {
       console.error("Failed to load assets:", error);
+    }
+  };
+
+  const loadLibraryData = async () => {
+    setLoading(true);
+    try {
+      if (!currentProjectId) {
+        setCharacters([]);
+        setAssets([]);
+        return;
+      }
+      const [characterData, assetData] = await Promise.all([
+        characterApi.getCharactersByProject(currentProjectId),
+        assetApi.getAssetsByProject(currentProjectId),
+      ]);
+      setCharacters(characterData ?? []);
+      setAssets(assetData ?? []);
+    } catch (error) {
+      console.error("Failed to load asset library data:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadLibraryData();
+  }, [currentProjectId]);
 
   const refreshCurrentTab = async () => {
     if (activeTab === "characters") {
