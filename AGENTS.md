@@ -27,6 +27,7 @@ The project is interest-driven, but treat it as a real product workflow tool. Pr
 
 - Preserve the existing structure and naming style unless a change is required.
 - Keep generated or AI-assisted UI code maintainable: extract reusable components, remove dead code, and avoid large unstructured files.
+- This project has a repo-local code-style skill at `.codex/skills/storyboard-code-style/SKILL.md`; for maintainability refactors and UI cleanup, follow it preferentially.
 - Prefer explicit types and status values for long-running AI generation work.
 - Keep AI workflows user-controllable: loading, success, failed, retry, preview, and edit states should be visible where relevant.
 - Do not hide failures behind only transient toasts; persistent task-level errors are usually more useful.

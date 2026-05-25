@@ -2391,21 +2391,6 @@ export default function Workspace() {
                     </div>
 
                     <div>
-                      <Label className="text-xs text-gray-400">背景场景</Label>
-                      <div className="mt-1.5 flex flex-wrap gap-2">
-                        {selectedShot.background ? (
-                          <Badge variant="outline" className="border-blue-700 text-blue-300">
-                            {selectedShot.background}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-gray-700 text-gray-500">
-                            未生成
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
                       <Label className="text-xs text-gray-400">背景资产</Label>
                       <div className="mt-1.5 flex flex-wrap gap-2">
                         {selectedShot.assets && selectedShot.assets.length > 0 ? (
@@ -3056,7 +3041,6 @@ export default function Workspace() {
                 <div><span className="text-gray-500">场景标题：</span><span>{coverGenerationPreview?.fields.scene_title || "-"}</span></div>
                 <div><span className="text-gray-500">地点：</span><span>{coverGenerationPreview?.fields.location || "-"}</span></div>
                 <div><span className="text-gray-500">时间：</span><span>{coverGenerationPreview?.fields.time_of_day || "-"}</span></div>
-                <div><span className="text-gray-500">背景场景：</span><span>{coverGenerationPreview?.fields.background || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{coverGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{coverGenerationPreview?.fields.content || "-"}</span></div>
                 <div><span className="text-gray-500">情绪：</span><span>{coverGenerationPreview?.fields.mood || "-"}</span></div>
@@ -3302,7 +3286,6 @@ export default function Workspace() {
               <div className="text-gray-300 font-medium">共用字段</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
                 <div><span className="text-gray-500">场景标题：</span><span>{videoGenerationPreview?.fields.scene_title || "-"}</span></div>
-                <div><span className="text-gray-500">背景场景：</span><span>{videoGenerationPreview?.fields.background || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{videoGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
                 <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{videoGenerationPreview?.fields.content || "-"}</span></div>
                 <div><span className="text-gray-500">情绪：</span><span>{videoGenerationPreview?.fields.mood || "-"}</span></div>
