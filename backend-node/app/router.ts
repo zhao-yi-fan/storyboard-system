@@ -50,6 +50,8 @@ module.exports = (app: any) => {
   router.post('/api/storyboards/:id/generate-video', controller.storyboard.generateVideo);
   router.post('/api/storyboards/:id/characters', controller.storyboard.addCharacter);
   router.delete('/api/storyboards/:id/characters/:characterId', controller.storyboard.removeCharacter);
+  router.post('/api/storyboards/:id/assets', controller.storyboard.addAsset);
+  router.delete('/api/storyboards/:id/assets/:assetId', controller.storyboard.removeAsset);
 
   router.get('/api/characters/:id', controller.character.show);
   router.put('/api/characters/:id', controller.character.update);

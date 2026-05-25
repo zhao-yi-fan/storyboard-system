@@ -8,6 +8,7 @@ import type {
   StoryboardMediaGeneration,
   StoryboardMediaMutationResult,
 } from "../api/types";
+import type { Asset } from "./types";
 
 export function getStoryboardsByScene(sceneId: number) {
   return apiClient.get<Storyboard[]>(`/scenes/${sceneId}/storyboards`);
@@ -82,6 +83,14 @@ export function addStoryboardCharacter(id: number, characterId: number) {
 
 export function removeStoryboardCharacter(id: number, characterId: number) {
   return apiClient.delete<Storyboard>(`/storyboards/${id}/characters/${characterId}`);
+}
+
+export function addStoryboardAsset(id: number, assetId: number) {
+  return apiClient.post<Storyboard>(`/storyboards/${id}/assets`, { asset_id: assetId });
+}
+
+export function removeStoryboardAsset(id: number, assetId: number) {
+  return apiClient.delete<Storyboard>(`/storyboards/${id}/assets/${assetId}`);
 }
 
 export function getStoryboardCoverGenerationPreview(id: number, data?: { model?: string }) {

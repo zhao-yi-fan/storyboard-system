@@ -70,6 +70,7 @@ import {
   sceneApi,
   storyboardApi,
   characterApi,
+  assetApi,
   type Project,
   type Chapter,
   type Scene,
@@ -79,6 +80,7 @@ import {
   type StoryboardMediaGeneration,
   type AIGenerationPreview,
   type Character,
+  type Asset,
 } from "../api";
 
 const COVER_MODEL_OPTIONS = [
@@ -436,9 +438,13 @@ export default function Workspace() {
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
   const [projectCharacters, setProjectCharacters] = useState<Character[]>([]);
+  const [projectAssets, setProjectAssets] = useState<Asset[]>([]);
   const [isManageCharactersOpen, setIsManageCharactersOpen] = useState(false);
+  const [isManageAssetsOpen, setIsManageAssetsOpen] = useState(false);
   const [isLoadingProjectCharacters, setIsLoadingProjectCharacters] = useState(false);
+  const [isLoadingProjectAssets, setIsLoadingProjectAssets] = useState(false);
   const [activeCharacterActionKey, setActiveCharacterActionKey] = useState<string | null>(null);
+  const [activeAssetActionKey, setActiveAssetActionKey] = useState<string | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(350);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -587,6 +593,25 @@ export default function Workspace() {
       setProjectCharacters([]);
     } finally {
       setIsLoadingProjectCharacters(false);
+    }
+  };
+
+  const loadProjectAssets = async (projectId: number) => {
+    setIsLoadingProjectAssets(true);
+    try {
+      const data = await assetApi.getAssetsByProject(projectId);
+      setProjectAssets(
+        (data || []).filter((asset) => {
+          const type = String(asset.type || "").trim().toLowerCase();
+          return type.includes("scene") || type.includes("background") || type.includes("场景") || type.includes("背景");
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to load project assets:", error);
+      toast.error(error instanceof Error ? error.message : "加载项目资产失败");
+      setProjectAssets([]);
+    } finally {
+      setIsLoadingProjectAssets(false);
     }
   };
 
@@ -909,6 +934,48 @@ export default function Workspace() {
   const confirmGenerateVideo = async () => {
     setIsVideoConfirmOpen(false);
     await runGenerateVideo();
+  };
+
+  const handleOpenManageAssets = async () => {
+    if (!selectedProject || !selectedShot) {
+      return;
+    }
+    setIsManageAssetsOpen(true);
+    await loadProjectAssets(selectedProject.id);
+  };
+
+  const handleAddStoryboardAsset = async (assetId: number) => {
+    if (!selectedShot) {
+      return;
+    }
+    const actionKey = `add-asset:${assetId}`;
+    setActiveAssetActionKey(actionKey);
+    try {
+      const updated = await storyboardApi.addStoryboardAsset(selectedShot.id, assetId);
+      applyStoryboardUpdate(updated);
+    } catch (error) {
+      console.error("Failed to add storyboard asset:", error);
+      toast.error(error instanceof Error ? error.message : "添加背景资产失败");
+    } finally {
+      setActiveAssetActionKey(null);
+    }
+  };
+
+  const handleRemoveStoryboardAsset = async (assetId: number) => {
+    if (!selectedShot) {
+      return;
+    }
+    const actionKey = `remove-asset:${assetId}`;
+    setActiveAssetActionKey(actionKey);
+    try {
+      const updated = await storyboardApi.removeStoryboardAsset(selectedShot.id, assetId);
+      applyStoryboardUpdate(updated);
+    } catch (error) {
+      console.error("Failed to remove storyboard asset:", error);
+      toast.error(error instanceof Error ? error.message : "移除背景资产失败");
+    } finally {
+      setActiveAssetActionKey(null);
+    }
   };
   const handleGenerateSceneCover = () => {
     if (!selectedScene || isGeneratingSceneCover || isLoadingSceneCoverPreview) {
@@ -2339,6 +2406,45 @@ export default function Workspace() {
                     </div>
 
                     <div>
+                      <Label className="text-xs text-gray-400">背景资产</Label>
+                      <div className="mt-1.5 flex flex-wrap gap-2">
+                        {selectedShot.assets && selectedShot.assets.length > 0 ? (
+                          selectedShot.assets.map((asset) => (
+                            <Badge
+                              key={asset.id}
+                              variant="outline"
+                              className="flex h-7 items-center gap-1 border-emerald-700 pr-1 text-emerald-300"
+                            >
+                              <span>{asset.name}</span>
+                              <button
+                                type="button"
+                                className="rounded-sm p-0.5 text-emerald-300 transition hover:bg-emerald-900/40 disabled:opacity-50"
+                                onClick={() => void handleRemoveStoryboardAsset(asset.id)}
+                                disabled={activeAssetActionKey === `remove-asset:${asset.id}`}
+                                aria-label={`移除背景资产 ${asset.name}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="outline" className="border-gray-700 text-gray-500">
+                            待关联
+                          </Badge>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs border-gray-700 text-gray-400"
+                          onClick={() => void handleOpenManageAssets()}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          管理背景资产
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
                       <Label className="text-xs text-gray-400">画面描述</Label>
                       <Textarea
                         value={shotForm.content}
@@ -2660,6 +2766,125 @@ export default function Workspace() {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setIsManageCharactersOpen(false)}>
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isManageAssetsOpen} onOpenChange={setIsManageAssetsOpen}>
+        <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>管理背景资产</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              给当前镜头添加或移除场景背景资产。这些背景图会在 Seedance 视频生成时作为参考图一起传入。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+              <div className="text-gray-300 font-medium">当前镜头</div>
+              <div className="mt-2 text-xs text-gray-400">
+                {selectedShot ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}` : "未选择镜头"}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedShot?.assets?.length ? (
+                  selectedShot.assets.map((asset) => (
+                    <Badge
+                      key={asset.id}
+                      variant="outline"
+                      className="flex h-7 items-center gap-1 border-emerald-700 pr-1 text-emerald-300"
+                    >
+                      <span>{asset.name}</span>
+                      <button
+                        type="button"
+                        className="rounded-sm p-0.5 text-emerald-300 transition hover:bg-emerald-900/40 disabled:opacity-50"
+                        onClick={() => void handleRemoveStoryboardAsset(asset.id)}
+                        disabled={activeAssetActionKey === `remove-asset:${asset.id}`}
+                        aria-label={`移除背景资产 ${asset.name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge variant="outline" className="border-gray-700 text-gray-500">
+                    当前镜头未关联背景资产
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-gray-300 font-medium">项目背景资产库</div>
+                {selectedProject ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-gray-700 text-xs text-gray-300"
+                    onClick={() => void loadProjectAssets(selectedProject.id)}
+                    disabled={isLoadingProjectAssets}
+                  >
+                    {isLoadingProjectAssets ? (
+                      <>
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        刷新中
+                      </>
+                    ) : (
+                      "刷新资产库"
+                    )}
+                  </Button>
+                ) : null}
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {isLoadingProjectAssets ? (
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    正在加载项目背景资产
+                  </div>
+                ) : projectAssets.length > 0 ? (
+                  projectAssets.map((asset) => {
+                    const alreadyAssigned = !!selectedShot?.assets?.some((item) => item.id === asset.id);
+                    return (
+                      <div
+                        key={asset.id}
+                        className="flex items-start justify-between gap-3 rounded-md border border-gray-800 bg-[#111111] p-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-200">{asset.name}</div>
+                          <div className="mt-1 line-clamp-3 text-xs leading-5 text-gray-400">{asset.meta || asset.type || "场景背景资产"}</div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={alreadyAssigned ? "outline" : "default"}
+                          className={alreadyAssigned ? "h-7 border-gray-700 text-xs text-gray-400" : "h-7 bg-purple-600 px-3 text-xs text-white hover:bg-purple-700"}
+                          onClick={() => void handleAddStoryboardAsset(asset.id)}
+                          disabled={alreadyAssigned || activeAssetActionKey === `add-asset:${asset.id}`}
+                        >
+                          {activeAssetActionKey === `add-asset:${asset.id}` ? (
+                            <>
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              添加中
+                            </>
+                          ) : alreadyAssigned ? (
+                            "已关联"
+                          ) : (
+                            "加入镜头"
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-gray-500">当前项目还没有可用的场景背景资产。</div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsManageAssetsOpen(false)}>
               关闭
             </Button>
           </DialogFooter>
@@ -3033,8 +3258,8 @@ export default function Workspace() {
             {!!videoGenerationPreview?.reference_images?.length && (
               <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-gray-300 font-medium">角色参考图</div>
-                  <div className="text-[11px] text-gray-500">当前仅 Seedance 会实际引用这些角色设定图</div>
+                  <div className="text-gray-300 font-medium">参考图输入</div>
+                  <div className="text-[11px] text-gray-500">当前仅 Seedance 会实际引用这些场景背景图和角色设定图</div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   {videoGenerationPreview.reference_images.map((reference, index) => (
@@ -3050,7 +3275,9 @@ export default function Workspace() {
                       </div>
                       <div className="min-w-0 space-y-1.5 text-xs">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-[#1b2336] text-[#9ec5ff] hover:bg-[#1b2336]">{reference.type === "character" ? "角色" : reference.type}</Badge>
+                          <Badge className="bg-[#1b2336] text-[#9ec5ff] hover:bg-[#1b2336]">
+                            {reference.type === "character" ? "角色" : reference.type === "scene" ? "背景" : reference.type}
+                          </Badge>
                           <span className="truncate text-gray-200">{reference.name}</span>
                         </div>
                         <div><span className="text-gray-500">来源：</span><span className="text-gray-300">{reference.source}</span></div>
@@ -3064,7 +3291,7 @@ export default function Workspace() {
                 </div>
                 {!!videoGenerationPreview?.missing_references?.length && (
                   <div className="rounded border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">
-                    <div className="mb-1 text-amber-300">以下角色缺少可用参考图：</div>
+                    <div className="mb-1 text-amber-300">以下参考项缺少可用图片：</div>
                     <div className="break-words">{videoGenerationPreview.missing_references.join("、")}</div>
                   </div>
                 )}

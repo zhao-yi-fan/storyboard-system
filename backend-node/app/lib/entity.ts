@@ -74,5 +74,7 @@ export function mapStoryboard(app: any, row: Record<string, any>) {
     updated_at: toNullableDate(row.updated_at),
     characters: [],
     character_names: [],
+    assets: [],
+    asset_names: [],
   };
 }

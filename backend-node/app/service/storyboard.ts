@@ -29,6 +29,8 @@ const {
 } = require('../lib/prompt_library');
 
 class StoryboardService extends Service {
+  static SCENE_BACKGROUND_USAGE = 'scene_background';
+
   get pool() {
     return this.app.mysqlPool;
   }
@@ -59,6 +61,7 @@ class StoryboardService extends Service {
 
     const items = rows.map(row => mapStoryboard(this.app, row));
     await this.attachCharacters(items);
+    await this.attachAssets(items);
     return items;
   }
 
@@ -77,6 +80,7 @@ class StoryboardService extends Service {
     }
     const item = mapStoryboard(this.app, rows[0]);
     await this.attachCharacters([ item ]);
+    await this.attachAssets([ item ]);
     return item;
   }
 
@@ -220,6 +224,32 @@ class StoryboardService extends Service {
     }
   }
 
+  async attachAssets(items) {
+    if (!items.length) {
+      return;
+    }
+    const ids = items.map(item => item.id);
+    const placeholders = ids.map(() => '?').join(', ');
+    const [rows] = await this.pool.query(
+      `SELECT sau.storyboard_id, a.id, a.project_id, a.character_id, a.name, a.type, a.file_url, a.cover_url, a.thumbnail_url, a.meta, a.created_at, a.updated_at
+       FROM storyboard_asset_usages sau
+       JOIN assets a ON a.id = sau.asset_id
+       WHERE sau.storyboard_id IN (${placeholders}) AND sau.usage_type = ? AND a.deleted_at IS NULL
+       ORDER BY sau.storyboard_id ASC, a.id ASC`,
+      [ ...ids, StoryboardService.SCENE_BACKGROUND_USAGE ]
+    );
+    const byStoryboard = new Map(items.map(item => [ item.id, item ]));
+    for (const row of rows) {
+      const target = byStoryboard.get(Number(row.storyboard_id));
+      if (!target) {
+        continue;
+      }
+      const asset = this.ctx.service.asset.map(row);
+      target.assets.push(asset);
+      target.asset_names.push(asset.name);
+    }
+  }
+
   supportedCoverModels() {
     return new Set([ '', 'auto', 'qwen-image-2.0', 'wan2.7-image-pro', 'seedream-4.5' ]);
   }
@@ -256,30 +286,29 @@ class StoryboardService extends Service {
     return normalized !== 'false' && normalized !== '0' && normalized !== 'off';
   }
 
-  async selectReferenceImages(storyboard, scene) {
+  async selectSceneReferenceImages(storyboard, scene) {
     const references = [];
     const missing = [];
-    const [ assets ] = await this.pool.query(
-      `SELECT id, name, type, file_url, cover_url
-       FROM assets
-       WHERE project_id = ? AND deleted_at IS NULL
-       ORDER BY created_at DESC, id DESC`,
-      [ scene.project_id ]
-    );
-    const sceneAsset = assets.find(item => {
-      const type = String(item.type || '').trim().toLowerCase();
-      return type === 'scene' || type === 'background';
-    });
-    if (sceneAsset) {
-      const url = resolveUrl(this.app, sceneAsset.cover_url || sceneAsset.file_url, this.app.config.storyboard.publicAppBaseUrl || '');
+    for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
+      const url = resolveUrl(this.app, asset.cover_url || asset.file_url, this.app.config.storyboard.publicAppBaseUrl || '');
       if (url) {
-        references.push({ asset_id: Number(sceneAsset.id), type: 'scene', name: String(sceneAsset.name || '').trim(), url, source: sceneAsset.cover_url ? 'asset.cover_url' : 'asset.file_url' });
+        references.push({
+          asset_id: Number(asset.id),
+          type: 'scene',
+          name: String(asset.name || '').trim(),
+          url,
+          source: asset.cover_url ? 'asset.cover_url' : 'asset.file_url',
+        });
       }
     }
     if (!references.length) {
-      missing.push('scene');
+      missing.push('scene-background');
     }
+    return { references, missing };
+  }
 
+  async selectReferenceImages(storyboard, scene) {
+    const { references, missing } = await this.selectSceneReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
       const url = resolveUrl(this.app, character.design_sheet_url || character.avatar_url, this.app.config.storyboard.publicAppBaseUrl || '');
       if (!url) {
@@ -311,6 +340,15 @@ class StoryboardService extends Service {
     return { references, missing };
   }
 
+  async selectVideoReferenceImages(storyboard, scene) {
+    const { references: sceneReferences, missing: sceneMissing } = await this.selectSceneReferenceImages(storyboard, scene);
+    const { references: characterReferences, missing: characterMissing } = this.selectVideoCharacterReferenceImages(storyboard);
+    return {
+      references: [ ...sceneReferences, ...characterReferences ],
+      missing: [ ...sceneMissing, ...characterMissing ],
+    };
+  }
+
   async addCharacter(storyboardId, characterId) {
     const storyboard = await this.findById(storyboardId);
     if (!storyboard) {
@@ -340,6 +378,43 @@ class StoryboardService extends Service {
     await this.pool.execute(
       'DELETE FROM storyboard_characters WHERE storyboard_id = ? AND character_id = ?',
       [ storyboardId, characterId ]
+    );
+    return await this.findById(storyboardId);
+  }
+
+  async addAsset(storyboardId, assetId) {
+    const storyboard = await this.findById(storyboardId);
+    if (!storyboard) {
+      throw new Error('storyboard not found');
+    }
+    const asset = await this.ctx.service.asset.findById(assetId);
+    if (!asset) {
+      throw new Error('asset not found');
+    }
+    if (Number(asset.project_id) !== Number(storyboard.project_id)) {
+      throw new Error('asset does not belong to the same project');
+    }
+    const type = String(asset.type || '').trim().toLowerCase();
+    if (!(type.includes('scene') || type.includes('background') || type.includes('场景') || type.includes('背景'))) {
+      throw new Error('当前资产不是场景背景资产');
+    }
+    await this.pool.execute(
+      `INSERT INTO storyboard_asset_usages (storyboard_id, asset_id, usage_type)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE usage_type = VALUES(usage_type)`,
+      [ storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE ]
+    );
+    return await this.findById(storyboardId);
+  }
+
+  async removeAsset(storyboardId, assetId) {
+    const storyboard = await this.findById(storyboardId);
+    if (!storyboard) {
+      throw new Error('storyboard not found');
+    }
+    await this.pool.execute(
+      'DELETE FROM storyboard_asset_usages WHERE storyboard_id = ? AND asset_id = ? AND usage_type = ?',
+      [ storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE ]
     );
     return await this.findById(storyboardId);
   }
@@ -475,10 +550,10 @@ class StoryboardService extends Service {
       throw new Error('当前视频模型仅支持基于首帧生成，请开启“使用当前首帧”或切换模型');
     }
     const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
-    const shouldUseCharacterReferences = model === 'seedance-1.5-pro';
-    const { references: rawCharacterReferenceImages, missing: rawMissingCharacterReferences } = this.selectVideoCharacterReferenceImages(storyboard);
-    const characterReferenceImages = shouldUseCharacterReferences ? rawCharacterReferenceImages : [];
-    const missingCharacterReferences = shouldUseCharacterReferences ? rawMissingCharacterReferences : [];
+    const shouldUseReferenceImages = model === 'seedance-1.5-pro';
+    const { references: rawReferenceImages, missing: rawMissingReferences } = await this.selectVideoReferenceImages(storyboard, scene);
+    const referenceImages = shouldUseReferenceImages ? rawReferenceImages : [];
+    const missingReferences = shouldUseReferenceImages ? rawMissingReferences : [];
     const videoPrompt = buildStoryboardVideoPrompt({
       ...storyboard,
       style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
@@ -493,8 +568,8 @@ class StoryboardService extends Service {
       source_image_url: sourceImageUrl,
       source_image_status: !useFirstFrame ? 'not-required' : (sourceImageUrl ? 'existing-cover' : 'will-generate-cover'),
       will_generate_cover: useFirstFrame && !sourceImageUrl,
-      reference_images: characterReferenceImages.map(item => ({ type: item.type, name: item.name, url: item.url, source: item.source })),
-      missing_references: missingCharacterReferences,
+      reference_images: referenceImages.map(item => ({ type: item.type, name: item.name, url: item.url, source: item.source })),
+      missing_references: missingReferences,
       fields: {
         scene_title: String(scene.title || '').trim(),
         background: String(storyboard.background || '').trim(),

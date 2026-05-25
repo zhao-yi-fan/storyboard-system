@@ -226,6 +226,20 @@ class StoryboardController extends Controller {
     }
   }
 
+  async addAsset() {
+    const storyboardId = this.parseId();
+    const assetId = Number((this.ctx.request.body || {}).asset_id);
+    if (!storyboardId || !Number.isInteger(assetId) || assetId <= 0) {
+      response.error(this.ctx, 'invalid asset id');
+      return;
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.storyboard.addAsset(storyboardId, assetId));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
   async removeCharacter() {
     const storyboardId = this.parseId();
     const characterId = Number(this.ctx.params.characterId);
@@ -235,6 +249,20 @@ class StoryboardController extends Controller {
     }
     try {
       response.success(this.ctx, await this.ctx.service.storyboard.removeCharacter(storyboardId, characterId));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async removeAsset() {
+    const storyboardId = this.parseId();
+    const assetId = Number(this.ctx.params.assetId);
+    if (!storyboardId || !Number.isInteger(assetId) || assetId <= 0) {
+      response.error(this.ctx, 'invalid asset id');
+      return;
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.storyboard.removeAsset(storyboardId, assetId));
     } catch (err) {
       response.error(this.ctx, err.message);
     }

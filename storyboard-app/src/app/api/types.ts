@@ -115,6 +115,8 @@ export type Storyboard = {
   sort_order: number;
   characters?: Character[];
   character_names?: string[];
+  assets?: Asset[];
+  asset_names?: string[];
   created_at?: string;
   updated_at?: string;
 };
