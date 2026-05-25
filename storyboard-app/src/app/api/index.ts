@@ -6,3 +6,4 @@ export * as sceneApi from './scene';
 export * as characterApi from './character';
 export * as assetApi from './asset';
 export * as storyboardApi from './storyboard';
+export * as ossApi from './oss';

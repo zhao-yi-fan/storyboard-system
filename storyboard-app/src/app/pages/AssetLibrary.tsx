@@ -44,8 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import { characterApi, assetApi, apiClient, type Character, type Asset, type AIGenerationPreview, type CharacterDesignSheetModel } from "../api";
-import { getApiBaseUrl } from "../api/client";
+import { characterApi, assetApi, apiClient, ossApi, type Character, type Asset, type AIGenerationPreview, type CharacterDesignSheetModel } from "../api";
 
 type SelectedAsset =
   | { type: "character"; data: Character }
@@ -236,34 +235,6 @@ export default function AssetLibrary() {
     }
   };
 
-  const handleFileUpload = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const uploadResponse = await fetch(`${getApiBaseUrl()}/oss/upload`, {
-      method: "POST",
-      credentials: "include",
-      body: formData,
-    });
-    const result = await uploadResponse.json() as {
-      code: number;
-      data: {
-        public_url: string;
-        object_key: string;
-      } | null;
-      message: string;
-    };
-
-    if (!uploadResponse.ok) {
-      throw new Error(`上传文件失败: HTTP ${uploadResponse.status}`);
-    }
-
-    if (result.code !== 200 || !result.data?.public_url) {
-      throw new Error(result.message || "上传文件失败");
-    }
-
-    return result.data.public_url;
-  };
-
   const resetCreateState = () => {
     setNewCharacter({ name: "", description: "", avatar_url: "" });
     setNewAsset({ name: "", type: "scene", meta: "", file_url: "" });
@@ -282,7 +253,7 @@ export default function AssetLibrary() {
         }
         let avatarURL = newCharacter.avatar_url.trim();
         if (!avatarURL && createCharacterFile) {
-          avatarURL = await handleFileUpload(createCharacterFile);
+          avatarURL = await ossApi.uploadFileToOss(createCharacterFile);
         }
         const created = await characterApi.createCharacter(currentProjectId, {
           name: newCharacter.name.trim(),
@@ -299,7 +270,7 @@ export default function AssetLibrary() {
         }
         let fileURL = newAsset.file_url.trim();
         if (!fileURL && createAssetFile) {
-          fileURL = await handleFileUpload(createAssetFile);
+          fileURL = await ossApi.uploadFileToOss(createAssetFile);
         }
         const created = await assetApi.createAsset(currentProjectId, {
           name: newAsset.name.trim(),

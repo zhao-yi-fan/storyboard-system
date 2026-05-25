@@ -18,6 +18,7 @@ import {
   Camera,
   MessageSquare,
   Image as ImageIcon,
+  Upload,
   X,
   Sparkles,
   Loader2,
@@ -71,6 +72,7 @@ import {
   storyboardApi,
   characterApi,
   assetApi,
+  ossApi,
   type Project,
   type Chapter,
   type Scene,
@@ -403,6 +405,7 @@ export default function Workspace() {
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [isSavingShot, setIsSavingShot] = useState(false);
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
+  const [uploadingCoverId, setUploadingCoverId] = useState<number | null>(null);
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string; items?: { src: string; alt: string }[]; currentIndex?: number } | null>(null);
@@ -454,6 +457,7 @@ export default function Workspace() {
   const leftSidebarRef = useRef<HTMLDivElement>(null);
   const rightSidebarRef = useRef<HTMLDivElement>(null);
   const videoPollingTimerRef = useRef<number | null>(null);
+  const shotCoverInputRef = useRef<HTMLInputElement>(null);
 
   const MIN_SIDEBAR_WIDTH = 220;
   const MAX_SIDEBAR_WIDTH = 500;
@@ -929,6 +933,31 @@ export default function Workspace() {
       .finally(() => {
         setIsLoadingVideoPreview(false);
       });
+  };
+
+  const handleRequestUploadShotCover = () => {
+    shotCoverInputRef.current?.click();
+  };
+
+  const handleUploadShotCover = async (file: File) => {
+    if (!selectedShot) {
+      return;
+    }
+    setUploadingCoverId(selectedShot.id);
+    try {
+      const uploadedUrl = await ossApi.uploadFileToOss(file);
+      const result = await storyboardApi.uploadStoryboardCover(selectedShot.id, uploadedUrl);
+      applyMediaMutation(result);
+      toast.success("首帧上传成功");
+    } catch (error) {
+      console.error("Failed to upload storyboard cover:", error);
+      toast.error(error instanceof Error ? error.message : "首帧上传失败");
+    } finally {
+      setUploadingCoverId(null);
+      if (shotCoverInputRef.current) {
+        shotCoverInputRef.current.value = "";
+      }
+    }
   };
 
   const confirmGenerateVideo = async () => {
@@ -2014,8 +2043,20 @@ export default function Workspace() {
                   {/* First frame */}
                   <div>
                     <Label className="text-xs text-gray-400">首帧图</Label>
+                    <input
+                      ref={shotCoverInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          void handleUploadShotCover(file);
+                        }
+                      }}
+                    />
                     <div className="mt-1.5 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
-                      {selectedShot.thumbnail_url && generatingCoverId !== selectedShot.id ? (
+                      {selectedShot.thumbnail_url && generatingCoverId !== selectedShot.id && uploadingCoverId !== selectedShot.id ? (
                         <button
                           type="button"
                           className="w-full h-full"
@@ -2038,6 +2079,11 @@ export default function Workspace() {
                         <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
                           <Loader2 className="w-8 h-8 text-purple-300 animate-spin" />
                           <span className="text-xs text-gray-300">正在生成新首帧...</span>
+                        </div>
+                      ) : uploadingCoverId === selectedShot.id ? (
+                        <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
+                          <Loader2 className="w-8 h-8 text-blue-300 animate-spin" />
+                          <span className="text-xs text-gray-300">正在上传首帧...</span>
                         </div>
                       ) : (
                         <ImageIcon className="w-16 h-16 text-gray-700" />
@@ -2066,8 +2112,27 @@ export default function Workspace() {
                         </div>
                         <Button
                           type="button"
+                          variant="outline"
+                          onClick={handleRequestUploadShotCover}
+                          disabled={uploadingCoverId === selectedShot.id || generatingCoverId === selectedShot.id || isLoadingCoverPreview}
+                          className="bg-[#1a1a1a] hover:bg-[#202020] border-gray-700 text-gray-100 shrink-0"
+                        >
+                          {uploadingCoverId === selectedShot.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              上传中
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              上传首帧
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
                           onClick={handleGenerateCover}
-                          disabled={generatingCoverId === selectedShot.id || isLoadingCoverPreview}
+                          disabled={generatingCoverId === selectedShot.id || uploadingCoverId === selectedShot.id || isLoadingCoverPreview}
                           className="bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100 shrink-0"
                         >
                           {generatingCoverId === selectedShot.id || isLoadingCoverPreview ? (

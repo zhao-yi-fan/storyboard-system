@@ -202,6 +202,16 @@ class StoryboardController extends Controller {
     }
   }
 
+  async uploadCover() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try {
+      response.success(this.ctx, await this.ctx.service.storyboard.uploadCover(id, (this.ctx.request.body || {}).thumbnail_url));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
   async generateVideo() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');

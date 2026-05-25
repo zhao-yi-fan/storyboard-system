@@ -525,6 +525,35 @@ class StoryboardService extends Service {
     }
   }
 
+  async uploadCover(id, thumbnailUrl) {
+    const storyboard = await this.findById(id);
+    if (!storyboard) {
+      throw new Error('storyboard not found');
+    }
+    const normalizedThumbnailUrl = normalizeGeneratedAssetReference(this.app, String(thumbnailUrl || '').trim());
+    if (!normalizedThumbnailUrl) {
+      throw new Error('thumbnail_url is required');
+    }
+
+    const generation = await this.ctx.service.mediaGeneration.create({
+      storyboard_id: id,
+      media_type: 'cover',
+      model: 'manual-upload',
+      status: 'succeeded',
+      result_url: normalizedThumbnailUrl,
+      preview_url: normalizedThumbnailUrl,
+      source_url: normalizedThumbnailUrl,
+      is_current: false,
+      meta_json: JSON.stringify({ source: 'manual-upload' }),
+    });
+    await this.ctx.service.mediaGeneration.markCurrent(id, 'cover', generation.id);
+    const nextStoryboard = await this.applyMediaGeneration(id, generation);
+    return {
+      storyboard: nextStoryboard,
+      media_generations: await this.ctx.service.mediaGeneration.listByStoryboardId(id),
+    };
+  }
+
   async previewVideoGeneration(id, selectedModel, duration, useFirstFrameRaw) {
     const storyboard = await this.findById(id);
     if (!storyboard) {

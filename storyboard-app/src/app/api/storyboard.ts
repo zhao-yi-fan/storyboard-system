@@ -124,3 +124,9 @@ export function getStoryboardVideoGenerationPreview(id: number, data?: { model?:
 export function generateStoryboardVideo(id: number, data?: { model?: string; duration?: number; use_first_frame?: boolean }) {
   return apiClient.post<GenerateStoryboardVideoResult>(`/storyboards/${id}/generate-video`, data);
 }
+
+export function uploadStoryboardCover(id: number, thumbnailUrl: string) {
+  return apiClient.post<StoryboardMediaMutationResult>(`/storyboards/${id}/upload-cover`, {
+    thumbnail_url: thumbnailUrl,
+  });
+}

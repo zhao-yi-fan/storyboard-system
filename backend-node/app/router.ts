@@ -47,6 +47,7 @@ module.exports = (app: any) => {
   router.get('/api/storyboards/:id/cover-generation-preview', controller.storyboard.previewCoverGeneration);
   router.get('/api/storyboards/:id/video-generation-preview', controller.storyboard.previewVideoGeneration);
   router.post('/api/storyboards/:id/generate-cover', controller.storyboard.generateCover);
+  router.post('/api/storyboards/:id/upload-cover', controller.storyboard.uploadCover);
   router.post('/api/storyboards/:id/generate-video', controller.storyboard.generateVideo);
   router.post('/api/storyboards/:id/characters', controller.storyboard.addCharacter);
   router.delete('/api/storyboards/:id/characters/:characterId', controller.storyboard.removeCharacter);
