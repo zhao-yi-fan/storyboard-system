@@ -255,7 +255,7 @@ class StoryboardService extends Service {
   }
 
   supportedVideoModels() {
-    return new Set([ 'wan2.6-i2v-flash', 'wan2.7-i2v', 'seedance-1.5-pro' ]);
+    return new Set([ 'wan2.7-i2v', 'seedance-1.5-pro' ]);
   }
 
   resolveStoryboardStylePreset(scene, storyboard) {
@@ -574,9 +574,6 @@ class StoryboardService extends Service {
     }
     if (model !== 'seedance-1.5-pro' && selectedDuration !== 5) {
       throw new Error('当前视频模型仅支持 5 秒输出');
-    }
-    if (!useFirstFrame && model === 'wan2.6-i2v-flash') {
-      throw new Error('当前视频模型仅支持基于首帧生成，请开启“使用当前首帧”或切换模型');
     }
     const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
     const { references: referenceImages, missing: missingReferences } = await this.selectVideoReferenceImages(storyboard, scene);

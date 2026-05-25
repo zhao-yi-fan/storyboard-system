@@ -95,7 +95,6 @@ const COVER_MODEL_OPTIONS = [
 const VIDEO_MODEL_OPTIONS = [
   { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
   { value: "seedance-1.5-pro", label: "Seedance 1.5 Pro" },
-  { value: "wan2.6-i2v-flash", label: "Wan 2.6 I2V Flash" },
 ] as const;
 
 const SHOT_TYPE_OPTIONS = ["远景", "全景", "中景", "近景", "特写", "大特写"] as const;
@@ -2112,25 +2111,6 @@ export default function Workspace() {
                         </div>
                         <Button
                           type="button"
-                          variant="outline"
-                          onClick={handleRequestUploadShotCover}
-                          disabled={uploadingCoverId === selectedShot.id || generatingCoverId === selectedShot.id || isLoadingCoverPreview}
-                          className="bg-[#1a1a1a] hover:bg-[#202020] border-gray-700 text-gray-100 shrink-0"
-                        >
-                          {uploadingCoverId === selectedShot.id ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              上传中
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4 mr-2" />
-                              上传首帧
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
                           onClick={handleGenerateCover}
                           disabled={generatingCoverId === selectedShot.id || uploadingCoverId === selectedShot.id || isLoadingCoverPreview}
                           className="bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100 shrink-0"
@@ -2147,6 +2127,31 @@ export default function Workspace() {
                             </>
                           )}
                         </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={uploadingCoverId === selectedShot.id || generatingCoverId === selectedShot.id || isLoadingCoverPreview}
+                              className="bg-[#1a1a1a] hover:bg-[#202020] border-gray-700 text-gray-100 shrink-0 px-2"
+                            >
+                              {uploadingCoverId === selectedShot.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-[#1a1a1a] border-gray-700 text-gray-100 min-w-40">
+                            <DropdownMenuItem
+                              onClick={handleRequestUploadShotCover}
+                              className="cursor-pointer focus:bg-[#242424]"
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              上传首帧
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <div className="flex items-center gap-2">
                         <Select value={selectedVideoModel} onValueChange={(value) => setSelectedVideoModel(value as typeof selectedVideoModel)}>
