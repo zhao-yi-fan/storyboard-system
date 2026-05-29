@@ -57,10 +57,8 @@ module.exports = (app: any) => {
   router.get('/api/characters/:id', controller.character.show);
   router.put('/api/characters/:id', controller.character.update);
   router.delete('/api/characters/:id', controller.character.destroy);
-  router.get('/api/characters/:id/cover-generation-preview', controller.character.previewCoverGeneration);
   router.get('/api/characters/:id/design-sheet-generation-preview', controller.character.previewDesignSheetGeneration);
   router.get('/api/characters/:id/voice-reference-generation-preview', controller.character.previewVoiceReferenceGeneration);
-  router.post('/api/characters/:id/generate-cover', controller.character.generateCover);
   router.post('/api/characters/:id/generate-design-sheet', controller.character.generateDesignSheet);
   router.post('/api/characters/:id/generate-voice-reference', controller.character.generateVoiceReference);
   router.get('/api/characters/:id/assets', controller.asset.indexByCharacter);

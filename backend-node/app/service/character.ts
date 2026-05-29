@@ -19,8 +19,8 @@ class CharacterService extends Service {
       project_id: Number(row.project_id),
       name: row.name,
       description: row.description || '',
-      avatar_url: resolveUrl(this.app, row.avatar_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
-      avatar_preview_url: resolveUrl(this.app, row.avatar_preview_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
+      avatar_url: resolveUrl(this.app, row.design_sheet_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
+      avatar_preview_url: resolveUrl(this.app, row.design_sheet_preview_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
       design_sheet_url: resolveUrl(this.app, row.design_sheet_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
       design_sheet_preview_url: resolveUrl(this.app, row.design_sheet_preview_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
       voice_reference_url: resolveUrl(this.app, row.voice_reference_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
@@ -48,7 +48,6 @@ class CharacterService extends Service {
     );
     const items = rows.map(row => this.map(row));
     for (const item of items) {
-      await this.ensureAvatarPreview(item);
       await this.ensureDesignSheetPreview(item);
     }
     return items;
@@ -65,7 +64,6 @@ class CharacterService extends Service {
       return null;
     }
     const item = this.map(rows[0]);
-    await this.ensureAvatarPreview(item);
     await this.ensureDesignSheetPreview(item);
     return item;
   }
@@ -78,13 +76,12 @@ class CharacterService extends Service {
       `INSERT INTO characters (
         project_id, name, description, avatar_url, avatar_preview_url, design_sheet_url, design_sheet_preview_url,
         voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt
-      ) VALUES (?, ?, ?, ?, '', ?, '', '', NULL, '', '', ?)`,
+      ) VALUES (?, ?, ?, '', '', ?, '', '', NULL, '', '', ?)`,
       [
         projectId,
         name,
         String(payload.description || '').trim(),
-        normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim()),
-        normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || '').trim()),
+        normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || payload.avatar_url || '').trim()),
         String(payload.voice_prompt || '').trim(),
       ]
     );
@@ -96,23 +93,21 @@ class CharacterService extends Service {
     if (!current) throw new Error('character not found');
     const name = Object.prototype.hasOwnProperty.call(payload, 'name') ? String(payload.name || '').trim() : current.name;
     if (!name) throw new Error('name is required');
-    const currentAvatarRef = normalizeGeneratedAssetReference(this.app, current.avatar_url);
+    
     const currentDesignRef = normalizeGeneratedAssetReference(this.app, current.design_sheet_url);
-    const nextAvatar = Object.prototype.hasOwnProperty.call(payload, 'avatar_url')
-      ? normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim())
-      : currentAvatarRef;
     const nextDesign = Object.prototype.hasOwnProperty.call(payload, 'design_sheet_url')
       ? normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || '').trim())
-      : currentDesignRef;
+      : (Object.prototype.hasOwnProperty.call(payload, 'avatar_url')
+        ? normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim())
+        : currentDesignRef);
+
     await this.pool.execute(
       `UPDATE characters
-       SET name = ?, description = ?, avatar_url = ?, avatar_preview_url = ?, design_sheet_url = ?, design_sheet_preview_url = ?, voice_prompt = ?
+       SET name = ?, description = ?, design_sheet_url = ?, design_sheet_preview_url = ?, voice_prompt = ?
        WHERE id = ?`,
       [
         name,
         Object.prototype.hasOwnProperty.call(payload, 'description') ? String(payload.description || '').trim() : current.description,
-        nextAvatar,
-        nextAvatar !== currentAvatarRef ? '' : normalizeGeneratedAssetReference(this.app, current.avatar_preview_url),
         nextDesign,
         nextDesign !== currentDesignRef ? '' : normalizeGeneratedAssetReference(this.app, current.design_sheet_preview_url),
         Object.prototype.hasOwnProperty.call(payload, 'voice_prompt') ? String(payload.voice_prompt || '').trim() : current.voice_prompt,
@@ -126,14 +121,6 @@ class CharacterService extends Service {
     await this.pool.execute('UPDATE characters SET deleted_at = NOW() WHERE id = ?', [ id ]);
   }
 
-  async ensureAvatarPreview(character) {
-    if (!character || !character.avatar_url || character.avatar_preview_url) {
-      return;
-    }
-    const preview = await createPreviewFromSource(this.app, character.avatar_url, 'characters', `character-${character.id}`, avatarPreviewSpec());
-    await this.pool.execute('UPDATE characters SET avatar_preview_url = ? WHERE id = ?', [ preview, character.id ]);
-    character.avatar_preview_url = resolveMediaUrl(this.app, preview);
-  }
 
   async ensureDesignSheetPreview(character) {
     if (!character || !character.design_sheet_url || character.design_sheet_preview_url) {
@@ -144,9 +131,6 @@ class CharacterService extends Service {
     character.design_sheet_preview_url = resolveMediaUrl(this.app, preview);
   }
 
-  buildCoverPrompt(character) {
-    return buildCharacterCoverPrompt(character).prompt;
-  }
 
   buildDesignPrompt(character, mode) {
     return buildCharacterDesignPrompt(character, mode).prompt;
@@ -162,24 +146,6 @@ class CharacterService extends Service {
       : { mode: 'final', model: 'wan2.7-image-pro' };
   }
 
-  async previewCoverGeneration(id) {
-    const character = await this.findById(id);
-    if (!character) throw new Error('character not found');
-    const coverPrompt = buildCharacterCoverPrompt(character);
-    return {
-      action: 'character-cover',
-      model: this.app.config.storyboard.wanxModel || 'wanx2.0-t2i-turbo',
-      fields: {
-        角色名称: character.name,
-        角色描述: character.description,
-        输出: '单人角色封面头像',
-      },
-      template: coverPrompt.template,
-      prompt_blueprint: coverPrompt.blueprint,
-      final_prompt: coverPrompt.prompt,
-      notes: [ '用于资产库展示，重点是角色识别度和构图干净。' ],
-    };
-  }
 
   async previewDesignSheetGeneration(id, modelRaw, modeRaw) {
     const character = await this.findById(id);
@@ -222,17 +188,6 @@ class CharacterService extends Service {
     };
   }
 
-  async generateCover(id) {
-    const character = await this.findById(id);
-    if (!character) throw new Error('character not found');
-    const imageUrl = await generateWanxImage(this.app, this.buildCoverPrompt(character), this.app.config.storyboard.wanxModel || 'qwen-image-2.0');
-    const filename = `${sanitizeFileName(`character-avatar-${id}`)}-${Date.now()}.png`;
-    const stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
-    const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
-    const previewPath = await createPreviewFromLocalPath(this.app, stored.localPath, 'characters', previewFilename, avatarPreviewSpec());
-    await this.pool.execute('UPDATE characters SET avatar_url = ?, avatar_preview_url = ? WHERE id = ?', [ stored.publicPath, previewPath, id ]);
-    return await this.findById(id);
-  }
 
   async generateDesignSheet(id, modelRaw, modeRaw) {
     const character = await this.findById(id);

@@ -23,14 +23,6 @@ export function updateCharacter(
   return apiClient.put<Character>(`/characters/${id}`, data);
 }
 
-export function getCharacterCoverGenerationPreview(id: number) {
-  return apiClient.get<AIGenerationPreview>(`/characters/${id}/cover-generation-preview`);
-}
-
-export function generateCharacterCover(id: number) {
-  return apiClient.post<Character>(`/characters/${id}/generate-cover`);
-}
-
 export function getCharacterDesignSheetGenerationPreview(id: number, data?: { model?: CharacterDesignSheetModel }) {
   const model = data?.model ? `?model=${encodeURIComponent(data.model)}` : "";
   return apiClient.get<AIGenerationPreview>(`/characters/${id}/design-sheet-generation-preview${model}`);

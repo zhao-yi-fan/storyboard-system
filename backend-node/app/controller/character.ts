@@ -44,11 +44,6 @@ class CharacterController extends Controller {
     try { await this.ctx.service.character.softDelete(id); response.success(this.ctx, { success: true }); } catch (err) { response.error(this.ctx, err.message); }
   }
 
-  async previewCoverGeneration() {
-    const id = this.parseId();
-    if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.character.previewCoverGeneration(id)); } catch (err) { response.error(this.ctx, err.message); }
-  }
   async previewDesignSheetGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
@@ -58,11 +53,6 @@ class CharacterController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try { response.success(this.ctx, await this.ctx.service.character.previewVoiceReferenceGeneration(id, this.ctx.query.voice_prompt, this.ctx.query.preview_text)); } catch (err) { response.error(this.ctx, err.message); }
-  }
-  async generateCover() {
-    const id = this.parseId();
-    if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.character.generateCover(id)); } catch (err) { response.error(this.ctx, err.message); }
   }
   async generateDesignSheet() {
     const id = this.parseId();

@@ -310,12 +310,12 @@ class StoryboardService extends Service {
   async selectReferenceImages(storyboard, scene) {
     const { references, missing } = await this.selectSceneReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveUrl(this.app, character.design_sheet_url || character.avatar_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      const url = resolveUrl(this.app, character.design_sheet_url, this.app.config.storyboard.publicAppBaseUrl || '');
       if (!url) {
         missing.push(`character:${character.name}`);
         continue;
       }
-      references.push({ asset_id: Number(character.id), type: 'character', name: character.name, url, source: character.design_sheet_url ? 'character.design_sheet_url' : 'character.avatar_url' });
+      references.push({ asset_id: Number(character.id), type: 'character', name: character.name, url, source: 'character.design_sheet_url' });
     }
     return { references, missing };
   }
@@ -324,7 +324,7 @@ class StoryboardService extends Service {
     const references = [];
     const missing = [];
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveUrl(this.app, character.design_sheet_url || character.avatar_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      const url = resolveUrl(this.app, character.design_sheet_url, this.app.config.storyboard.publicAppBaseUrl || '');
       if (!url) {
         missing.push(`character:${character.name}`);
         continue;
@@ -334,7 +334,7 @@ class StoryboardService extends Service {
         type: 'character',
         name: character.name,
         url,
-        source: character.design_sheet_url ? 'character.design_sheet_url' : 'character.avatar_url',
+        source: 'character.design_sheet_url',
       });
     }
     return { references, missing };

@@ -52,17 +52,23 @@ npm run build
 
 ## Backend Guidance
 
-- Backend code lives in `backend/`.
-- Use Go conventions and run `gofmt` after editing Go files.
-- Keep database access in repository packages, request handling in handlers, and external integration logic in services.
-- Treat image/video/model calls as long-running or failure-prone operations.
-- Prefer explicit task statuses and saved error details for generation flows.
+> [!IMPORTANT]
+> **Go 后端项目（`backend/`）已完全弃用并冷冻，目前所有的业务开发、API 变更均只能在 Node 后端（`backend-node/`）中进行。不要修改 `backend/` 下的任何代码。**
+
+### Node 后端开发规范 (`backend-node/`)
+- 使用 Egg.js 框架进行开发，代码结构遵循 MVC 规范（`controller`, `service`, `middleware`, `lib` 等）。
+- 保持数据响应格式的统一：
+  - 成功：`{ code: 200, data, message: "" }`
+  - 失败：`{ code: 0, data: null, message }`
+- 重视 AI/长任务的异步状态追踪和失败记录，不要仅依赖内存缓存或短暂 Toast 提示，必须持久化到 MySQL 数据库中。
 
 Useful commands:
 
 ```bash
-cd backend
-go build ./...
+cd backend-node
+npm run build
+npm run dev
+npm run test
 ```
 
 ## Specification-Driven Work
