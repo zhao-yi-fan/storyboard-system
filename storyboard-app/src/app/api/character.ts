@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { AIGenerationPreview, Character, CharacterDesignSheetModel } from "./types";
+import type { AIGenerationPreview, Character } from "./types";
 
 export function getCharactersByProject(projectId: number) {
   return apiClient.get<Character[]>(`/projects/${projectId}/characters`);
@@ -23,13 +23,12 @@ export function updateCharacter(
   return apiClient.put<Character>(`/characters/${id}`, data);
 }
 
-export function getCharacterDesignSheetGenerationPreview(id: number, data?: { model?: CharacterDesignSheetModel }) {
-  const model = data?.model ? `?model=${encodeURIComponent(data.model)}` : "";
-  return apiClient.get<AIGenerationPreview>(`/characters/${id}/design-sheet-generation-preview${model}`);
+export function getCharacterDesignSheetGenerationPreview(id: number) {
+  return apiClient.get<AIGenerationPreview>(`/characters/${id}/design-sheet-generation-preview`);
 }
 
-export function generateCharacterDesignSheet(id: number, data?: { model?: CharacterDesignSheetModel }) {
-  return apiClient.post<Character>(`/characters/${id}/generate-design-sheet`, data ?? {});
+export function generateCharacterDesignSheet(id: number) {
+  return apiClient.post<Character>(`/characters/${id}/generate-design-sheet`, {});
 }
 
 export function getCharacterVoiceReferenceGenerationPreview(id: number, data?: { voice_prompt?: string; preview_text?: string }) {

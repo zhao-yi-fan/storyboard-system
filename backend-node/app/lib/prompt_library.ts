@@ -341,6 +341,14 @@ export function renderPromptBlueprint(blueprint: PromptBlueprint): string {
   return sections.filter(Boolean).join(' ');
 }
 
+/**
+ * 把结构化 prompt blueprint 转成前端可直接渲染的分段展示块。
+ * @param {PromptBlueprint} blueprint 结构化提示词对象。
+ * @returns {PromptDisplayBlock[]} 展示区块数组。
+ * @example
+ * buildPromptDisplayBlocks({ intro: "生成视频", subject: ["李明"], output: ["单镜头"] })
+ * // => [{ section: "主体与画面核心", items: ["李明"] }, ...]
+ */
 export function buildPromptDisplayBlocks(blueprint: PromptBlueprint): PromptDisplayBlock[] {
   const blocks: PromptDisplayBlock[] = [];
   const sectionMap: Array<{ section: string; items: unknown[] }> = [
@@ -383,6 +391,14 @@ export function buildPromptDisplayBlocks(blueprint: PromptBlueprint): PromptDisp
   return blocks;
 }
 
+/**
+ * 把视频 prompt 相关信息转成类似控制台可读的标签流。
+ * @param {object} options 视频 prompt 输入摘要。
+ * @returns {PromptDisplayToken[]} 标签流 token 数组。
+ * @example
+ * buildPromptDisplayTokens({ finalPrompt: "镜头缓慢推进", characters: ["李明"], useFirstFrame: true })
+ * // => [{ type: "badge", label: "角色", text: "李明" }, ...]
+ */
 export function buildPromptDisplayTokens(options: {
   finalPrompt: string;
   sceneTitle?: unknown;
@@ -442,6 +458,15 @@ export function buildPromptDisplayTokens(options: {
   return tokens;
 }
 
+/**
+ * 构建镜头首帧生成 prompt。
+ * @param {Record<string, unknown>} fields 镜头和场景字段摘要。
+ * @param {Array<{ type: string }>} references 参考图摘要数组。
+ * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
+ * @example
+ * buildStoryboardCoverPrompt({ scene_title: "便利店门口", content: "李明抬头" }, [{ type: "character" }])
+ * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
+ */
 export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, references: Array<{ type: string }>) {
   const template = selectPromptTemplate([
     fields.style_preset,
@@ -487,6 +512,16 @@ export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, refe
   };
 }
 
+/**
+ * 构建镜头视频生成 prompt。
+ * @param {Record<string, unknown>} storyboard 镜头字段。
+ * @param {Record<string, unknown>} scene 所属场景字段。
+ * @param {number} duration 视频时长秒数。
+ * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
+ * @example
+ * buildStoryboardVideoPrompt({ content: "李明抬头", camera_motion: "缓推" }, { title: "便利店门口" }, 5)
+ * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
+ */
 export function buildStoryboardVideoPrompt(storyboard: Record<string, unknown>, scene: Record<string, unknown>, duration: number) {
   const characters = Array.isArray(storyboard.character_names) && storyboard.character_names.length
     ? storyboard.character_names
@@ -544,6 +579,15 @@ export function buildStoryboardVideoPrompt(storyboard: Record<string, unknown>, 
   };
 }
 
+/**
+ * 构建场景封面生成 prompt。
+ * @param {Record<string, unknown>} scene 场景字段。
+ * @param {Array<Record<string, unknown>>} storyboards 场景下镜头列表。
+ * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
+ * @example
+ * buildSceneCoverPrompt({ title: "便利店门口", location: "街角" }, [{ content: "李明抬头" }])
+ * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
+ */
 export function buildSceneCoverPrompt(scene: Record<string, unknown>, storyboards: Array<Record<string, unknown>>) {
   const backgrounds = uniqueParts(storyboards.map(item => item.background)).slice(0, 3);
   const characters = uniqueParts(storyboards.flatMap(item => Array.isArray(item.character_names) ? item.character_names : [])).slice(0, 5);
@@ -586,6 +630,14 @@ export function buildSceneCoverPrompt(scene: Record<string, unknown>, storyboard
   };
 }
 
+/**
+ * 构建角色封面图 prompt。
+ * @param {Record<string, unknown>} character 角色字段。
+ * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
+ * @example
+ * buildCharacterCoverPrompt({ name: "林婉", description: "温婉端庄" })
+ * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
+ */
 export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
   const template = selectPromptTemplate([ character.description ]);
   const blueprint = buildPromptBlueprint({
@@ -607,27 +659,52 @@ export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
   };
 }
 
-export function buildCharacterDesignPrompt(character: Record<string, unknown>, mode: string) {
-  const template = selectPromptTemplate([ character.description, mode ]);
+/**
+ * 构建角色主设定图 prompt。
+ * @param {Record<string, unknown>} character 角色字段。
+ * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
+ * @example
+ * buildCharacterDesignPrompt({ name: "林婉", description: "温婉端庄，外柔内刚" })
+ * // => { template: "mythic-awakening", blueprint: {...}, prompt: "..." }
+ */
+export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
+  const template = selectPromptTemplate([ character.description, character.name ]);
   const blueprint = buildPromptBlueprint({
     template,
-    intro: '为漫剧分镜系统生成角色主设定图',
+    intro: '为漫剧分镜系统生成高细节角色主设定板',
     subject: normalizeTextList([
       character.name ? `角色名称为${character.name}` : '',
       character.description ? `角色描述为${character.description}` : '',
+      '以输入的人物参考图为唯一角色外观基线，严格保持脸型、五官、发型、发饰和服装识别点一致',
     ]),
     action: [
-      mode === 'draft'
-        ? '快速确定角色长相、发型、服装和整体气质'
-        : '输出最终定稿级角色设定板，作为后续镜头封面的核心参考图',
+      '输出最终定稿级角色主设定板，作为后续镜头封面和角色一致性的核心参考图',
+      '重点呈现面部细节、妆容、发型、发饰、耳饰、项链、腰饰、服装结构、刺绣纹样和面料层次',
+      '确保人物气质、年龄感、身形比例和服装细节在所有视角下稳定一致',
     ],
     camera: [
-      '单张角色设定板内包含正面全身、侧面全身、背面全身和半身近景头像',
-      '保证不同视角下的比例、服装结构和配饰位置一致',
+      '单张角色设定板内包含正面全身、侧面全身、背面全身和高质量半身头像特写',
+      '额外包含线稿辅助视图和身高比例参考区',
+      '保证不同视角下的比例、服装结构、花纹走向和配饰位置一致',
     ],
-    style: [ '背景保持纯净浅色或白底', '不要剧情场景，不要复杂道具' ],
-    consistency: [ '脸型、五官、发型、发色、服装结构、配饰位置和身材比例完全一致' ],
-    output: [ '单张完整设定板', '不要文字说明' ],
+    style: [
+      '页面像专业角色设定板，不是剧情插画，不是海报',
+      '背景保持纯净浅色或白底，不要剧情场景，不要复杂道具',
+      '版式整洁清晰，保留设定页的信息分区感',
+    ],
+    effects: [
+      '面料质感清晰，刺绣、提花、金属和珠玉细节明确',
+      '头像区突出皮肤、眼睛、嘴唇、发丝和首饰细节',
+    ],
+    consistency: [
+      '脸型、五官、发型、发色、服装结构、配饰位置和身材比例完全一致',
+      '不要换脸，不要改发饰，不要丢失首饰和衣纹细节',
+    ],
+    output: [
+      '单张完整竖版角色主设定板',
+      '允许少量清晰中文栏目标题和标注说明',
+      '包含三视图、头像、线稿辅助区、材质与配饰信息感',
+    ],
   });
   return {
     template,
@@ -636,6 +713,14 @@ export function buildCharacterDesignPrompt(character: Record<string, unknown>, m
   };
 }
 
+/**
+ * 构建场景资产封面 prompt。
+ * @param {Record<string, unknown>} asset 资产字段。
+ * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
+ * @example
+ * buildAssetCoverPrompt({ name: "CG背景", type: "scene", meta: "便利店外景" })
+ * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
+ */
 export function buildAssetCoverPrompt(asset: Record<string, unknown>) {
   const template = selectPromptTemplate([ asset.type, asset.meta, asset.name ]);
   const blueprint = buildPromptBlueprint({
@@ -658,6 +743,14 @@ export function buildAssetCoverPrompt(asset: Record<string, unknown>) {
   };
 }
 
+/**
+ * 构建角色主语音参考的文本 prompt。
+ * @param {Record<string, unknown>} character 角色字段。
+ * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
+ * @example
+ * buildCharacterVoicePromptText({ name: "林婉", description: "温婉端庄" })
+ * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
+ */
 export function buildCharacterVoicePromptText(character: Record<string, unknown>) {
   const template = selectPromptTemplate([ character.description ]);
   const blueprint = buildPromptBlueprint({

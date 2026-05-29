@@ -23,6 +23,7 @@ const DEFAULT_SEEDANCE_POLL_INTERVAL_MS = 10000;
 
 const WANX_IMAGE_SIZE = '1024*576';
 const SEEDREAM_IMAGE_SIZE = '2560x1440';
+const SEEDREAM_DESIGN_SHEET_SIZE = '1536x2048';
 const OPENAI_IMAGE_SIZE = '1536x1024';
 const VIDEO_RESOLUTION_720P = '720P';
 const VIDEO_RESOLUTION_480P = '480p';
@@ -103,10 +104,20 @@ async function wait(ms) {
   await new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * 调用万相文生图模型生成单张图片。
+ * @param {any} app Egg app 实例。
+ * @param {string} prompt 最终提示词，例如 `"便利店门口夜景，冷光，电影感"`。
+ * @param {string} model 模型名，例如 `"wan2.7-image-pro"`。
+ * @returns {Promise<string>} 远端返回的图片 URL。
+ * @example
+ * await generateWanxImage(app, "便利店门口夜景，冷光，电影感", "wan2.7-image-pro")
+ * // => "https://..."
+ */
 async function generateWanxImage(app, prompt, model) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '场景封面生成未配置：缺少 DASHSCOPE_API_KEY');
-  const selectedModel = String(model || cfg.wanxModel || 'qwen-image-2.0').trim();
+  const selectedModel = String(model || cfg.wanxModel || 'wan2.7-image-pro').trim();
   const timeoutMs = resolveTimeoutMs(cfg.wanxRequestTimeoutSeconds, 300, DEFAULT_IMAGE_TIMEOUT_MS);
   const baseUrl = normalizeBaseUrl(cfg.wanxBaseUrl, DASHSCOPE_BASE_URL);
 
@@ -134,6 +145,17 @@ async function generateWanxImage(app, prompt, model) {
   return image;
 }
 
+/**
+ * 调用万相参考图生图模型。
+ * @param {any} app Egg app 实例。
+ * @param {string} prompt 最终提示词，例如 `"基于角色设定图生成镜头首帧"`。
+ * @param {string[]} imageUrls 参考图 URL 数组，例如 `["https://a.png", "https://b.png"]`。
+ * @param {string} model 模型名，例如 `"wan2.7-image-pro"`。
+ * @returns {Promise<string>} 远端返回的图片 URL。
+ * @example
+ * await generateWanxImageWithReferences(app, "基于角色设定图生成镜头首帧", ["https://a.png"], "wan2.7-image-pro")
+ * // => "https://..."
+ */
 async function generateWanxImageWithReferences(app, prompt, imageUrls, model) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '场景封面生成未配置：缺少 DASHSCOPE_API_KEY');
@@ -166,7 +188,18 @@ async function generateWanxImageWithReferences(app, prompt, imageUrls, model) {
   return image;
 }
 
-async function generateSeedreamImage(app, prompt, imageUrls) {
+/**
+ * 调用 Seedream 图像生成接口，支持文生图和图生图。
+ * @param {any} app Egg app 实例。
+ * @param {string} prompt 最终提示词，例如 `"生成高细节角色主设定板"`。
+ * @param {string[]} imageUrls 参考图 URL 数组，例如 `["https://role-ref.png", "https://layout-ref.png"]`。
+ * @param {{ size?: string }} options 额外参数，例如 `{ size: "1536x2048" }`。
+ * @returns {Promise<string>} 远端返回的图片 URL。
+ * @example
+ * await generateSeedreamImage(app, "生成高细节角色主设定板", ["https://role-ref.png"], { size: "1536x2048" })
+ * // => "https://..."
+ */
+async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.seedreamImageBaseUrl, ARK_BASE_URL);
@@ -174,7 +207,7 @@ async function generateSeedreamImage(app, prompt, imageUrls) {
   const payload = {
     model: String(cfg.seedreamImageModel || DEFAULT_SEEDREAM_MODEL).trim(),
     prompt: String(prompt || '').trim(),
-    size: SEEDREAM_IMAGE_SIZE,
+    size: String(options.size || SEEDREAM_IMAGE_SIZE).trim(),
     response_format: 'url',
     watermark: false,
   };
@@ -192,6 +225,16 @@ async function generateSeedreamImage(app, prompt, imageUrls) {
   return image;
 }
 
+/**
+ * 调用 OpenAI 图像模型生成单张图片。
+ * @param {any} app Egg app 实例。
+ * @param {string} prompt 最终提示词，例如 `"古风女性半身像"`。
+ * @param {string} model 模型名，例如 `"gpt-image-2"`。
+ * @returns {Promise<Buffer>} PNG 图片内容。
+ * @example
+ * await generateOpenAIImage(app, "古风女性半身像", "gpt-image-2")
+ * // => <Buffer ...>
+ */
 async function generateOpenAIImage(app, prompt, model) {
   const cfg = getConfig(app);
   requireValue(cfg.openAiApiKey, 'GPT Image 2 未配置：缺少 OPENAI_API_KEY');
@@ -214,6 +257,19 @@ async function generateOpenAIImage(app, prompt, model) {
   return Buffer.from(b64, 'base64');
 }
 
+/**
+ * 调用万相视频模型生成镜头视频。
+ * @param {any} app Egg app 实例。
+ * @param {string} prompt 最终提示词，例如 `"镜头缓慢推进，李明抬头"`。
+ * @param {string} imageUrl 首帧图 URL，例如 `"https://cover.png"`。
+ * @param {string} model 模型名，例如 `"wan2.7-i2v"`。
+ * @param {number} duration 时长秒数，例如 `5`。
+ * @param {boolean} useFirstFrame 是否使用首帧图。
+ * @returns {Promise<string>} 最终视频 URL。
+ * @example
+ * await generateWanxVideo(app, "镜头缓慢推进，李明抬头", "https://cover.png", "wan2.7-i2v", 5, true)
+ * // => "https://..."
+ */
 async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirstFrame = true) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '镜头视频生成未配置：缺少 DASHSCOPE_API_KEY');
@@ -281,6 +337,19 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
   throw new Error('视频生成任务超时');
 }
 
+/**
+ * 调用 Seedance 视频模型生成镜头视频。
+ * @param {any} app Egg app 实例。
+ * @param {string} prompt 最终提示词，例如 `"金色粒子汇聚，神女结印"`。
+ * @param {string} imageUrl 首帧图 URL，例如 `"https://cover.png"`。
+ * @param {number} duration 时长秒数，例如 `5`。
+ * @param {boolean} useFirstFrame 是否使用首帧图。
+ * @param {string[]} referenceImageUrls 额外参考图 URL 数组。
+ * @returns {Promise<string>} 最终视频 URL。
+ * @example
+ * await generateSeedanceVideo(app, "金色粒子汇聚，神女结印", "https://cover.png", 5, true, [])
+ * // => "https://..."
+ */
 async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFrame = true, referenceImageUrls = []) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
@@ -377,6 +446,17 @@ function findFirstVideoUrl(value) {
   return '';
 }
 
+/**
+ * 生成角色主语音参考的预览参数，不真正落库。
+ * @param {any} app Egg app 实例。
+ * @param {object} character 角色对象，例如 `{ name: "林婉", description: "温婉端庄" }`。
+ * @param {string} customPrompt 自定义声音提示词。
+ * @param {string} customText 自定义参考台词。
+ * @returns {Promise<object>} 预览配置对象。
+ * @example
+ * await createCharacterVoicePreview(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
+ * // => { voicePrompt: "...", previewText: "今晚你先走。", targetModel: "qwen3-tts-vd-2026-01-26" }
+ */
 async function createCharacterVoicePreview(app, character, customPrompt, customText) {
   const cfg = getConfig(app);
   const voicePrompt = String(customPrompt || '').trim() || buildCharacterVoicePrompt(character);
@@ -390,6 +470,17 @@ async function createCharacterVoicePreview(app, character, customPrompt, customT
   };
 }
 
+/**
+ * 真正调用语音模型生成角色主语音参考。
+ * @param {any} app Egg app 实例。
+ * @param {object} character 角色对象，例如 `{ name: "林婉", description: "温婉端庄" }`。
+ * @param {string} customPrompt 自定义声音提示词。
+ * @param {string} customText 自定义参考台词。
+ * @returns {Promise<object>} 音频 buffer、音色信息和最终提示词。
+ * @example
+ * await generateCharacterVoiceReference(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
+ * // => { audioBuffer: <Buffer ...>, voiceName: "...", voicePrompt: "..." }
+ */
 async function generateCharacterVoiceReference(app, character, customPrompt, customText) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '角色主语音参考生成未配置：缺少 DASHSCOPE_API_KEY');
@@ -444,6 +535,7 @@ module.exports = {
   generateWanxImage,
   generateWanxImageWithReferences,
   generateSeedreamImage,
+  SEEDREAM_DESIGN_SHEET_SIZE,
   generateOpenAIImage,
   generateWanxVideo,
   generateSeedanceVideo,

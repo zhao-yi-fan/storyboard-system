@@ -9,6 +9,14 @@ class MediaGenerationService extends Service {
     return this.app.mysqlPool;
   }
 
+  /**
+   * 把数据库行映射成接口返回对象，并补全媒体 URL。
+   * @param {Record<string, unknown>} row 数据库原始行，例如 `{ id: 29, media_type: "video" }`。
+   * @returns {object} 映射后的媒体生成记录。
+   * @example
+   * service.map({ id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" })
+   * // => { id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" }
+   */
   map(row) {
     return {
       id: Number(row.id),
@@ -27,6 +35,14 @@ class MediaGenerationService extends Service {
     };
   }
 
+  /**
+   * 列出某个镜头的全部媒体生成历史。
+   * @param {number} storyboardId 镜头 id，例如 `146`。
+   * @returns {Promise<Array>} 历史记录列表。
+   * @example
+   * await service.listByStoryboardId(146)
+   * // => [{ id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" }]
+   */
   async listByStoryboardId(storyboardId) {
     const [ rows ] = await this.pool.query(
       `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
@@ -38,6 +54,14 @@ class MediaGenerationService extends Service {
     return rows.map(row => this.map(row));
   }
 
+  /**
+   * 按 id 读取单条媒体生成记录。
+   * @param {number} id 记录 id，例如 `29`。
+   * @returns {Promise<object|null>} 媒体生成记录，不存在时返回 `null`。
+   * @example
+   * await service.findById(29)
+   * // => { id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" }
+   */
   async findById(id) {
     const [ rows ] = await this.pool.query(
       `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
@@ -48,6 +72,16 @@ class MediaGenerationService extends Service {
     return rows.length ? this.map(rows[0]) : null;
   }
 
+  /**
+   * 将某条媒体记录标记为当前版本。
+   * @param {number} storyboardId 镜头 id，例如 `146`。
+   * @param {string} mediaType 媒体类型，例如 `"video"`。
+   * @param {number} generationId 记录 id，例如 `29`。
+   * @returns {Promise<void>} 事务提交后返回。
+   * @example
+   * await service.markCurrent(146, "video", 29)
+   * // => void
+   */
   async markCurrent(storyboardId, mediaType, generationId) {
     const conn = await this.pool.getConnection();
     try {
@@ -63,6 +97,14 @@ class MediaGenerationService extends Service {
     }
   }
 
+  /**
+   * 软删除一条媒体生成记录，并取消当前标记。
+   * @param {number} id 记录 id，例如 `29`。
+   * @returns {Promise<void>} 写入删除标记后返回。
+   * @example
+   * await service.softDelete(29)
+   * // => void
+   */
   async softDelete(id) {
     await this.pool.execute(
       `UPDATE storyboard_media_generations SET deleted_at = NOW(), is_current = 0 WHERE id = ? AND deleted_at IS NULL`,
@@ -70,6 +112,14 @@ class MediaGenerationService extends Service {
     );
   }
 
+  /**
+   * 新建一条媒体生成记录。
+   * @param {Record<string, unknown>} payload 输入数据，例如 `{ storyboard_id: 146, media_type: "video", status: "pending" }`。
+   * @returns {Promise<object>} 新建后的媒体生成记录。
+   * @example
+   * await service.create({ storyboard_id: 146, media_type: "video", status: "pending" })
+   * // => { id: 31, storyboard_id: 146, media_type: "video", status: "pending" }
+   */
   async create(payload) {
     const [ result ] = await this.pool.execute(
       `INSERT INTO storyboard_media_generations
@@ -91,6 +141,15 @@ class MediaGenerationService extends Service {
     return await this.findById(result.insertId);
   }
 
+  /**
+   * 更新媒体生成记录的状态或结果 URL。
+   * @param {number} id 记录 id，例如 `29`。
+   * @param {Record<string, unknown>} payload 局部补丁，例如 `{ status: "failed", error_message: "timeout" }`。
+   * @returns {Promise<object>} 更新后的媒体生成记录。
+   * @example
+   * await service.update(29, { status: "failed", error_message: "timeout" })
+   * // => { id: 29, status: "failed", error_message: "timeout" }
+   */
   async update(id, payload) {
     const current = await this.findById(id);
     if (!current) {
@@ -115,6 +174,16 @@ class MediaGenerationService extends Service {
     return await this.findById(id);
   }
 
+  /**
+   * 查询同类型最近一条成功记录，常用于删除当前记录后的回退。
+   * @param {number} storyboardId 镜头 id，例如 `146`。
+   * @param {string} mediaType 媒体类型，例如 `"cover"`。
+   * @param {number} excludeId 需要排除的记录 id，例如 `29`。
+   * @returns {Promise<object|null>} 最近成功记录，不存在时返回 `null`。
+   * @example
+   * await service.findLatestSucceeded(146, "cover", 29)
+   * // => { id: 25, media_type: "cover", status: "succeeded" }
+   */
   async findLatestSucceeded(storyboardId, mediaType, excludeId = 0) {
     const [ rows ] = await this.pool.query(
       `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at

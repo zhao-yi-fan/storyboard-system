@@ -28,6 +28,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 获取场景下的镜头列表。
+   * @returns {Promise<void>} 通过统一响应格式返回镜头数组。
+   * @example
+   * GET /api/scenes/21/storyboards
+   * // => { code: 200, data: [{ id: 146, shot_number: 10 }], message: "" }
+   */
   async show() {
     const id = this.parseId();
     if (!id) {
@@ -47,6 +54,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 获取单个镜头详情。
+   * @returns {Promise<void>} 通过统一响应格式返回镜头对象。
+   * @example
+   * GET /api/storyboards/146
+   * // => { code: 200, data: { id: 146, content: "李明与林婉对话" }, message: "" }
+   */
   async create() {
     const sceneId = this.parseId();
     if (!sceneId) {
@@ -62,6 +76,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 创建镜头。
+   * @returns {Promise<void>} 通过统一响应格式返回新建镜头。
+   * @example
+   * POST /api/scenes/21/storyboards { "content": "李明与林婉对话" }
+   * // => { code: 200, data: { id: 146, content: "李明与林婉对话" }, message: "" }
+   */
   async update() {
     const id = this.parseId();
     if (!id) {
@@ -77,6 +98,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 更新镜头。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头。
+   * @example
+   * PUT /api/storyboards/146 { "mood": "紧张" }
+   * // => { code: 200, data: { id: 146, mood: "紧张" }, message: "" }
+   */
   async destroy() {
     const id = this.parseId();
     if (!id) {
@@ -92,6 +120,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 删除镜头。
+   * @returns {Promise<void>} 通过统一响应格式返回删除结果。
+   * @example
+   * DELETE /api/storyboards/146
+   * // => { code: 200, data: { success: true }, message: "" }
+   */
   async mediaGenerations() {
     const id = this.parseId();
     if (!id) {
@@ -105,6 +140,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 获取镜头的媒体生成历史。
+   * @returns {Promise<void>} 通过统一响应格式返回历史记录数组。
+   * @example
+   * GET /api/storyboards/146/media-generations
+   * // => { code: 200, data: [{ id: 29, media_type: "video" }], message: "" }
+   */
   async setMediaGenerationCurrent() {
     const storyboardId = this.parseId();
     const generationId = Number(this.ctx.params.generationId);
@@ -133,6 +175,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 将某条历史媒体记录设为当前版本。
+   * @returns {Promise<void>} 通过统一响应格式返回最新镜头和历史。
+   * @example
+   * POST /api/storyboards/146/media-generations/29/set-current
+   * // => { code: 200, data: { storyboard: { id: 146 }, media_generations: [...] }, message: "" }
+   */
   async deleteMediaGeneration() {
     const storyboardId = this.parseId();
     const generationId = Number(this.ctx.params.generationId);
@@ -172,6 +221,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 删除一条历史媒体记录。
+   * @returns {Promise<void>} 通过统一响应格式返回删除后的镜头和历史。
+   * @example
+   * DELETE /api/storyboards/146/media-generations/29
+   * // => { code: 200, data: { storyboard: { id: 146 }, media_generations: [...] }, message: "" }
+   */
   async previewCoverGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
@@ -182,6 +238,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 预览镜头首帧生成参数。
+   * @returns {Promise<void>} 通过统一响应格式返回参考图、字段摘要和 prompt。
+   * @example
+   * GET /api/storyboards/146/cover-generation-preview?model=seedream-4.5
+   * // => { code: 200, data: { model: "seedream-4.5", final_prompt: "..." }, message: "" }
+   */
   async previewVideoGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
@@ -192,6 +255,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 预览镜头视频生成参数。
+   * @returns {Promise<void>} 通过统一响应格式返回视频字段和 prompt。
+   * @example
+   * GET /api/storyboards/146/video-generation-preview?model=seedance-1.5-pro
+   * // => { code: 200, data: { model: "seedance-1.5-pro", final_prompt: "..." }, message: "" }
+   */
   async generateCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
@@ -202,6 +272,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 生成镜头首帧。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头或媒体结果。
+   * @example
+   * POST /api/storyboards/146/generate-cover { "model": "seedream-4.5" }
+   * // => { code: 200, data: { storyboard_id: 146, thumbnail_url: "/generated/storyboards/..." }, message: "" }
+   */
   async uploadCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
@@ -212,6 +289,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 上传并设置镜头当前首帧。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头。
+   * @example
+   * POST /api/storyboards/146/upload-cover { "thumbnail_url": "/generated/assets/manual.png" }
+   * // => { code: 200, data: { id: 146, thumbnail_url: "/generated/assets/manual.png" }, message: "" }
+   */
   async generateVideo() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
@@ -222,6 +306,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 生成镜头视频。
+   * @returns {Promise<void>} 通过统一响应格式返回视频任务结果。
+   * @example
+   * POST /api/storyboards/146/generate-video { "model": "seedance-1.5-pro", "use_first_frame": true }
+   * // => { code: 200, data: { storyboard_id: 146, video_url: "/generated/storyboard-videos/..." }, message: "" }
+   */
   async addCharacter() {
     const storyboardId = this.parseId();
     const characterId = Number((this.ctx.request.body || {}).character_id);
@@ -236,6 +327,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 给镜头绑定角色。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头。
+   * @example
+   * POST /api/storyboards/146/characters { "character_id": 8 }
+   * // => { code: 200, data: { id: 146, characters: [{ id: 8, name: "林婉" }] }, message: "" }
+   */
   async addAsset() {
     const storyboardId = this.parseId();
     const assetId = Number((this.ctx.request.body || {}).asset_id);
@@ -250,6 +348,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 给镜头绑定背景资产。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头。
+   * @example
+   * POST /api/storyboards/146/assets { "asset_id": 5 }
+   * // => { code: 200, data: { id: 146, assets: [{ id: 5, name: "CG背景" }] }, message: "" }
+   */
   async removeCharacter() {
     const storyboardId = this.parseId();
     const characterId = Number(this.ctx.params.characterId);
@@ -264,6 +369,13 @@ class StoryboardController extends Controller {
     }
   }
 
+  /**
+   * 从镜头中移除角色。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头。
+   * @example
+   * DELETE /api/storyboards/146/characters/8
+   * // => { code: 200, data: { id: 146, characters: [] }, message: "" }
+   */
   async removeAsset() {
     const storyboardId = this.parseId();
     const assetId = Number(this.ctx.params.assetId);
@@ -277,6 +389,14 @@ class StoryboardController extends Controller {
       response.error(this.ctx, err.message);
     }
   }
+
+  /**
+   * 从镜头中移除背景资产。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头。
+   * @example
+   * DELETE /api/storyboards/146/assets/5
+   * // => { code: 200, data: { id: 146, assets: [] }, message: "" }
+   */
 }
 
 module.exports = StoryboardController;

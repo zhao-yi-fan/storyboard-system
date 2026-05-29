@@ -87,7 +87,6 @@ import {
 
 const COVER_MODEL_OPTIONS = [
   { value: "auto", label: "自动选择模型" },
-  { value: "qwen-image-2.0", label: "Qwen Image 2.0" },
   { value: "wan2.7-image-pro", label: "Wan 2.7 Image Pro" },
   { value: "seedream-4.5", label: "Seedream 4.5" },
 ] as const;
@@ -2105,7 +2104,7 @@ export default function Workspace() {
                           </Select>
                           {selectedCoverModel === "auto" && (
                             <div className="mt-1 px-1 text-[11px] leading-tight text-gray-500">
-                              参考图：Wan 2.7 Image Pro / 纯文本：Qwen Image 2.0
+                              默认优先使用 Wan 2.7 Image Pro；需要更强电影感与复杂光影时可切换 Seedream 4.5
                             </div>
                           )}
                         </div>

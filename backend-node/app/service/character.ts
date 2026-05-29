@@ -2,27 +2,39 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
-const path = require('node:path');
-const { resolveMediaUrl, createPreviewFromSource, avatarPreviewSpec, storyboardPreviewSpec, downloadAndStore, createPreviewFromLocalPath, storeBuffer, probeDuration, sanitizeFileName } = require('../lib/media');
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
-const { generateWanxImage, generateOpenAIImage, createCharacterVoicePreview, generateCharacterVoiceReference } = require('../lib/ai_clients');
-const { buildCharacterCoverPrompt, buildCharacterDesignPrompt } = require('../lib/prompt_library');
+const { downloadAndStore, probeDuration, sanitizeFileName, storeBuffer } = require('../lib/media');
+const {
+  generateSeedreamImage,
+  SEEDREAM_DESIGN_SHEET_SIZE,
+  createCharacterVoicePreview,
+  generateCharacterVoiceReference,
+} = require('../lib/ai_clients');
+const { buildCharacterDesignPrompt } = require('../lib/prompt_library');
+
+const CHARACTER_DESIGN_MODEL = 'seedream-4.5';
 
 class CharacterService extends Service {
   get pool() {
     return this.app.mysqlPool;
   }
 
+  /**
+   * 把角色数据库行映射成接口对象，并把媒体路径转成可访问 URL。
+   * @param {Record<string, unknown>} row 数据库原始行，例如 `{ id: 8, name: "林婉" }`。
+   * @returns {object} 映射后的角色对象。
+   * @example
+   * service.map({ id: 8, project_id: 30, name: "林婉", avatar_url: "/generated/assets/ref.png" })
+   * // => { id: 8, project_id: 30, name: "林婉", avatar_url: "https://..." }
+   */
   map(row) {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
       name: row.name,
       description: row.description || '',
-      avatar_url: resolveUrl(this.app, row.design_sheet_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
-      avatar_preview_url: resolveUrl(this.app, row.design_sheet_preview_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
+      avatar_url: resolveUrl(this.app, row.avatar_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
       design_sheet_url: resolveUrl(this.app, row.design_sheet_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
-      design_sheet_preview_url: resolveUrl(this.app, row.design_sheet_preview_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
       voice_reference_url: resolveUrl(this.app, row.voice_reference_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
       voice_reference_duration: row.voice_reference_duration == null ? 0 : Number(row.voice_reference_duration),
       voice_reference_text: row.voice_reference_text || '',
@@ -33,83 +45,116 @@ class CharacterService extends Service {
     };
   }
 
+  /**
+   * 确认项目存在，避免角色写入无效项目。
+   * @param {number} projectId 项目 id，例如 `30`。
+   * @returns {Promise<void>} 项目存在时正常返回。
+   * @example
+   * await service.ensureProjectExists(30)
+   * // => void
+   */
   async ensureProjectExists(projectId) {
-    const [ rows ] = await this.pool.query('SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL', [ projectId ]);
+    const [rows] = await this.pool.query('SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL', [projectId]);
     if (!rows.length) throw new Error('project not found');
   }
 
+  /**
+   * 读取项目下的全部角色。
+   * @param {number} projectId 项目 id，例如 `30`。
+   * @returns {Promise<Array>} 角色列表。
+   * @example
+   * await service.findByProjectId(30)
+   * // => [{ id: 8, name: "林婉", design_sheet_url: "https://..." }]
+   */
   async findByProjectId(projectId) {
     await this.ensureProjectExists(projectId);
-    const [ rows ] = await this.pool.query(
-      `SELECT id, project_id, name, description, avatar_url, avatar_preview_url, design_sheet_url, design_sheet_preview_url,
+    const [rows] = await this.pool.query(
+      `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
               voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
        FROM characters WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
-      [ projectId ]
+      [projectId]
     );
-    const items = rows.map(row => this.map(row));
-    for (const item of items) {
-      await this.ensureDesignSheetPreview(item);
-    }
-    return items;
+    return rows.map(row => this.map(row));
   }
 
+  /**
+   * 按 id 读取单个角色。
+   * @param {number} id 角色 id，例如 `8`。
+   * @returns {Promise<object|null>} 角色对象，不存在时返回 `null`。
+   * @example
+   * await service.findById(8)
+   * // => { id: 8, name: "林婉", avatar_url: "https://..." }
+   */
   async findById(id) {
-    const [ rows ] = await this.pool.query(
-      `SELECT id, project_id, name, description, avatar_url, avatar_preview_url, design_sheet_url, design_sheet_preview_url,
+    const [rows] = await this.pool.query(
+      `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
               voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
        FROM characters WHERE id = ? AND deleted_at IS NULL`,
-      [ id ]
+      [id]
     );
-    if (!rows.length) {
-      return null;
-    }
-    const item = this.map(rows[0]);
-    await this.ensureDesignSheetPreview(item);
-    return item;
+    return rows.length ? this.map(rows[0]) : null;
   }
 
+  /**
+   * 创建角色资产记录。
+   * @param {number} projectId 项目 id，例如 `30`。
+   * @param {Record<string, unknown>} payload 输入数据，例如 `{ name: "林婉", avatar_url: "/generated/assets/ref.png" }`。
+   * @returns {Promise<object>} 新建后的角色对象。
+   * @example
+   * await service.create(30, { name: "林婉", description: "温婉端庄" })
+   * // => { id: 8, project_id: 30, name: "林婉" }
+   */
   async create(projectId, payload) {
     await this.ensureProjectExists(projectId);
     const name = String(payload.name || '').trim();
     if (!name) throw new Error('name is required');
-    const [ result ] = await this.pool.execute(
+    const avatarUrl = normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim());
+    const designSheetUrl = normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || '').trim());
+    const [result] = await this.pool.execute(
       `INSERT INTO characters (
-        project_id, name, description, avatar_url, avatar_preview_url, design_sheet_url, design_sheet_preview_url,
+        project_id, name, description, avatar_url, design_sheet_url,
         voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt
-      ) VALUES (?, ?, ?, '', '', ?, '', '', NULL, '', '', ?)`,
+      ) VALUES (?, ?, ?, ?, ?, '', NULL, '', '', ?)`,
       [
         projectId,
         name,
         String(payload.description || '').trim(),
-        normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || payload.avatar_url || '').trim()),
+        avatarUrl,
+        designSheetUrl,
         String(payload.voice_prompt || '').trim(),
       ]
     );
     return await this.findById(result.insertId);
   }
 
+  /**
+   * 更新角色文本、参考图和主设定图等字段。
+   * @param {number} id 角色 id，例如 `8`。
+   * @param {Record<string, unknown>} payload 局部补丁，例如 `{ avatar_url: "/generated/assets/ref.png" }`。
+   * @returns {Promise<object>} 更新后的角色对象。
+   * @example
+   * await service.update(8, { description: "外柔内刚" })
+   * // => { id: 8, description: "外柔内刚" }
+   */
   async update(id, payload) {
     const current = await this.findById(id);
     if (!current) throw new Error('character not found');
     const name = Object.prototype.hasOwnProperty.call(payload, 'name') ? String(payload.name || '').trim() : current.name;
     if (!name) throw new Error('name is required');
-    
-    const currentDesignRef = normalizeGeneratedAssetReference(this.app, current.design_sheet_url);
-    const nextDesign = Object.prototype.hasOwnProperty.call(payload, 'design_sheet_url')
-      ? normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || '').trim())
-      : (Object.prototype.hasOwnProperty.call(payload, 'avatar_url')
-        ? normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim())
-        : currentDesignRef);
 
     await this.pool.execute(
       `UPDATE characters
-       SET name = ?, description = ?, design_sheet_url = ?, design_sheet_preview_url = ?, voice_prompt = ?
+       SET name = ?, description = ?, avatar_url = ?, design_sheet_url = ?, voice_prompt = ?
        WHERE id = ?`,
       [
         name,
         Object.prototype.hasOwnProperty.call(payload, 'description') ? String(payload.description || '').trim() : current.description,
-        nextDesign,
-        nextDesign !== currentDesignRef ? '' : normalizeGeneratedAssetReference(this.app, current.design_sheet_preview_url),
+        Object.prototype.hasOwnProperty.call(payload, 'avatar_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim())
+          : normalizeGeneratedAssetReference(this.app, current.avatar_url),
+        Object.prototype.hasOwnProperty.call(payload, 'design_sheet_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || '').trim())
+          : normalizeGeneratedAssetReference(this.app, current.design_sheet_url),
         Object.prototype.hasOwnProperty.call(payload, 'voice_prompt') ? String(payload.voice_prompt || '').trim() : current.voice_prompt,
         id,
       ]
@@ -117,58 +162,124 @@ class CharacterService extends Service {
     return await this.findById(id);
   }
 
+  /**
+   * 软删除角色。
+   * @param {number} id 角色 id，例如 `8`。
+   * @returns {Promise<void>} 删除标记写入后返回。
+   * @example
+   * await service.softDelete(8)
+   * // => void
+   */
   async softDelete(id) {
-    await this.pool.execute('UPDATE characters SET deleted_at = NOW() WHERE id = ?', [ id ]);
+    await this.pool.execute('UPDATE characters SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
+  /**
+   * 构建角色主设定图的最终 prompt 文本。
+   * @param {object} character 角色对象，例如 `{ name: "林婉", description: "温婉端庄" }`。
+   * @returns {string} 最终 prompt 文本。
+   * @example
+   * service.buildDesignPrompt({ name: "林婉", description: "温婉端庄" })
+   * // => "..."
+   */
+  buildDesignPrompt(character) {
+    return buildCharacterDesignPrompt(character).prompt;
+  }
 
-  async ensureDesignSheetPreview(character) {
-    if (!character || !character.design_sheet_url || character.design_sheet_preview_url) {
-      return;
+  /**
+   * 收集角色主设定图生成所需的参考图。
+   * @param {object} character 角色对象，例如 `{ name: "林婉", avatar_url: "https://..." }`。
+   * @returns {{references: Array, missing: Array, avatarUrl: string, layoutUrl: string}} 参考图和缺失项摘要。
+   * @example
+   * service.collectDesignReferenceImages({ name: "林婉", avatar_url: "https://example.com/ref.png" })
+   * // => { references: [{ type: "character-reference", url: "https://example.com/ref.png" }], missing: [] }
+   */
+  collectDesignReferenceImages(character) {
+    const references = [];
+    const missing = [];
+    const avatarUrl = resolveUrl(this.app, character.avatar_url, this.app.config.storyboard.publicAppBaseUrl || '');
+    const layoutUrl = resolveUrl(
+      this.app,
+      this.app.config.storyboard.characterDesignLayoutReferenceUrl || '',
+      this.app.config.storyboard.publicAppBaseUrl || ''
+    );
+
+    if (avatarUrl) {
+      references.push({
+        type: 'character-reference',
+        name: `${character.name} 角色参考图`,
+        url: avatarUrl,
+        source: 'character.avatar_url',
+      });
+    } else {
+      missing.push('character-reference');
     }
-    const preview = await createPreviewFromSource(this.app, character.design_sheet_url, 'characters', `character-design-sheet-${character.id}`, storyboardPreviewSpec());
-    await this.pool.execute('UPDATE characters SET design_sheet_preview_url = ? WHERE id = ?', [ preview, character.id ]);
-    character.design_sheet_preview_url = resolveMediaUrl(this.app, preview);
+
+    if (layoutUrl) {
+      references.push({
+        type: 'layout-reference',
+        name: '设定板版式参考图',
+        url: layoutUrl,
+        source: 'storyboard.characterDesignLayoutReferenceUrl',
+      });
+    }
+
+    return { references, missing, avatarUrl, layoutUrl };
   }
 
-
-  buildDesignPrompt(character, mode) {
-    return buildCharacterDesignPrompt(character, mode).prompt;
-  }
-
-  resolveDesignSelection(modelRaw, modeRaw) {
-    const model = String(modelRaw || '').trim().toLowerCase();
-    if (model === 'qwen-image-2.0') return { mode: 'draft', model: 'qwen-image-2.0' };
-    if (model === 'gpt-image-2') return { mode: 'final', model: 'gpt-image-2' };
-    if (model === 'wan2.7-image-pro') return { mode: 'final', model: 'wan2.7-image-pro' };
-    return String(modeRaw || '').trim().toLowerCase() === 'draft'
-      ? { mode: 'draft', model: 'qwen-image-2.0' }
-      : { mode: 'final', model: 'wan2.7-image-pro' };
-  }
-
-
-  async previewDesignSheetGeneration(id, modelRaw, modeRaw) {
+  /**
+   * 预览角色主设定图生成参数、参考图和 prompt。
+   * @param {number} id 角色 id，例如 `8`。
+   * @returns {Promise<object>} 预览信息。
+   * @example
+   * await service.previewDesignSheetGeneration(8)
+   * // => { action: "character-design-sheet", model: "seedream-4.5", final_prompt: "..." }
+   */
+  async previewDesignSheetGeneration(id) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const selection = this.resolveDesignSelection(modelRaw, modeRaw);
-    const designPrompt = buildCharacterDesignPrompt(character, selection.mode);
+    const { references, missing, avatarUrl, layoutUrl } = this.collectDesignReferenceImages(character);
+    if (!avatarUrl) {
+      throw new Error('生成主设定图前请先上传角色参考图');
+    }
+    const designPrompt = buildCharacterDesignPrompt(character);
     return {
       action: 'character-design-sheet',
-      model: selection.model,
+      model: CHARACTER_DESIGN_MODEL,
+      reference_images: references,
       fields: {
         角色名称: character.name,
-        角色描述: character.description,
-        生成模型: selection.model,
-        生成档位: selection.mode,
+        角色描述: character.description || '-',
+        生成模型: 'Seedream 4.5',
+        生成方式: '图生图',
+        角色参考图: '已提供',
+        版式参考图: layoutUrl ? '已配置' : '未配置',
         输出: '角色主设定图',
       },
       template: designPrompt.template,
       prompt_blueprint: designPrompt.blueprint,
       final_prompt: designPrompt.prompt,
-      notes: [ '主设定图会作为后续镜头封面生成的人物核心参考图。' ],
+      notes: [
+        '这次固定走 Seedream 图生图。',
+        '角色参考图只用于生成主设定图，不参与其他展示和分镜参考链路。',
+        layoutUrl
+          ? '系统已附带设定板版式参考图。'
+          : '当前未配置系统版式参考图，本次只会基于角色参考图和提示词生成。',
+        ...missing.map(item => `缺少参考项：${item}`),
+      ],
     };
   }
 
+  /**
+   * 预览角色主语音参考生成参数。
+   * @param {number} id 角色 id，例如 `8`。
+   * @param {string} voicePrompt 自定义声音提示词，例如 `"年轻女性，温柔克制"`。
+   * @param {string} previewText 参考台词，例如 `"今晚你先走。"`。
+   * @returns {Promise<object>} 语音生成预览信息。
+   * @example
+   * await service.previewVoiceReferenceGeneration(8, "年轻女性，温柔克制", "今晚你先走。")
+   * // => { action: "character-voice-reference", final_prompt: "..." }
+   */
   async previewVoiceReferenceGeneration(id, voicePrompt, previewText) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
@@ -188,28 +299,44 @@ class CharacterService extends Service {
     };
   }
 
-
-  async generateDesignSheet(id, modelRaw, modeRaw) {
+  /**
+   * 用 Seedream 图生图生成角色主设定图。
+   * @param {number} id 角色 id，例如 `8`。
+   * @returns {Promise<object>} 更新后的角色对象，包含 `design_sheet_url`。
+   * @example
+   * await service.generateDesignSheet(8)
+   * // => { id: 8, design_sheet_url: "/generated/characters/character-design-sheet-8-....png" }
+   */
+  async generateDesignSheet(id) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const selection = this.resolveDesignSelection(modelRaw, modeRaw);
-    const prompt = this.buildDesignPrompt(character, selection.mode);
-    let stored;
-    if (selection.model === 'gpt-image-2') {
-      const imageBytes = await generateOpenAIImage(this.app, prompt, selection.model);
-      const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
-      stored = await storeBuffer(this.app, imageBytes, 'characters', filename, 'image/png');
-    } else {
-      const imageUrl = await generateWanxImage(this.app, prompt, selection.model);
-      const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
-      stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
+    const { avatarUrl, layoutUrl } = this.collectDesignReferenceImages(character);
+    if (!avatarUrl) {
+      throw new Error('生成主设定图前请先上传角色参考图');
     }
-    const previewFilename = `${path.basename(stored.publicPath, path.extname(stored.publicPath))}.thumb.webp`.replace(/^.*\//, '');
-    const previewPath = await createPreviewFromLocalPath(this.app, stored.localPath, 'characters', previewFilename, storyboardPreviewSpec());
-    await this.pool.execute('UPDATE characters SET design_sheet_url = ?, design_sheet_preview_url = ? WHERE id = ?', [ stored.publicPath, previewPath, id ]);
+    const prompt = this.buildDesignPrompt(character);
+    const imageUrl = await generateSeedreamImage(
+      this.app,
+      prompt,
+      layoutUrl ? [ avatarUrl, layoutUrl ] : [ avatarUrl ],
+      { size: SEEDREAM_DESIGN_SHEET_SIZE }
+    );
+    const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
+    const stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
+    await this.pool.execute('UPDATE characters SET design_sheet_url = ? WHERE id = ?', [ stored.publicPath, id ]);
     return await this.findById(id);
   }
 
+  /**
+   * 生成并绑定角色主语音参考音频。
+   * @param {number} id 角色 id，例如 `8`。
+   * @param {string} voicePrompt 自定义声音提示词，例如 `"年轻女性，温柔克制"`。
+   * @param {string} previewText 参考台词，例如 `"今晚你先走。"`。
+   * @returns {Promise<object>} 更新后的角色对象，包含语音地址和时长。
+   * @example
+   * await service.generateVoiceReference(8, "年轻女性，温柔克制", "今晚你先走。")
+   * // => { id: 8, voice_reference_url: "/generated/characters/character-voice-reference-8-....wav" }
+   */
   async generateVoiceReference(id, voicePrompt, previewText) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');

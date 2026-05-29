@@ -14,6 +14,14 @@ class SceneService extends Service {
     return this.app.mysqlPool;
   }
 
+  /**
+   * 查询章节是否存在，并拿到它所属的项目。
+   * @param {number} id 章节 id，例如 `11`。
+   * @returns {Promise<object|null>} 章节最小信息，不存在时返回 `null`。
+   * @example
+   * await service.findChapterById(11)
+   * // => { id: 11, project_id: 19 }
+   */
   async findChapterById(id) {
     const [ rows ] = await this.pool.query(
       'SELECT id, project_id FROM chapters WHERE id = ? AND deleted_at IS NULL',
@@ -22,6 +30,14 @@ class SceneService extends Service {
     return rows[0] || null;
   }
 
+  /**
+   * 读取章节下的所有场景。
+   * @param {number} chapterId 章节 id，例如 `11`。
+   * @returns {Promise<Array>} 场景列表，按排序字段升序返回。
+   * @example
+   * await service.findByChapterId(11)
+   * // => [{ id: 21, chapter_id: 11, title: "便利店门口", sort_order: 1 }]
+   */
   async findByChapterId(chapterId) {
     const chapter = await this.findChapterById(chapterId);
     if (!chapter) {
@@ -41,6 +57,14 @@ class SceneService extends Service {
     return rows.map(row => mapScene(this.app, row));
   }
 
+  /**
+   * 按 id 读取单个场景。
+   * @param {number} id 场景 id，例如 `21`。
+   * @returns {Promise<object|null>} 场景对象，不存在时返回 `null`。
+   * @example
+   * await service.findById(21)
+   * // => { id: 21, title: "便利店门口", chapter_id: 11, project_id: 19 }
+   */
   async findById(id) {
     const [ rows ] = await this.pool.query(
       `SELECT id, chapter_id, project_id, title, description, location, time_of_day, style_preset, style_notes,
@@ -54,6 +78,14 @@ class SceneService extends Service {
     return rows.length ? mapScene(this.app, rows[0]) : null;
   }
 
+  /**
+   * 读取章节内当前最大的场景排序值。
+   * @param {number} chapterId 章节 id，例如 `11`。
+   * @returns {Promise<number>} 最大排序值，例如 `4`。
+   * @example
+   * await service.getMaxSortOrder(11)
+   * // => 4
+   */
   async getMaxSortOrder(chapterId) {
     const [ rows ] = await this.pool.query(
       'SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM scenes WHERE chapter_id = ? AND deleted_at IS NULL',
@@ -62,6 +94,15 @@ class SceneService extends Service {
     return Number(rows[0]?.max_sort || 0);
   }
 
+  /**
+   * 在指定章节下创建场景。
+   * @param {number} chapterId 章节 id，例如 `11`。
+   * @param {Record<string, unknown>} payload 输入数据，例如 `{ title: "便利店门口", location: "街角" }`。
+   * @returns {Promise<object>} 新建后的场景对象。
+   * @example
+   * await service.create(11, { title: "便利店门口", location: "街角" })
+   * // => { id: 21, chapter_id: 11, title: "便利店门口", sort_order: 1 }
+   */
   async create(chapterId, payload) {
     const chapter = await this.findChapterById(chapterId);
     if (!chapter) {
@@ -95,6 +136,15 @@ class SceneService extends Service {
     return await this.findById(result.insertId);
   }
 
+  /**
+   * 更新场景基础信息和媒体状态字段。
+   * @param {number} id 场景 id，例如 `21`。
+   * @param {Record<string, unknown>} payload 局部补丁，例如 `{ title: "便利店门口（夜）", style_notes: "冷光" }`。
+   * @returns {Promise<object>} 更新后的场景对象。
+   * @example
+   * await service.update(21, { title: "便利店门口（夜）" })
+   * // => { id: 21, title: "便利店门口（夜）" }
+   */
   async update(id, payload) {
     const current = await this.findById(id);
     if (!current) {
@@ -142,14 +192,39 @@ class SceneService extends Service {
     return await this.findById(id);
   }
 
+  /**
+   * 软删除场景。
+   * @param {number} id 场景 id，例如 `21`。
+   * @returns {Promise<void>} 写入删除标记后返回。
+   * @example
+   * await service.softDelete(21)
+   * // => void
+   */
   async softDelete(id) {
     await this.pool.execute('UPDATE scenes SET deleted_at = NOW() WHERE id = ?', [ id ]);
   }
 
+  /**
+   * 生成场景封面用的最终 prompt 文本。
+   * @param {object} scene 场景对象，例如 `{ title: "便利店门口" }`。
+   * @param {Array} storyboards 场景下镜头列表，例如 `[{ content: "李明抬头" }]`。
+   * @returns {string} 最终 prompt 文本。
+   * @example
+   * service.buildCoverPrompt({ title: "便利店门口" }, [{ content: "李明抬头" }])
+   * // => "..."
+   */
   buildCoverPrompt(scene, storyboards) {
     return buildSceneCoverPrompt(scene, storyboards).prompt;
   }
 
+  /**
+   * 预览场景封面生成参数和 prompt。
+   * @param {number} id 场景 id，例如 `21`。
+   * @returns {Promise<object>} 预览信息，包含字段摘要、模板和最终 prompt。
+   * @example
+   * await service.previewCoverGeneration(21)
+   * // => { action: "scene-cover", model: "wan2.7-image-pro", final_prompt: "..." }
+   */
   async previewCoverGeneration(id) {
     const scene = await this.findById(id);
     if (!scene) {
@@ -159,7 +234,7 @@ class SceneService extends Service {
     const coverPrompt = buildSceneCoverPrompt(scene, storyboards);
     return {
       action: 'scene-cover',
-      model: this.app.config.storyboard.wanxModel || 'wanx2.0-t2i-turbo',
+      model: this.app.config.storyboard.wanxModel || 'wan2.7-image-pro',
       fields: {
         场景标题: String(scene.title || '').trim(),
         地点: String(scene.location || '').trim(),
@@ -175,6 +250,14 @@ class SceneService extends Service {
     };
   }
 
+  /**
+   * 真正生成场景封面，并回写封面图和预览图。
+   * @param {number} id 场景 id，例如 `21`。
+   * @returns {Promise<object>} 更新后的场景对象。
+   * @example
+   * await service.generateCover(21)
+   * // => { id: 21, cover_url: "/generated/scene-covers/scene-21-....png" }
+   */
   async generateCover(id) {
     const scene = await this.findById(id);
     if (!scene) {
@@ -182,7 +265,7 @@ class SceneService extends Service {
     }
     const storyboards = await this.ctx.service.storyboard.findBySceneId(id);
     const prompt = this.buildCoverPrompt(scene, storyboards);
-    const imageUrl = await generateWanxImage(this.app, prompt, this.app.config.storyboard.wanxModel || 'qwen-image-2.0');
+    const imageUrl = await generateWanxImage(this.app, prompt, this.app.config.storyboard.wanxModel || 'wan2.7-image-pro');
     const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.png`;
     const stored = await downloadAndStore(this.app, imageUrl, 'scene-covers', filename, 'image/png');
     const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
@@ -193,6 +276,14 @@ class SceneService extends Service {
     });
   }
 
+  /**
+   * 批量为场景下所有镜头生成封面。
+   * @param {number} id 场景 id，例如 `21`。
+   * @returns {Promise<object>} 批量结果，包含成功数量和失败项。
+   * @example
+   * await service.generateStoryboardCovers(21)
+   * // => { generated_count: 8, failed: [] }
+   */
   async generateStoryboardCovers(id) {
     const storyboards = await this.ctx.service.storyboard.findBySceneId(id);
     const failed = [];
@@ -213,6 +304,15 @@ class SceneService extends Service {
     };
   }
 
+  /**
+   * 合成场景视频。
+   * @param {number} id 场景 id，例如 `21`。
+   * @param {boolean} regenerate 已有视频时，是否强制重新合成。
+   * @returns {Promise<object>} 更新后的场景对象。
+   * @example
+   * await service.composeVideo(21, true)
+   * // => { id: 21, video_url: "/generated/scene-videos/scene-21-....mp4", video_status: "succeeded" }
+   */
   async composeVideo(id, regenerate) {
     const scene = await this.findById(id);
     if (!scene) {

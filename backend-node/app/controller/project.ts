@@ -21,6 +21,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 获取项目列表。
+   * @returns {Promise<void>} 通过统一响应格式返回项目数组。
+   * @example
+   * GET /api/projects
+   * // => { code: 200, data: [{ id: 19, name: "便利店门口" }], message: "" }
+   */
   async show() {
     const id = this.parseId();
     if (!id) {
@@ -40,6 +47,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 获取单个项目详情。
+   * @returns {Promise<void>} 通过统一响应格式返回项目对象。
+   * @example
+   * GET /api/projects/19
+   * // => { code: 200, data: { id: 19, name: "便利店门口" }, message: "" }
+   */
   async create() {
     const { name = '', description = '' } = this.ctx.request.body || {};
     const trimmedName = String(name).trim();
@@ -59,6 +73,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 创建项目。
+   * @returns {Promise<void>} 通过统一响应格式返回新建项目。
+   * @example
+   * POST /api/projects { "name": "新项目", "description": "古风漫剧" }
+   * // => { code: 200, data: { id: 30, name: "新项目" }, message: "" }
+   */
   async update() {
     const id = this.parseId();
     if (!id) {
@@ -74,6 +95,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 更新项目基础信息。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的项目。
+   * @example
+   * PUT /api/projects/19 { "description": "修订说明" }
+   * // => { code: 200, data: { id: 19, description: "修订说明" }, message: "" }
+   */
   async destroy() {
     const id = this.parseId();
     if (!id) {
@@ -89,6 +117,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 软删除项目。
+   * @returns {Promise<void>} 通过统一响应格式返回删除结果。
+   * @example
+   * DELETE /api/projects/19
+   * // => { code: 200, data: { success: true }, message: "" }
+   */
   async pin() {
     const id = this.parseId();
     if (!id) {
@@ -104,6 +139,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 置顶项目。
+   * @returns {Promise<void>} 通过统一响应格式返回置顶后的项目。
+   * @example
+   * POST /api/projects/19/pin
+   * // => { code: 200, data: { id: 19, pinned_at: "..." }, message: "" }
+   */
   async unpin() {
     const id = this.parseId();
     if (!id) {
@@ -119,6 +161,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 取消项目置顶。
+   * @returns {Promise<void>} 通过统一响应格式返回取消置顶后的项目。
+   * @example
+   * POST /api/projects/19/unpin
+   * // => { code: 200, data: { id: 19, pinned_at: null }, message: "" }
+   */
   async importScript() {
     const id = this.parseId();
     if (!id) {
@@ -138,6 +187,13 @@ class ProjectController extends Controller {
     }
   }
 
+  /**
+   * 导入小说或剧本文本，并触发结构化拆解。
+   * @returns {Promise<void>} 通过统一响应格式返回导入统计结果。
+   * @example
+   * POST /api/projects/19/import-script { "script_text": "李明推开便利店门。" }
+   * // => { code: 200, data: { chapter_count: 1, scene_count: 1, storyboard_count: 3 }, message: "" }
+   */
   async composeVideo() {
     const id = this.parseId();
     if (!id) {
@@ -160,6 +216,14 @@ class ProjectController extends Controller {
       response.error(this.ctx, err.message);
     }
   }
+
+  /**
+   * 合成项目总片。
+   * @returns {Promise<void>} 通过统一响应格式返回项目视频结果。
+   * @example
+   * POST /api/projects/19/compose-video { "regenerate": true }
+   * // => { code: 200, data: { project_id: 19, video_url: "/generated/project-videos/..." }, message: "" }
+   */
 }
 
 module.exports = ProjectController;

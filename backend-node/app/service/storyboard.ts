@@ -203,8 +203,8 @@ class StoryboardService extends Service {
     const ids = items.map(item => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [ rows ] = await this.pool.query(
-      `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url, c.avatar_preview_url,
-              c.design_sheet_url, c.design_sheet_preview_url, c.voice_reference_url, c.voice_reference_duration,
+      `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url,
+              c.design_sheet_url, c.voice_reference_url, c.voice_reference_duration,
               c.voice_reference_text, c.voice_name, c.voice_prompt, c.created_at, c.updated_at
        FROM storyboard_characters sc
        JOIN characters c ON c.id = sc.character_id
@@ -251,7 +251,7 @@ class StoryboardService extends Service {
   }
 
   supportedCoverModels() {
-    return new Set([ '', 'auto', 'qwen-image-2.0', 'wan2.7-image-pro', 'seedream-4.5' ]);
+    return new Set([ '', 'auto', 'wan2.7-image-pro', 'seedream-4.5' ]);
   }
 
   supportedVideoModels() {
@@ -432,7 +432,7 @@ class StoryboardService extends Service {
       throw new Error('scene not found');
     }
     const { references, missing } = await this.selectReferenceImages(storyboard, scene);
-    const model = String(selectedModel || '').trim() || (references.length ? (this.app.config.storyboard.wanxReferenceModel || 'wan2.7-image-pro') : (this.app.config.storyboard.wanxModel || 'qwen-image-2.0'));
+    const model = String(selectedModel || '').trim() || (references.length ? (this.app.config.storyboard.wanxReferenceModel || 'wan2.7-image-pro') : (this.app.config.storyboard.wanxModel || 'wan2.7-image-pro'));
     const mode = references.length ? 'reference' : 'text-only';
     const fields = {
       scene_title: String(scene.title || '').trim(),

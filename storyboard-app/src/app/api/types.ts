@@ -62,9 +62,7 @@ export type Character = {
   name: string;
   description: string;
   avatar_url: string;
-  avatar_preview_url?: string;
   design_sheet_url?: string;
-  design_sheet_preview_url?: string;
   voice_reference_url?: string;
   voice_reference_duration?: number;
   voice_reference_text?: string;
@@ -300,12 +298,11 @@ export type ComposeProjectVideoResult = {
 };
 
 
-export type CharacterDesignSheetModel = "qwen-image-2.0" | "wan2.7-image-pro" | "gpt-image-2";
-
 export type AIGenerationPreview = {
   action: string;
   model: string;
   fields: Record<string, string>;
   final_prompt: string;
   notes?: string[];
+  reference_images?: StoryboardCoverGenerationReferenceImage[];
 };

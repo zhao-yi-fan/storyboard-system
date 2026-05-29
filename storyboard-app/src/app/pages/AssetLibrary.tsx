@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router";
 import {
@@ -25,7 +25,6 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import { characterApi, assetApi, apiClient, ossApi, type Character, type Asset, type AIGenerationPreview, type CharacterDesignSheetModel } from "../api";
+import { characterApi, assetApi, ossApi, type Character, type Asset, type AIGenerationPreview } from "../api";
 
 type SelectedAsset =
   | { type: "character"; data: Character }
@@ -69,10 +68,13 @@ type AIPreviewDialogState = {
 };
 
 const getCharacterPreviewSrc = (character: Character | null | undefined) =>
-  character?.design_sheet_preview_url || character?.design_sheet_url || "";
+  character?.design_sheet_url || "";
 
 const getCharacterDesignSheetPreviewSrc = (character: Character | null | undefined) =>
-  character?.design_sheet_preview_url || character?.design_sheet_url || "";
+  character?.design_sheet_url || "";
+
+const getCharacterReferenceSrc = (character: Character | null | undefined) =>
+  character?.avatar_url || "";
 
 const getCharacterVoiceReferenceSrc = (character: Character | null | undefined) =>
   character?.voice_reference_url || "";
@@ -80,11 +82,7 @@ const getCharacterVoiceReferenceSrc = (character: Character | null | undefined) 
 const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
 
-const CHARACTER_DESIGN_SHEET_MODEL_OPTIONS: Array<{ value: CharacterDesignSheetModel; label: string }> = [
-  { value: "qwen-image-2.0", label: "Qwen Image 2.0" },
-  { value: "wan2.7-image-pro", label: "Wan 2.7 Image Pro" },
-  { value: "gpt-image-2", label: "GPT Image 2" },
-];
+const CHARACTER_DESIGN_SHEET_MODEL_LABEL = "Seedream 4.5 图生图";
 
 const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
@@ -110,20 +108,21 @@ export default function AssetLibrary() {
   const [aiPreviewDialog, setAiPreviewDialog] = useState<AIPreviewDialogState | null>(null);
   const [isLoadingAIPreview, setIsLoadingAIPreview] = useState(false);
 
-  const [newCharacter, setNewCharacter] = useState({ name: "", description: "", design_sheet_url: "" });
+  const [newCharacter, setNewCharacter] = useState({ name: "", description: "", avatar_url: "" });
   const [newAsset, setNewAsset] = useState({ name: "", type: "scene", meta: "", file_url: "" });
   const [createCharacterFile, setCreateCharacterFile] = useState<File | null>(null);
   const [createAssetFile, setCreateAssetFile] = useState<File | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingCharacter, setIsSavingCharacter] = useState(false);
   const [isSavingAsset, setIsSavingAsset] = useState(false);
+  const [uploadingCharacterReferenceId, setUploadingCharacterReferenceId] = useState<number | null>(null);
   const [generatingCharacterDesignSheetId, setGeneratingCharacterDesignSheetId] = useState<number | null>(null);
   const [generatingCharacterVoiceReferenceId, setGeneratingCharacterVoiceReferenceId] = useState<number | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
-  const [characterDesignSheetModel, setCharacterDesignSheetModel] = useState<CharacterDesignSheetModel>("wan2.7-image-pro");
   const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
   const [isResizingDetailSidebar, setIsResizingDetailSidebar] = useState(false);
+  const selectedCharacterReferenceInputRef = useRef<HTMLInputElement | null>(null);
 
   const MIN_DETAIL_SIDEBAR_WIDTH = 320;
   const MAX_DETAIL_SIDEBAR_WIDTH = 560;
@@ -232,7 +231,7 @@ export default function AssetLibrary() {
   };
 
   const resetCreateState = () => {
-    setNewCharacter({ name: "", description: "", design_sheet_url: "" });
+    setNewCharacter({ name: "", description: "", avatar_url: "" });
     setNewAsset({ name: "", type: "scene", meta: "", file_url: "" });
     setCreateCharacterFile(null);
     setCreateAssetFile(null);
@@ -247,14 +246,14 @@ export default function AssetLibrary() {
           toast.error("请输入角色名称");
           return;
         }
-        let avatarURL = newCharacter.design_sheet_url.trim();
+        let avatarURL = newCharacter.avatar_url.trim();
         if (!avatarURL && createCharacterFile) {
           avatarURL = await ossApi.uploadFileToOss(createCharacterFile);
         }
         const created = await characterApi.createCharacter(currentProjectId, {
           name: newCharacter.name.trim(),
           description: newCharacter.description.trim(),
-          design_sheet_url: avatarURL || undefined,
+          avatar_url: avatarURL || undefined,
         });
         await loadCharacters();
         setActiveTab("characters");
@@ -294,6 +293,7 @@ export default function AssetLibrary() {
       const updated = await characterApi.updateCharacter(selectedAsset.data.id, {
         name: selectedAsset.data.name,
         description: selectedAsset.data.description || "",
+        avatar_url: selectedAsset.data.avatar_url || "",
         voice_prompt: selectedAsset.data.voice_prompt || "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
@@ -328,9 +328,7 @@ export default function AssetLibrary() {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setGeneratingCharacterDesignSheetId(selectedAsset.data.id);
     try {
-      const updated = await characterApi.generateCharacterDesignSheet(selectedAsset.data.id, {
-        model: characterDesignSheetModel,
-      });
+      const updated = await characterApi.generateCharacterDesignSheet(selectedAsset.data.id);
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
     } catch (error) {
@@ -381,13 +379,11 @@ export default function AssetLibrary() {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setIsLoadingAIPreview(true);
     try {
-      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(selectedAsset.data.id, {
-        model: characterDesignSheetModel,
-      });
+      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(selectedAsset.data.id);
       openAIPreviewDialog({
         action: "character-design-sheet",
         title: "确认生成主设定图",
-        description: "会为当前角色生成主设定图，并作为后续镜头封面生成的人物核心参考图。",
+        description: "会用 Seedream 图生图生成当前角色的主设定图。角色参考图只用于这次生成，不参与其他展示链路。",
         confirmLabel: "确认生成",
         preview,
       });
@@ -396,6 +392,28 @@ export default function AssetLibrary() {
       toast.error(error instanceof Error ? error.message : "获取主设定图预览失败");
     } finally {
       setIsLoadingAIPreview(false);
+    }
+  };
+
+  const handleUploadSelectedCharacterReference = async (file: File | null) => {
+    if (!file || !selectedAsset || selectedAsset.type !== "character") return;
+    setUploadingCharacterReferenceId(selectedAsset.data.id);
+    try {
+      const avatarURL = await ossApi.uploadFileToOss(file);
+      const updated = await characterApi.updateCharacter(selectedAsset.data.id, {
+        avatar_url: avatarURL,
+      });
+      setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setSelectedAsset({ type: "character", data: updated });
+      toast.success("角色参考图已更新");
+    } catch (error) {
+      console.error("Failed to upload character reference image:", error);
+      toast.error(error instanceof Error ? error.message : "上传角色参考图失败");
+    } finally {
+      setUploadingCharacterReferenceId(null);
+      if (selectedCharacterReferenceInputRef.current) {
+        selectedCharacterReferenceInputRef.current.value = "";
+      }
     }
   };
 
@@ -663,8 +681,77 @@ export default function AssetLibrary() {
                     <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-sm text-gray-100">角色人设/设定图</div>
-                          <div className="text-xs text-gray-500">作为分镜及视频生成的人物核心人设参考图</div>
+                          <div className="text-sm text-gray-100">角色参考图</div>
+                          <div className="text-xs text-gray-500">只用于生成主设定图，不参与其他展示和分镜参考链路</div>
+                        </div>
+                        <Badge className="bg-amber-600 text-white text-xs">内部参考</Badge>
+                      </div>
+                      <div className="aspect-square bg-gradient-to-br from-amber-900/20 to-orange-900/10 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
+                        {getCharacterReferenceSrc(selectedAsset.data) ? (
+                          <button
+                            type="button"
+                            className="w-full h-full"
+                            onClick={() =>
+                              setPreviewImage({
+                                src: getCharacterReferenceSrc(selectedAsset.data),
+                                alt: `${selectedAsset.data.name} 角色参考图`,
+                              })
+                            }
+                          >
+                            <img
+                              src={getCharacterReferenceSrc(selectedAsset.data)}
+                              alt={`${selectedAsset.data.name} 角色参考图`}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain rounded"
+                            />
+                          </button>
+                        ) : (
+                          <Users className="w-24 h-24 text-gray-700" />
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">角色参考图地址</Label>
+                        <Input
+                          value={selectedAsset.data.avatar_url || ""}
+                          onChange={(e) =>
+                            setSelectedAsset({ type: "character", data: { ...selectedAsset.data, avatar_url: e.target.value } })
+                          }
+                          placeholder="https://..."
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          ref={selectedCharacterReferenceInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => void handleUploadSelectedCharacterReference(e.target.files?.[0] || null)}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 border-gray-700 text-gray-200 hover:bg-gray-900"
+                          disabled={uploadingCharacterReferenceId === selectedAsset.data.id}
+                          onClick={() => selectedCharacterReferenceInputRef.current?.click()}
+                        >
+                          {uploadingCharacterReferenceId === selectedAsset.data.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              上传中
+                            </>
+                          ) : (
+                            <>上传参考图</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-gray-100">角色主设定图</div>
+                          <div className="text-xs text-gray-500">角色正式展示图，以及后续分镜封面的人物核心参考图</div>
                         </div>
                         <Badge className="bg-blue-600 text-white text-xs">角色设定</Badge>
                       </div>
@@ -675,7 +762,7 @@ export default function AssetLibrary() {
                             className="w-full h-full"
                             onClick={() =>
                               setPreviewImage({
-                                src: selectedAsset.data.design_sheet_url || selectedAsset.data.design_sheet_preview_url || "",
+                                src: selectedAsset.data.design_sheet_url || "",
                                 alt: `${selectedAsset.data.name} 设定图`,
                               })
                             }
@@ -693,18 +780,9 @@ export default function AssetLibrary() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Select value={characterDesignSheetModel} onValueChange={(value) => setCharacterDesignSheetModel(value as CharacterDesignSheetModel)}>
-                          <SelectTrigger className="w-full bg-[#1a1a1a] border-gray-700 text-gray-100">
-                            <SelectValue placeholder="选择生成模型" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CHARACTER_DESIGN_SHEET_MODEL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="rounded border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-200">
+                          {CHARACTER_DESIGN_SHEET_MODEL_LABEL}
+                        </div>
                         <Button
                           type="button"
                           variant="outline"
@@ -715,12 +793,12 @@ export default function AssetLibrary() {
                           {generatingCharacterDesignSheetId === selectedAsset.data.id ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              正在生成人设图
+                              正在生成主设定图
                             </>
                           ) : (
                             <>
                               <Sparkles className="w-4 h-4 mr-2" />
-                              生成设定图
+                              生成主设定图
                             </>
                           )}
                         </Button>
@@ -862,6 +940,27 @@ export default function AssetLibrary() {
                 ))}
               </div>
             </div>
+            {aiPreviewDialog?.preview.reference_images?.length ? (
+              <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
+                <div className="text-gray-300 font-medium">参考图输入</div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {aiPreviewDialog.preview.reference_images.map((image) => (
+                    <button
+                      key={`${image.type}:${image.name}`}
+                      type="button"
+                      className="rounded border border-gray-800 bg-[#111111] p-2 text-left"
+                      onClick={() => setPreviewImage({ src: image.url, alt: image.name })}
+                    >
+                      <div className="aspect-[4/3] overflow-hidden rounded border border-gray-800 bg-black/20">
+                        <img src={image.url} alt={image.name} className="h-full w-full object-contain" loading="lazy" decoding="async" />
+                      </div>
+                      <div className="mt-2 text-xs text-gray-200">{image.name}</div>
+                      <div className="mt-1 text-[11px] text-gray-500">{image.source}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">最终 Prompt</div>
               <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{aiPreviewDialog?.preview.final_prompt || "-"}</pre>
@@ -896,8 +995,8 @@ export default function AssetLibrary() {
               <>
                 <div><Label className="text-xs text-gray-400">名称</Label><Input value={newCharacter.name} onChange={(e) => setNewCharacter((prev) => ({ ...prev, name: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
                 <div><Label className="text-xs text-gray-400">描述</Label><Textarea value={newCharacter.description} onChange={(e) => setNewCharacter((prev) => ({ ...prev, description: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
-                <div><Label className="text-xs text-gray-400">设定图地址（可选）</Label><Input value={newCharacter.design_sheet_url} onChange={(e) => setNewCharacter((prev) => ({ ...prev, design_sheet_url: e.target.value }))} placeholder="https://..." className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                <div><Label className="text-xs text-gray-400">设定图上传（可选）</Label><Input type="file" accept="image/*" onChange={(e) => setCreateCharacterFile(e.target.files?.[0] || null)} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
+                <div><Label className="text-xs text-gray-400">角色参考图地址（可选）</Label><Input value={newCharacter.avatar_url} onChange={(e) => setNewCharacter((prev) => ({ ...prev, avatar_url: e.target.value }))} placeholder="https://..." className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
+                <div><Label className="text-xs text-gray-400">上传角色参考图（可选）</Label><Input type="file" accept="image/*" onChange={(e) => setCreateCharacterFile(e.target.files?.[0] || null)} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
               </>
             ) : (
               <>

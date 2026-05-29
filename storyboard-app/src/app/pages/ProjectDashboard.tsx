@@ -246,10 +246,6 @@ export default function ProjectDashboard() {
                             <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">画面连贯稳定，质感极佳，适合高精度的最终成片。</div>
                           </li>
                           <li>
-                            <div className="font-medium">• Wan 2.6 Flash</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">生成速度极快，成本低，适合用来快速预览和打草稿。</div>
-                          </li>
-                          <li>
                             <div className="font-medium">• Seedance 1.5 Pro</div>
                             <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">人物动作幅度大，运镜丰富，视觉冲击与表现力强。</div>
                           </li>
@@ -265,10 +261,6 @@ export default function ProjectDashboard() {
                           <li>
                             <div className="font-medium">• Seedream 4.5</div>
                             <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">擅长电影感、复杂光影和高真实度的高清场景刻画。</div>
-                          </li>
-                          <li>
-                            <div className="font-medium">• Qwen Image 2.0</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">中英指令跟随能力强，擅长精准控制风格和复杂构图。</div>
                           </li>
                         </ul>
                       </div>

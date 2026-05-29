@@ -12,6 +12,14 @@ class AssetService extends Service {
     return this.app.mysqlPool;
   }
 
+  /**
+   * 把资产数据库行映射成接口对象，并补全可访问 URL。
+   * @param {Record<string, unknown>} row 数据库原始行，例如 `{ id: 5, type: "scene" }`。
+   * @returns {object} 映射后的资产对象。
+   * @example
+   * service.map({ id: 5, project_id: 30, name: "CG背景", type: "scene", file_url: "/generated/assets/a.png" })
+   * // => { id: 5, project_id: 30, name: "CG背景", type: "scene", file_url: "https://..." }
+   */
   map(row) {
     return {
       id: Number(row.id),
@@ -28,11 +36,28 @@ class AssetService extends Service {
     };
   }
 
+  /**
+   * 确认项目存在，避免把资产挂到无效项目上。
+   * @param {number} projectId 项目 id，例如 `30`。
+   * @returns {Promise<void>} 项目存在时正常返回。
+   * @example
+   * await service.ensureProjectExists(30)
+   * // => void
+   */
   async ensureProjectExists(projectId) {
     const [ rows ] = await this.pool.query('SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL', [ projectId ]);
     if (!rows.length) throw new Error('project not found');
   }
 
+  /**
+   * 确认角色属于当前项目，供角色关联资产使用。
+   * @param {number} characterId 角色 id，例如 `8`。
+   * @param {number} projectId 项目 id，例如 `30`。
+   * @returns {Promise<void>} 角色合法时正常返回。
+   * @example
+   * await service.ensureCharacterInProject(8, 30)
+   * // => void
+   */
   async ensureCharacterInProject(characterId, projectId) {
     const [ rows ] = await this.pool.query(
       'SELECT id FROM characters WHERE id = ? AND project_id = ? AND deleted_at IS NULL',
@@ -41,6 +66,14 @@ class AssetService extends Service {
     if (!rows.length) throw new Error('character not found');
   }
 
+  /**
+   * 读取项目下的全部资产。
+   * @param {number} projectId 项目 id，例如 `30`。
+   * @returns {Promise<Array>} 资产列表。
+   * @example
+   * await service.findByProjectId(30)
+   * // => [{ id: 5, name: "CG背景", type: "scene" }]
+   */
   async findByProjectId(projectId) {
     await this.ensureProjectExists(projectId);
     const [ rows ] = await this.pool.query(
@@ -55,6 +88,14 @@ class AssetService extends Service {
     return items;
   }
 
+  /**
+   * 读取某个角色绑定的全部资产。
+   * @param {number} characterId 角色 id，例如 `8`。
+   * @returns {Promise<Array>} 资产列表。
+   * @example
+   * await service.findByCharacterId(8)
+   * // => [{ id: 15, character_id: 8, name: "发簪特写", type: "prop" }]
+   */
   async findByCharacterId(characterId) {
     const [ rows ] = await this.pool.query(
       `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
@@ -68,6 +109,14 @@ class AssetService extends Service {
     return items;
   }
 
+  /**
+   * 按 id 读取单个资产。
+   * @param {number} id 资产 id，例如 `5`。
+   * @returns {Promise<object|null>} 资产对象，不存在时返回 `null`。
+   * @example
+   * await service.findById(5)
+   * // => { id: 5, name: "CG背景", file_url: "https://..." }
+   */
   async findById(id) {
     const [ rows ] = await this.pool.query(
       `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
@@ -82,6 +131,15 @@ class AssetService extends Service {
     return item;
   }
 
+  /**
+   * 创建场景资产或角色资产。
+   * @param {number} projectId 项目 id，例如 `30`。
+   * @param {Record<string, unknown>} payload 输入数据，例如 `{ name: "CG背景", type: "scene", file_url: "/generated/assets/a.png" }`。
+   * @returns {Promise<object>} 新建后的资产对象。
+   * @example
+   * await service.create(30, { name: "CG背景", type: "scene", file_url: "/generated/assets/a.png" })
+   * // => { id: 5, project_id: 30, name: "CG背景", type: "scene" }
+   */
   async create(projectId, payload) {
     await this.ensureProjectExists(projectId);
     const name = String(payload.name || '').trim();
@@ -98,6 +156,15 @@ class AssetService extends Service {
     return await this.findById(result.insertId);
   }
 
+  /**
+   * 更新资产元信息和文件地址。
+   * @param {number} id 资产 id，例如 `5`。
+   * @param {Record<string, unknown>} payload 局部补丁，例如 `{ meta: "便利店外景背景" }`。
+   * @returns {Promise<object>} 更新后的资产对象。
+   * @example
+   * await service.update(5, { meta: "便利店外景背景" })
+   * // => { id: 5, meta: "便利店外景背景" }
+   */
   async update(id, payload) {
     const current = await this.findById(id);
     if (!current) throw new Error('asset not found');
@@ -124,6 +191,14 @@ class AssetService extends Service {
     return await this.findById(id);
   }
 
+  /**
+   * 软删除未被镜头引用的资产。
+   * @param {number} id 资产 id，例如 `5`。
+   * @returns {Promise<void>} 删除标记写入后返回。
+   * @example
+   * await service.softDelete(5)
+   * // => void
+   */
   async softDelete(id) {
     const [ rows ] = await this.pool.query(`
       SELECT COUNT(*) AS count
@@ -137,6 +212,14 @@ class AssetService extends Service {
     await this.pool.execute('UPDATE assets SET deleted_at = NOW() WHERE id = ?', [ id ]);
   }
 
+  /**
+   * 缺少缩略图时，基于原图或封面补一张预览图。
+   * @param {object} asset 资产对象，例如 `{ id: 5, file_url: "https://..." }`。
+   * @returns {Promise<void>} 预览图存在后返回。
+   * @example
+   * await service.ensurePreview({ id: 5, file_url: "https://example.com/a.png" })
+   * // => void
+   */
   async ensurePreview(asset) {
     if (!asset || asset.thumbnail_url) {
       return;
@@ -150,15 +233,39 @@ class AssetService extends Service {
     asset.thumbnail_url = resolveUrl(this.app, preview, this.app.config.storyboard.publicAppBaseUrl || '');
   }
 
+  /**
+   * 判断当前资产类型是否允许自动生成封面。
+   * @param {string} assetType 资产类型，例如 `"scene"`。
+   * @returns {boolean} 可生成时返回 `true`。
+   * @example
+   * service.canGenerateSceneAssetCover("scene")
+   * // => true
+   */
   canGenerateSceneAssetCover(assetType) {
     const value = String(assetType || '').trim().toLowerCase();
     return value.includes('scene') || value.includes('background') || value.includes('场景') || value.includes('背景');
   }
 
+  /**
+   * 生成场景资产封面所需的 prompt 文本。
+   * @param {object} asset 资产对象，例如 `{ name: "CG背景", type: "scene" }`。
+   * @returns {string} 最终 prompt 文本。
+   * @example
+   * service.buildCoverPrompt({ name: "CG背景", type: "scene", meta: "便利店外景" })
+   * // => "..."
+   */
   buildCoverPrompt(asset) {
     return buildAssetCoverPrompt(asset).prompt;
   }
 
+  /**
+   * 预览资产封面生成参数和 prompt。
+   * @param {number} id 资产 id，例如 `5`。
+   * @returns {Promise<object>} 预览信息。
+   * @example
+   * await service.previewCoverGeneration(5)
+   * // => { action: "asset-cover", model: "wan2.7-image-pro", final_prompt: "..." }
+   */
   async previewCoverGeneration(id) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
@@ -168,7 +275,7 @@ class AssetService extends Service {
     const coverPrompt = buildAssetCoverPrompt(asset);
     return {
       action: 'asset-cover',
-      model: this.app.config.storyboard.wanxModel || 'wanx2.0-t2i-turbo',
+      model: this.app.config.storyboard.wanxModel || 'wan2.7-image-pro',
       fields: {
         资产名称: asset.name,
         资产类型: asset.type,
@@ -182,6 +289,14 @@ class AssetService extends Service {
     };
   }
 
+  /**
+   * 真正生成资产封面，并回写封面图和缩略图。
+   * @param {number} id 资产 id，例如 `5`。
+   * @returns {Promise<object>} 更新后的资产对象。
+   * @example
+   * await service.generateCover(5)
+   * // => { id: 5, cover_url: "/generated/assets/asset-cover-5-....png" }
+   */
   async generateCover(id) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
@@ -189,7 +304,7 @@ class AssetService extends Service {
       throw new Error('当前资产类型不支持生成封面');
     }
     const { generateWanxImage } = require('../lib/ai_clients');
-    const imageUrl = await generateWanxImage(this.app, this.buildCoverPrompt(asset), this.app.config.storyboard.wanxModel || 'qwen-image-2.0');
+    const imageUrl = await generateWanxImage(this.app, this.buildCoverPrompt(asset), this.app.config.storyboard.wanxModel || 'wan2.7-image-pro');
     const filename = `${sanitizeFileName(`asset-cover-${id}`)}-${Date.now()}.png`;
     const stored = await downloadAndStore(this.app, imageUrl, 'assets', filename, 'image/png');
     const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;

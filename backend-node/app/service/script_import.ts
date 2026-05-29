@@ -10,6 +10,15 @@ class ScriptImportService extends Service {
     return this.app.mysqlPool;
   }
 
+  /**
+   * 使用 DeepSeek 解析整段小说/剧本，并重建项目下的章节、场景、镜头和角色关联。
+   * @param {number} projectId 项目 id，例如 `19`。
+   * @param {string} scriptText 原始小说或剧本文本，例如 `"李明推开便利店门。"`。
+   * @returns {Promise<object>} 导入结果统计，例如 `{ chapter_count: 2, scene_count: 6, storyboard_count: 18 }`。
+   * @example
+   * await service.parseAndImport(19, "李明推开便利店门。")
+   * // => { project_id: 19, chapter_count: 1, scene_count: 1, storyboard_count: 3, character_count: 2 }
+   */
   async parseAndImport(projectId, scriptText) {
     const project = await this.ctx.service.project.findById(projectId);
     if (!project) {
