@@ -33,9 +33,21 @@ class CharacterService extends Service {
       project_id: Number(row.project_id),
       name: row.name,
       description: row.description || '',
-      avatar_url: resolveUrl(this.app, row.avatar_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
-      design_sheet_url: resolveUrl(this.app, row.design_sheet_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
-      voice_reference_url: resolveUrl(this.app, row.voice_reference_url || '', this.app.config.storyboard.publicAppBaseUrl || ''),
+      avatar_url: resolveUrl(
+        this.app,
+        normalizeGeneratedAssetReference(this.app, row.avatar_url || ''),
+        this.app.config.storyboard.publicAppBaseUrl || ''
+      ),
+      design_sheet_url: resolveUrl(
+        this.app,
+        normalizeGeneratedAssetReference(this.app, row.design_sheet_url || ''),
+        this.app.config.storyboard.publicAppBaseUrl || ''
+      ),
+      voice_reference_url: resolveUrl(
+        this.app,
+        normalizeGeneratedAssetReference(this.app, row.voice_reference_url || ''),
+        this.app.config.storyboard.publicAppBaseUrl || ''
+      ),
       voice_reference_duration: row.voice_reference_duration == null ? 0 : Number(row.voice_reference_duration),
       voice_reference_text: row.voice_reference_text || '',
       voice_name: row.voice_name || '',
