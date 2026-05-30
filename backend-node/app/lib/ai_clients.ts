@@ -23,7 +23,7 @@ const DEFAULT_SEEDANCE_POLL_INTERVAL_MS = 10000;
 
 const WANX_IMAGE_SIZE = '1024*576';
 const SEEDREAM_IMAGE_SIZE = '2560x1440';
-const SEEDREAM_DESIGN_SHEET_SIZE = '1536x2048';
+const SEEDREAM_DESIGN_SHEET_SIZE = '1600x2304';
 const OPENAI_IMAGE_SIZE = '1536x1024';
 const VIDEO_RESOLUTION_720P = '720P';
 const VIDEO_RESOLUTION_480P = '480p';
@@ -193,10 +193,10 @@ async function generateWanxImageWithReferences(app, prompt, imageUrls, model) {
  * @param {any} app Egg app 实例。
  * @param {string} prompt 最终提示词，例如 `"生成高细节角色主设定板"`。
  * @param {string[]} imageUrls 参考图 URL 数组，例如 `["https://role-ref.png", "https://layout-ref.png"]`。
- * @param {{ size?: string }} options 额外参数，例如 `{ size: "1536x2048" }`。
+ * @param {{ size?: string }} options 额外参数，例如 `{ size: "1600x2304" }`。
  * @returns {Promise<string>} 远端返回的图片 URL。
  * @example
- * await generateSeedreamImage(app, "生成高细节角色主设定板", ["https://role-ref.png"], { size: "1536x2048" })
+ * await generateSeedreamImage(app, "生成高细节角色主设定板", ["https://role-ref.png"], { size: "1600x2304" })
  * // => "https://..."
  */
 async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
