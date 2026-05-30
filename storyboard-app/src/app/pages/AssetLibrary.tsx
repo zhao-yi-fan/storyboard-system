@@ -90,6 +90,36 @@ const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
 const getAssetOriginalSrc = (asset: Asset | null | undefined) =>
   asset?.cover_url || asset?.file_url || "";
 
+const PROMPT_SECTION_BREAKS = [
+  "主体与画面核心：",
+  "动作与叙事重点：",
+  "镜头设计：",
+  "风格气质：",
+  "特效与氛围：",
+  "一致性要求：",
+  "音频要求：",
+  "画质与完成度：",
+  "输出要求：",
+  "负向约束：",
+  "节奏分段：",
+  "首段：",
+  "中段：",
+  "尾段：",
+  "开场：",
+  "中段：",
+  "高潮：",
+  "收束：",
+] as const;
+
+const formatPromptForDisplay = (prompt: string | null | undefined) => {
+  const raw = String(prompt || "").trim();
+  if (!raw) return "-";
+  return PROMPT_SECTION_BREAKS.reduce((formatted, marker) => {
+    const next = formatted.replaceAll(marker, `\n${marker}`);
+    return next.startsWith("\n") ? next.slice(1) : next;
+  }, raw);
+};
+
 export default function AssetLibrary() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -963,7 +993,7 @@ export default function AssetLibrary() {
             ) : null}
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{aiPreviewDialog?.preview.final_prompt || "-"}</pre>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{formatPromptForDisplay(aiPreviewDialog?.preview.final_prompt)}</pre>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">

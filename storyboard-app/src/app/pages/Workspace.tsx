@@ -126,6 +126,35 @@ const STYLE_PRESET_LABEL_MAP: Record<(typeof STYLE_PRESET_OPTIONS)[number]["valu
   STYLE_PRESET_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<(typeof STYLE_PRESET_OPTIONS)[number]["value"], string>;
 
+const PROMPT_SECTION_BREAKS = [
+  "主体与画面核心：",
+  "动作与叙事重点：",
+  "镜头设计：",
+  "风格气质：",
+  "特效与氛围：",
+  "一致性要求：",
+  "音频要求：",
+  "画质与完成度：",
+  "输出要求：",
+  "负向约束：",
+  "节奏分段：",
+  "首段：",
+  "中段：",
+  "尾段：",
+  "开场：",
+  "高潮：",
+  "收束：",
+] as const;
+
+const formatPromptForDisplay = (prompt: string | null | undefined) => {
+  const raw = String(prompt || "").trim();
+  if (!raw) return "-";
+  return PROMPT_SECTION_BREAKS.reduce((formatted, marker) => {
+    const next = formatted.replaceAll(marker, `\n${marker}`);
+    return next.startsWith("\n") ? next.slice(1) : next;
+  }, raw);
+};
+
 const MOOD_PROMPT_MAP: Record<(typeof MOOD_OPTIONS)[number], string> = {
   压抑: "情绪压抑克制，空气沉闷，人物状态收紧，画面保持低张扬度。",
   神秘: "保留未知与隐匿感，信息不完全揭示，气氛偏冷静但不透明。",
@@ -3108,7 +3137,7 @@ export default function Workspace() {
 
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{coverGenerationPreview?.final_prompt || "-"}</pre>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{formatPromptForDisplay(coverGenerationPreview?.final_prompt)}</pre>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
@@ -3157,7 +3186,7 @@ export default function Workspace() {
             </div>
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{sceneCoverGenerationPreview?.final_prompt || "-"}</pre>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{formatPromptForDisplay(sceneCoverGenerationPreview?.final_prompt)}</pre>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
@@ -3424,7 +3453,7 @@ export default function Workspace() {
                   </AccordionTrigger>
                   <AccordionContent className="pt-3">
                     <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">
-                      {videoGenerationPreview?.final_prompt || "-"}
+                      {formatPromptForDisplay(videoGenerationPreview?.final_prompt)}
                     </pre>
                   </AccordionContent>
                 </AccordionItem>

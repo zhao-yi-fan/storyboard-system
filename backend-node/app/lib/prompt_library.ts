@@ -338,7 +338,7 @@ export function renderPromptBlueprint(blueprint: PromptBlueprint): string {
   if (Array.isArray(blueprint.timeline) && blueprint.timeline.length) {
     sections.push(sentence('节奏分段', blueprint.timeline.map(item => `${item.label}：${item.description}`)));
   }
-  return sections.filter(Boolean).join(' ');
+  return sections.filter(Boolean).join('\n');
 }
 
 /**
@@ -668,7 +668,7 @@ export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
  * // => { template: "mythic-awakening", blueprint: {...}, prompt: "..." }
  */
 export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
-  const template = selectPromptTemplate([ character.description, character.name ]);
+  const template = DEFAULT_TEMPLATE;
   const blueprint = buildPromptBlueprint({
     template,
     intro: '为漫剧分镜系统生成高细节角色主设定板',
@@ -692,9 +692,10 @@ export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
       '背景保持纯净浅色或白底，不要剧情场景，不要复杂道具',
       '版式整洁清晰，保留设定页的信息分区感',
     ],
-    effects: [
+    quality: [
       '面料质感清晰，刺绣、提花、金属和珠玉细节明确',
       '头像区突出皮肤、眼睛、嘴唇、发丝和首饰细节',
+      '设定板各信息区分辨率充足，局部细节可读',
     ],
     consistency: [
       '脸型、五官、发型、发色、服装结构、配饰位置和身材比例完全一致',
