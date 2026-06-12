@@ -43,6 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
+import { UserMenu } from "../components/UserMenu";
 import { characterApi, assetApi, ossApi, type Character, type Asset, type AIGenerationPreview } from "../api";
 
 type SelectedAsset =
@@ -552,7 +553,7 @@ export default function AssetLibrary() {
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="ghost" onClick={() => navigate("/")} className="h-8 text-gray-400 hover:text-gray-200">
+            <Button size="sm" variant="ghost" onClick={() => navigate("/projects")} className="h-8 text-gray-400 hover:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-1.5" />
               项目列表
             </Button>
@@ -569,10 +570,13 @@ export default function AssetLibrary() {
               <span className="text-sm">资产库</span>
             </div>
           </div>
-          <Button size="sm" className="h-8 bg-purple-600 hover:bg-purple-700" onClick={() => setShowCreateDialog(true)}>
-            <Plus className="w-4 h-4 mr-1.5" />
-            新建资产
-          </Button>
+          <div className="flex items-center gap-3">
+            <UserMenu />
+            <Button size="sm" className="h-8 bg-purple-600 hover:bg-purple-700" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              新建资产
+            </Button>
+          </div>
         </div>
       </header>
 

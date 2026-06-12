@@ -15,6 +15,10 @@ export const DEFAULT_PUBLIC_APP_BASE_URL = '';
 export const DEFAULT_GENERATED_ASSET_DIR = '../storage';
 export const DEFAULT_GENERATED_ASSET_BASE_PATH = '/generated';
 export const DEFAULT_CHARACTER_DESIGN_LAYOUT_REFERENCE_URL = '/generated/assets/1780043684268-1s8z3t9mzjn.png';
+export const DEFAULT_AUTH_COOKIE_NAME = 'storyboard_session';
+export const DEFAULT_AUTH_SESSION_TTL_DAYS = 14;
+export const DEFAULT_AUTH_BOOTSTRAP_DISPLAY_NAME = '创作者';
+export const DEFAULT_AUTH_BOOTSTRAP_ROLE_LABEL = '分镜工作室';
 
 export const DEFAULT_DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
 export const DEFAULT_ARK_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';

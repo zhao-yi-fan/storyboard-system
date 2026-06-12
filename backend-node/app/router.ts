@@ -4,6 +4,9 @@ module.exports = (app: any) => {
   const { router, controller } = app;
 
   router.get('/api/health', controller.health.index);
+  router.post('/api/auth/login', controller.auth.login);
+  router.post('/api/auth/logout', controller.auth.logout);
+  router.get('/api/auth/me', controller.auth.me);
 
   router.get('/api/projects', controller.project.index);
   router.post('/api/projects', controller.project.create);

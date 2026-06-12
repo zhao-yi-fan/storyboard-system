@@ -51,6 +51,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "../components/ui/tooltip";
+import { UserMenu } from "../components/UserMenu";
 import { projectApi, type Project } from "../api";
 
 type ViewMode = "grid" | "list";
@@ -282,6 +283,7 @@ export default function ProjectDashboard() {
                 </TooltipContent>
               </Tooltip>
 
+              <UserMenu />
               <Button size="sm" className="h-9 bg-purple-600 hover:bg-purple-700" onClick={() => navigate("/import")}>
                 <Plus className="w-4 h-4 mr-2" />
                 新建项目

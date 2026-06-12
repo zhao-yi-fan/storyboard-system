@@ -4,6 +4,17 @@ export type ApiResponse<T = unknown> = {
   message: string;
 };
 
+export type AuthUser = {
+  id: number;
+  account: string;
+  display_name: string;
+  role_label: string;
+  is_active?: boolean;
+  last_login_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 export type Project = {
   id: number;
   name: string;

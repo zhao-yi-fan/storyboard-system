@@ -4,6 +4,7 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { buildServerConfig } from './sections/server';
 import { buildMysqlConfig } from './sections/mysql';
+import { buildAuthConfig } from './sections/auth';
 import { buildStoryboardBaseConfig } from './sections/storyboard';
 import { buildDeepSeekConfig } from './providers/deepseek';
 import { buildDashScopeConfig } from './providers/dashscope';
@@ -33,10 +34,15 @@ for (const envPath of ENV_PATHS) {
 
 module.exports = (appInfo: { name: string }) => {
   const config: Record<string, unknown> = {};
+  const authConfig = buildAuthConfig();
 
   config.keys = `${appInfo.name}-migration-key`;
 
-  config.middleware = [ 'apiCors' ];
+  config.middleware = [ 'apiCors', 'authSession' ];
+  config.authSession = {
+    publicPaths: authConfig.publicPaths,
+    sessionCookieName: authConfig.sessionCookieName,
+  };
   config.cluster = { listen: buildServerConfig() };
 
   config.bodyParser = {
@@ -55,6 +61,7 @@ module.exports = (appInfo: { name: string }) => {
   };
 
   config.mysql = buildMysqlConfig();
+  config.auth = authConfig;
   config.storyboard = {
     ...buildStoryboardBaseConfig(),
     ...buildDeepSeekConfig(),

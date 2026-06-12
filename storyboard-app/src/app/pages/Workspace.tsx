@@ -65,6 +65,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
+import { UserMenu } from "../components/UserMenu";
 import {
   projectApi,
   chapterApi,
@@ -1445,7 +1446,7 @@ export default function Workspace() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/projects")}
               className="h-8 text-gray-400 hover:text-gray-200"
             >
               <ArrowLeft className="w-4 h-4 mr-1.5" />
@@ -1513,9 +1514,9 @@ export default function Workspace() {
                     selectedProject
                       ? `/assets?project=${selectedProject.id}`
                       : "/assets",
-                  )
-                }
-              >
+                    )
+                  }
+                >
                 <Package className="w-4 h-4 mr-1.5" />
                 资产库
               </Button>
@@ -1805,11 +1806,12 @@ export default function Workspace() {
                   >
                     <Play className="w-3.5 h-3.5 mr-1.5" />
                     播放场景视频
-                  </Button>
-                ) : null}
-                <Button
-                  size="sm"
-                  variant="ghost"
+                </Button>
+              ) : null}
+              <UserMenu />
+              <Button
+                size="sm"
+                variant="ghost"
                   className="h-7 text-xs text-gray-400"
                   onClick={handleInsertShot}
                   disabled={!selectedScene || isCreatingShot}

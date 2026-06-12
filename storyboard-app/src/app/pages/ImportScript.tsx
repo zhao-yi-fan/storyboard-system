@@ -20,6 +20,7 @@ import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { UserMenu } from "../components/UserMenu";
 import {
   Select,
   SelectContent,
@@ -250,7 +251,7 @@ export default function ImportScript() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/projects")}
               className="h-8 text-gray-400 hover:text-gray-200"
             >
               <ArrowLeft className="w-4 h-4 mr-1.5" />
@@ -268,6 +269,9 @@ export default function ImportScript() {
             <span className="text-purple-400">1. 导入剧本</span>
             <ChevronRight className="w-4 h-4" />
             <span className="text-gray-600">2. 生成分镜</span>
+            <div className="ml-3">
+              <UserMenu />
+            </div>
           </div>
         </div>
       </header>
