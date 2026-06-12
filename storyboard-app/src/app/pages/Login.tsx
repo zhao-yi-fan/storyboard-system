@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { authApi } from "../api";
 import { saveAuthSession } from "../lib/auth";
 import loginBgVideo from "../../imports/login_bg_video.mp4";
+import loginBgFallback from "../../imports/login_bg_fallback.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function Login() {
   const [keepLogin, setKeepLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [videoEnabled, setVideoEnabled] = useState(true);
   const [cardMouse, setCardMouse] = useState({ x: 0, y: 0 });
   const [cardHovered, setCardHovered] = useState(false);
   const [outerGlow, setOuterGlow] = useState({ x: 0, y: 0, alpha: 0 });
@@ -128,15 +130,30 @@ export default function Login() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#060508] text-gray-100">
-      <video
-        src={loginBgVideo}
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ filter: "brightness(0.55) saturate(0.75)" }}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${loginBgFallback})`,
+          filter: "brightness(0.45) saturate(0.7)",
+          transform: "scale(1.01)",
+        }}
       />
+      {videoEnabled ? (
+        <video
+          src={loginBgVideo}
+          poster={loginBgFallback}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ filter: "brightness(0.55) saturate(0.75)" }}
+          onError={() => {
+            setVideoEnabled(false);
+          }}
+        />
+      ) : null}
 
       <div className="absolute inset-0" style={{ background: "rgba(4,3,8,0.42)" }} />
       <div
