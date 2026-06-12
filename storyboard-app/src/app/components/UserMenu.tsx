@@ -1,19 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { LogOut, Settings2, Sparkles } from "lucide-react";
+import { LogOut, ChevronDown, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { authApi } from "../api";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import { clearAuthSession, getAuthSession } from "../lib/auth";
 
 function getInitials(displayName: string) {
@@ -22,22 +11,39 @@ function getInitials(displayName: string) {
 
 export function UserMenu() {
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const session = getAuthSession();
 
   const userInfo = useMemo(
     () => ({
-      displayName: session?.display_name || "创作者",
-      roleLabel: session?.role_label || "分镜工作室",
+      name: session?.display_name || "创作者",
+      role: session?.role_label || "分镜工作室",
       initials: getInitials(session?.display_name || "创作者"),
     }),
     [session],
   );
 
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+    };
+  }, []);
+
   const handleAccountSettings = () => {
+    setOpen(false);
     toast.info("账号设置将在接入真实鉴权后开放");
   };
 
   const handleLogout = async () => {
+    setOpen(false);
     try {
       await authApi.logout({ suppressToast: true });
     } catch {
@@ -50,62 +56,95 @@ export function UserMenu() {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="h-10 rounded-full border border-gray-800 bg-[#1a1a1a] px-2.5 text-left hover:border-purple-500/60 hover:bg-[#202020]"
-        >
-          <div className="flex items-center gap-2.5">
-            <Avatar className="h-7 w-7 border border-purple-500/30 bg-gradient-to-br from-purple-500/90 to-fuchsia-600/90">
-              <AvatarFallback className="bg-transparent text-xs font-medium text-white">
-                {userInfo.initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <div className="truncate text-sm text-gray-100">{userInfo.displayName}</div>
-              <div className="truncate text-[11px] text-gray-500">{userInfo.roleLabel}</div>
-            </div>
-          </div>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="w-64 border-gray-800 bg-[#111111] p-2 text-gray-200 shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((value) => !value)}
+        className={[
+          "flex h-8 select-none items-center gap-2 rounded-md border pl-1.5 pr-2 text-left outline-none transition-colors duration-150",
+          open
+            ? "border-gray-700 bg-[#1a1a1a] text-gray-200"
+            : "border-transparent bg-transparent text-gray-400 hover:border-gray-800 hover:bg-[#1a1a1a] hover:text-gray-200",
+        ].join(" ")}
       >
-        <DropdownMenuLabel className="rounded-md bg-[#171717] px-3 py-3">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border border-purple-500/30 bg-gradient-to-br from-purple-500/90 to-fuchsia-600/90">
-              <AvatarFallback className="bg-transparent text-sm font-medium text-white">
-                {userInfo.initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-white">{userInfo.displayName}</div>
-              <div className="truncate text-xs font-normal text-gray-500">{userInfo.roleLabel}</div>
+        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded bg-gradient-to-br from-purple-500 to-pink-600">
+          <span className="text-white" style={{ fontSize: "10px", fontWeight: 600, lineHeight: 1 }}>
+            {userInfo.initials}
+          </span>
+        </div>
+        <span className="hidden max-w-[80px] truncate text-xs sm:block">{userInfo.name}</span>
+        <ChevronDown
+          size={11}
+          className={`opacity-40 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open ? (
+        <div
+          className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-lg border border-gray-800 bg-[#141414]"
+          style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)" }}
+        >
+          <div className="border-b border-gray-800/80 px-3 py-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-purple-500 to-pink-600">
+                <span className="text-white font-semibold" style={{ fontSize: "12px" }}>
+                  {userInfo.initials}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium leading-tight text-gray-200">
+                  {userInfo.name}
+                </div>
+                <div className="mt-0.5 truncate text-xs leading-tight text-gray-600">
+                  {userInfo.role}
+                </div>
+              </div>
             </div>
           </div>
-          <Badge className="mt-3 border border-purple-500/20 bg-purple-500/12 text-purple-200">
-            <Sparkles className="mr-1 h-3 w-3" />
-            创作中
-          </Badge>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-gray-800" />
-        <DropdownMenuItem
-          className="rounded-md px-3 py-2 text-sm text-gray-200 focus:bg-[#1c1c1c] focus:text-white"
-          onClick={handleAccountSettings}
-        >
-          <Settings2 className="h-4 w-4" />
-          账号设置
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="rounded-md px-3 py-2 text-sm text-red-300 focus:bg-red-500/12 focus:text-red-200"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4" />
-          退出登录
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+
+          <div className="p-1">
+            <MenuItem icon={<Settings size={13} />} label="账号设置" onClick={handleAccountSettings} />
+          </div>
+
+          <div className="mx-1 border-t border-gray-800/80" />
+
+          <div className="p-1">
+            <MenuItem
+              icon={<LogOut size={13} />}
+              label="退出登录"
+              onClick={handleLogout}
+              subtle
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MenuItem({
+  icon,
+  label,
+  onClick,
+  subtle,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  subtle?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        "w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-100",
+        "flex items-center gap-2.5",
+        subtle
+          ? "text-gray-500 hover:bg-[#1c1c1c] hover:text-gray-300"
+          : "text-gray-400 hover:bg-[#1c1c1c] hover:text-gray-200",
+      ].join(" ")}
+    >
+      <span className="flex-shrink-0 opacity-70">{icon}</span>
+      {label}
+    </button>
   );
 }
