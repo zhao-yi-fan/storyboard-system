@@ -25,6 +25,9 @@ export default defineConfig({
     },
   },
   build: {
+    assetsInlineLimit(filePath) {
+      return filePath.endsWith('login_bg_video.mp4') ? true : undefined
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {
