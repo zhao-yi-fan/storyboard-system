@@ -130,3 +130,10 @@ export function uploadStoryboardCover(id: number, thumbnailUrl: string) {
     thumbnail_url: thumbnailUrl,
   });
 }
+
+export function applyShotDirectionSuggestion(
+  id: number,
+  data?: { camera_motion?: boolean; shot_type?: boolean; notes?: boolean }
+) {
+  return apiClient.post<Storyboard>(`/storyboards/${id}/apply-shot-direction-suggestion`, data ?? {});
+}

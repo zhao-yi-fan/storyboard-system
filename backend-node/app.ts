@@ -3,6 +3,7 @@
 
 const mysql = require('mysql2/promise');
 const { ensureAuthSchema, ensureBootstrapAuthUser } = require('./app/lib/auth_schema');
+const { ensureShotDirectionAnalysisSchema } = require('./app/lib/shot_direction_schema');
 
 function isUnitTestEnvironment() {
   return (
@@ -24,6 +25,7 @@ class AppBootHook {
     try {
       await ensureAuthSchema(this.app.mysqlPool);
       await ensureBootstrapAuthUser(this.app.mysqlPool, this.app.config.auth || {});
+      await ensureShotDirectionAnalysisSchema(this.app.mysqlPool);
     } catch (error) {
       if (!isUnitTestEnvironment()) {
         throw error;

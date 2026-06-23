@@ -313,6 +313,23 @@ class StoryboardController extends Controller {
    * POST /api/storyboards/146/generate-video { "model": "seedance-2.0", "use_first_frame": true }
    * // => { code: 200, data: { storyboard_id: 146, video_url: "/generated/storyboard-videos/..." }, message: "" }
    */
+  async applyShotDirectionSuggestion() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try {
+      response.success(this.ctx, await this.ctx.service.shotDirection.applySuggestion(id, this.ctx.request.body || {}));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  /**
+   * 将最新镜头走向分析建议写入镜头现有字段。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的镜头。
+   * @example
+   * POST /api/storyboards/146/apply-shot-direction-suggestion
+   * // => { code: 200, data: { id: 146, camera_motion: "缓慢推进" }, message: "" }
+   */
   async addCharacter() {
     const storyboardId = this.parseId();
     const characterId = Number((this.ctx.request.body || {}).character_id);

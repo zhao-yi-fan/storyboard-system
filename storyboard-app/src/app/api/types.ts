@@ -151,6 +151,28 @@ export type StoryboardMediaMutationResult = {
   media_generations: StoryboardMediaGeneration[];
 };
 
+export type StoryboardDirectionAnalysisResult = {
+  narrative_role: string;
+  emotional_shift: string;
+  continuity_from_previous: string;
+  continuity_to_next: string;
+  camera_motion_suggestion: string;
+  shot_type_suggestion: string;
+  risk_flags: string[];
+};
+
+export type StoryboardDirectionAnalysis = {
+  id: number;
+  project_id: number;
+  scene_id: number;
+  storyboard_id: number;
+  status: "pending" | "analyzing" | "succeeded" | "failed" | string;
+  result_json: StoryboardDirectionAnalysisResult | null;
+  error_message: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 export type GenerateStoryboardCoverResult = {
   storyboard_id: number;
   thumbnail_url: string;

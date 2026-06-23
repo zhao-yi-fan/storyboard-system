@@ -37,6 +37,8 @@ module.exports = (app: any) => {
   router.get('/api/scenes/:id/cover-generation-preview', controller.scene.previewCoverGeneration);
   router.post('/api/scenes/:id/generate-cover', controller.scene.generateCover);
   router.post('/api/scenes/:id/generate-storyboard-covers', controller.scene.generateStoryboardCovers);
+  router.post('/api/scenes/:id/analyze-shot-directions', controller.scene.analyzeShotDirections);
+  router.get('/api/scenes/:id/shot-direction-analyses', controller.scene.shotDirectionAnalyses);
   router.post('/api/scenes/:id/compose-video', controller.scene.composeVideo);
   router.get('/api/scenes/:id/storyboards', controller.storyboard.indexByScene);
   router.post('/api/scenes/:id/storyboards', controller.storyboard.create);
@@ -52,6 +54,7 @@ module.exports = (app: any) => {
   router.post('/api/storyboards/:id/generate-cover', controller.storyboard.generateCover);
   router.post('/api/storyboards/:id/upload-cover', controller.storyboard.uploadCover);
   router.post('/api/storyboards/:id/generate-video', controller.storyboard.generateVideo);
+  router.post('/api/storyboards/:id/apply-shot-direction-suggestion', controller.storyboard.applyShotDirectionSuggestion);
   router.post('/api/storyboards/:id/characters', controller.storyboard.addCharacter);
   router.delete('/api/storyboards/:id/characters/:characterId', controller.storyboard.removeCharacter);
   router.post('/api/storyboards/:id/assets', controller.storyboard.addAsset);

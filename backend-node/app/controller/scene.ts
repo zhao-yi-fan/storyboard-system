@@ -174,6 +174,32 @@ class SceneController extends Controller {
    * POST /api/scenes/21/generate-storyboard-covers
    * // => { code: 200, data: { generated_count: 8, failed: [] }, message: "" }
    */
+  async analyzeShotDirections() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try { response.success(this.ctx, await this.ctx.service.shotDirection.analyzeScene(id)); } catch (err) { response.error(this.ctx, err.message); }
+  }
+
+  /**
+   * 分析场景下所有镜头的叙事走向。
+   * @returns {Promise<void>} 通过统一响应格式返回镜头走向分析列表。
+   * @example
+   * POST /api/scenes/21/analyze-shot-directions
+   * // => { code: 200, data: [{ storyboard_id: 146, status: "succeeded" }], message: "" }
+   */
+  async shotDirectionAnalyses() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try { response.success(this.ctx, await this.ctx.service.shotDirection.listBySceneId(id)); } catch (err) { response.error(this.ctx, err.message); }
+  }
+
+  /**
+   * 获取场景下所有镜头走向分析结果。
+   * @returns {Promise<void>} 通过统一响应格式返回镜头走向分析列表。
+   * @example
+   * GET /api/scenes/21/shot-direction-analyses
+   * // => { code: 200, data: [{ storyboard_id: 146, status: "succeeded" }], message: "" }
+   */
   async composeVideo() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');

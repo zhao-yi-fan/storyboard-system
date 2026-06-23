@@ -81,6 +81,7 @@ import {
   type StoryboardCoverGenerationPreview,
   type StoryboardVideoGenerationPreview,
   type StoryboardMediaGeneration,
+  type StoryboardDirectionAnalysis,
   type AIGenerationPreview,
   type Character,
   type Asset,
@@ -418,6 +419,160 @@ function getCameraMotionLabel(value?: string | null) {
   return value || "";
 }
 
+function getDirectionStatusLabel(status?: string) {
+  if (status === "succeeded") return "已完成";
+  if (status === "failed") return "失败";
+  if (status === "analyzing") return "分析中";
+  if (status === "pending") return "等待中";
+  return status || "未分析";
+}
+
+function getDirectionStatusClass(status?: string) {
+  if (status === "succeeded") return "border-emerald-700 text-emerald-300";
+  if (status === "failed") return "border-red-700 text-red-300";
+  if (status === "analyzing" || status === "pending") return "border-amber-700 text-amber-300";
+  return "border-gray-700 text-gray-500";
+}
+
+type ShotDirectionAnalysisPanelProps = {
+  scene: Scene | null;
+  shots: Storyboard[];
+  analyses: StoryboardDirectionAnalysis[];
+  isAnalyzing: boolean;
+  activeApplyStoryboardId: number | null;
+  onAnalyze: () => void;
+  onApply: (analysis: StoryboardDirectionAnalysis) => void;
+  formatShotNumber: (num?: number) => string;
+};
+
+function ShotDirectionAnalysisPanel({
+  scene,
+  shots,
+  analyses,
+  isAnalyzing,
+  activeApplyStoryboardId,
+  onAnalyze,
+  onApply,
+  formatShotNumber,
+}: ShotDirectionAnalysisPanelProps) {
+  const analysisByStoryboardId = new Map(analyses.map((analysis) => [analysis.storyboard_id, analysis]));
+  const succeededCount = analyses.filter((analysis) => analysis.status === "succeeded").length;
+  const failedCount = analyses.filter((analysis) => analysis.status === "failed").length;
+
+  return (
+    <section className="mb-4 rounded-lg border border-gray-800 bg-[#111111] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-purple-300" />
+            <h4 className="text-sm text-gray-100">镜头走向分析</h4>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <span>{scene ? `${shots.length} 个镜头` : "请选择场景"}</span>
+            {analyses.length > 0 ? (
+              <>
+                <span>已完成 {succeededCount}</span>
+                {failedCount > 0 ? <span className="text-red-300">失败 {failedCount}</span> : null}
+              </>
+            ) : null}
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 border-gray-700 text-gray-300"
+          onClick={onAnalyze}
+          disabled={!scene || shots.length === 0 || isAnalyzing}
+        >
+          {isAnalyzing ? (
+            <>
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              分析中
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              分析镜头走向
+            </>
+          )}
+        </Button>
+      </div>
+
+      {shots.length === 0 ? (
+        <p className="mt-3 text-xs text-gray-500">当前场景还没有镜头，暂时无法分析走向。</p>
+      ) : analyses.length === 0 ? (
+        <p className="mt-3 text-xs text-gray-500">尚未分析。分析会结合当前场景内所有镜头的前后承接关系。</p>
+      ) : (
+        <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+          {shots.map((shot) => {
+            const analysis = analysisByStoryboardId.get(shot.id);
+            const result = analysis?.result_json;
+            return (
+              <div key={shot.id} className="rounded-md border border-gray-800 bg-[#151515] p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs tracking-[0.18em] text-gray-300">{formatShotNumber(shot.shot_number)}</span>
+                      <Badge variant="outline" className={`text-[10px] ${getDirectionStatusClass(analysis?.status)}`}>
+                        {getDirectionStatusLabel(analysis?.status)}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 line-clamp-1 text-xs text-gray-500">{shot.content || "未填写画面描述"}</p>
+                  </div>
+                  {analysis?.status === "succeeded" && result ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 border-gray-700 px-2 text-xs text-gray-300"
+                      disabled={activeApplyStoryboardId === shot.id}
+                      onClick={() => onApply(analysis)}
+                    >
+                      {activeApplyStoryboardId === shot.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <>
+                          <Save className="mr-1 h-3 w-3" />
+                          采纳建议
+                        </>
+                      )}
+                    </Button>
+                  ) : null}
+                </div>
+
+                {result ? (
+                  <div className="mt-3 grid gap-2 text-xs text-gray-400 sm:grid-cols-2">
+                    <div><span className="text-gray-500">功能：</span>{result.narrative_role || "-"}</div>
+                    <div><span className="text-gray-500">情绪：</span>{result.emotional_shift || "-"}</div>
+                    <div><span className="text-gray-500">承接：</span>{result.continuity_from_previous || "-"}</div>
+                    <div><span className="text-gray-500">引出：</span>{result.continuity_to_next || "-"}</div>
+                    <div><span className="text-gray-500">运动：</span>{result.camera_motion_suggestion || "-"}</div>
+                    <div><span className="text-gray-500">景别：</span>{result.shot_type_suggestion || "-"}</div>
+                  </div>
+                ) : analysis?.status === "failed" ? (
+                  <p className="mt-2 text-xs leading-5 text-red-300">{analysis.error_message || "镜头走向分析失败"}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-500">等待分析结果。</p>
+                )}
+
+                {result?.risk_flags?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {result.risk_flags.map((flag) => (
+                      <Badge key={flag} variant="outline" className="border-amber-700 text-[10px] text-amber-300">
+                        {flag}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Workspace() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -474,6 +629,10 @@ export default function Workspace() {
   const [isManageAssetsOpen, setIsManageAssetsOpen] = useState(false);
   const [isLoadingProjectCharacters, setIsLoadingProjectCharacters] = useState(false);
   const [isLoadingProjectAssets, setIsLoadingProjectAssets] = useState(false);
+  const [shotDirectionAnalyses, setShotDirectionAnalyses] = useState<StoryboardDirectionAnalysis[]>([]);
+  const [isLoadingShotDirections, setIsLoadingShotDirections] = useState(false);
+  const [isAnalyzingShotDirections, setIsAnalyzingShotDirections] = useState(false);
+  const [activeApplyDirectionStoryboardId, setActiveApplyDirectionStoryboardId] = useState<number | null>(null);
   const [activeCharacterActionKey, setActiveCharacterActionKey] = useState<string | null>(null);
   const [activeAssetActionKey, setActiveAssetActionKey] = useState<string | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
@@ -581,6 +740,19 @@ export default function Workspace() {
     }
   };
 
+  const loadShotDirectionAnalyses = async (sceneId: number) => {
+    setIsLoadingShotDirections(true);
+    try {
+      const data = await sceneApi.getSceneShotDirectionAnalyses(sceneId);
+      setShotDirectionAnalyses(data);
+    } catch (error) {
+      console.error("Failed to load shot direction analyses:", error);
+      setShotDirectionAnalyses([]);
+    } finally {
+      setIsLoadingShotDirections(false);
+    }
+  };
+
   const applyStoryboardUpdate = (nextShot: Storyboard) => {
     setStoryboards((prev) => prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)));
     setSelectedShot((prev) => (prev?.id === nextShot.id ? nextShot : prev));
@@ -684,9 +856,11 @@ export default function Workspace() {
         setSelectedScene(firstScene);
         if (firstScene) {
           await loadStoryboards(firstScene.id);
+          await loadShotDirectionAnalyses(firstScene.id);
         } else {
           setStoryboards([]);
           setSelectedShot(null);
+          setShotDirectionAnalyses([]);
         }
       } else {
         setSelectedScene((prev) => {
@@ -701,6 +875,7 @@ export default function Workspace() {
         setSelectedScene(null);
         setStoryboards([]);
         setSelectedShot(null);
+        setShotDirectionAnalyses([]);
       }
     }
   };
@@ -721,6 +896,7 @@ export default function Workspace() {
           setSelectedScene(null);
           setStoryboards([]);
           setSelectedShot(null);
+          setShotDirectionAnalyses([]);
         }
       }
     } catch (error) {
@@ -732,6 +908,7 @@ export default function Workspace() {
         setSelectedScene(null);
         setStoryboards([]);
         setSelectedShot(null);
+        setShotDirectionAnalyses([]);
       }
     }
   };
@@ -777,6 +954,7 @@ export default function Workspace() {
       setSelectedScene(null);
       setStoryboards([]);
       setSelectedShot(null);
+      setShotDirectionAnalyses([]);
       return;
     }
 
@@ -788,6 +966,7 @@ export default function Workspace() {
   const selectScene = async (scene: Scene) => {
     setSelectedScene(scene);
     await loadStoryboards(scene.id);
+    await loadShotDirectionAnalyses(scene.id);
   };
 
   const handleLeftMouseDown = (e: React.MouseEvent) => {
@@ -1121,6 +1300,38 @@ export default function Workspace() {
     await runBatchGenerateSceneCovers();
   };
 
+  const handleAnalyzeShotDirections = async () => {
+    if (!selectedScene || filteredShots.length === 0 || isAnalyzingShotDirections) {
+      return;
+    }
+
+    setIsAnalyzingShotDirections(true);
+    try {
+      const result = await sceneApi.analyzeSceneShotDirections(selectedScene.id);
+      setShotDirectionAnalyses(result);
+      toast.success("镜头走向分析完成");
+    } catch (error) {
+      console.error("Failed to analyze shot directions:", error);
+      await loadShotDirectionAnalyses(selectedScene.id);
+    } finally {
+      setIsAnalyzingShotDirections(false);
+    }
+  };
+
+  const handleApplyShotDirectionSuggestion = async (analysis: StoryboardDirectionAnalysis) => {
+    const storyboardId = analysis.storyboard_id;
+    setActiveApplyDirectionStoryboardId(storyboardId);
+    try {
+      const updated = await storyboardApi.applyShotDirectionSuggestion(storyboardId);
+      applyStoryboardUpdate(updated);
+      toast.success("已采纳镜头走向建议");
+    } catch (error) {
+      console.error("Failed to apply shot direction suggestion:", error);
+    } finally {
+      setActiveApplyDirectionStoryboardId(null);
+    }
+  };
+
   const handleComposeSceneVideo = () => {
     if (!selectedScene || isComposingSceneVideo) {
       return;
@@ -1267,6 +1478,7 @@ export default function Workspace() {
       await storyboardApi.deleteStoryboard(deleteTargetShot.id);
       setDeleteTargetShot(null);
       setStoryboards((prev) => prev.filter((shot) => shot.id !== deleteTargetShot.id));
+      setShotDirectionAnalyses((prev) => prev.filter((analysis) => analysis.storyboard_id !== deleteTargetShot.id));
 
       if (selectedShot?.id === deleteTargetShot.id) {
         setSelectedShot(fallbackShot);
@@ -1297,6 +1509,7 @@ export default function Workspace() {
         setSelectedScene(null);
         setStoryboards([]);
         setSelectedShot(null);
+        setShotDirectionAnalyses([]);
       }
     } catch (error) {
       console.error("Failed to delete scene:", error);
@@ -1364,6 +1577,7 @@ export default function Workspace() {
       await loadScenes(targetChapter.id);
       setSelectedScene(scene);
       await loadStoryboards(scene.id);
+      await loadShotDirectionAnalyses(scene.id);
       setIsCreateSceneOpen(false);
       resetNewSceneForm();
     } catch (error) {
@@ -1388,6 +1602,7 @@ export default function Workspace() {
       });
 
       await loadStoryboards(selectedScene.id);
+      await loadShotDirectionAnalyses(selectedScene.id);
       setSelectedShot(storyboard);
     } catch (error) {
       console.error("Failed to create storyboard:", error);
@@ -1846,6 +2061,19 @@ export default function Workspace() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
+            {selectedScene ? (
+              <ShotDirectionAnalysisPanel
+                scene={selectedScene}
+                shots={filteredShots}
+                analyses={shotDirectionAnalyses}
+                isAnalyzing={isAnalyzingShotDirections || isLoadingShotDirections}
+                activeApplyStoryboardId={activeApplyDirectionStoryboardId}
+                onAnalyze={handleAnalyzeShotDirections}
+                onApply={handleApplyShotDirectionSuggestion}
+                formatShotNumber={formatShotNumber}
+              />
+            ) : null}
+
             {storyboardViewMode === "grid" ? (
               <div className="grid grid-cols-2 gap-4 pb-4">
                 {filteredShots.map((shot) => (

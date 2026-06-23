@@ -5,6 +5,7 @@ import type {
   GenerateSceneCoverResult,
   GenerateSceneStoryboardCoversResult,
   Scene,
+  StoryboardDirectionAnalysis,
 } from "./types";
 
 export function getScenesByChapter(chapterId: number) {
@@ -47,4 +48,12 @@ export function generateSceneStoryboardCovers(id: number) {
 
 export function composeSceneVideo(id: number, data?: { regenerate?: boolean }) {
   return apiClient.post<ComposeSceneVideoResult>(`/scenes/${id}/compose-video`, data ?? {});
+}
+
+export function getSceneShotDirectionAnalyses(id: number) {
+  return apiClient.get<StoryboardDirectionAnalysis[]>(`/scenes/${id}/shot-direction-analyses`);
+}
+
+export function analyzeSceneShotDirections(id: number) {
+  return apiClient.post<StoryboardDirectionAnalysis[]>(`/scenes/${id}/analyze-shot-directions`);
 }
