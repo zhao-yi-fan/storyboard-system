@@ -55,12 +55,12 @@ Storyboard System 是一个面向个人创作流程的 AI 漫剧分镜制作系�
 ### AI / Model Providers
 - 阿里云百炼 / DashScope
   - 图像生成：Qwen Image、Wan 2.7 Image Pro
-  - 视频生成：Wan 2.7 I2V、Seedance 1.5 Pro
+  - 视频生成：Wan 2.7 I2V、Seedance 2.0
   - 语音参考生成：Qwen Voice Design / TTS 链路
 - DeepSeek
   - 脚本解析：DeepSeek V4 Flash
 - 火山方舟
-  - 视频生成：Seedance 通道（当前生产实际跑的是兼容的 1.5 Pro 通道）
+  - 视频生成：Seedance 2.0 通道（`doubao-seedance-2-0-260128`）
 
 ## Core Data Model
 ### Project
@@ -214,8 +214,7 @@ Storyboard System 是一个面向个人创作流程的 AI 漫剧分镜制作系�
 - 支持镜头级视频生成。
 - 当前支持的视频模型入口：
   - Wan 2.7 I2V
-  - Seedance 1.5 Pro
-  - Seedance（当前生产为兼容通道，不等于真实 2.0 模型 ID）
+  - Seedance 2.0
 - 生成前支持预览详细参数和最终 prompt。
 - 支持历史版本、设为当前、删除历史。
 

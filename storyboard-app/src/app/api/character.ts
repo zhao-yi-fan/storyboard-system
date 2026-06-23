@@ -43,6 +43,12 @@ export function generateCharacterVoiceReference(id: number, data?: { voice_promp
   return apiClient.post<Character>(`/characters/${id}/generate-voice-reference`, data ?? {});
 }
 
+export function uploadCharacterVoiceReference(id: number, voiceReferenceUrl: string) {
+  return apiClient.post<Character>(`/characters/${id}/upload-voice-reference`, {
+    voice_reference_url: voiceReferenceUrl,
+  });
+}
+
 export function deleteCharacter(id: number) {
   return apiClient.delete<{ success: boolean }>(`/characters/${id}`);
 }

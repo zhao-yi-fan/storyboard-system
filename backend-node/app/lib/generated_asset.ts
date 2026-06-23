@@ -129,7 +129,8 @@ function resolveGeneratedUrl(app, raw) {
     return value;
   }
   if (!isOssEnabled(app)) {
-    return value;
+    const publicBaseUrl = String(storyboardConfig(app).publicAppBaseUrl || '').trim();
+    return publicBaseUrl ? `${publicBaseUrl.replace(/\/$/, '')}${value}` : value;
   }
   const client = createOssClient(app, true);
   const signed = client.signatureUrl(generatedObjectKey(app, value), { method: 'GET', expires: 3600 });

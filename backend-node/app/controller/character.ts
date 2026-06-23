@@ -123,6 +123,13 @@ class CharacterController extends Controller {
     try { response.success(this.ctx, await this.ctx.service.character.generateVoiceReference(id, body.voice_prompt, body.preview_text)); } catch (err) { response.error(this.ctx, err.message); }
   }
 
+  async uploadVoiceReference() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    const body = this.ctx.request.body || {};
+    try { response.success(this.ctx, await this.ctx.service.character.uploadVoiceReference(id, body.voice_reference_url)); } catch (err) { response.error(this.ctx, err.message); }
+  }
+
   /**
    * 生成角色主语音参考。
    * @returns {Promise<void>} 通过统一响应格式返回更新后的角色对象。

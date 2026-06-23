@@ -147,6 +147,7 @@ export default function AssetLibrary() {
   const [isSavingCharacter, setIsSavingCharacter] = useState(false);
   const [isSavingAsset, setIsSavingAsset] = useState(false);
   const [uploadingCharacterReferenceId, setUploadingCharacterReferenceId] = useState<number | null>(null);
+  const [uploadingCharacterVoiceReferenceId, setUploadingCharacterVoiceReferenceId] = useState<number | null>(null);
   const [generatingCharacterDesignSheetId, setGeneratingCharacterDesignSheetId] = useState<number | null>(null);
   const [generatingCharacterVoiceReferenceId, setGeneratingCharacterVoiceReferenceId] = useState<number | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
@@ -154,6 +155,7 @@ export default function AssetLibrary() {
   const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
   const [isResizingDetailSidebar, setIsResizingDetailSidebar] = useState(false);
   const selectedCharacterReferenceInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedCharacterVoiceReferenceInputRef = useRef<HTMLInputElement | null>(null);
 
   const MIN_DETAIL_SIDEBAR_WIDTH = 320;
   const MAX_DETAIL_SIDEBAR_WIDTH = 560;
@@ -444,6 +446,26 @@ export default function AssetLibrary() {
       setUploadingCharacterReferenceId(null);
       if (selectedCharacterReferenceInputRef.current) {
         selectedCharacterReferenceInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleUploadSelectedCharacterVoiceReference = async (file: File | null) => {
+    if (!file || !selectedAsset || selectedAsset.type !== "character") return;
+    setUploadingCharacterVoiceReferenceId(selectedAsset.data.id);
+    try {
+      const voiceReferenceURL = await ossApi.uploadFileToOss(file);
+      const updated = await characterApi.uploadCharacterVoiceReference(selectedAsset.data.id, voiceReferenceURL);
+      setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setSelectedAsset({ type: "character", data: updated });
+      toast.success("主语音参考已更新");
+    } catch (error) {
+      console.error("Failed to upload character voice reference:", error);
+      toast.error(error instanceof Error ? error.message : "上传主语音参考失败");
+    } finally {
+      setUploadingCharacterVoiceReferenceId(null);
+      if (selectedCharacterVoiceReferenceInputRef.current) {
+        selectedCharacterVoiceReferenceInputRef.current.value = "";
       }
     }
   };
@@ -903,6 +925,32 @@ export default function AssetLibrary() {
                           <>
                             <Sparkles className="w-4 h-4 mr-2" />
                             生成主语音参考
+                          </>
+                        )}
+                      </Button>
+                      <input
+                        ref={selectedCharacterVoiceReferenceInputRef}
+                        type="file"
+                        accept="audio/wav,audio/mpeg,.wav,.mp3"
+                        className="hidden"
+                        onChange={(event) => void handleUploadSelectedCharacterVoiceReference(event.target.files?.[0] || null)}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
+                        disabled={uploadingCharacterVoiceReferenceId === selectedAsset.data.id}
+                        onClick={() => selectedCharacterVoiceReferenceInputRef.current?.click()}
+                      >
+                        {uploadingCharacterVoiceReferenceId === selectedAsset.data.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            上传中
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            上传/替换主语音参考
                           </>
                         )}
                       </Button>

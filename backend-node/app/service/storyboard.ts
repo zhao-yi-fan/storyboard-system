@@ -30,6 +30,11 @@ const {
 
 class StoryboardService extends Service {
   static SCENE_BACKGROUND_USAGE = 'scene_background';
+  static SEEDANCE_VIDEO_MODEL = 'seedance-2.0';
+  static SEEDANCE_MAX_REFERENCE_AUDIO_COUNT = 3;
+  static SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS = 2;
+  static SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS = 15;
+  static SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS = 15;
 
   get pool() {
     return this.app.mysqlPool;
@@ -255,7 +260,11 @@ class StoryboardService extends Service {
   }
 
   supportedVideoModels() {
-    return new Set([ 'wan2.7-i2v', 'seedance-1.5-pro' ]);
+    return new Set([ 'wan2.7-i2v', StoryboardService.SEEDANCE_VIDEO_MODEL ]);
+  }
+
+  isSeedanceVideoModel(model) {
+    return String(model || '').trim() === StoryboardService.SEEDANCE_VIDEO_MODEL;
   }
 
   resolveStoryboardStylePreset(scene, storyboard) {
@@ -346,6 +355,61 @@ class StoryboardService extends Service {
     return {
       references: [ ...sceneReferences, ...characterReferences ],
       missing: [ ...sceneMissing, ...characterMissing ],
+    };
+  }
+
+  selectVideoAudioReferences(storyboard, useFirstFrame) {
+    const references = [];
+    const missing = [];
+    const blockingReasons = [];
+    for (const character of Array.isArray(storyboard.characters) ? storyboard.characters : []) {
+      const url = resolveUrl(this.app, character.voice_reference_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      if (!url) {
+        missing.push(character.name);
+        continue;
+      }
+      references.push({
+        character_id: Number(character.id),
+        type: 'character',
+        name: character.name,
+        url,
+        source: 'character.voice_reference_url',
+        duration: Number(character.voice_reference_duration || 0) || 0,
+        voice_name: String(character.voice_name || '').trim(),
+      });
+    }
+    if (missing.length) {
+      blockingReasons.push(`以下角色缺少主语音参考：${missing.join('、')}`);
+    }
+    if (references.length > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT) {
+      blockingReasons.push(`Seedance 2.0 最多支持 ${StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT} 段参考音频，当前为 ${references.length} 段`);
+    }
+    const invalidDurationReferences = references.filter(item =>
+      item.duration < StoryboardService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS ||
+      item.duration > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS
+    );
+    if (invalidDurationReferences.length) {
+      blockingReasons.push(`以下角色主语音时长不在 2-15 秒范围内：${invalidDurationReferences.map(item => `${item.name}${item.duration ? `(${item.duration.toFixed(1)}s)` : '(未知时长)'}`).join('、')}`);
+    }
+    const totalDuration = references.reduce((sum, item) => sum + item.duration, 0);
+    if (totalDuration > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS) {
+      blockingReasons.push(`Seedance 2.0 参考音频总时长不能超过 15 秒，当前为 ${totalDuration.toFixed(1)} 秒`);
+    }
+    if (references.length && !useFirstFrame) {
+      blockingReasons.push('Seedance 2.0 传入角色参考音频时必须同时使用首帧图');
+    }
+    return {
+      references,
+      missing,
+      totalDuration,
+      blockingReasons,
+      limits: {
+        max_count: StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT,
+        min_duration: StoryboardService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS,
+        max_duration: StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
+        max_total_duration: StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS,
+        formats: [ 'wav', 'mp3' ],
+      },
     };
   }
 
@@ -569,14 +633,18 @@ class StoryboardService extends Service {
     }
     const selectedDuration = Number(duration || 5) || 5;
     const useFirstFrame = this.parseUseFirstFrame(useFirstFrameRaw);
-    if (model === 'seedance-1.5-pro' && selectedDuration !== 5) {
-      throw new Error('当前 Seedance 视频当前按兼容配置生成，仅支持 5 秒输出');
+    const isSeedance = this.isSeedanceVideoModel(model);
+    if (isSeedance && selectedDuration !== 5) {
+      throw new Error('当前 Seedance 2.0 视频生成仅支持 5 秒输出');
     }
-    if (model !== 'seedance-1.5-pro' && selectedDuration !== 5) {
+    if (!isSeedance && selectedDuration !== 5) {
       throw new Error('当前视频模型仅支持 5 秒输出');
     }
     const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
     const { references: referenceImages, missing: missingReferences } = await this.selectVideoReferenceImages(storyboard, scene);
+    const audioReferenceSummary = isSeedance
+      ? this.selectVideoAudioReferences(storyboard, useFirstFrame)
+      : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
     const videoPrompt = buildStoryboardVideoPrompt({
       ...storyboard,
       style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
@@ -585,7 +653,7 @@ class StoryboardService extends Service {
     return {
       model,
       duration: selectedDuration,
-      resolution: model === 'seedance-1.5-pro' ? '480p' : '720P',
+      resolution: isSeedance ? '480p' : '720P',
       audio: true,
       use_first_frame: useFirstFrame,
       source_image_url: sourceImageUrl,
@@ -593,6 +661,19 @@ class StoryboardService extends Service {
       will_generate_cover: useFirstFrame && !sourceImageUrl,
       reference_images: referenceImages.map(item => ({ type: item.type, name: item.name, url: item.url, source: item.source })),
       missing_references: missingReferences,
+      audio_reference_assets: audioReferenceSummary.references.map(item => ({
+        character_id: item.character_id,
+        type: item.type,
+        name: item.name,
+        url: item.url,
+        source: item.source,
+        duration: item.duration,
+        voice_name: item.voice_name,
+      })),
+      missing_audio_references: audioReferenceSummary.missing,
+      audio_reference_total_duration: audioReferenceSummary.totalDuration,
+      audio_reference_limits: audioReferenceSummary.limits,
+      blocking_reasons: audioReferenceSummary.blockingReasons,
       fields: {
         scene_title: String(scene.title || '').trim(),
         background: String(storyboard.background || '').trim(),
@@ -632,6 +713,9 @@ class StoryboardService extends Service {
 
   async generateVideo(id, selectedModel, duration, useFirstFrameRaw) {
     const preview = await this.previewVideoGeneration(id, selectedModel, duration, useFirstFrameRaw);
+    if (Array.isArray(preview.blocking_reasons) && preview.blocking_reasons.length) {
+      throw new Error(preview.blocking_reasons.join('；'));
+    }
     const current = await this.findById(id);
     if (current.video_status === 'generating') {
       return {
@@ -647,7 +731,15 @@ class StoryboardService extends Service {
       model: preview.model,
       status: 'generating',
       source_url: preview.use_first_frame ? (current.thumbnail_url || null) : null,
-      meta_json: JSON.stringify({ resolution: preview.resolution, duration: preview.duration, audio: true, use_first_frame: preview.use_first_frame }),
+      meta_json: JSON.stringify({
+        resolution: preview.resolution,
+        duration: preview.duration,
+        audio: true,
+        use_first_frame: preview.use_first_frame,
+        audio_reference_count: preview.audio_reference_assets?.length || 0,
+        audio_reference_characters: (preview.audio_reference_assets || []).map(item => item.name),
+        audio_reference_total_duration: preview.audio_reference_total_duration || 0,
+      }),
     });
 
     await this.update(id, {
@@ -679,8 +771,8 @@ class StoryboardService extends Service {
       }
       const scene = await this.ctx.service.scene.findById(storyboard.scene_id);
       const prompt = this.buildVideoPrompt(storyboard, scene, preview.duration);
-      const result = preview.model === 'seedance-1.5-pro'
-        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame)
+      const result = this.isSeedanceVideoModel(preview.model)
+        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame, [], (preview.audio_reference_assets || []).map(item => item.url))
         : await generateWanxVideo(this.app, prompt, imageInput, preview.model, preview.duration, preview.use_first_frame);
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.mp4`;
       const stored = await downloadAndStore(this.app, result.videoUrl, 'videos', filename, 'video/mp4');
@@ -698,7 +790,15 @@ class StoryboardService extends Service {
         preview_url: stored.publicPath,
         source_url: preview.use_first_frame ? storyboard.thumbnail_url : '',
         error_message: null,
-        meta_json: JSON.stringify({ resolution: preview.resolution, duration: result.duration, audio: true, use_first_frame: preview.use_first_frame }),
+        meta_json: JSON.stringify({
+          resolution: preview.resolution,
+          duration: result.duration,
+          audio: true,
+          use_first_frame: preview.use_first_frame,
+          audio_reference_count: preview.audio_reference_assets?.length || 0,
+          audio_reference_characters: (preview.audio_reference_assets || []).map(item => item.name),
+          audio_reference_total_duration: preview.audio_reference_total_duration || 0,
+        }),
       });
       await this.ctx.service.mediaGeneration.markCurrent(id, 'video', generation.id);
     } catch (error) {

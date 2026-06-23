@@ -3,7 +3,7 @@
 
 const Service = require('egg').Service;
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
-const { downloadAndStore, probeDuration, sanitizeFileName, storeBuffer } = require('../lib/media');
+const { downloadAndStore, materializeSourceToLocalFile, probeDuration, sanitizeFileName, storeBuffer } = require('../lib/media');
 const {
   generateSeedreamImage,
   SEEDREAM_DESIGN_SHEET_SIZE,
@@ -365,6 +365,31 @@ class CharacterService extends Service {
        WHERE id = ?`,
       [ stored.publicPath, duration, result.voiceReferenceText, result.voiceName, result.voicePrompt, id ]
     );
+    return await this.findById(id);
+  }
+
+  async uploadVoiceReference(id, voiceReferenceUrl) {
+    const character = await this.findById(id);
+    if (!character) throw new Error('character not found');
+    const normalizedUrl = normalizeGeneratedAssetReference(this.app, String(voiceReferenceUrl || '').trim());
+    if (!normalizedUrl) {
+      throw new Error('voice_reference_url is required');
+    }
+    let materialized;
+    try {
+      materialized = await materializeSourceToLocalFile(this.app, normalizedUrl, '.audio');
+      const duration = await probeDuration(materialized.localPath);
+      await this.pool.execute(
+        `UPDATE characters
+         SET voice_reference_url = ?, voice_reference_duration = ?, voice_name = ?
+         WHERE id = ?`,
+        [ normalizedUrl, duration, 'manual-upload', id ]
+      );
+    } finally {
+      if (materialized) {
+        await materialized.cleanup();
+      }
+    }
     return await this.findById(id);
   }
 }

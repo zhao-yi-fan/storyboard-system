@@ -94,7 +94,7 @@ const COVER_MODEL_OPTIONS = [
 
 const VIDEO_MODEL_OPTIONS = [
   { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
-  { value: "seedance-1.5-pro", label: "Seedance 1.5 Pro" },
+  { value: "seedance-2.0", label: "Seedance 2.0" },
 ] as const;
 
 const SHOT_TYPE_OPTIONS = ["远景", "全景", "中景", "近景", "特写", "大特写"] as const;
@@ -261,7 +261,7 @@ const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
-const isSeedanceVideoModel = (model: string) => model === "seedance-1.5-pro";
+const isSeedanceVideoModel = (model: string) => model === "seedance-2.0";
 
 const getVideoGenerationDuration = (model: string) => (isSeedanceVideoModel(model) ? 5 : 5);
 
@@ -3331,7 +3331,7 @@ export default function Workspace() {
               <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-gray-300 font-medium">参考图输入</div>
-                  <div className="text-[11px] text-gray-500">当前仅用于生成前确认；Seedance 1.5 Pro 实际仅接收首帧图</div>
+                  <div className="text-[11px] text-gray-500">用于生成前确认；Seedance 2.0 会额外传入角色主语音参考</div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   {videoGenerationPreview.reference_images.map((reference, index) => (
@@ -3369,6 +3369,54 @@ export default function Workspace() {
                 )}
               </div>
             )}
+
+            {videoGenerationPreview?.audio_reference_limits ? (
+              <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-gray-300 font-medium">角色主语音参考</div>
+                  <div className="text-[11px] text-gray-500">
+                    最多 {videoGenerationPreview.audio_reference_limits.max_count} 段 / 总时长不超过 {videoGenerationPreview.audio_reference_limits.max_total_duration} 秒
+                  </div>
+                </div>
+                {videoGenerationPreview.audio_reference_assets?.length ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {videoGenerationPreview.audio_reference_assets.map((reference) => (
+                      <div key={`${reference.character_id}-${reference.url}`} className="rounded border border-gray-800 bg-[#111111] p-3 text-xs space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="truncate text-gray-200">{reference.name}</div>
+                            <div className="mt-1 text-gray-500">{reference.voice_name || "角色主语音"} · {reference.duration ? `${reference.duration.toFixed(1)}s` : "未知时长"}</div>
+                          </div>
+                          <Badge className="bg-emerald-600 text-white">reference_audio</Badge>
+                        </div>
+                        <audio controls className="w-full" src={reference.url} />
+                        <div className="break-all text-gray-500">{reference.url}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded border border-dashed border-gray-700 px-3 py-4 text-xs text-gray-500">
+                    当前镜头没有可传入的角色主语音参考。
+                  </div>
+                )}
+                {!!videoGenerationPreview.missing_audio_references?.length && (
+                  <div className="rounded border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">
+                    <div className="mb-1 text-amber-300">以下角色缺少主语音参考：</div>
+                    <div className="break-words">{videoGenerationPreview.missing_audio_references.join("、")}</div>
+                  </div>
+                )}
+                {!!videoGenerationPreview.blocking_reasons?.length && (
+                  <div className="rounded border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
+                    <div className="mb-1 text-red-300">当前不能生成 Seedance 2.0 视频：</div>
+                    <ul className="space-y-1 list-disc pl-5">
+                      {videoGenerationPreview.blocking_reasons.map((reason) => (
+                        <li key={reason}>{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">共用字段</div>
@@ -3464,7 +3512,14 @@ export default function Workspace() {
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setIsVideoConfirmOpen(false)}>取消</Button>
-            <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateVideo()}>确认生成</Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => void confirmGenerateVideo()}
+              disabled={!!videoGenerationPreview?.blocking_reasons?.length}
+            >
+              确认生成
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

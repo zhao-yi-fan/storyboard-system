@@ -247,8 +247,8 @@ export default function ProjectDashboard() {
                             <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">画面连贯稳定，质感极佳，适合高精度的最终成片。</div>
                           </li>
                           <li>
-                            <div className="font-medium">• Seedance 1.5 Pro</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">人物动作幅度大，运镜丰富，视觉冲击与表现力强。</div>
+                            <div className="font-medium">• Seedance 2.0</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">支持角色主语音参考，适合保持跨镜头人物音色一致。</div>
                           </li>
                         </ul>
                       </div>

@@ -5,7 +5,7 @@
   "description": "Egg.js migration backend for storyboard-system",
   "scripts": {
     "build": "node ./scripts/build.mjs",
-    "dev": "npm run build && egg-bin dev dist",
+    "dev": "npm run build && egg-bin dev --baseDir dist",
     "start": "egg-scripts start dist --daemon --title=storyboard-backend-node",
     "stop": "egg-scripts stop --title=storyboard-backend-node",
     "test": "egg-bin test"

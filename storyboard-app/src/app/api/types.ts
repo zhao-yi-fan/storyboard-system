@@ -253,6 +253,25 @@ export type StoryboardVideoGenerationPreview = {
   will_generate_cover: boolean;
   reference_images?: StoryboardCoverGenerationReferenceImage[];
   missing_references?: string[];
+  audio_reference_assets?: Array<{
+    character_id: number;
+    type: string;
+    name: string;
+    url: string;
+    source: string;
+    duration: number;
+    voice_name?: string;
+  }>;
+  missing_audio_references?: string[];
+  audio_reference_total_duration?: number;
+  audio_reference_limits?: {
+    max_count: number;
+    min_duration: number;
+    max_duration: number;
+    max_total_duration: number;
+    formats: string[];
+  } | null;
+  blocking_reasons?: string[];
   fields: StoryboardVideoGenerationFields;
   video_fields: StoryboardVideoGenerationVideoFields;
   template?: string;

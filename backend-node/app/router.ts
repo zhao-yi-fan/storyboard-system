@@ -64,6 +64,7 @@ module.exports = (app: any) => {
   router.get('/api/characters/:id/voice-reference-generation-preview', controller.character.previewVoiceReferenceGeneration);
   router.post('/api/characters/:id/generate-design-sheet', controller.character.generateDesignSheet);
   router.post('/api/characters/:id/generate-voice-reference', controller.character.generateVoiceReference);
+  router.post('/api/characters/:id/upload-voice-reference', controller.character.uploadVoiceReference);
   router.get('/api/characters/:id/assets', controller.asset.indexByCharacter);
 
   router.put('/api/assets/:id', controller.asset.update);

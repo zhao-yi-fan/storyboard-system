@@ -259,8 +259,8 @@ class StoryboardController extends Controller {
    * 预览镜头视频生成参数。
    * @returns {Promise<void>} 通过统一响应格式返回视频字段和 prompt。
    * @example
-   * GET /api/storyboards/146/video-generation-preview?model=seedance-1.5-pro
-   * // => { code: 200, data: { model: "seedance-1.5-pro", final_prompt: "..." }, message: "" }
+   * GET /api/storyboards/146/video-generation-preview?model=seedance-2.0
+   * // => { code: 200, data: { model: "seedance-2.0", final_prompt: "..." }, message: "" }
    */
   async generateCover() {
     const id = this.parseId();
@@ -310,7 +310,7 @@ class StoryboardController extends Controller {
    * 生成镜头视频。
    * @returns {Promise<void>} 通过统一响应格式返回视频任务结果。
    * @example
-   * POST /api/storyboards/146/generate-video { "model": "seedance-1.5-pro", "use_first_frame": true }
+   * POST /api/storyboards/146/generate-video { "model": "seedance-2.0", "use_first_frame": true }
    * // => { code: 200, data: { storyboard_id: 146, video_url: "/generated/storyboard-videos/..." }, message: "" }
    */
   async addCharacter() {

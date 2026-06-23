@@ -36,7 +36,7 @@ const DEFAULT_SEEDREAM_MODEL = 'doubao-seedream-4-5-251128';
 const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
 const DEFAULT_WANX_VIDEO_MODEL = 'wan2.7-i2v';
 const DEFAULT_WANX_TEXT_VIDEO_MODEL = 'wan2.7-t2v-2026-04-25';
-const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-1-5-pro-251215';
+const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-2-0-260128';
 const DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL = 'qwen-voice-design';
 const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
 
@@ -345,12 +345,13 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
  * @param {number} duration 时长秒数，例如 `5`。
  * @param {boolean} useFirstFrame 是否使用首帧图。
  * @param {string[]} referenceImageUrls 额外参考图 URL 数组。
+ * @param {string[]} referenceAudioUrls 角色参考音频 URL 数组。
  * @returns {Promise<string>} 最终视频 URL。
  * @example
- * await generateSeedanceVideo(app, "金色粒子汇聚，神女结印", "https://cover.png", 5, true, [])
+ * await generateSeedanceVideo(app, "金色粒子汇聚，神女结印", "https://cover.png", 5, true, [], ["https://voice.wav"])
  * // => "https://..."
  */
-async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFrame = true, referenceImageUrls = []) {
+async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFrame = true, referenceImageUrls = [], referenceAudioUrls = []) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, ARK_BASE_URL);
@@ -362,6 +363,9 @@ async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFr
   for (const url of referenceImageUrls.filter(Boolean)) {
     content.push({ type: 'image_url', role: 'reference_image', image_url: { url } });
   }
+  for (const url of referenceAudioUrls.filter(Boolean)) {
+    content.push({ type: 'audio_url', role: 'reference_audio', audio_url: { url } });
+  }
   const payload = {
     model: String(cfg.seedanceModel || DEFAULT_SEEDANCE_MODEL).trim(),
     content,
@@ -369,6 +373,9 @@ async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFr
     resolution: VIDEO_RESOLUTION_480P,
     generate_audio: true,
   };
+  if (payload.model.includes('1-5') || payload.model.includes('1.5')) {
+    throw new Error('Seedance 2.0 生成未配置正确模型 ID，请将 SEEDANCE_MODEL 设置为 doubao-seedance-2-0-260128');
+  }
   const createData = await postJson(`${baseUrl}/contents/generations/tasks`, cfg.seedanceApiKey, payload, timeoutMs);
   const taskId = createData?.id;
   if (!taskId) {
