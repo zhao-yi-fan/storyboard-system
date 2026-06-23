@@ -85,7 +85,7 @@ const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
 
 const CHARACTER_DESIGN_SHEET_MODEL_LABEL = "Seedream 4.5 图生图";
-const FIXED_CHARACTER_VOICE_REFERENCE_TEXT = "这一次，我要亲手改写命运。";
+const FIXED_CHARACTER_VOICE_REFERENCE_TEXT = "这一次，我不会再退让，也不会再逃避，我要亲手改写命运。";
 const CHARACTER_VOICE_REFERENCE_DURATION_HINT = "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。";
 const CHARACTER_VOICE_REFERENCE_TEXT_HINT = "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。";
 

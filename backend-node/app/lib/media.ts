@@ -209,7 +209,7 @@ async function normalizeAudioDuration(buffer: Buffer, options: any = {}) {
     }
     if (minSeconds > 0 && originalDuration < minSeconds) {
       throw new Error(
-        `${label}只有 ${formatDurationSeconds(originalDuration)}，低于目标下限 ${formatDurationSeconds(minSeconds)}。请把参考文本改成一句 3-5 秒短句后重试。`
+        `${label}只有 ${formatDurationSeconds(originalDuration)}，低于目标下限 ${formatDurationSeconds(minSeconds)}。系统已保留原语音，请稍后重试。`
       );
     }
     if (maxSeconds > 0 && originalDuration > maxSeconds) {

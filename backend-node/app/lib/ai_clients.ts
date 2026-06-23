@@ -40,7 +40,7 @@ const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-2-0-260128';
 const DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL = 'qwen-voice-design';
 const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
 const VOICE_REFERENCE_DURATION_INSTRUCTION = '试听参考音频必须控制在3-5秒内，使用一句中文短句，语速自然，不要拉长停顿。';
-const FIXED_VOICE_REFERENCE_TEXT = '这一次，我要亲手改写命运。';
+const FIXED_VOICE_REFERENCE_TEXT = '这一次，我不会再退让，也不会再逃避，我要亲手改写命运。';
 
 function getConfig(app) {
   return app.config.storyboard || {};

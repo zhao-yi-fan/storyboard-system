@@ -8,7 +8,7 @@ const {
   generateCharacterVoiceReference,
 } = require('../app/lib/ai_clients');
 
-const FIXED_REFERENCE_TEXT = '这一次，我要亲手改写命运。';
+const FIXED_REFERENCE_TEXT = '这一次，我不会再退让，也不会再逃避，我要亲手改写命运。';
 
 function mockApp() {
   return {
