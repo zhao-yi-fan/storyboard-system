@@ -85,8 +85,9 @@ const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
 
 const CHARACTER_DESIGN_SHEET_MODEL_LABEL = "Seedream 4.5 图生图";
+const FIXED_CHARACTER_VOICE_REFERENCE_TEXT = "这一次，我要亲手改写命运。";
 const CHARACTER_VOICE_REFERENCE_DURATION_HINT = "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。";
-const CHARACTER_VOICE_REFERENCE_TEXT_HINT = "建议参考文本写成一句 3-5 秒短句，避免 Seedance 参考音频总时长超限。";
+const CHARACTER_VOICE_REFERENCE_TEXT_HINT = "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。";
 
 const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
@@ -382,7 +383,6 @@ export default function AssetLibrary() {
     try {
       const updated = await characterApi.generateCharacterVoiceReference(selectedAsset.data.id, {
         voice_prompt: selectedAsset.data.voice_prompt || "",
-        preview_text: selectedAsset.data.voice_reference_text || "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
@@ -485,7 +485,6 @@ export default function AssetLibrary() {
     try {
       const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(selectedAsset.data.id, {
         voice_prompt: selectedAsset.data.voice_prompt || "",
-        preview_text: selectedAsset.data.voice_reference_text || "",
       });
       openAIPreviewDialog({
         action: "character-voice-reference",
@@ -905,12 +904,9 @@ export default function AssetLibrary() {
                       </div>
                       <div>
                         <Label className="text-xs text-gray-400">参考文本</Label>
-                        <Textarea
-                          value={selectedAsset.data.voice_reference_text || ""}
-                          onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, voice_reference_text: e.target.value } })}
-                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
-                          placeholder="例如：我叫林婉，这一次无论多难，我都要亲手改写命运。"
-                        />
+                        <div className="mt-1.5 rounded border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-200">
+                          {FIXED_CHARACTER_VOICE_REFERENCE_TEXT}
+                        </div>
                         <div className="mt-1 text-[11px] text-gray-500">{CHARACTER_VOICE_REFERENCE_TEXT_HINT}</div>
                       </div>
                       {(selectedAsset.data.voice_name || selectedAsset.data.voice_reference_duration) ? (
