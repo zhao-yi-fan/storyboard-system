@@ -85,6 +85,8 @@ const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
 
 const CHARACTER_DESIGN_SHEET_MODEL_LABEL = "Seedream 4.5 图生图";
+const CHARACTER_VOICE_REFERENCE_DURATION_HINT = "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。";
+const CHARACTER_VOICE_REFERENCE_TEXT_HINT = "建议参考文本写成一句 3-5 秒短句，避免 Seedance 参考音频总时长超限。";
 
 const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
@@ -151,6 +153,7 @@ export default function AssetLibrary() {
   const [uploadingCharacterVoiceReferenceId, setUploadingCharacterVoiceReferenceId] = useState<number | null>(null);
   const [generatingCharacterDesignSheetId, setGeneratingCharacterDesignSheetId] = useState<number | null>(null);
   const [generatingCharacterVoiceReferenceId, setGeneratingCharacterVoiceReferenceId] = useState<number | null>(null);
+  const [characterVoiceReferenceError, setCharacterVoiceReferenceError] = useState<{ id: number; message: string } | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
   const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
@@ -375,6 +378,7 @@ export default function AssetLibrary() {
   const runGenerateSelectedCharacterVoiceReference = async () => {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setGeneratingCharacterVoiceReferenceId(selectedAsset.data.id);
+    setCharacterVoiceReferenceError(null);
     try {
       const updated = await characterApi.generateCharacterVoiceReference(selectedAsset.data.id, {
         voice_prompt: selectedAsset.data.voice_prompt || "",
@@ -382,10 +386,13 @@ export default function AssetLibrary() {
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
+      setCharacterVoiceReferenceError(null);
       toast.success("主语音参考已生成");
     } catch (error) {
       console.error("Failed to generate character voice reference:", error);
-      toast.error(error instanceof Error ? error.message : "生成主语音参考失败");
+      const message = error instanceof Error ? error.message : "生成主语音参考失败";
+      setCharacterVoiceReferenceError({ id: selectedAsset.data.id, message });
+      toast.error(message);
     } finally {
       setGeneratingCharacterVoiceReferenceId(null);
     }
@@ -459,6 +466,7 @@ export default function AssetLibrary() {
       const updated = await characterApi.uploadCharacterVoiceReference(selectedAsset.data.id, voiceReferenceURL);
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
+      setCharacterVoiceReferenceError(null);
       toast.success("主语音参考已更新");
     } catch (error) {
       console.error("Failed to upload character voice reference:", error);
@@ -482,7 +490,7 @@ export default function AssetLibrary() {
       openAIPreviewDialog({
         action: "character-voice-reference",
         title: "确认生成主语音参考",
-        description: "会用大模型生成当前角色的主语音参考，并绑定到角色资产上，后续对白和视频音频优先参考这段声音。",
+        description: `会用大模型生成当前角色的主语音参考，并绑定到角色资产上。${CHARACTER_VOICE_REFERENCE_DURATION_HINT}`,
         confirmLabel: "确认生成",
         preview,
       });
@@ -867,10 +875,15 @@ export default function AssetLibrary() {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <div className="text-sm text-gray-100">主语音参考</div>
-                          <div className="text-xs text-gray-500">由大模型生成并绑定到角色，后续对白和视频音频优先参考这段声音</div>
+                          <div className="text-xs text-gray-500">{CHARACTER_VOICE_REFERENCE_DURATION_HINT}</div>
                         </div>
                         <Badge className="bg-emerald-600 text-white text-xs">角色语音</Badge>
                       </div>
+                      {characterVoiceReferenceError?.id === selectedAsset.data.id ? (
+                        <div className="rounded border border-red-900/60 bg-red-950/30 px-3 py-2 text-xs text-red-200">
+                          {characterVoiceReferenceError.message}
+                        </div>
+                      ) : null}
                       {getCharacterVoiceReferenceSrc(selectedAsset.data) ? (
                         <audio key={selectedAsset.data.voice_reference_url} controls className="w-full">
                           <source src={getCharacterVoiceReferenceSrc(selectedAsset.data)} />
@@ -888,6 +901,7 @@ export default function AssetLibrary() {
                           className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
                           placeholder="例如：年轻男性，低沉克制，略带疲惫感，真实自然，不要播音腔。"
                         />
+                        <div className="mt-1 text-[11px] text-gray-500">系统会在生成时追加 3-5 秒短句约束。</div>
                       </div>
                       <div>
                         <Label className="text-xs text-gray-400">参考文本</Label>
@@ -895,8 +909,9 @@ export default function AssetLibrary() {
                           value={selectedAsset.data.voice_reference_text || ""}
                           onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, voice_reference_text: e.target.value } })}
                           className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
-                          placeholder="不填则自动使用系统默认参考文本。"
+                          placeholder="例如：我叫林婉，这一次无论多难，我都要亲手改写命运。"
                         />
+                        <div className="mt-1 text-[11px] text-gray-500">{CHARACTER_VOICE_REFERENCE_TEXT_HINT}</div>
                       </div>
                       {(selectedAsset.data.voice_name || selectedAsset.data.voice_reference_duration) ? (
                         <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">

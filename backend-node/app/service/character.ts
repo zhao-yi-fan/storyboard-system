@@ -3,7 +3,14 @@
 
 const Service = require('egg').Service;
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
-const { downloadAndStore, materializeSourceToLocalFile, probeDuration, sanitizeFileName, storeBuffer } = require('../lib/media');
+const {
+  downloadAndStore,
+  materializeSourceToLocalFile,
+  normalizeAudioDuration,
+  probeDuration,
+  sanitizeFileName,
+  storeBuffer,
+} = require('../lib/media');
 const {
   generateSeedreamImage,
   SEEDREAM_DESIGN_SHEET_SIZE,
@@ -13,6 +20,11 @@ const {
 const { buildCharacterDesignPrompt } = require('../lib/prompt_library');
 
 const CHARACTER_DESIGN_MODEL = 'seedream-4.5';
+const VOICE_REFERENCE_MIN_SECONDS = 3;
+const VOICE_REFERENCE_MAX_SECONDS = 5;
+const VOICE_REFERENCE_SAMPLE_RATE = 24000;
+const VOICE_REFERENCE_CHANNELS = 1;
+const VOICE_REFERENCE_CONTENT_TYPE = 'audio/wav';
 
 class CharacterService extends Service {
   get pool() {
@@ -304,10 +316,15 @@ class CharacterService extends Service {
         角色描述: character.description,
         目标语音模型: preview.targetModel,
         音色名称: preview.preferredVoiceName,
+        目标时长: `${VOICE_REFERENCE_MIN_SECONDS}-${VOICE_REFERENCE_MAX_SECONDS}秒`,
+        超时处理: `超过${VOICE_REFERENCE_MAX_SECONDS}秒会自动裁剪到${VOICE_REFERENCE_MAX_SECONDS}秒`,
         参考文本: preview.previewText,
       },
       final_prompt: preview.voicePrompt,
-      notes: [ '这段主语音参考会绑定到当前角色，后续对白和视频音频优先参考该声音。' ],
+      notes: [
+        '这段主语音参考会绑定到当前角色，后续对白和视频音频优先参考该声音。',
+        `目标时长固定为 ${VOICE_REFERENCE_MIN_SECONDS}-${VOICE_REFERENCE_MAX_SECONDS} 秒；超过 ${VOICE_REFERENCE_MAX_SECONDS} 秒会自动裁剪，低于 ${VOICE_REFERENCE_MIN_SECONDS} 秒会生成失败且不覆盖现有语音。`,
+      ],
     };
   }
 
@@ -339,6 +356,26 @@ class CharacterService extends Service {
     return await this.findById(id);
   }
 
+  async generateVoiceReferenceAudio(character, voicePrompt, previewText) {
+    return await generateCharacterVoiceReference(this.app, character, voicePrompt, previewText);
+  }
+
+  async normalizeGeneratedVoiceReferenceAudio(audioBuffer, extension) {
+    return await normalizeAudioDuration(audioBuffer, {
+      minSeconds: VOICE_REFERENCE_MIN_SECONDS,
+      maxSeconds: VOICE_REFERENCE_MAX_SECONDS,
+      sampleRate: VOICE_REFERENCE_SAMPLE_RATE,
+      channels: VOICE_REFERENCE_CHANNELS,
+      extension,
+      label: '生成的主语音参考',
+    });
+  }
+
+  async storeGeneratedVoiceReferenceAudio(id, audioBuffer, extension) {
+    const filename = `${sanitizeFileName(`character-voice-reference-${id}`)}-${Date.now()}.${extension}`;
+    return await storeBuffer(this.app, audioBuffer, 'characters', filename, VOICE_REFERENCE_CONTENT_TYPE);
+  }
+
   /**
    * 生成并绑定角色主语音参考音频。
    * @param {number} id 角色 id，例如 `8`。
@@ -352,18 +389,15 @@ class CharacterService extends Service {
   async generateVoiceReference(id, voicePrompt, previewText) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const result = await generateCharacterVoiceReference(this.app, character, voicePrompt, previewText);
-    const filename = `${sanitizeFileName(`character-voice-reference-${id}`)}-${Date.now()}.${result.extension}`;
-    const stored = await storeBuffer(this.app, result.audioBuffer, 'characters', filename, 'audio/wav');
-    let duration = 0;
-    try {
-      duration = await probeDuration(stored.localPath);
-    } catch {}
+    const result = await this.generateVoiceReferenceAudio(character, voicePrompt, previewText);
+    const extension = String(result.extension || 'wav').replace(/^\./, '') || 'wav';
+    const normalized = await this.normalizeGeneratedVoiceReferenceAudio(result.audioBuffer, extension);
+    const stored = await this.storeGeneratedVoiceReferenceAudio(id, normalized.audioBuffer, extension);
     await this.pool.execute(
       `UPDATE characters
        SET voice_reference_url = ?, voice_reference_duration = ?, voice_reference_text = ?, voice_name = ?, voice_prompt = ?
        WHERE id = ?`,
-      [ stored.publicPath, duration, result.voiceReferenceText, result.voiceName, result.voicePrompt, id ]
+      [ stored.publicPath, normalized.duration, result.voiceReferenceText, result.voiceName, result.voicePrompt, id ]
     );
     return await this.findById(id);
   }

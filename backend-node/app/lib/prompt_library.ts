@@ -762,8 +762,8 @@ export function buildCharacterVoicePromptText(character: Record<string, unknown>
       character.description ? `人设描述为${character.description}` : '',
     ]),
     style: [ '自然真人感', '适合剧情对白', '声音气质贴合角色而不过度表演' ],
-    audio: [ '吐字清晰', '口语节奏自然', '不要主持腔', '不要广告腔' ],
-    output: [ '适合作为主语音参考' ],
+    audio: [ '吐字清晰', '口语节奏自然', '一句 3-5 秒短句', '不要主持腔', '不要广告腔' ],
+    output: [ '生成 3-5 秒短句参考音频', '适合作为主语音参考' ],
   });
   return {
     template,

@@ -185,6 +185,64 @@ async function probeDuration(localPath) {
   return Number.isFinite(value) ? value : 0;
 }
 
+function formatDurationSeconds(value: any) {
+  const duration = Number(value || 0);
+  return `${duration.toFixed(1)}秒`;
+}
+
+async function normalizeAudioDuration(buffer: Buffer, options: any = {}) {
+  const minSeconds = Number(options.minSeconds || 0);
+  const maxSeconds = Number(options.maxSeconds || 0);
+  const extension = String(options.extension || 'wav').replace(/^\./, '') || 'wav';
+  const sampleRate = Number(options.sampleRate || 24000);
+  const channels = Number(options.channels || 1);
+  const label = String(options.label || '音频');
+  const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-audio-'));
+  const inputPath = path.join(workDir, `input.${extension}`);
+  const outputPath = path.join(workDir, `output.${extension}`);
+
+  try {
+    await fsp.writeFile(inputPath, buffer);
+    const originalDuration = await probeDuration(inputPath);
+    if (!originalDuration) {
+      throw new Error(`${label}生成成功但无法读取音频时长，请重试`);
+    }
+    if (minSeconds > 0 && originalDuration < minSeconds) {
+      throw new Error(
+        `${label}只有 ${formatDurationSeconds(originalDuration)}，低于目标下限 ${formatDurationSeconds(minSeconds)}。请把参考文本改成一句 3-5 秒短句后重试。`
+      );
+    }
+    if (maxSeconds > 0 && originalDuration > maxSeconds) {
+      await ensureFfmpeg();
+      await run('ffmpeg', [
+        '-y',
+        '-i', inputPath,
+        '-t', String(maxSeconds),
+        '-vn',
+        '-ar', String(sampleRate),
+        '-ac', String(channels),
+        outputPath,
+      ]);
+      const duration = await probeDuration(outputPath);
+      return {
+        audioBuffer: await fsp.readFile(outputPath),
+        duration,
+        originalDuration,
+        wasTrimmed: true,
+      };
+    }
+
+    return {
+      audioBuffer: buffer,
+      duration: originalDuration,
+      originalDuration,
+      wasTrimmed: false,
+    };
+  } finally {
+    await fsp.rm(workDir, { recursive: true, force: true });
+  }
+}
+
 async function composeVideos(app, sources, subdir, filename) {
   await ensureFfmpeg();
   const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-compose-'));
@@ -262,6 +320,7 @@ module.exports = {
   storeBuffer,
   downloadAndStore,
   probeDuration,
+  normalizeAudioDuration,
   composeVideos,
   resolveMediaUrl,
 };
