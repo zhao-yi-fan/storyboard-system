@@ -69,6 +69,28 @@ const VIDEO_NEGATIVE = [
   '不要字幕',
 ];
 
+const STYLE_PRESET_PROMPT_MAP: Record<string, string> = {
+  realistic_cinematic: '写实电影质感，自然光影层次，人物与环境比例真实，整体叙事克制而稳定',
+  dark_realism: '阴郁现实主义气质，低饱和冷色调，真实生活颗粒感，压迫而克制的空间氛围',
+  mystery_thriller: '悬疑惊悚风格，暗部信息丰富，视觉上保留未知与压迫感，节奏紧绷',
+  youthful_bright: '青春清透风格，明亮干净的自然光，肤色通透，画面轻盈有呼吸感',
+  japanese_animation: '日式动画叙事感，轮廓清晰，色彩组织明确，情绪表达更直观',
+  retro_film: '复古胶片气质，暖色颗粒与轻微褪色感，画面带旧时代电影的时间痕迹',
+  warm_poetic: '温暖诗意风格，柔和光线与细腻色调过渡，强调情绪余韵和生活感',
+  cold_noir: '冷峻黑色电影气质，硬朗明暗反差，人物关系紧张，都市夜色感更强',
+};
+
+const IMAGE_COVER_STYLE_TEMPLATE_MAP: Record<string, string> = {
+  realistic_cinematic: DEFAULT_TEMPLATE,
+  dark_realism: SUSPENSE_TEMPLATE,
+  mystery_thriller: SUSPENSE_TEMPLATE,
+  youthful_bright: DEFAULT_TEMPLATE,
+  japanese_animation: DEFAULT_TEMPLATE,
+  retro_film: DEFAULT_TEMPLATE,
+  warm_poetic: DEFAULT_TEMPLATE,
+  cold_noir: SUSPENSE_TEMPLATE,
+};
+
 const TEMPLATE_LIBRARY: Record<string, Partial<PromptBlueprint>> = {
   [DEFAULT_TEMPLATE]: {
     style: [ '写实电影感', '叙事性强', '构图克制' ],
@@ -97,9 +119,9 @@ const TEMPLATE_LIBRARY: Record<string, Partial<PromptBlueprint>> = {
 };
 
 const TEMPLATE_KEYWORDS = [
-  { name: MYTHIC_TEMPLATE, patterns: [ '神', '神女', '仙', '古风', '法印', '符文', '神轮', '史诗', '粒子', '神性' ] },
+  { name: MYTHIC_TEMPLATE, patterns: [ '神女', '神明', '仙', '古风', '法印', '符文', '神轮', '史诗', '粒子', '神性' ] },
   { name: TRANSFORMATION_TEMPLATE, patterns: [ '变装', '蜕变', '换装', '爆发', '觉醒', '进化', '成型', '汇聚' ] },
-  { name: SUSPENSE_TEMPLATE, patterns: [ '悬疑', '雨夜', '黑暗', '压迫', '阴影', '监视', '窒息', '追踪', '危机' ] },
+  { name: SUSPENSE_TEMPLATE, patterns: [ '悬疑', '神秘', '雨夜', '黑暗', '压迫', '阴影', '监视', '窒息', '追踪', '危机' ] },
   { name: DIALOGUE_TEMPLATE, patterns: [ '对话', '对白', '独白', '凝视', '沉默', '对峙', '争执', '告白' ] },
 ];
 
@@ -288,6 +310,18 @@ export function selectPromptTemplate(values: unknown[]): string {
   return DEFAULT_TEMPLATE;
 }
 
+function resolveStylePresetPrompt(stylePreset: unknown): string {
+  return STYLE_PRESET_PROMPT_MAP[String(stylePreset || '').trim()] || '';
+}
+
+function selectImageCoverTemplate(stylePreset: unknown, values: unknown[]): string {
+  const preset = String(stylePreset || '').trim();
+  if (preset) {
+    return IMAGE_COVER_STYLE_TEMPLATE_MAP[preset] || DEFAULT_TEMPLATE;
+  }
+  return selectPromptTemplate(values);
+}
+
 export function buildPromptBlueprint(input: Partial<PromptBlueprint>): PromptBlueprint {
   const template = input.template || DEFAULT_TEMPLATE;
   const templateDefaults = TEMPLATE_LIBRARY[template] || TEMPLATE_LIBRARY[DEFAULT_TEMPLATE] || {};
@@ -468,8 +502,8 @@ export function buildPromptDisplayTokens(options: {
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
 export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, references: Array<{ type: string }>) {
-  const template = selectPromptTemplate([
-    fields.style_preset,
+  const stylePresetPrompt = resolveStylePresetPrompt(fields.style_preset);
+  const template = selectImageCoverTemplate(fields.style_preset, [
     fields.style_notes,
     fields.content,
     fields.mood,
@@ -496,7 +530,7 @@ export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, refe
       '封面图只保留一个决定性瞬间，不做多画格拼贴',
     ]),
     style: normalizeTextList([
-      fields.style_preset ? `风格预设偏向${fields.style_preset}` : '',
+      stylePresetPrompt ? `风格基调采用${stylePresetPrompt}` : '',
       fields.style_notes ? `风格补充强调${fields.style_notes}` : '',
       '适合作为剧情分镜封面，不做广告海报式排版',
     ]),
@@ -593,8 +627,8 @@ export function buildSceneCoverPrompt(scene: Record<string, unknown>, storyboard
   const characters = uniqueParts(storyboards.flatMap(item => Array.isArray(item.character_names) ? item.character_names : [])).slice(0, 5);
   const moods = uniqueParts(storyboards.map(item => item.mood)).slice(0, 4);
   const content = uniqueParts(storyboards.map(item => item.content)).slice(0, 4);
-  const template = selectPromptTemplate([
-    scene.style_preset,
+  const stylePresetPrompt = resolveStylePresetPrompt(scene.style_preset);
+  const template = selectImageCoverTemplate(scene.style_preset, [
     scene.style_notes,
     scene.description,
     ...moods,
@@ -617,7 +651,7 @@ export function buildSceneCoverPrompt(scene: Record<string, unknown>, storyboard
     ]),
     camera: [ '只生成一张完整场景代表图，不要多画格，不要机械并排多个镜头' ],
     style: normalizeTextList([
-      scene.style_preset ? `风格预设偏向${scene.style_preset}` : '',
+      stylePresetPrompt ? `风格基调采用${stylePresetPrompt}` : '',
       scene.style_notes ? `风格补充强调${scene.style_notes}` : '',
       '适合作为场景树封面和场景头部预览',
     ]),
