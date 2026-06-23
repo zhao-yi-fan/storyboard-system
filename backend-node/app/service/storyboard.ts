@@ -10,6 +10,8 @@ const {
   downloadAndStore,
   composeVideos,
   createPreviewFromLocalPath,
+  materializeSourceToLocalFile,
+  probeDuration,
   resolveMediaUrl,
 } = require('../lib/media');
 const { resolveUrl } = require('../lib/generated_asset');
@@ -358,7 +360,33 @@ class StoryboardService extends Service {
     };
   }
 
-  selectVideoAudioReferences(storyboard, useFirstFrame) {
+  async resolveVoiceReferenceDuration(character, url) {
+    const storedDuration = Number(character.voice_reference_duration || 0) || 0;
+    if (storedDuration > 0) {
+      return storedDuration;
+    }
+    let materialized;
+    try {
+      materialized = await materializeSourceToLocalFile(this.app, url, '.audio');
+      const duration = await probeDuration(materialized.localPath);
+      if (duration > 0) {
+        await this.pool.execute(
+          'UPDATE characters SET voice_reference_duration = ? WHERE id = ?',
+          [ duration, Number(character.id) ]
+        );
+      }
+      return duration;
+    } catch (error) {
+      this.ctx.logger.warn('[seedance] failed to probe voice reference duration character=%s: %s', character.id, error.message);
+      return 0;
+    } finally {
+      if (materialized) {
+        await materialized.cleanup();
+      }
+    }
+  }
+
+  async selectVideoAudioReferences(storyboard, useFirstFrame) {
     const references = [];
     const missing = [];
     const blockingReasons = [];
@@ -374,7 +402,7 @@ class StoryboardService extends Service {
         name: character.name,
         url,
         source: 'character.voice_reference_url',
-        duration: Number(character.voice_reference_duration || 0) || 0,
+        duration: await this.resolveVoiceReferenceDuration(character, url),
         voice_name: String(character.voice_name || '').trim(),
       });
     }
@@ -643,7 +671,7 @@ class StoryboardService extends Service {
     const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
     const { references: referenceImages, missing: missingReferences } = await this.selectVideoReferenceImages(storyboard, scene);
     const audioReferenceSummary = isSeedance
-      ? this.selectVideoAudioReferences(storyboard, useFirstFrame)
+      ? await this.selectVideoAudioReferences(storyboard, useFirstFrame)
       : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
     const videoPrompt = buildStoryboardVideoPrompt({
       ...storyboard,
