@@ -8,10 +8,7 @@ import {
 
 describe('test/shot_direction.test.ts', () => {
   it('should reject invalid model JSON', () => {
-    assert.throws(
-      () => parseShotDirectionResponse('不是 JSON'),
-      /模型未返回合法 JSON/
-    );
+    assert.throws(() => parseShotDirectionResponse('不是 JSON'), /模型未返回合法 JSON/);
   });
 
   it('should return an empty result for an empty scene', () => {
@@ -22,7 +19,7 @@ describe('test/shot_direction.test.ts', () => {
     let persisted: unknown = null;
     const graph = buildShotDirectionGraph({
       config: {},
-      persistResults: async analyses => {
+      persistResults: async (analyses) => {
         persisted = analyses;
       },
     });
@@ -55,7 +52,7 @@ describe('test/shot_direction.test.ts', () => {
           },
         ],
       },
-      storyboards
+      storyboards,
     );
 
     assert.equal(result.length, 2);

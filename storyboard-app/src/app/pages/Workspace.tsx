@@ -36,11 +36,22 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import { ImagePreviewDialog } from "../components/ui/image-preview-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../components/ui/accordion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,9 +135,11 @@ const STYLE_PRESET_PROMPT_MAP: Record<(typeof STYLE_PRESET_OPTIONS)[number]["val
   cold_noir: "冷峻黑色电影气质，硬朗明暗反差，人物关系紧张，都市夜色感更强。",
 };
 
-const STYLE_PRESET_LABEL_MAP: Record<(typeof STYLE_PRESET_OPTIONS)[number]["value"], string> = Object.fromEntries(
-  STYLE_PRESET_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<(typeof STYLE_PRESET_OPTIONS)[number]["value"], string>;
+const STYLE_PRESET_LABEL_MAP: Record<(typeof STYLE_PRESET_OPTIONS)[number]["value"], string> =
+  Object.fromEntries(STYLE_PRESET_OPTIONS.map((option) => [option.value, option.label])) as Record<
+    (typeof STYLE_PRESET_OPTIONS)[number]["value"],
+    string
+  >;
 
 const PROMPT_SECTION_BREAKS = [
   "主体与画面核心：",
@@ -266,7 +279,8 @@ const isSeedanceVideoModel = (model: string) => model === "seedance-2.0";
 
 const getVideoGenerationDuration = (model: string) => (isSeedanceVideoModel(model) ? 5 : 5);
 
-const getVideoGenerationResolution = (model: string) => (isSeedanceVideoModel(model) ? "480p" : "720P");
+const getVideoGenerationResolution = (model: string) =>
+  isSeedanceVideoModel(model) ? "480p" : "720P";
 
 const getVideoGenerationAudio = (_model: string) => true;
 
@@ -381,9 +395,15 @@ function buildPromptDisplayTokensFromPreview(preview?: StoryboardVideoGeneration
     tokens.push({ type: "badge", label: "角色", text: preview.fields.characters.join("、") });
   }
   if (preview.fields.style_preset) {
-    tokens.push({ type: "badge", label: "风格", text: getStylePresetLabel(preview.fields.style_preset) || preview.fields.style_preset });
+    tokens.push({
+      type: "badge",
+      label: "风格",
+      text: getStylePresetLabel(preview.fields.style_preset) || preview.fields.style_preset,
+    });
   }
-  const cameraText = [preview.video_fields.camera_direction, preview.video_fields.camera_motion].filter(Boolean).join(" / ");
+  const cameraText = [preview.video_fields.camera_direction, preview.video_fields.camera_motion]
+    .filter(Boolean)
+    .join(" / ");
   if (cameraText) {
     tokens.push({ type: "badge", label: "运镜", text: cameraText });
   }
@@ -455,7 +475,9 @@ function ShotDirectionAnalysisPanel({
   onApply,
   formatShotNumber,
 }: ShotDirectionAnalysisPanelProps) {
-  const analysisByStoryboardId = new Map(analyses.map((analysis) => [analysis.storyboard_id, analysis]));
+  const analysisByStoryboardId = new Map(
+    analyses.map((analysis) => [analysis.storyboard_id, analysis]),
+  );
   const succeededCount = analyses.filter((analysis) => analysis.status === "succeeded").length;
   const failedCount = analyses.filter((analysis) => analysis.status === "failed").length;
 
@@ -501,7 +523,9 @@ function ShotDirectionAnalysisPanel({
       {shots.length === 0 ? (
         <p className="mt-3 text-xs text-gray-500">当前场景还没有镜头，暂时无法分析走向。</p>
       ) : analyses.length === 0 ? (
-        <p className="mt-3 text-xs text-gray-500">尚未分析。分析会结合当前场景内所有镜头的前后承接关系。</p>
+        <p className="mt-3 text-xs text-gray-500">
+          尚未分析。分析会结合当前场景内所有镜头的前后承接关系。
+        </p>
       ) : (
         <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
           {shots.map((shot) => {
@@ -512,12 +536,19 @@ function ShotDirectionAnalysisPanel({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs tracking-[0.18em] text-gray-300">{formatShotNumber(shot.shot_number)}</span>
-                      <Badge variant="outline" className={`text-[10px] ${getDirectionStatusClass(analysis?.status)}`}>
+                      <span className="font-mono text-xs tracking-[0.18em] text-gray-300">
+                        {formatShotNumber(shot.shot_number)}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${getDirectionStatusClass(analysis?.status)}`}
+                      >
                         {getDirectionStatusLabel(analysis?.status)}
                       </Badge>
                     </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-gray-500">{shot.content || "未填写画面描述"}</p>
+                    <p className="mt-1 line-clamp-1 text-xs text-gray-500">
+                      {shot.content || "未填写画面描述"}
+                    </p>
                   </div>
                   {analysis?.status === "succeeded" && result ? (
                     <Button
@@ -542,15 +573,35 @@ function ShotDirectionAnalysisPanel({
 
                 {result ? (
                   <div className="mt-3 grid gap-2 text-xs text-gray-400 sm:grid-cols-2">
-                    <div><span className="text-gray-500">功能：</span>{result.narrative_role || "-"}</div>
-                    <div><span className="text-gray-500">情绪：</span>{result.emotional_shift || "-"}</div>
-                    <div><span className="text-gray-500">承接：</span>{result.continuity_from_previous || "-"}</div>
-                    <div><span className="text-gray-500">引出：</span>{result.continuity_to_next || "-"}</div>
-                    <div><span className="text-gray-500">运动：</span>{result.camera_motion_suggestion || "-"}</div>
-                    <div><span className="text-gray-500">景别：</span>{result.shot_type_suggestion || "-"}</div>
+                    <div>
+                      <span className="text-gray-500">功能：</span>
+                      {result.narrative_role || "-"}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">情绪：</span>
+                      {result.emotional_shift || "-"}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">承接：</span>
+                      {result.continuity_from_previous || "-"}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">引出：</span>
+                      {result.continuity_to_next || "-"}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">运动：</span>
+                      {result.camera_motion_suggestion || "-"}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">景别：</span>
+                      {result.shot_type_suggestion || "-"}
+                    </div>
                   </div>
                 ) : analysis?.status === "failed" ? (
-                  <p className="mt-2 text-xs leading-5 text-red-300">{analysis.error_message || "镜头走向分析失败"}</p>
+                  <p className="mt-2 text-xs leading-5 text-red-300">
+                    {analysis.error_message || "镜头走向分析失败"}
+                  </p>
                 ) : (
                   <p className="mt-2 text-xs text-gray-500">等待分析结果。</p>
                 )}
@@ -558,7 +609,11 @@ function ShotDirectionAnalysisPanel({
                 {result?.risk_flags?.length ? (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {result.risk_flags.map((flag) => (
-                      <Badge key={flag} variant="outline" className="border-amber-700 text-[10px] text-amber-300">
+                      <Badge
+                        key={flag}
+                        variant="outline"
+                        className="border-amber-700 text-[10px] text-amber-300"
+                      >
                         {flag}
                       </Badge>
                     ))}
@@ -591,19 +646,30 @@ export default function Workspace() {
   const [uploadingCoverId, setUploadingCoverId] = useState<number | null>(null);
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [pendingGeneratedShotId, setPendingGeneratedShotId] = useState<number | null>(null);
-  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string; items?: { src: string; alt: string }[]; currentIndex?: number } | null>(null);
-  const [selectedCoverModel, setSelectedCoverModel] = useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>("auto");
-  const [selectedVideoModel, setSelectedVideoModel] = useState<(typeof VIDEO_MODEL_OPTIONS)[number]["value"]>(VIDEO_MODEL_OPTIONS[0].value);
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    alt: string;
+    items?: { src: string; alt: string }[];
+    currentIndex?: number;
+  } | null>(null);
+  const [selectedCoverModel, setSelectedCoverModel] =
+    useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>("auto");
+  const [selectedVideoModel, setSelectedVideoModel] = useState<
+    (typeof VIDEO_MODEL_OPTIONS)[number]["value"]
+  >(VIDEO_MODEL_OPTIONS[0].value);
   const [useFirstFrameForVideo, setUseFirstFrameForVideo] = useState(true);
   const [storyboardViewMode, setStoryboardViewMode] = useState<"grid" | "list">("list");
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
   const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
-  const [coverGenerationPreview, setCoverGenerationPreview] = useState<StoryboardCoverGenerationPreview | null>(null);
-  const [videoGenerationPreview, setVideoGenerationPreview] = useState<StoryboardVideoGenerationPreview | null>(null);
+  const [coverGenerationPreview, setCoverGenerationPreview] =
+    useState<StoryboardCoverGenerationPreview | null>(null);
+  const [videoGenerationPreview, setVideoGenerationPreview] =
+    useState<StoryboardVideoGenerationPreview | null>(null);
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
-  const [sceneCoverGenerationPreview, setSceneCoverGenerationPreview] = useState<AIGenerationPreview | null>(null);
+  const [sceneCoverGenerationPreview, setSceneCoverGenerationPreview] =
+    useState<AIGenerationPreview | null>(null);
   const [isLoadingSceneCoverPreview, setIsLoadingSceneCoverPreview] = useState(false);
   const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
   const [isSceneVideoConfirmOpen, setIsSceneVideoConfirmOpen] = useState(false);
@@ -615,12 +681,21 @@ export default function Workspace() {
   const [isBatchGeneratingSceneCover, setIsBatchGeneratingSceneCover] = useState(false);
   const [isComposingSceneVideo, setIsComposingSceneVideo] = useState(false);
   const [isComposingProjectVideo, setIsComposingProjectVideo] = useState(false);
-  const [deleteTargetGeneration, setDeleteTargetGeneration] = useState<StoryboardMediaGeneration | null>(null);
+  const [deleteTargetGeneration, setDeleteTargetGeneration] =
+    useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
   const [deleteTargetShot, setDeleteTargetShot] = useState<Storyboard | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
-  const [previewSceneVideo, setPreviewSceneVideo] = useState<{ src: string; originalSrc?: string; title: string } | null>(null);
-  const [previewProjectVideo, setPreviewProjectVideo] = useState<{ src: string; originalSrc?: string; title: string } | null>(null);
+  const [previewSceneVideo, setPreviewSceneVideo] = useState<{
+    src: string;
+    originalSrc?: string;
+    title: string;
+  } | null>(null);
+  const [previewProjectVideo, setPreviewProjectVideo] = useState<{
+    src: string;
+    originalSrc?: string;
+    title: string;
+  } | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
   const [projectCharacters, setProjectCharacters] = useState<Character[]>([]);
@@ -629,10 +704,14 @@ export default function Workspace() {
   const [isManageAssetsOpen, setIsManageAssetsOpen] = useState(false);
   const [isLoadingProjectCharacters, setIsLoadingProjectCharacters] = useState(false);
   const [isLoadingProjectAssets, setIsLoadingProjectAssets] = useState(false);
-  const [shotDirectionAnalyses, setShotDirectionAnalyses] = useState<StoryboardDirectionAnalysis[]>([]);
+  const [shotDirectionAnalyses, setShotDirectionAnalyses] = useState<StoryboardDirectionAnalysis[]>(
+    [],
+  );
   const [isLoadingShotDirections, setIsLoadingShotDirections] = useState(false);
   const [isAnalyzingShotDirections, setIsAnalyzingShotDirections] = useState(false);
-  const [activeApplyDirectionStoryboardId, setActiveApplyDirectionStoryboardId] = useState<number | null>(null);
+  const [activeApplyDirectionStoryboardId, setActiveApplyDirectionStoryboardId] = useState<
+    number | null
+  >(null);
   const [activeCharacterActionKey, setActiveCharacterActionKey] = useState<string | null>(null);
   const [activeAssetActionKey, setActiveAssetActionKey] = useState<string | null>(null);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(256);
@@ -764,7 +843,9 @@ export default function Workspace() {
   };
 
   const applyProjectUpdate = (nextProject: Project) => {
-    setProjects((prev) => prev.map((project) => (project.id === nextProject.id ? nextProject : project)));
+    setProjects((prev) =>
+      prev.map((project) => (project.id === nextProject.id ? nextProject : project)),
+    );
     setSelectedProject((prev) => (prev?.id === nextProject.id ? nextProject : prev));
   };
 
@@ -781,7 +862,10 @@ export default function Workspace() {
     });
   };
 
-  const applyMediaMutation = (payload: { storyboard: Storyboard; media_generations: StoryboardMediaGeneration[] }) => {
+  const applyMediaMutation = (payload: {
+    storyboard: Storyboard;
+    media_generations: StoryboardMediaGeneration[];
+  }) => {
     applyStoryboardUpdate(payload.storyboard);
     setMediaGenerations(payload.media_generations);
   };
@@ -806,8 +890,15 @@ export default function Workspace() {
       const data = await assetApi.getAssetsByProject(projectId);
       setProjectAssets(
         (data || []).filter((asset) => {
-          const type = String(asset.type || "").trim().toLowerCase();
-          return type.includes("scene") || type.includes("background") || type.includes("场景") || type.includes("背景");
+          const type = String(asset.type || "")
+            .trim()
+            .toLowerCase();
+          return (
+            type.includes("scene") ||
+            type.includes("background") ||
+            type.includes("场景") ||
+            type.includes("背景")
+          );
         }),
       );
     } catch (error) {
@@ -982,7 +1073,9 @@ export default function Workspace() {
   const filteredShots = selectedScene
     ? storyboards.filter((shot) => shot.scene_id === selectedScene.id)
     : [];
-  const composableShots = filteredShots.filter((shot) => shot.video_status === "succeeded" && !!shot.video_url);
+  const composableShots = filteredShots.filter(
+    (shot) => shot.video_status === "succeeded" && !!shot.video_url,
+  );
   const activeChapterForSceneCreation = selectedChapter ?? chapters[0] ?? null;
 
   const calculateTotalDuration = () => {
@@ -1037,9 +1130,7 @@ export default function Workspace() {
         ...(useTextOnly ? { use_text_only: true } : {}),
       });
       const nextShot = result.storyboard;
-      setStoryboards((prev) =>
-        prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)),
-      );
+      setStoryboards((prev) => prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)));
       setSelectedShot(nextShot);
       await loadMediaGenerations(nextShot.id);
     } catch (error) {
@@ -1095,7 +1186,10 @@ export default function Workspace() {
 
     setIsLoadingCoverPreview(true);
     try {
-      const preview = await storyboardApi.getStoryboardCoverGenerationPreview(selectedShot.id, selectedCoverModel !== "auto" ? { model: selectedCoverModel } : undefined);
+      const preview = await storyboardApi.getStoryboardCoverGenerationPreview(
+        selectedShot.id,
+        selectedCoverModel !== "auto" ? { model: selectedCoverModel } : undefined,
+      );
       setCoverGenerationPreview(preview);
       setIsCoverConfirmOpen(true);
     } catch (error) {
@@ -1390,7 +1484,6 @@ export default function Workspace() {
     await runComposeProjectVideo();
   };
 
-
   const handleSetCurrentGeneration = async (generation: StoryboardMediaGeneration) => {
     if (!selectedShot) {
       return;
@@ -1398,7 +1491,10 @@ export default function Workspace() {
     const actionKey = `set-current:${generation.id}`;
     setActiveMediaActionKey(actionKey);
     try {
-      const result = await storyboardApi.setStoryboardMediaGenerationCurrent(selectedShot.id, generation.id);
+      const result = await storyboardApi.setStoryboardMediaGenerationCurrent(
+        selectedShot.id,
+        generation.id,
+      );
       applyMediaMutation(result);
     } catch (error) {
       console.error("Failed to set current media generation:", error);
@@ -1470,15 +1566,16 @@ export default function Workspace() {
 
     const sceneShots = storyboards.filter((shot) => shot.scene_id === selectedScene.id);
     const deleteIndex = sceneShots.findIndex((shot) => shot.id === deleteTargetShot.id);
-    const fallbackShot = deleteIndex >= 0
-      ? sceneShots[deleteIndex + 1] || sceneShots[deleteIndex - 1] || null
-      : null;
+    const fallbackShot =
+      deleteIndex >= 0 ? sceneShots[deleteIndex + 1] || sceneShots[deleteIndex - 1] || null : null;
 
     try {
       await storyboardApi.deleteStoryboard(deleteTargetShot.id);
       setDeleteTargetShot(null);
       setStoryboards((prev) => prev.filter((shot) => shot.id !== deleteTargetShot.id));
-      setShotDirectionAnalyses((prev) => prev.filter((analysis) => analysis.storyboard_id !== deleteTargetShot.id));
+      setShotDirectionAnalyses((prev) =>
+        prev.filter((analysis) => analysis.storyboard_id !== deleteTargetShot.id),
+      );
 
       if (selectedShot?.id === deleteTargetShot.id) {
         setSelectedShot(fallbackShot);
@@ -1524,7 +1621,10 @@ export default function Workspace() {
     const actionKey = `delete:${deleteTargetGeneration.id}`;
     setActiveMediaActionKey(actionKey);
     try {
-      const result = await storyboardApi.deleteStoryboardMediaGeneration(selectedShot.id, deleteTargetGeneration.id);
+      const result = await storyboardApi.deleteStoryboardMediaGeneration(
+        selectedShot.id,
+        deleteTargetGeneration.id,
+      );
       applyMediaMutation(result);
     } catch (error) {
       console.error("Failed to delete media generation:", error);
@@ -1538,7 +1638,10 @@ export default function Workspace() {
     setShotForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const updateNewSceneForm = <K extends keyof typeof emptySceneForm>(key: K, value: (typeof emptySceneForm)[K]) => {
+  const updateNewSceneForm = <K extends keyof typeof emptySceneForm>(
+    key: K,
+    value: (typeof emptySceneForm)[K],
+  ) => {
     setNewSceneForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -1675,9 +1778,7 @@ export default function Workspace() {
                 <Film className="w-4 h-4 text-white" />
               </div>
               <span className="text-sm">
-                {selectedProject
-                  ? `《${selectedProject.name}》分镜工作台`
-                  : "漫剧分镜工作台"}
+                {selectedProject ? `《${selectedProject.name}》分镜工作台` : "漫剧分镜工作台"}
               </span>
             </div>
 
@@ -1725,13 +1826,9 @@ export default function Workspace() {
                 variant="ghost"
                 className="h-8 text-gray-400 hover:text-gray-200"
                 onClick={() =>
-                  navigate(
-                    selectedProject
-                      ? `/assets?project=${selectedProject.id}`
-                      : "/assets",
-                    )
-                  }
-                >
+                  navigate(selectedProject ? `/assets?project=${selectedProject.id}` : "/assets")
+                }
+              >
                 <Package className="w-4 h-4 mr-1.5" />
                 资产库
               </Button>
@@ -1751,139 +1848,140 @@ export default function Workspace() {
             style={{ width: leftSidebarWidth }}
             className="border-r border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0 relative"
           >
-          <div className="p-3 border-b border-gray-800 flex-shrink-0">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-400">章节场景</span>
+            <div className="p-3 border-b border-gray-800 flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-400">章节场景</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsLeftSidebarOpen(false)}
+                  className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
+                >
+                  <PanelLeftClose className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input
+                  placeholder="搜索场景..."
+                  className="pl-9 h-8 bg-[#1a1a1a] border-gray-700 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {loading ? (
+                <div className="p-8 text-center text-gray-500">
+                  <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin opacity-30" />
+                  <p className="text-sm">加载中...</p>
+                </div>
+              ) : !selectedProject ? (
+                <div className="p-8 text-center text-gray-500">
+                  <Film className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">请选择一个项目</p>
+                  <p className="text-xs mt-1">回到项目列表进入工作台</p>
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {chapters.map((chapter) => (
+                    <div key={chapter.id}>
+                      <button
+                        onClick={() => toggleChapter(chapter.id)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-[#1a1a1a] rounded"
+                      >
+                        {expandedChapters.includes(chapter.id) ? (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        )}
+                        <Film className="w-4 h-4 text-purple-400" />
+                        <span className="flex-1 text-left truncate">{chapter.title}</span>
+                      </button>
+
+                      {expandedChapters.includes(chapter.id) && (
+                        <div className="ml-6 mt-1 space-y-0.5">
+                          {scenes
+                            .filter((s) => s.chapter_id === chapter.id)
+                            .map((scene) => (
+                              <div
+                                key={scene.id}
+                                className={`w-full flex items-center gap-1 px-1 py-0.5 text-sm rounded ${
+                                  selectedScene?.id === scene.id
+                                    ? "bg-purple-600/20 text-purple-300"
+                                    : "text-gray-300 hover:bg-[#1a1a1a]"
+                                }`}
+                              >
+                                <button
+                                  onClick={() => selectScene(scene)}
+                                  className="flex-1 flex items-center gap-2 px-1 py-1 text-sm rounded text-left min-w-0"
+                                >
+                                  {getScenePreviewSrc(scene) ? (
+                                    <img
+                                      src={getScenePreviewSrc(scene)}
+                                      alt=""
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="h-8 w-10 rounded border border-gray-700 object-contain bg-[#171717]"
+                                    />
+                                  ) : (
+                                    <div className="flex h-8 w-10 items-center justify-center rounded border border-gray-800 bg-[#171717]">
+                                      <Camera className="w-3.5 h-3.5 text-gray-500" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate">{scene.title}</div>
+                                    {scene.location || scene.time_of_day ? (
+                                      <div className="truncate text-[11px] text-gray-500">
+                                        {[scene.location, scene.time_of_day]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-gray-500 hover:bg-red-500/10 hover:text-red-400"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleRequestDeleteScene(scene);
+                                  }}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 border-t border-gray-800 flex-shrink-0">
               <Button
                 size="sm"
-                variant="ghost"
-                onClick={() => setIsLeftSidebarOpen(false)}
-                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
+                variant="outline"
+                className="w-full h-8 border-gray-700 text-gray-400"
+                onClick={() => {
+                  if (!selectedProject) {
+                    return;
+                  }
+                  if (activeChapterForSceneCreation) {
+                    setSelectedChapter(activeChapterForSceneCreation);
+                    setExpandedChapters([activeChapterForSceneCreation.id]);
+                  }
+                  setIsCreateSceneOpen(true);
+                }}
+                disabled={!selectedProject}
               >
-                <PanelLeftClose className="w-4 h-4" />
+                <Plus className="w-4 h-4 mr-1.5" />
+                新建场景
               </Button>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <Input
-                placeholder="搜索场景..."
-                className="pl-9 h-8 bg-[#1a1a1a] border-gray-700 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {loading ? (
-              <div className="p-8 text-center text-gray-500">
-                <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin opacity-30" />
-                <p className="text-sm">加载中...</p>
-              </div>
-            ) : !selectedProject ? (
-              <div className="p-8 text-center text-gray-500">
-                <Film className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">请选择一个项目</p>
-                <p className="text-xs mt-1">回到项目列表进入工作台</p>
-              </div>
-            ) : (
-              <div className="p-2 space-y-1">
-                {chapters.map((chapter) => (
-                  <div key={chapter.id}>
-                    <button
-                      onClick={() => toggleChapter(chapter.id)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-[#1a1a1a] rounded"
-                    >
-                      {expandedChapters.includes(chapter.id) ? (
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                      )}
-                      <Film className="w-4 h-4 text-purple-400" />
-                      <span className="flex-1 text-left truncate">{chapter.title}</span>
-                    </button>
-
-                    {expandedChapters.includes(chapter.id) && (
-                      <div className="ml-6 mt-1 space-y-0.5">
-                        {scenes
-                          .filter((s) => s.chapter_id === chapter.id)
-                          .map((scene) => (
-                            <div
-                              key={scene.id}
-                              className={`w-full flex items-center gap-1 px-1 py-0.5 text-sm rounded ${
-                                selectedScene?.id === scene.id
-                                  ? "bg-purple-600/20 text-purple-300"
-                                  : "text-gray-300 hover:bg-[#1a1a1a]"
-                              }`}
-                            >
-                              <button
-                                onClick={() => selectScene(scene)}
-                                className="flex-1 flex items-center gap-2 px-1 py-1 text-sm rounded text-left min-w-0"
-                              >
-                                {getScenePreviewSrc(scene) ? (
-                                  <img
-                                    src={getScenePreviewSrc(scene)}
-                                    alt=""
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="h-8 w-10 rounded border border-gray-700 object-contain bg-[#171717]"
-                                  />
-                                ) : (
-                                  <div className="flex h-8 w-10 items-center justify-center rounded border border-gray-800 bg-[#171717]">
-                                    <Camera className="w-3.5 h-3.5 text-gray-500" />
-                                  </div>
-                                )}
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate">{scene.title}</div>
-                                  {(scene.location || scene.time_of_day) ? (
-                                    <div className="truncate text-[11px] text-gray-500">
-                                      {[scene.location, scene.time_of_day].filter(Boolean).join(" · ")}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0 text-gray-500 hover:bg-red-500/10 hover:text-red-400"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleRequestDeleteScene(scene);
-                                }}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-3 border-t border-gray-800 flex-shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full h-8 border-gray-700 text-gray-400"
-              onClick={() => {
-                if (!selectedProject) {
-                  return;
-                }
-                if (activeChapterForSceneCreation) {
-                  setSelectedChapter(activeChapterForSceneCreation);
-                  setExpandedChapters([activeChapterForSceneCreation.id]);
-                }
-                setIsCreateSceneOpen(true);
-              }}
-              disabled={!selectedProject}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              新建场景
-            </Button>
-          </div>
-
           </aside>
         )}
 
@@ -1917,7 +2015,13 @@ export default function Workspace() {
                   <button
                     type="button"
                     className="h-12 w-20 overflow-hidden rounded border border-gray-800 bg-[#171717]"
-                    onClick={() => selectedScene.cover_url && setPreviewImage({ src: selectedScene.cover_url, alt: `${selectedScene.title} 场景封面` })}
+                    onClick={() =>
+                      selectedScene.cover_url &&
+                      setPreviewImage({
+                        src: selectedScene.cover_url,
+                        alt: `${selectedScene.title} 场景封面`,
+                      })
+                    }
                     disabled={!selectedScene.cover_url}
                   >
                     {getScenePreviewSrc(selectedScene) ? (
@@ -1943,7 +2047,11 @@ export default function Workspace() {
                   </h3>
                   {selectedScene ? (
                     <p className="mt-1 truncate text-xs text-gray-500">
-                      {[selectedScene.location, selectedScene.time_of_day].filter(Boolean).join(" · ") || selectedScene.description || "当前场景还没有补充描述"}
+                      {[selectedScene.location, selectedScene.time_of_day]
+                        .filter(Boolean)
+                        .join(" · ") ||
+                        selectedScene.description ||
+                        "当前场景还没有补充描述"}
                     </p>
                   ) : null}
                 </div>
@@ -1973,7 +2081,9 @@ export default function Workspace() {
                   variant="outline"
                   className="h-8 border-gray-700 text-gray-300"
                   onClick={handleBatchGenerateSceneCovers}
-                  disabled={!selectedScene || filteredShots.length === 0 || isBatchGeneratingSceneCover}
+                  disabled={
+                    !selectedScene || filteredShots.length === 0 || isBatchGeneratingSceneCover
+                  }
                 >
                   {isBatchGeneratingSceneCover ? (
                     <>
@@ -2021,12 +2131,12 @@ export default function Workspace() {
                   >
                     <Play className="w-3.5 h-3.5 mr-1.5" />
                     播放场景视频
-                </Button>
-              ) : null}
-              <UserMenu />
-              <Button
-                size="sm"
-                variant="ghost"
+                  </Button>
+                ) : null}
+                <UserMenu />
+                <Button
+                  size="sm"
+                  variant="ghost"
                   className="h-7 text-xs text-gray-400"
                   onClick={handleInsertShot}
                   disabled={!selectedScene || isCreatingShot}
@@ -2102,7 +2212,7 @@ export default function Workspace() {
                         {pendingGeneratedShotId === shot.id ? (
                           <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-2">
                             <Loader2 className="w-6 h-6 text-white animate-spin" />
-                          <span className="text-xs text-white/90">正在生成新首帧...</span>
+                            <span className="text-xs text-white/90">正在生成新首帧...</span>
                           </div>
                         ) : null}
                       </div>
@@ -2134,15 +2244,16 @@ export default function Workspace() {
                           {selectedScene?.title}
                         </Badge>
                         {shot.background ? (
-                          <Badge variant="outline" className="text-xs border-blue-800 text-blue-300">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-blue-800 text-blue-300"
+                          >
                             {shot.background}
                           </Badge>
                         ) : null}
                       </div>
 
-                      <p className="text-xs text-gray-400 line-clamp-2">
-                        {shot.content}
-                      </p>
+                      <p className="text-xs text-gray-400 line-clamp-2">{shot.content}</p>
 
                       {shot.notes && (
                         <div className="flex items-start gap-1.5 text-xs text-gray-500">
@@ -2191,7 +2302,7 @@ export default function Workspace() {
                       {pendingGeneratedShotId === shot.id ? (
                         <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-2">
                           <Loader2 className="w-5 h-5 text-white animate-spin" />
-                            <span className="text-[11px] text-white/90">正在生成新首帧...</span>
+                          <span className="text-[11px] text-white/90">正在生成新首帧...</span>
                         </div>
                       ) : null}
                       <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs font-mono tracking-[0.2em]">
@@ -2213,12 +2324,18 @@ export default function Workspace() {
                           {deriveShotType(shot)}
                         </Badge>
                         {shot.background ? (
-                          <Badge variant="outline" className="text-xs border-blue-800 text-blue-300">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-blue-800 text-blue-300"
+                          >
                             {shot.background}
                           </Badge>
                         ) : null}
                         {shot.duration > 0 ? (
-                          <Badge variant="outline" className="text-xs border-gray-700 text-gray-300">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-gray-700 text-gray-300"
+                          >
                             <Clock className="w-3 h-3 mr-1" />
                             {shot.duration}s
                           </Badge>
@@ -2269,673 +2386,819 @@ export default function Workspace() {
             style={{ width: rightSidebarWidth }}
             className="border-l border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0 relative"
           >
-          {selectedShot ? (
-            <>
-              <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
-                <h3 className="text-sm">镜头详情</h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsRightSidebarOpen(false)}
-                    className="h-7 w-7 p-0 text-gray-400 hover:text-gray-200"
-                  >
-                    <PanelRightClose className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                <div className="flex min-h-0 flex-1 flex-col gap-4">
-                  {/* Shot Number */}
-                  <div>
-                    <Label className="text-xs text-gray-400">镜头编号</Label>
-                    <Input
-                      value={selectedShot.shot_number}
-                      className="mt-1.5 bg-[#1a1a1a] border-gray-700 font-mono"
-                      readOnly
-                    />
+            {selectedShot ? (
+              <>
+                <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
+                  <h3 className="text-sm">镜头详情</h3>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsRightSidebarOpen(false)}
+                      className="h-7 w-7 p-0 text-gray-400 hover:text-gray-200"
+                    >
+                      <PanelRightClose className="w-4 h-4" />
+                    </Button>
                   </div>
+                </div>
 
-                  {/* First frame */}
-                  <div>
-                    <Label className="text-xs text-gray-400">首帧图</Label>
-                    <input
-                      ref={shotCoverInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (file) {
-                          void handleUploadShotCover(file);
-                        }
-                      }}
-                    />
-                    <div className="mt-1.5 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
-                      {selectedShot.thumbnail_url && generatingCoverId !== selectedShot.id && uploadingCoverId !== selectedShot.id ? (
-                        <button
-                          type="button"
-                          className="w-full h-full"
-                          onClick={() =>
-                            setPreviewImage({
-                              src: selectedShot.thumbnail_url!,
-                              alt: `镜头 ${selectedShot.shot_number} 首帧图`,
-                            })
-                          }
-                        >
-                          <img
-                            src={getStoryboardPreviewSrc(selectedShot)}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-contain rounded"
-                          />
-                        </button>
-                      ) : generatingCoverId === selectedShot.id ? (
-                        <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
-                          <Loader2 className="w-8 h-8 text-purple-300 animate-spin" />
-                          <span className="text-xs text-gray-300">正在生成新首帧...</span>
-                        </div>
-                      ) : uploadingCoverId === selectedShot.id ? (
-                        <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
-                          <Loader2 className="w-8 h-8 text-blue-300 animate-spin" />
-                          <span className="text-xs text-gray-300">正在上传首帧...</span>
-                        </div>
-                      ) : (
-                        <ImageIcon className="w-16 h-16 text-gray-700" />
-                      )}
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  <div className="flex min-h-0 flex-1 flex-col gap-4">
+                    {/* Shot Number */}
+                    <div>
+                      <Label className="text-xs text-gray-400">镜头编号</Label>
+                      <Input
+                        value={selectedShot.shot_number}
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 font-mono"
+                        readOnly
+                      />
                     </div>
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 min-w-0">
-                          <Select value={selectedCoverModel} onValueChange={(value) => setSelectedCoverModel(value as typeof selectedCoverModel)}>
-                            <SelectTrigger className="w-full bg-[#1a1a1a] border-gray-700 min-h-10 h-auto text-sm">
+
+                    {/* First frame */}
+                    <div>
+                      <Label className="text-xs text-gray-400">首帧图</Label>
+                      <input
+                        ref={shotCoverInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            void handleUploadShotCover(file);
+                          }
+                        }}
+                      />
+                      <div className="mt-1.5 aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
+                        {selectedShot.thumbnail_url &&
+                        generatingCoverId !== selectedShot.id &&
+                        uploadingCoverId !== selectedShot.id ? (
+                          <button
+                            type="button"
+                            className="w-full h-full"
+                            onClick={() =>
+                              setPreviewImage({
+                                src: selectedShot.thumbnail_url!,
+                                alt: `镜头 ${selectedShot.shot_number} 首帧图`,
+                              })
+                            }
+                          >
+                            <img
+                              src={getStoryboardPreviewSrc(selectedShot)}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain rounded"
+                            />
+                          </button>
+                        ) : generatingCoverId === selectedShot.id ? (
+                          <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
+                            <Loader2 className="w-8 h-8 text-purple-300 animate-spin" />
+                            <span className="text-xs text-gray-300">正在生成新首帧...</span>
+                          </div>
+                        ) : uploadingCoverId === selectedShot.id ? (
+                          <div className="w-full h-full rounded flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-900 to-gray-800">
+                            <Loader2 className="w-8 h-8 text-blue-300 animate-spin" />
+                            <span className="text-xs text-gray-300">正在上传首帧...</span>
+                          </div>
+                        ) : (
+                          <ImageIcon className="w-16 h-16 text-gray-700" />
+                        )}
+                      </div>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <Select
+                              value={selectedCoverModel}
+                              onValueChange={(value) =>
+                                setSelectedCoverModel(value as typeof selectedCoverModel)
+                              }
+                            >
+                              <SelectTrigger className="w-full bg-[#1a1a1a] border-gray-700 min-h-10 h-auto text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                                {COVER_MODEL_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {selectedCoverModel === "auto" && (
+                              <div className="mt-1 px-1 text-[11px] leading-tight text-gray-500">
+                                默认优先使用 Wan 2.7 Image Pro；需要更强电影感与复杂光影时可切换
+                                Seedream 4.5
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={handleGenerateCover}
+                            disabled={
+                              generatingCoverId === selectedShot.id ||
+                              uploadingCoverId === selectedShot.id ||
+                              isLoadingCoverPreview
+                            }
+                            className="bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100 shrink-0"
+                          >
+                            {generatingCoverId === selectedShot.id || isLoadingCoverPreview ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                {isLoadingCoverPreview ? "分析中" : "正在生成"}
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                生成首帧
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleRequestUploadShotCover}
+                            disabled={
+                              uploadingCoverId === selectedShot.id ||
+                              generatingCoverId === selectedShot.id ||
+                              isLoadingCoverPreview
+                            }
+                            className="bg-[#1a1a1a] hover:bg-[#202020] border-gray-700 text-gray-100 shrink-0 px-2"
+                          >
+                            {uploadingCoverId === selectedShot.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Upload className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={selectedVideoModel}
+                            onValueChange={(value) =>
+                              setSelectedVideoModel(value as typeof selectedVideoModel)
+                            }
+                          >
+                            <SelectTrigger className="flex-1 bg-[#1a1a1a] border-gray-700 h-10 text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                              {COVER_MODEL_OPTIONS.map((option) => (
+                              {VIDEO_MODEL_OPTIONS.map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
                                   {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          {selectedCoverModel === "auto" && (
-                            <div className="mt-1 px-1 text-[11px] leading-tight text-gray-500">
-                              默认优先使用 Wan 2.7 Image Pro；需要更强电影感与复杂光影时可切换 Seedream 4.5
+                          <Button
+                            type="button"
+                            onClick={handleGenerateVideo}
+                            disabled={generatingVideoId === selectedShot.id}
+                            className="bg-purple-600 hover:bg-purple-700 text-white shrink-0"
+                          >
+                            {generatingVideoId === selectedShot.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                正在生成
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-4 h-4 mr-2" />
+                                生成视频
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      {selectedShot.video_status === "failed" && selectedShot.video_error ? (
+                        <p className="mt-2 text-xs text-red-400 leading-5">
+                          {selectedShot.video_error}
+                        </p>
+                      ) : null}
+                      {selectedShot.video_status === "generating" ? (
+                        <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-4">
+                          <div className="flex flex-col items-center justify-center gap-3 text-center">
+                            <Loader2 className="w-6 h-6 text-purple-300 animate-spin" />
+                            <div>
+                              <p className="text-sm text-gray-200">正在生成新视频...</p>
+                              <p className="text-xs text-gray-500 mt-1">生成完成后会自动刷新预览</p>
                             </div>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          onClick={handleGenerateCover}
-                          disabled={generatingCoverId === selectedShot.id || uploadingCoverId === selectedShot.id || isLoadingCoverPreview}
-                          className="bg-[#1a1a1a] hover:bg-[#202020] border border-gray-700 text-gray-100 shrink-0"
-                        >
-                          {generatingCoverId === selectedShot.id || isLoadingCoverPreview ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              {isLoadingCoverPreview ? "分析中" : "正在生成"}
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              生成首帧
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleRequestUploadShotCover}
-                          disabled={uploadingCoverId === selectedShot.id || generatingCoverId === selectedShot.id || isLoadingCoverPreview}
-                          className="bg-[#1a1a1a] hover:bg-[#202020] border-gray-700 text-gray-100 shrink-0 px-2"
-                        >
-                          {uploadingCoverId === selectedShot.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Upload className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Select value={selectedVideoModel} onValueChange={(value) => setSelectedVideoModel(value as typeof selectedVideoModel)}>
-                          <SelectTrigger className="flex-1 bg-[#1a1a1a] border-gray-700 h-10 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            {VIDEO_MODEL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          type="button"
-                          onClick={handleGenerateVideo}
-                          disabled={generatingVideoId === selectedShot.id}
-                          className="bg-purple-600 hover:bg-purple-700 text-white shrink-0"
-                        >
-                          {generatingVideoId === selectedShot.id ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              正在生成
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-4 h-4 mr-2" />
-                              生成视频
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    {selectedShot.video_status === "failed" && selectedShot.video_error ? (
-                      <p className="mt-2 text-xs text-red-400 leading-5">{selectedShot.video_error}</p>
-                    ) : null}
-                    {selectedShot.video_status === "generating" ? (
-                      <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-4">
-                        <div className="flex flex-col items-center justify-center gap-3 text-center">
-                          <Loader2 className="w-6 h-6 text-purple-300 animate-spin" />
-                          <div>
-                            <p className="text-sm text-gray-200">正在生成新视频...</p>
-                            <p className="text-xs text-gray-500 mt-1">生成完成后会自动刷新预览</p>
                           </div>
                         </div>
-                      </div>
-                    ) : hasSucceededStoryboardVideo(selectedShot) ? (
-                      <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-2">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs text-gray-400">视频预览</span>
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs text-gray-500">{(selectedShot.video_duration || selectedShot.duration) ? `${selectedShot.video_duration || selectedShot.duration}s` : "-"}</span>
-                            <button
-                              type="button"
-                              className="text-xs text-purple-300 hover:text-purple-200"
-                              onClick={() => window.open(selectedShot.video_url, "_blank", "noopener,noreferrer")}
-                            >
-                              打开原视频
-                            </button>
-                          </div>
-                        </div>
-                        <video
-                          key={getStoryboardVideoPreviewSrc(selectedShot)}
-                          src={getStoryboardVideoPreviewSrc(selectedShot)}
-                          controls
-                          preload="metadata"
-                          className="w-full rounded bg-black"
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-300">首帧历史</p>
-                        <p className="text-[11px] text-gray-500">新生成的首帧会自动成为当前版本</p>
-                      </div>
-                      <Badge variant="outline" className="border-gray-700 text-gray-400">{coverGenerations.length}</Badge>
-                    </div>
-                    {coverGenerations.length > 0 ? (
-                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                        {coverGenerations.map((generation) => (
-                          <div key={generation.id} className="rounded-md border border-gray-800 bg-[#161616] p-2">
-                            <div className="flex gap-3">
+                      ) : hasSucceededStoryboardVideo(selectedShot) ? (
+                        <div className="mt-3 rounded border border-gray-700 bg-[#121212] p-2">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-xs text-gray-400">视频预览</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-gray-500">
+                                {selectedShot.video_duration || selectedShot.duration
+                                  ? `${selectedShot.video_duration || selectedShot.duration}s`
+                                  : "-"}
+                              </span>
                               <button
                                 type="button"
-                                className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]"
-                                onClick={() => generation.result_url && openCoverHistoryPreview(generation)}
-                                disabled={!generation.result_url}
+                                className="text-xs text-purple-300 hover:text-purple-200"
+                                onClick={() =>
+                                  window.open(
+                                    selectedShot.video_url,
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                  )
+                                }
                               >
-                                {getGenerationPreviewSrc(generation) ? (
-                                  <img
-                                    src={getGenerationPreviewSrc(generation)}
-                                    alt=""
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="w-full h-full object-contain"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <ImageIcon className="w-4 h-4 text-gray-600" />
-                                  </div>
-                                )}
+                                打开原视频
                               </button>
-                              <div className="min-w-0 flex-1 space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs text-gray-200">{generation.model}</span>
-                                  {generation.is_current ? (
-                                    <Badge className="bg-purple-600 text-white text-[10px]">当前</Badge>
-                                  ) : null}
-                                  <Badge variant="outline" className="border-gray-700 text-gray-400 text-[10px]">{generation.status}</Badge>
-                                </div>
-                                <p className="text-[11px] text-gray-500">{formatShanghaiDateTime(generation.created_at)}</p>
-                                {generation.error_message ? (
-                                  <p className="text-[11px] leading-5 text-red-400 line-clamp-2">{generation.error_message}</p>
-                                ) : null}
-                                <div className="flex items-center gap-2 pt-1">
-                                  {!generation.is_current && generation.status === "succeeded" ? (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-6 border-gray-700 px-2 text-[11px] text-gray-300"
-                                      disabled={activeMediaActionKey === `set-current:${generation.id}`}
-                                      onClick={() => handleSetCurrentGeneration(generation)}
-                                    >
-                                      {activeMediaActionKey === `set-current:${generation.id}` ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                      ) : (
-                                        "设为当前"
-                                      )}
-                                    </Button>
-                                  ) : null}
-                                  {generation.status !== "generating" ? (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 px-2 text-[11px] text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                                      disabled={activeMediaActionKey === `delete:${generation.id}`}
-                                      onClick={() => handleRequestDeleteGeneration(generation)}
-                                    >
-                                      删除
-                                    </Button>
-                                  ) : null}
-                                </div>
-                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-500">当前镜头还没有首帧历史记录</p>
-                    )}
-                  </div>
-
-                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-300">视频历史</p>
-                        <p className="text-[11px] text-gray-500">多次生成会保留全部历史，不覆盖旧结果</p>
-                      </div>
-                      <Badge variant="outline" className="border-gray-700 text-gray-400">{videoGenerations.length}</Badge>
+                          <video
+                            key={getStoryboardVideoPreviewSrc(selectedShot)}
+                            src={getStoryboardVideoPreviewSrc(selectedShot)}
+                            controls
+                            preload="metadata"
+                            className="w-full rounded bg-black"
+                          />
+                        </div>
+                      ) : null}
                     </div>
-                    {videoGenerations.length > 0 ? (
-                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                        {videoGenerations.map((generation) => (
-                          <div key={generation.id} className="rounded-md border border-gray-800 bg-[#161616] p-2 space-y-2">
-                            <div className="flex gap-3">
-                              <div className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]">
-                                {generation.preview_url || generation.result_url ? (
-                                  <video
-                                    src={generation.preview_url || generation.result_url}
-                                    muted
-                                    playsInline
-                                    preload="metadata"
-                                    className="w-full h-full object-contain"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Play className="w-4 h-4 text-gray-600" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1 space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs text-gray-200">{generation.model}</span>
-                                  {generation.is_current ? (
-                                    <Badge className="bg-purple-600 text-white text-[10px]">当前</Badge>
-                                  ) : null}
-                                  <Badge variant="outline" className="border-gray-700 text-gray-400 text-[10px]">{generation.status}</Badge>
-                                </div>
-                                <p className="text-[11px] text-gray-500">{formatShanghaiDateTime(generation.created_at)}</p>
-                                {generation.error_message ? (
-                                  <p className="text-[11px] leading-5 text-red-400 line-clamp-2">{generation.error_message}</p>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              {!generation.is_current && generation.status === "succeeded" ? (
-                                <Button
+
+                    <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-gray-300">首帧历史</p>
+                          <p className="text-[11px] text-gray-500">
+                            新生成的首帧会自动成为当前版本
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="border-gray-700 text-gray-400">
+                          {coverGenerations.length}
+                        </Badge>
+                      </div>
+                      {coverGenerations.length > 0 ? (
+                        <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                          {coverGenerations.map((generation) => (
+                            <div
+                              key={generation.id}
+                              className="rounded-md border border-gray-800 bg-[#161616] p-2"
+                            >
+                              <div className="flex gap-3">
+                                <button
                                   type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 border-gray-700 text-xs text-gray-300"
-                                  disabled={activeMediaActionKey === `set-current:${generation.id}`}
-                                  onClick={() => handleSetCurrentGeneration(generation)}
+                                  className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]"
+                                  onClick={() =>
+                                    generation.result_url && openCoverHistoryPreview(generation)
+                                  }
+                                  disabled={!generation.result_url}
                                 >
-                                  {activeMediaActionKey === `set-current:${generation.id}` ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  {getGenerationPreviewSrc(generation) ? (
+                                    <img
+                                      src={getGenerationPreviewSrc(generation)}
+                                      alt=""
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="w-full h-full object-contain"
+                                    />
                                   ) : (
-                                    "设为当前"
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <ImageIcon className="w-4 h-4 text-gray-600" />
+                                    </div>
                                   )}
-                                </Button>
-                              ) : null}
-                              {generation.status !== "generating" ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 px-2 text-xs text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                                  disabled={activeMediaActionKey === `delete:${generation.id}`}
-                                  onClick={() => handleRequestDeleteGeneration(generation)}
-                                >
-                                  删除
-                                </Button>
-                              ) : null}
-                              {generation.status === "succeeded" && generation.result_url ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 border-gray-700 text-xs text-gray-300"
-                                  onClick={() => window.open(generation.result_url, "_blank", "noopener,noreferrer")}
-                                >
-                                  打开视频
-                                </Button>
-                              ) : null}
+                                </button>
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-gray-200">
+                                      {generation.model}
+                                    </span>
+                                    {generation.is_current ? (
+                                      <Badge className="bg-purple-600 text-white text-[10px]">
+                                        当前
+                                      </Badge>
+                                    ) : null}
+                                    <Badge
+                                      variant="outline"
+                                      className="border-gray-700 text-gray-400 text-[10px]"
+                                    >
+                                      {generation.status}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-[11px] text-gray-500">
+                                    {formatShanghaiDateTime(generation.created_at)}
+                                  </p>
+                                  {generation.error_message ? (
+                                    <p className="text-[11px] leading-5 text-red-400 line-clamp-2">
+                                      {generation.error_message}
+                                    </p>
+                                  ) : null}
+                                  <div className="flex items-center gap-2 pt-1">
+                                    {!generation.is_current && generation.status === "succeeded" ? (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-6 border-gray-700 px-2 text-[11px] text-gray-300"
+                                        disabled={
+                                          activeMediaActionKey === `set-current:${generation.id}`
+                                        }
+                                        onClick={() => handleSetCurrentGeneration(generation)}
+                                      >
+                                        {activeMediaActionKey === `set-current:${generation.id}` ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          "设为当前"
+                                        )}
+                                      </Button>
+                                    ) : null}
+                                    {generation.status !== "generating" ? (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 px-2 text-[11px] text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                                        disabled={
+                                          activeMediaActionKey === `delete:${generation.id}`
+                                        }
+                                        onClick={() => handleRequestDeleteGeneration(generation)}
+                                      >
+                                        删除
+                                      </Button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">当前镜头还没有首帧历史记录</p>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-gray-300">视频历史</p>
+                          <p className="text-[11px] text-gray-500">
+                            多次生成会保留全部历史，不覆盖旧结果
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="border-gray-700 text-gray-400">
+                          {videoGenerations.length}
+                        </Badge>
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-500">当前镜头还没有视频历史记录</p>
-                    )}
-                  </div>
-
-                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
-                    <div>
-                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">共用信息</p>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">所属场景</Label>
-                      <Input
-                        value={selectedScene?.title || ""}
-                        className="mt-1.5 bg-[#1a1a1a] border-gray-700"
-                        readOnly
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">角色</Label>
-                      <div className="mt-1.5 flex flex-wrap gap-2">
-                        {selectedShot.characters && selectedShot.characters.length > 0 ? (
-                          selectedShot.characters.map((character) => (
-                            <Badge
-                              key={character.id}
-                              variant="outline"
-                              className="flex h-7 items-center gap-1 border-purple-700 pr-1 text-purple-300"
+                      {videoGenerations.length > 0 ? (
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                          {videoGenerations.map((generation) => (
+                            <div
+                              key={generation.id}
+                              className="rounded-md border border-gray-800 bg-[#161616] p-2 space-y-2"
                             >
-                              <span>{character.name}</span>
-                              <button
-                                type="button"
-                                className="rounded-sm p-0.5 text-purple-300 transition hover:bg-purple-900/40 disabled:opacity-50"
-                                onClick={() => handleRemoveStoryboardCharacter(character.id)}
-                                disabled={activeCharacterActionKey === `remove-character:${character.id}`}
-                                aria-label={`移除角色 ${character.name}`}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))
-                        ) : deriveCharacterNames(selectedShot).length > 0 ? (
-                          deriveCharacterNames(selectedShot).map((name) => (
-                            <Badge key={name} variant="outline" className="border-purple-700 text-purple-300">
-                              {name}
-                            </Badge>
-                          ))
-                        ) : (
-                          <Badge variant="outline" className="border-gray-700 text-gray-500">
-                            待关联
-                          </Badge>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 px-2 text-xs border-gray-700 text-gray-400"
-                          onClick={() => void handleOpenManageCharacters()}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          管理角色
-                        </Button>
-                      </div>
+                              <div className="flex gap-3">
+                                <div className="w-20 h-12 shrink-0 overflow-hidden rounded border border-gray-800 bg-[#0f0f0f]">
+                                  {generation.preview_url || generation.result_url ? (
+                                    <video
+                                      src={generation.preview_url || generation.result_url}
+                                      muted
+                                      playsInline
+                                      preload="metadata"
+                                      className="w-full h-full object-contain"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <Play className="w-4 h-4 text-gray-600" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-gray-200">
+                                      {generation.model}
+                                    </span>
+                                    {generation.is_current ? (
+                                      <Badge className="bg-purple-600 text-white text-[10px]">
+                                        当前
+                                      </Badge>
+                                    ) : null}
+                                    <Badge
+                                      variant="outline"
+                                      className="border-gray-700 text-gray-400 text-[10px]"
+                                    >
+                                      {generation.status}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-[11px] text-gray-500">
+                                    {formatShanghaiDateTime(generation.created_at)}
+                                  </p>
+                                  {generation.error_message ? (
+                                    <p className="text-[11px] leading-5 text-red-400 line-clamp-2">
+                                      {generation.error_message}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                {!generation.is_current && generation.status === "succeeded" ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 border-gray-700 text-xs text-gray-300"
+                                    disabled={
+                                      activeMediaActionKey === `set-current:${generation.id}`
+                                    }
+                                    onClick={() => handleSetCurrentGeneration(generation)}
+                                  >
+                                    {activeMediaActionKey === `set-current:${generation.id}` ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      "设为当前"
+                                    )}
+                                  </Button>
+                                ) : null}
+                                {generation.status !== "generating" ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                                    disabled={activeMediaActionKey === `delete:${generation.id}`}
+                                    onClick={() => handleRequestDeleteGeneration(generation)}
+                                  >
+                                    删除
+                                  </Button>
+                                ) : null}
+                                {generation.status === "succeeded" && generation.result_url ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 border-gray-700 text-xs text-gray-300"
+                                    onClick={() =>
+                                      window.open(
+                                        generation.result_url,
+                                        "_blank",
+                                        "noopener,noreferrer",
+                                      )
+                                    }
+                                  >
+                                    打开视频
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">当前镜头还没有视频历史记录</p>
+                      )}
                     </div>
 
-                    <div>
-                      <Label className="text-xs text-gray-400">背景资产</Label>
-                      <div className="mt-1.5 flex flex-wrap gap-2">
-                        {selectedShot.assets && selectedShot.assets.length > 0 ? (
-                          selectedShot.assets.map((asset) => (
-                            <Badge
-                              key={asset.id}
-                              variant="outline"
-                              className="flex h-7 items-center gap-1 border-emerald-700 pr-1 text-emerald-300"
-                            >
-                              <span>{asset.name}</span>
-                              <button
-                                type="button"
-                                className="rounded-sm p-0.5 text-emerald-300 transition hover:bg-emerald-900/40 disabled:opacity-50"
-                                onClick={() => void handleRemoveStoryboardAsset(asset.id)}
-                                disabled={activeAssetActionKey === `remove-asset:${asset.id}`}
-                                aria-label={`移除背景资产 ${asset.name}`}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))
-                        ) : (
-                          <Badge variant="outline" className="border-gray-700 text-gray-500">
-                            待关联
-                          </Badge>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 px-2 text-xs border-gray-700 text-gray-400"
-                          onClick={() => void handleOpenManageAssets()}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          管理背景资产
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">画面描述</Label>
-                      <Textarea
-                        value={shotForm.content}
-                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
-                        onChange={(e) => updateShotForm("content", e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">台词</Label>
-                      <Textarea
-                        value={shotForm.dialogue}
-                        placeholder="无台词"
-                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
-                        onChange={(e) => updateShotForm("dialogue", e.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
                       <div>
-                        <Label className="text-xs text-gray-400">风格预设</Label>
-                        <Select value={shotForm.style_preset || "__scene__"} onValueChange={(value) => updateShotForm("style_preset", value === "__scene__" ? "" : value)}>
-                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <span className="block truncate">
-                              {shotForm.style_preset ? getStylePresetLabel(shotForm.style_preset) : "跟随场景"}
-                            </span>
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            <SelectItem value="__scene__">跟随场景</SelectItem>
-                            {STYLE_PRESET_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                <SelectOptionWithTooltip label={option.label} prompt={STYLE_PRESET_PROMPT_MAP[option.value]} />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                          共用信息
+                        </p>
                       </div>
 
                       <div>
-                        <Label className="text-xs text-gray-400">风格补充</Label>
+                        <Label className="text-xs text-gray-400">所属场景</Label>
                         <Input
-                          value={shotForm.style_notes}
-                          placeholder="补充风格要求"
-                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
-                          onChange={(e) => updateShotForm("style_notes", e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs text-gray-400">情绪</Label>
-                      <Select value={shotForm.mood} onValueChange={(value) => updateShotForm("mood", value)}>
-                        <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                          <span className={`block truncate ${shotForm.mood ? "" : "text-muted-foreground"}`}>
-                            {getMoodLabel(shotForm.mood) || "选择情绪"}
-                          </span>
-                        </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            {MOOD_OPTIONS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                <SelectOptionWithTooltip label={option} prompt={MOOD_PROMPT_MAP[option]} />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
-                    <div>
-                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">视频信息</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs text-gray-400">景别</Label>
-                        <Select value={shotForm.shot_type} onValueChange={(value) => updateShotForm("shot_type", value)}>
-                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <span className={`block truncate ${shotForm.shot_type ? "" : "text-muted-foreground"}`}>
-                              {getShotTypeLabel(shotForm.shot_type) || "选择景别"}
-                            </span>
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            {SHOT_TYPE_OPTIONS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                <SelectOptionWithTooltip label={option} prompt={SHOT_TYPE_PROMPT_MAP[option]} />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label className="text-xs text-gray-400">机位</Label>
-                        <Select value={shotForm.camera_direction} onValueChange={(value) => updateShotForm("camera_direction", value)}>
-                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <span className={`block truncate ${shotForm.camera_direction ? "" : "text-muted-foreground"}`}>
-                              {getCameraDirectionLabel(shotForm.camera_direction) || "选择机位"}
-                            </span>
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            {CAMERA_DIRECTION_OPTIONS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                <SelectOptionWithTooltip label={option} prompt={CAMERA_DIRECTION_PROMPT_MAP[option]} />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs text-gray-400">镜头运动</Label>
-                        <Select value={shotForm.camera_motion} onValueChange={(value) => updateShotForm("camera_motion", value)}>
-                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                            <span className={`block truncate ${shotForm.camera_motion ? "" : "text-muted-foreground"}`}>
-                              {getCameraMotionLabel(shotForm.camera_motion) || "选择镜头运动"}
-                            </span>
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
-                            {CAMERA_MOTION_OPTIONS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                <SelectOptionWithTooltip label={option} prompt={CAMERA_MOTION_PROMPT_MAP[option]} />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label className="text-xs text-gray-400">时长（秒）</Label>
-                        <Input
-                          value={selectedShot.video_duration || selectedShot.duration || ""}
-                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                          value={selectedScene?.title || ""}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700"
                           readOnly
                         />
                       </div>
+
+                      <div>
+                        <Label className="text-xs text-gray-400">角色</Label>
+                        <div className="mt-1.5 flex flex-wrap gap-2">
+                          {selectedShot.characters && selectedShot.characters.length > 0 ? (
+                            selectedShot.characters.map((character) => (
+                              <Badge
+                                key={character.id}
+                                variant="outline"
+                                className="flex h-7 items-center gap-1 border-purple-700 pr-1 text-purple-300"
+                              >
+                                <span>{character.name}</span>
+                                <button
+                                  type="button"
+                                  className="rounded-sm p-0.5 text-purple-300 transition hover:bg-purple-900/40 disabled:opacity-50"
+                                  onClick={() => handleRemoveStoryboardCharacter(character.id)}
+                                  disabled={
+                                    activeCharacterActionKey === `remove-character:${character.id}`
+                                  }
+                                  aria-label={`移除角色 ${character.name}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))
+                          ) : deriveCharacterNames(selectedShot).length > 0 ? (
+                            deriveCharacterNames(selectedShot).map((name) => (
+                              <Badge
+                                key={name}
+                                variant="outline"
+                                className="border-purple-700 text-purple-300"
+                              >
+                                {name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <Badge variant="outline" className="border-gray-700 text-gray-500">
+                              待关联
+                            </Badge>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs border-gray-700 text-gray-400"
+                            onClick={() => void handleOpenManageCharacters()}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            管理角色
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-gray-400">背景资产</Label>
+                        <div className="mt-1.5 flex flex-wrap gap-2">
+                          {selectedShot.assets && selectedShot.assets.length > 0 ? (
+                            selectedShot.assets.map((asset) => (
+                              <Badge
+                                key={asset.id}
+                                variant="outline"
+                                className="flex h-7 items-center gap-1 border-emerald-700 pr-1 text-emerald-300"
+                              >
+                                <span>{asset.name}</span>
+                                <button
+                                  type="button"
+                                  className="rounded-sm p-0.5 text-emerald-300 transition hover:bg-emerald-900/40 disabled:opacity-50"
+                                  onClick={() => void handleRemoveStoryboardAsset(asset.id)}
+                                  disabled={activeAssetActionKey === `remove-asset:${asset.id}`}
+                                  aria-label={`移除背景资产 ${asset.name}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))
+                          ) : (
+                            <Badge variant="outline" className="border-gray-700 text-gray-500">
+                              待关联
+                            </Badge>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs border-gray-700 text-gray-400"
+                            onClick={() => void handleOpenManageAssets()}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            管理背景资产
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-gray-400">画面描述</Label>
+                        <Textarea
+                          value={shotForm.content}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
+                          onChange={(e) => updateShotForm("content", e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-gray-400">台词</Label>
+                        <Textarea
+                          value={shotForm.dialogue}
+                          placeholder="无台词"
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
+                          onChange={(e) => updateShotForm("dialogue", e.target.value)}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-gray-400">风格预设</Label>
+                          <Select
+                            value={shotForm.style_preset || "__scene__"}
+                            onValueChange={(value) =>
+                              updateShotForm("style_preset", value === "__scene__" ? "" : value)
+                            }
+                          >
+                            <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                              <span className="block truncate">
+                                {shotForm.style_preset
+                                  ? getStylePresetLabel(shotForm.style_preset)
+                                  : "跟随场景"}
+                              </span>
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                              <SelectItem value="__scene__">跟随场景</SelectItem>
+                              {STYLE_PRESET_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  <SelectOptionWithTooltip
+                                    label={option.label}
+                                    prompt={STYLE_PRESET_PROMPT_MAP[option.value]}
+                                  />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs text-gray-400">风格补充</Label>
+                          <Input
+                            value={shotForm.style_notes}
+                            placeholder="补充风格要求"
+                            className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                            onChange={(e) => updateShotForm("style_notes", e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-gray-400">情绪</Label>
+                        <Select
+                          value={shotForm.mood}
+                          onValueChange={(value) => updateShotForm("mood", value)}
+                        >
+                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                            <span
+                              className={`block truncate ${shotForm.mood ? "" : "text-muted-foreground"}`}
+                            >
+                              {getMoodLabel(shotForm.mood) || "选择情绪"}
+                            </span>
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                            {MOOD_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                <SelectOptionWithTooltip
+                                  label={option}
+                                  prompt={MOOD_PROMPT_MAP[option]}
+                                />
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-800 bg-[#121212] p-3 space-y-3">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                          视频信息
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-gray-400">景别</Label>
+                          <Select
+                            value={shotForm.shot_type}
+                            onValueChange={(value) => updateShotForm("shot_type", value)}
+                          >
+                            <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                              <span
+                                className={`block truncate ${shotForm.shot_type ? "" : "text-muted-foreground"}`}
+                              >
+                                {getShotTypeLabel(shotForm.shot_type) || "选择景别"}
+                              </span>
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                              {SHOT_TYPE_OPTIONS.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  <SelectOptionWithTooltip
+                                    label={option}
+                                    prompt={SHOT_TYPE_PROMPT_MAP[option]}
+                                  />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs text-gray-400">机位</Label>
+                          <Select
+                            value={shotForm.camera_direction}
+                            onValueChange={(value) => updateShotForm("camera_direction", value)}
+                          >
+                            <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                              <span
+                                className={`block truncate ${shotForm.camera_direction ? "" : "text-muted-foreground"}`}
+                              >
+                                {getCameraDirectionLabel(shotForm.camera_direction) || "选择机位"}
+                              </span>
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                              {CAMERA_DIRECTION_OPTIONS.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  <SelectOptionWithTooltip
+                                    label={option}
+                                    prompt={CAMERA_DIRECTION_PROMPT_MAP[option]}
+                                  />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-gray-400">镜头运动</Label>
+                          <Select
+                            value={shotForm.camera_motion}
+                            onValueChange={(value) => updateShotForm("camera_motion", value)}
+                          >
+                            <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
+                              <span
+                                className={`block truncate ${shotForm.camera_motion ? "" : "text-muted-foreground"}`}
+                              >
+                                {getCameraMotionLabel(shotForm.camera_motion) || "选择镜头运动"}
+                              </span>
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a] border-gray-700">
+                              {CAMERA_MOTION_OPTIONS.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  <SelectOptionWithTooltip
+                                    label={option}
+                                    prompt={CAMERA_MOTION_PROMPT_MAP[option]}
+                                  />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs text-gray-400">时长（秒）</Label>
+                          <Input
+                            value={selectedShot.video_duration || selectedShot.duration || ""}
+                            className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9"
+                            readOnly
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <Label className="text-xs text-gray-400">备注（补充细节）</Label>
+                      <Textarea
+                        value={shotForm.notes}
+                        placeholder="添加备注..."
+                        className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
+                        onChange={(e) => updateShotForm("notes", e.target.value)}
+                      />
                     </div>
                   </div>
+                </div>
 
-                  {/* Notes */}
-                  <div>
-                    <Label className="text-xs text-gray-400">备注（补充细节）</Label>
-                    <Textarea
-                      value={shotForm.notes}
-                      placeholder="添加备注..."
-                      className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
-                      onChange={(e) => updateShotForm("notes", e.target.value)}
-                    />
-                  </div>
+                <div className="p-4 border-t border-gray-800 flex gap-2">
+                  <Button
+                    className="flex-1 bg-purple-600 hover:bg-purple-700"
+                    onClick={handleSaveShot}
+                    disabled={isSavingShot}
+                  >
+                    {isSavingShot ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        保存中...
+                      </>
+                    ) : (
+                      "保存修改"
+                    )}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="inline-flex h-9 items-center justify-center rounded-md border border-gray-700 bg-[#1a1a1a] px-3 text-gray-100 transition-colors hover:bg-[#262626] hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="bg-[#111111] border-gray-800 text-gray-100"
+                    >
+                      <DropdownMenuItem
+                        variant="destructive"
+                        className="cursor-pointer focus:bg-red-500/10 focus:text-red-300"
+                        onClick={() => handleRequestDeleteShot(selectedShot)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        删除镜头
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <Camera className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">请选择一个镜头</p>
                 </div>
               </div>
-
-              <div className="p-4 border-t border-gray-800 flex gap-2">
-                <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={handleSaveShot} disabled={isSavingShot}>
-                  {isSavingShot ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      保存中...
-                    </>
-                  ) : (
-                    "保存修改"
-                  )}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="inline-flex h-9 items-center justify-center rounded-md border border-gray-700 bg-[#1a1a1a] px-3 text-gray-100 transition-colors hover:bg-[#262626] hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[#111111] border-gray-800 text-gray-100">
-                    <DropdownMenuItem
-                      variant="destructive"
-                      className="cursor-pointer focus:bg-red-500/10 focus:text-red-300"
-                      onClick={() => handleRequestDeleteShot(selectedShot)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      删除镜头
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <Camera className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">请选择一个镜头</p>
-              </div>
-            </div>
-          )}
+            )}
           </aside>
         )}
 
@@ -2965,7 +3228,9 @@ export default function Workspace() {
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
               <div className="text-gray-300 font-medium">当前镜头</div>
               <div className="mt-2 text-xs text-gray-400">
-                {selectedShot ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}` : "未选择镜头"}
+                {selectedShot
+                  ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}`
+                  : "未选择镜头"}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {selectedShot?.characters?.length ? (
@@ -3027,7 +3292,9 @@ export default function Workspace() {
                   </div>
                 ) : projectCharacters.length > 0 ? (
                   projectCharacters.map((character) => {
-                    const alreadyAssigned = !!selectedShot?.characters?.some((item) => item.id === character.id);
+                    const alreadyAssigned = !!selectedShot?.characters?.some(
+                      (item) => item.id === character.id,
+                    );
                     return (
                       <div
                         key={character.id}
@@ -3035,15 +3302,24 @@ export default function Workspace() {
                       >
                         <div className="min-w-0">
                           <div className="text-sm text-gray-200">{character.name}</div>
-                          <div className="mt-1 line-clamp-3 text-xs leading-5 text-gray-400">{character.description || "暂无角色描述"}</div>
+                          <div className="mt-1 line-clamp-3 text-xs leading-5 text-gray-400">
+                            {character.description || "暂无角色描述"}
+                          </div>
                         </div>
                         <Button
                           type="button"
                           size="sm"
                           variant={alreadyAssigned ? "outline" : "default"}
-                          className={alreadyAssigned ? "h-7 border-gray-700 text-xs text-gray-400" : "h-7 bg-purple-600 px-3 text-xs text-white hover:bg-purple-700"}
+                          className={
+                            alreadyAssigned
+                              ? "h-7 border-gray-700 text-xs text-gray-400"
+                              : "h-7 bg-purple-600 px-3 text-xs text-white hover:bg-purple-700"
+                          }
                           onClick={() => void handleAddStoryboardCharacter(character.id)}
-                          disabled={alreadyAssigned || activeCharacterActionKey === `add-character:${character.id}`}
+                          disabled={
+                            alreadyAssigned ||
+                            activeCharacterActionKey === `add-character:${character.id}`
+                          }
                         >
                           {activeCharacterActionKey === `add-character:${character.id}` ? (
                             <>
@@ -3066,7 +3342,11 @@ export default function Workspace() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsManageCharactersOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsManageCharactersOpen(false)}
+            >
               关闭
             </Button>
           </DialogFooter>
@@ -3077,14 +3357,17 @@ export default function Workspace() {
           <DialogHeader>
             <DialogTitle>管理背景资产</DialogTitle>
             <DialogDescription className="text-gray-400">
-              给当前镜头添加或移除场景背景资产。这些背景图会在 Seedance 视频生成时作为参考图一起传入。
+              给当前镜头添加或移除场景背景资产。这些背景图会在 Seedance
+              视频生成时作为参考图一起传入。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
               <div className="text-gray-300 font-medium">当前镜头</div>
               <div className="mt-2 text-xs text-gray-400">
-                {selectedShot ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}` : "未选择镜头"}
+                {selectedShot
+                  ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}`
+                  : "未选择镜头"}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {selectedShot?.assets?.length ? (
@@ -3146,7 +3429,9 @@ export default function Workspace() {
                   </div>
                 ) : projectAssets.length > 0 ? (
                   projectAssets.map((asset) => {
-                    const alreadyAssigned = !!selectedShot?.assets?.some((item) => item.id === asset.id);
+                    const alreadyAssigned = !!selectedShot?.assets?.some(
+                      (item) => item.id === asset.id,
+                    );
                     return (
                       <div
                         key={asset.id}
@@ -3154,15 +3439,23 @@ export default function Workspace() {
                       >
                         <div className="min-w-0">
                           <div className="text-sm text-gray-200">{asset.name}</div>
-                          <div className="mt-1 line-clamp-3 text-xs leading-5 text-gray-400">{asset.meta || asset.type || "场景背景资产"}</div>
+                          <div className="mt-1 line-clamp-3 text-xs leading-5 text-gray-400">
+                            {asset.meta || asset.type || "场景背景资产"}
+                          </div>
                         </div>
                         <Button
                           type="button"
                           size="sm"
                           variant={alreadyAssigned ? "outline" : "default"}
-                          className={alreadyAssigned ? "h-7 border-gray-700 text-xs text-gray-400" : "h-7 bg-purple-600 px-3 text-xs text-white hover:bg-purple-700"}
+                          className={
+                            alreadyAssigned
+                              ? "h-7 border-gray-700 text-xs text-gray-400"
+                              : "h-7 bg-purple-600 px-3 text-xs text-white hover:bg-purple-700"
+                          }
                           onClick={() => void handleAddStoryboardAsset(asset.id)}
-                          disabled={alreadyAssigned || activeAssetActionKey === `add-asset:${asset.id}`}
+                          disabled={
+                            alreadyAssigned || activeAssetActionKey === `add-asset:${asset.id}`
+                          }
                         >
                           {activeAssetActionKey === `add-asset:${asset.id}` ? (
                             <>
@@ -3237,14 +3530,22 @@ export default function Workspace() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs text-gray-400">风格预设</Label>
-                <Select value={newSceneForm.style_preset} onValueChange={(value) => updateNewSceneForm("style_preset", value)}>
+                <Select
+                  value={newSceneForm.style_preset}
+                  onValueChange={(value) => updateNewSceneForm("style_preset", value)}
+                >
                   <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700 h-9 text-sm">
-                    <span className="block truncate">{getStylePresetLabel(newSceneForm.style_preset) || "选择风格预设"}</span>
+                    <span className="block truncate">
+                      {getStylePresetLabel(newSceneForm.style_preset) || "选择风格预设"}
+                    </span>
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1a1a] border-gray-700">
                     {STYLE_PRESET_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        <SelectOptionWithTooltip label={option.label} prompt={STYLE_PRESET_PROMPT_MAP[option.value]} />
+                        <SelectOptionWithTooltip
+                          label={option.label}
+                          prompt={STYLE_PRESET_PROMPT_MAP[option.value]}
+                        />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -3302,14 +3603,26 @@ export default function Workspace() {
           <DialogHeader>
             <DialogTitle>确认生成首帧</DialogTitle>
             <DialogDescription className="text-gray-400 leading-6">
-              会为当前镜头调用图像模型生成 1 张新首帧，并消耗模型额度。弹窗展示的是本次将实际传给大模型的参数。
+              会为当前镜头调用图像模型生成 1
+              张新首帧，并消耗模型额度。弹窗展示的是本次将实际传给大模型的参数。
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div className="grid gap-3 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm md:grid-cols-2">
-              <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-gray-500">生成模式</span><span>{coverGenerationPreview?.mode === "reference" ? "参考图生成" : "纯文本生成"}</span></div>
-              <div className="flex justify-between gap-4 md:col-span-2"><span className="text-gray-500">实际模型</span><span>{coverGenerationPreview?.model || "-"}</span></div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">镜头编号</span>
+                <span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">生成模式</span>
+                <span>
+                  {coverGenerationPreview?.mode === "reference" ? "参考图生成" : "纯文本生成"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4 md:col-span-2">
+                <span className="text-gray-500">实际模型</span>
+                <span>{coverGenerationPreview?.model || "-"}</span>
+              </div>
             </div>
 
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
@@ -3317,7 +3630,10 @@ export default function Workspace() {
               {coverGenerationPreview?.reference_images?.length ? (
                 <div className="space-y-3">
                   {coverGenerationPreview.reference_images.map((reference, index) => (
-                    <div key={`${reference.type}-${reference.name}-${index}`} className="rounded border border-gray-800 bg-[#111111] p-2 text-xs space-y-2">
+                    <div
+                      key={`${reference.type}-${reference.name}-${index}`}
+                      className="rounded border border-gray-800 bg-[#111111] p-2 text-xs space-y-2"
+                    >
                       <div className="grid gap-2 md:grid-cols-[96px_minmax(0,1fr)]">
                         <div className="h-24 w-24 overflow-hidden rounded border border-gray-800 bg-black">
                           <img
@@ -3329,9 +3645,18 @@ export default function Workspace() {
                           />
                         </div>
                         <div className="space-y-1 break-all">
-                          <div className="flex justify-between gap-4"><span className="text-gray-500">类型</span><span>{reference.type}</span></div>
-                          <div className="flex justify-between gap-4"><span className="text-gray-500">名称</span><span>{reference.name || "-"}</span></div>
-                          <div className="flex justify-between gap-4"><span className="text-gray-500">来源字段</span><span>{reference.source}</span></div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-gray-500">类型</span>
+                            <span>{reference.type}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-gray-500">名称</span>
+                            <span>{reference.name || "-"}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-gray-500">来源字段</span>
+                            <span>{reference.source}</span>
+                          </div>
                           <div>
                             <div className="text-gray-500 mb-1">URL</div>
                             <div className="text-gray-300 break-all">{reference.url}</div>
@@ -3347,37 +3672,81 @@ export default function Workspace() {
               {!!coverGenerationPreview?.missing_references?.length && (
                 <div>
                   <div className="text-gray-500 mb-1">缺失参考图</div>
-                  <div className="text-gray-300 text-xs break-words">{coverGenerationPreview.missing_references.join("、")}</div>
+                  <div className="text-gray-300 text-xs break-words">
+                    {coverGenerationPreview.missing_references.join("、")}
+                  </div>
                 </div>
               )}
             </div>
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">结构化字段</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
-                <div><span className="text-gray-500">场景标题：</span><span>{coverGenerationPreview?.fields.scene_title || "-"}</span></div>
-                <div><span className="text-gray-500">地点：</span><span>{coverGenerationPreview?.fields.location || "-"}</span></div>
-                <div><span className="text-gray-500">时间：</span><span>{coverGenerationPreview?.fields.time_of_day || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{coverGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{coverGenerationPreview?.fields.content || "-"}</span></div>
-                <div><span className="text-gray-500">情绪：</span><span>{coverGenerationPreview?.fields.mood || "-"}</span></div>
-                <div><span className="text-gray-500">台词：</span><span>{coverGenerationPreview?.fields.dialogue || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">备注：</span><span>{coverGenerationPreview?.fields.notes || "-"}</span></div>
+                <div>
+                  <span className="text-gray-500">场景标题：</span>
+                  <span>{coverGenerationPreview?.fields.scene_title || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">地点：</span>
+                  <span>{coverGenerationPreview?.fields.location || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">时间：</span>
+                  <span>{coverGenerationPreview?.fields.time_of_day || "-"}</span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">角色：</span>
+                  <span>{coverGenerationPreview?.fields.characters?.join("、") || "-"}</span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">画面描述：</span>
+                  <span>{coverGenerationPreview?.fields.content || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">情绪：</span>
+                  <span>{coverGenerationPreview?.fields.mood || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">台词：</span>
+                  <span>{coverGenerationPreview?.fields.dialogue || "-"}</span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">备注：</span>
+                  <span>{coverGenerationPreview?.fields.notes || "-"}</span>
+                </div>
               </div>
             </div>
 
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{formatPromptForDisplay(coverGenerationPreview?.final_prompt)}</pre>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">
+                {formatPromptForDisplay(coverGenerationPreview?.final_prompt)}
+              </pre>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => setIsCoverConfirmOpen(false)}>取消</Button>
+            <Button type="button" variant="outline" onClick={() => setIsCoverConfirmOpen(false)}>
+              取消
+            </Button>
             {coverGenerationPreview?.reference_images?.length ? (
-              <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateCover(false)}>确认生成</Button>
+              <Button
+                type="button"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => void confirmGenerateCover(false)}
+              >
+                确认生成
+              </Button>
             ) : (
               <>
-                <Button type="button" variant="outline" onClick={handleGoToAssetsForReferences}>去资产库补参考图</Button>
-                <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateCover(true)}>继续用纯文本生成</Button>
+                <Button type="button" variant="outline" onClick={handleGoToAssetsForReferences}>
+                  去资产库补参考图
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => void confirmGenerateCover(true)}
+                >
+                  继续用纯文本生成
+                </Button>
               </>
             )}
           </DialogFooter>
@@ -3389,12 +3758,16 @@ export default function Workspace() {
           <DialogHeader>
             <DialogTitle>确认生成场景封面</DialogTitle>
             <DialogDescription className="text-gray-400 leading-6">
-              会为当前场景生成 1 张场景级代表封面。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
+              会为当前场景生成 1 张场景级代表封面。弹窗展示的是本次将实际传给大模型的详细参数和最终
+              prompt。
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
-              <div className="flex justify-between gap-4"><span className="text-gray-500">实际模型</span><span>{sceneCoverGenerationPreview?.model || "-"}</span></div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">实际模型</span>
+                <span>{sceneCoverGenerationPreview?.model || "-"}</span>
+              </div>
               {sceneCoverGenerationPreview?.notes?.length ? (
                 <div>
                   <div className="text-gray-500 mb-1">说明</div>
@@ -3410,23 +3783,43 @@ export default function Workspace() {
               <div className="text-gray-300 font-medium">详细参数</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
                 {Object.entries(sceneCoverGenerationPreview?.fields || {}).map(([key, value]) => (
-                  <div key={key}><span className="text-gray-500">{key}：</span><span>{value || "-"}</span></div>
+                  <div key={key}>
+                    <span className="text-gray-500">{key}：</span>
+                    <span>{value || "-"}</span>
+                  </div>
                 ))}
               </div>
             </div>
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{formatPromptForDisplay(sceneCoverGenerationPreview?.final_prompt)}</pre>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">
+                {formatPromptForDisplay(sceneCoverGenerationPreview?.final_prompt)}
+              </pre>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => setIsSceneCoverConfirmOpen(false)}>取消</Button>
-            <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmGenerateSceneCover()}>确认生成</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsSceneCoverConfirmOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => void confirmGenerateSceneCover()}
+            >
+              确认生成
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isBatchSceneCoverConfirmOpen} onOpenChange={setIsBatchSceneCoverConfirmOpen}>
+      <AlertDialog
+        open={isBatchSceneCoverConfirmOpen}
+        onOpenChange={setIsBatchSceneCoverConfirmOpen}
+      >
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
           <AlertDialogHeader>
             <AlertDialogTitle>确认批量生成首帧</AlertDialogTitle>
@@ -3435,13 +3828,30 @@ export default function Workspace() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-gray-500">场景标题</span><span>{selectedScene?.title || "-"}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">镜头数量</span><span>{filteredShots.length}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">当前模型</span><span>{COVER_MODEL_OPTIONS.find((option) => option.value === selectedCoverModel)?.label || selectedCoverModel}</span></div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">场景标题</span>
+              <span>{selectedScene?.title || "-"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">镜头数量</span>
+              <span>{filteredShots.length}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">当前模型</span>
+              <span>
+                {COVER_MODEL_OPTIONS.find((option) => option.value === selectedCoverModel)?.label ||
+                  selectedCoverModel}
+              </span>
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmBatchGenerateSceneCovers}>确认生成</AlertDialogAction>
+            <AlertDialogAction
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={confirmBatchGenerateSceneCovers}
+            >
+              确认生成
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -3449,7 +3859,9 @@ export default function Workspace() {
       <AlertDialog open={isSceneVideoConfirmOpen} onOpenChange={setIsSceneVideoConfirmOpen}>
         <AlertDialogContent className="bg-[#111111] border-gray-800 text-gray-100">
           <AlertDialogHeader>
-            <AlertDialogTitle>{selectedScene?.video_url ? "确认重新生成场景视频" : "确认生成场景视频"}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {selectedScene?.video_url ? "确认重新生成场景视频" : "确认生成场景视频"}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400 leading-6">
               {selectedScene?.video_url
                 ? "当前场景已经有一个已生成的视频。继续后会重新合成并覆盖当前场景视频结果。"
@@ -3457,13 +3869,25 @@ export default function Workspace() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-gray-500">场景标题</span><span>{selectedScene?.title || "-"}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">可合成镜头数</span><span>{composableShots.length}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 保留原音轨</span></div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">场景标题</span>
+              <span>{selectedScene?.title || "-"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">可合成镜头数</span>
+              <span>{composableShots.length}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">输出规格</span>
+              <span>720P / 保留原音轨</span>
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmComposeSceneVideo}>
+            <AlertDialogAction
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={confirmComposeSceneVideo}
+            >
               {selectedScene?.video_url ? "确认重新生成" : "确认合成"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -3479,12 +3903,21 @@ export default function Workspace() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-gray-500">项目名称</span><span>{selectedProject?.name || "-"}</span></div>
-            <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>720P / 保留各场景原音轨</span></div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">项目名称</span>
+              <span>{selectedProject?.name || "-"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-500">输出规格</span>
+              <span>720P / 保留各场景原音轨</span>
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-purple-600 hover:bg-purple-700 text-white" onClick={confirmComposeProjectVideo}>
+            <AlertDialogAction
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={confirmComposeProjectVideo}
+            >
               确认合成
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -3496,20 +3929,43 @@ export default function Workspace() {
           <DialogHeader>
             <DialogTitle>确认生成视频</DialogTitle>
             <DialogDescription className="text-gray-400 leading-6">
-              会为当前镜头生成 {getVideoGenerationSpecLabel(selectedVideoModel)} 视频。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
+              会为当前镜头生成 {getVideoGenerationSpecLabel(selectedVideoModel)}{" "}
+              视频。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div className="grid gap-3 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm md:grid-cols-2">
-              <div className="flex justify-between gap-4"><span className="text-gray-500">镜头编号</span><span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-gray-500">实际模型</span><span>{videoGenerationPreview?.model || selectedVideoModel}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-gray-500">时长</span><span>{videoGenerationPreview?.duration || getVideoGenerationDuration(selectedVideoModel)} 秒</span></div>
-              <div className="flex justify-between gap-4"><span className="text-gray-500">输出规格</span><span>{videoGenerationPreview ? `${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}` : getVideoGenerationSpecLabel(selectedVideoModel)}</span></div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">镜头编号</span>
+                <span>{selectedShot ? formatShotNumber(selectedShot.shot_number) : "-"}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">实际模型</span>
+                <span>{videoGenerationPreview?.model || selectedVideoModel}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">时长</span>
+                <span>
+                  {videoGenerationPreview?.duration ||
+                    getVideoGenerationDuration(selectedVideoModel)}{" "}
+                  秒
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">输出规格</span>
+                <span>
+                  {videoGenerationPreview
+                    ? `${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}`
+                    : getVideoGenerationSpecLabel(selectedVideoModel)}
+                </span>
+              </div>
               <div className="flex justify-between gap-4 md:col-span-2">
                 <span className="text-gray-500">首帧来源</span>
                 <span>
                   {videoGenerationPreview?.use_first_frame
-                    ? (videoGenerationPreview?.will_generate_cover ? "当前无首帧，后端会先自动生成首帧" : "使用当前镜头首帧作为首帧输入")
+                    ? videoGenerationPreview?.will_generate_cover
+                      ? "当前无首帧，后端会先自动生成首帧"
+                      : "使用当前镜头首帧作为首帧输入"
                     : "不使用首帧，直接文生视频"}
                 </span>
               </div>
@@ -3523,7 +3979,10 @@ export default function Workspace() {
                     关闭后将直接按文本生成视频，不依赖当前镜头首帧图。
                   </p>
                 </div>
-                <Switch checked={useFirstFrameForVideo} onCheckedChange={setUseFirstFrameForVideo} />
+                <Switch
+                  checked={useFirstFrameForVideo}
+                  onCheckedChange={setUseFirstFrameForVideo}
+                />
               </div>
             </div>
 
@@ -3535,22 +3994,37 @@ export default function Workspace() {
                     <div className="h-28 w-28 overflow-hidden rounded border border-gray-800 bg-black">
                       <img
                         src={videoGenerationPreview.source_image_url}
-                        alt={selectedShot ? `${formatShotNumber(selectedShot.shot_number)} 首帧图` : "首帧图"}
+                        alt={
+                          selectedShot
+                            ? `${formatShotNumber(selectedShot.shot_number)} 首帧图`
+                            : "首帧图"
+                        }
                         loading="lazy"
                         decoding="async"
                         className="h-full w-full object-contain"
                       />
                     </div>
                     <div className="space-y-2 break-all text-xs">
-                      <div className="flex justify-between gap-4"><span className="text-gray-500">状态</span><span>{videoGenerationPreview.source_image_status === "existing-cover" ? "已有首帧" : "将自动补首帧"}</span></div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-gray-500">状态</span>
+                        <span>
+                          {videoGenerationPreview.source_image_status === "existing-cover"
+                            ? "已有首帧"
+                            : "将自动补首帧"}
+                        </span>
+                      </div>
                       <div>
                         <div className="text-gray-500 mb-1">URL</div>
-                        <div className="text-gray-300 break-all">{videoGenerationPreview.source_image_url}</div>
+                        <div className="text-gray-300 break-all">
+                          {videoGenerationPreview.source_image_url}
+                        </div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-amber-300 text-sm">当前镜头还没有首帧。开始生成后，后端会先自动补一张首帧，再继续生成视频。</div>
+                  <div className="text-amber-300 text-sm">
+                    当前镜头还没有首帧。开始生成后，后端会先自动补一张首帧，再继续生成视频。
+                  </div>
                 )}
               </div>
             ) : null}
@@ -3559,11 +4033,16 @@ export default function Workspace() {
               <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-gray-300 font-medium">参考图输入</div>
-                  <div className="text-[11px] text-gray-500">用于生成前确认；Seedance 2.0 会额外传入角色主语音参考</div>
+                  <div className="text-[11px] text-gray-500">
+                    用于生成前确认；Seedance 2.0 会额外传入角色主语音参考
+                  </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   {videoGenerationPreview.reference_images.map((reference, index) => (
-                    <div key={`${reference.name}-${index}`} className="grid gap-2 rounded border border-gray-800 bg-[#111111] p-3 md:grid-cols-[96px_minmax(0,1fr)]">
+                    <div
+                      key={`${reference.name}-${index}`}
+                      className="grid gap-2 rounded border border-gray-800 bg-[#111111] p-3 md:grid-cols-[96px_minmax(0,1fr)]"
+                    >
                       <div className="h-24 w-24 overflow-hidden rounded border border-gray-800 bg-black">
                         <img
                           src={reference.url}
@@ -3576,11 +4055,18 @@ export default function Workspace() {
                       <div className="min-w-0 space-y-1.5 text-xs">
                         <div className="flex items-center gap-2">
                           <Badge className="bg-[#1b2336] text-[#9ec5ff] hover:bg-[#1b2336]">
-                            {reference.type === "character" ? "角色" : reference.type === "scene" ? "背景" : reference.type}
+                            {reference.type === "character"
+                              ? "角色"
+                              : reference.type === "scene"
+                                ? "背景"
+                                : reference.type}
                           </Badge>
                           <span className="truncate text-gray-200">{reference.name}</span>
                         </div>
-                        <div><span className="text-gray-500">来源：</span><span className="text-gray-300">{reference.source}</span></div>
+                        <div>
+                          <span className="text-gray-500">来源：</span>
+                          <span className="text-gray-300">{reference.source}</span>
+                        </div>
                         <div>
                           <div className="mb-1 text-gray-500">URL</div>
                           <div className="break-all text-gray-300">{reference.url}</div>
@@ -3592,7 +4078,9 @@ export default function Workspace() {
                 {!!videoGenerationPreview?.missing_references?.length && (
                   <div className="rounded border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">
                     <div className="mb-1 text-amber-300">以下参考项缺少可用图片：</div>
-                    <div className="break-words">{videoGenerationPreview.missing_references.join("、")}</div>
+                    <div className="break-words">
+                      {videoGenerationPreview.missing_references.join("、")}
+                    </div>
                   </div>
                 )}
               </div>
@@ -3603,17 +4091,26 @@ export default function Workspace() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-gray-300 font-medium">角色主语音参考</div>
                   <div className="text-[11px] text-gray-500">
-                    最多 {videoGenerationPreview.audio_reference_limits.max_count} 段 / 总时长不超过 {videoGenerationPreview.audio_reference_limits.max_total_duration} 秒
+                    最多 {videoGenerationPreview.audio_reference_limits.max_count} 段 / 总时长不超过{" "}
+                    {videoGenerationPreview.audio_reference_limits.max_total_duration} 秒
                   </div>
                 </div>
                 {videoGenerationPreview.audio_reference_assets?.length ? (
                   <div className="grid gap-3 md:grid-cols-2">
                     {videoGenerationPreview.audio_reference_assets.map((reference) => (
-                      <div key={`${reference.character_id}-${reference.url}`} className="rounded border border-gray-800 bg-[#111111] p-3 text-xs space-y-2">
+                      <div
+                        key={`${reference.character_id}-${reference.url}`}
+                        className="rounded border border-gray-800 bg-[#111111] p-3 text-xs space-y-2"
+                      >
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
                             <div className="truncate text-gray-200">{reference.name}</div>
-                            <div className="mt-1 text-gray-500">{reference.voice_name || "角色主语音"} · {reference.duration ? `${reference.duration.toFixed(1)}s` : "未知时长"}</div>
+                            <div className="mt-1 text-gray-500">
+                              {reference.voice_name || "角色主语音"} ·{" "}
+                              {reference.duration
+                                ? `${reference.duration.toFixed(1)}s`
+                                : "未知时长"}
+                            </div>
                           </div>
                           <Badge className="bg-emerald-600 text-white">reference_audio</Badge>
                         </div>
@@ -3630,7 +4127,9 @@ export default function Workspace() {
                 {!!videoGenerationPreview.missing_audio_references?.length && (
                   <div className="rounded border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">
                     <div className="mb-1 text-amber-300">以下角色缺少主语音参考：</div>
-                    <div className="break-words">{videoGenerationPreview.missing_audio_references.join("、")}</div>
+                    <div className="break-words">
+                      {videoGenerationPreview.missing_audio_references.join("、")}
+                    </div>
                   </div>
                 )}
                 {!!videoGenerationPreview.blocking_reasons?.length && (
@@ -3649,25 +4148,66 @@ export default function Workspace() {
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">共用字段</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
-                <div><span className="text-gray-500">场景标题：</span><span>{videoGenerationPreview?.fields.scene_title || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">角色：</span><span>{videoGenerationPreview?.fields.characters?.join("、") || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">画面描述：</span><span>{videoGenerationPreview?.fields.content || "-"}</span></div>
-                <div><span className="text-gray-500">情绪：</span><span>{videoGenerationPreview?.fields.mood || "-"}</span></div>
-                <div><span className="text-gray-500">风格预设：</span><span>{getStylePresetLabel(videoGenerationPreview?.fields.style_preset) || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">风格补充：</span><span>{videoGenerationPreview?.fields.style_notes || "-"}</span></div>
-                <div><span className="text-gray-500">台词：</span><span>{videoGenerationPreview?.fields.dialogue || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">备注：</span><span>{videoGenerationPreview?.fields.notes || "-"}</span></div>
+                <div>
+                  <span className="text-gray-500">场景标题：</span>
+                  <span>{videoGenerationPreview?.fields.scene_title || "-"}</span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">角色：</span>
+                  <span>{videoGenerationPreview?.fields.characters?.join("、") || "-"}</span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">画面描述：</span>
+                  <span>{videoGenerationPreview?.fields.content || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">情绪：</span>
+                  <span>{videoGenerationPreview?.fields.mood || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">风格预设：</span>
+                  <span>
+                    {getStylePresetLabel(videoGenerationPreview?.fields.style_preset) || "-"}
+                  </span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">风格补充：</span>
+                  <span>{videoGenerationPreview?.fields.style_notes || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">台词：</span>
+                  <span>{videoGenerationPreview?.fields.dialogue || "-"}</span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">备注：</span>
+                  <span>{videoGenerationPreview?.fields.notes || "-"}</span>
+                </div>
               </div>
             </div>
 
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">视频字段</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
-                <div><span className="text-gray-500">景别：</span><span>{videoGenerationPreview?.video_fields.shot_type || "-"}</span></div>
-                <div><span className="text-gray-500">机位：</span><span>{videoGenerationPreview?.video_fields.camera_direction || "-"}</span></div>
-                <div><span className="text-gray-500">镜头运动：</span><span>{videoGenerationPreview?.video_fields.camera_motion || "-"}</span></div>
-                <div><span className="text-gray-500">时长：</span><span>{videoGenerationPreview?.video_fields.duration || "-"}</span></div>
-                <div className="md:col-span-2"><span className="text-gray-500">使用当前首帧：</span><span>{videoGenerationPreview?.use_first_frame ? "是" : "否"}</span></div>
+                <div>
+                  <span className="text-gray-500">景别：</span>
+                  <span>{videoGenerationPreview?.video_fields.shot_type || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">机位：</span>
+                  <span>{videoGenerationPreview?.video_fields.camera_direction || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">镜头运动：</span>
+                  <span>{videoGenerationPreview?.video_fields.camera_motion || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">时长：</span>
+                  <span>{videoGenerationPreview?.video_fields.duration || "-"}</span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500">使用当前首帧：</span>
+                  <span>{videoGenerationPreview?.use_first_frame ? "是" : "否"}</span>
+                </div>
               </div>
             </div>
 
@@ -3676,8 +4216,13 @@ export default function Workspace() {
               {buildPromptDisplayBlocksFromBlueprint(videoGenerationPreview).length ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   {buildPromptDisplayBlocksFromBlueprint(videoGenerationPreview).map((block) => (
-                    <div key={block.section} className="rounded border border-gray-800 bg-[#111111] p-3">
-                      <div className="mb-2 text-xs font-medium tracking-[0.14em] text-gray-500">{block.section}</div>
+                    <div
+                      key={block.section}
+                      className="rounded border border-gray-800 bg-[#111111] p-3"
+                    >
+                      <div className="mb-2 text-xs font-medium tracking-[0.14em] text-gray-500">
+                        {block.section}
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {block.items.map((item) => (
                           <Badge
@@ -3693,7 +4238,9 @@ export default function Workspace() {
                   ))}
                 </div>
               ) : (
-                <div className="rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-500">当前没有可展示的结构化提示词。</div>
+                <div className="rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-500">
+                  当前没有可展示的结构化提示词。
+                </div>
               )}
             </div>
 
@@ -3739,7 +4286,9 @@ export default function Workspace() {
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => setIsVideoConfirmOpen(false)}>取消</Button>
+            <Button type="button" variant="outline" onClick={() => setIsVideoConfirmOpen(false)}>
+              取消
+            </Button>
             <Button
               type="button"
               className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -3770,20 +4319,25 @@ export default function Workspace() {
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">镜头编号</span>
-              <span>{deleteTargetShot ? formatShotNumber(deleteTargetShot.shot_number) : '-'}</span>
+              <span>{deleteTargetShot ? formatShotNumber(deleteTargetShot.shot_number) : "-"}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">景别</span>
-              <span>{deleteTargetShot ? deriveShotType(deleteTargetShot) : '-'}</span>
+              <span>{deleteTargetShot ? deriveShotType(deleteTargetShot) : "-"}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">描述</span>
-              <span className="max-w-[240px] truncate text-right">{deleteTargetShot?.content || '-'}</span>
+              <span className="max-w-[240px] truncate text-right">
+                {deleteTargetShot?.content || "-"}
+              </span>
             </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDeleteShot}>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={confirmDeleteShot}
+            >
               确认删除
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -3820,9 +4374,7 @@ export default function Workspace() {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>
-              取消
-            </AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700 text-white"
               onClick={confirmDeleteGeneration}
@@ -3851,20 +4403,23 @@ export default function Workspace() {
           <div className="space-y-2 rounded-md border border-gray-800 bg-[#161616] p-3 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">场景标题</span>
-              <span>{deleteTargetScene?.title || '-'}</span>
+              <span>{deleteTargetScene?.title || "-"}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">地点</span>
-              <span>{deleteTargetScene?.location || '-'}</span>
+              <span>{deleteTargetScene?.location || "-"}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">时间</span>
-              <span>{deleteTargetScene?.time_of_day || '-'}</span>
+              <span>{deleteTargetScene?.time_of_day || "-"}</span>
             </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDeleteScene}>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={confirmDeleteScene}
+            >
               确认删除
             </AlertDialogAction>
           </AlertDialogFooter>

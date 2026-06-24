@@ -18,14 +18,29 @@ export function getScene(id: number) {
 
 export function createScene(
   chapterId: number,
-  data: { title: string; description?: string; location?: string; time_of_day?: string; style_preset?: string; style_notes?: string }
+  data: {
+    title: string;
+    description?: string;
+    location?: string;
+    time_of_day?: string;
+    style_preset?: string;
+    style_notes?: string;
+  },
 ) {
   return apiClient.post<Scene>(`/chapters/${chapterId}/scenes`, data);
 }
 
 export function updateScene(
   id: number,
-  data: { title?: string; description?: string; location?: string; time_of_day?: string; style_preset?: string; style_notes?: string; sort_order?: number }
+  data: {
+    title?: string;
+    description?: string;
+    location?: string;
+    time_of_day?: string;
+    style_preset?: string;
+    style_notes?: string;
+    sort_order?: number;
+  },
 ) {
   return apiClient.put<Scene>(`/scenes/${id}`, data);
 }
@@ -43,7 +58,9 @@ export function generateSceneCover(id: number) {
 }
 
 export function generateSceneStoryboardCovers(id: number) {
-  return apiClient.post<GenerateSceneStoryboardCoversResult>(`/scenes/${id}/generate-storyboard-covers`);
+  return apiClient.post<GenerateSceneStoryboardCoversResult>(
+    `/scenes/${id}/generate-storyboard-covers`,
+  );
 }
 
 export function composeSceneVideo(id: number, data?: { regenerate?: boolean }) {

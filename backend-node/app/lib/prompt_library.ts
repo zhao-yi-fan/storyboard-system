@@ -41,33 +41,13 @@ const TRANSFORMATION_TEMPLATE = 'transformation-spectacle';
 const CHINESE_PERIOD = '。';
 const CHINESE_SEMICOLON = '；';
 
-const COMMON_QUALITY = [
-  '电影感画面组织',
-  '主体明确',
-  '光影层次清楚',
-  '高细节质感',
-];
+const COMMON_QUALITY = ['电影感画面组织', '主体明确', '光影层次清楚', '高细节质感'];
 
-const COMMON_OUTPUT = [
-  '不要文字',
-  '不要水印',
-  '不要 logo',
-  '不要海报排版',
-];
+const COMMON_OUTPUT = ['不要文字', '不要水印', '不要 logo', '不要海报排版'];
 
-const COMMON_NEGATIVE = [
-  '避免人物五官崩坏',
-  '避免手部畸形',
-  '避免穿模',
-  '避免廉价游戏感',
-];
+const COMMON_NEGATIVE = ['避免人物五官崩坏', '避免手部畸形', '避免穿模', '避免廉价游戏感'];
 
-const VIDEO_NEGATIVE = [
-  '不要切镜',
-  '不要闪回',
-  '不要镜头突然跳变',
-  '不要字幕',
-];
+const VIDEO_NEGATIVE = ['不要切镜', '不要闪回', '不要镜头突然跳变', '不要字幕'];
 
 const STYLE_PRESET_PROMPT_MAP: Record<string, string> = {
   realistic_cinematic: '写实电影质感，自然光影层次，人物与环境比例真实，整体叙事克制而稳定',
@@ -93,36 +73,48 @@ const IMAGE_COVER_STYLE_TEMPLATE_MAP: Record<string, string> = {
 
 const TEMPLATE_LIBRARY: Record<string, Partial<PromptBlueprint>> = {
   [DEFAULT_TEMPLATE]: {
-    style: [ '写实电影感', '叙事性强', '构图克制' ],
-    quality: [ '画面稳定', '色彩统一', '主体和背景层次分明' ],
+    style: ['写实电影感', '叙事性强', '构图克制'],
+    quality: ['画面稳定', '色彩统一', '主体和背景层次分明'],
   },
   [DIALOGUE_TEMPLATE]: {
-    style: [ '情绪张力明确', '人物关系可读', '氛围克制而压迫' ],
-    camera: [ '镜头优先锁定眼神、停顿和角色之间的距离变化' ],
-    quality: [ '保留细微表情和呼吸感停顿' ],
+    style: ['情绪张力明确', '人物关系可读', '氛围克制而压迫'],
+    camera: ['镜头优先锁定眼神、停顿和角色之间的距离变化'],
+    quality: ['保留细微表情和呼吸感停顿'],
   },
   [MYTHIC_TEMPLATE]: {
-    style: [ '东方神话史诗感', '冷冽神性气质', '高预算电影级 CG 质感' ],
-    effects: [ '高质量粒子拖尾', '能量光晕', '空间涟漪或符文层次' ],
-    quality: [ '高光与暗部层次充足', '特效与人物边缘清晰' ],
+    style: ['东方神话史诗感', '冷冽神性气质', '高预算电影级 CG 质感'],
+    effects: ['高质量粒子拖尾', '能量光晕', '空间涟漪或符文层次'],
+    quality: ['高光与暗部层次充足', '特效与人物边缘清晰'],
   },
   [SUSPENSE_TEMPLATE]: {
-    style: [ '悬疑压迫感', '低饱和冷调', '空间留白增强不确定性' ],
-    camera: [ '镜头运动克制，优先制造观察感和逼近感' ],
-    quality: [ '暗部细节可读', '氛围真实，不要过曝' ],
+    style: ['悬疑压迫感', '低饱和冷调', '空间留白增强不确定性'],
+    camera: ['镜头运动克制，优先制造观察感和逼近感'],
+    quality: ['暗部细节可读', '氛围真实，不要过曝'],
   },
   [TRANSFORMATION_TEMPLATE]: {
-    style: [ '短视频爆点感', '华丽变形过程', '高潮段视觉反差明显' ],
-    effects: [ '服装或粒子形态变化', '高密度能量爆发', '动作卡点清楚' ],
-    quality: [ '变化过程连续', '关键形变节点完整可见' ],
+    style: ['短视频爆点感', '华丽变形过程', '高潮段视觉反差明显'],
+    effects: ['服装或粒子形态变化', '高密度能量爆发', '动作卡点清楚'],
+    quality: ['变化过程连续', '关键形变节点完整可见'],
   },
 };
 
 const TEMPLATE_KEYWORDS = [
-  { name: MYTHIC_TEMPLATE, patterns: [ '神女', '神明', '仙', '古风', '法印', '符文', '神轮', '史诗', '粒子', '神性' ] },
-  { name: TRANSFORMATION_TEMPLATE, patterns: [ '变装', '蜕变', '换装', '爆发', '觉醒', '进化', '成型', '汇聚' ] },
-  { name: SUSPENSE_TEMPLATE, patterns: [ '悬疑', '神秘', '雨夜', '黑暗', '压迫', '阴影', '监视', '窒息', '追踪', '危机' ] },
-  { name: DIALOGUE_TEMPLATE, patterns: [ '对话', '对白', '独白', '凝视', '沉默', '对峙', '争执', '告白' ] },
+  {
+    name: MYTHIC_TEMPLATE,
+    patterns: ['神女', '神明', '仙', '古风', '法印', '符文', '神轮', '史诗', '粒子', '神性'],
+  },
+  {
+    name: TRANSFORMATION_TEMPLATE,
+    patterns: ['变装', '蜕变', '换装', '爆发', '觉醒', '进化', '成型', '汇聚'],
+  },
+  {
+    name: SUSPENSE_TEMPLATE,
+    patterns: ['悬疑', '神秘', '雨夜', '黑暗', '压迫', '阴影', '监视', '窒息', '追踪', '危机'],
+  },
+  {
+    name: DIALOGUE_TEMPLATE,
+    patterns: ['对话', '对白', '独白', '凝视', '沉默', '对峙', '争执', '告白'],
+  },
 ];
 
 function uniqueParts(values: unknown[]): string[] {
@@ -147,13 +139,17 @@ function sentence(label: string, values: unknown[]): string {
   return `${label}：${parts.join(CHINESE_SEMICOLON)}${CHINESE_PERIOD}`;
 }
 
-function mergeSection(blueprint: PromptBlueprint, key: keyof PromptBlueprint, extra: unknown[]): void {
-  const current = Array.isArray(blueprint[key]) ? blueprint[key] as string[] : [];
-  blueprint[key] = uniqueParts([ ...current, ...extra ]) as never;
+function mergeSection(
+  blueprint: PromptBlueprint,
+  key: keyof PromptBlueprint,
+  extra: unknown[],
+): void {
+  const current = Array.isArray(blueprint[key]) ? (blueprint[key] as string[]) : [];
+  blueprint[key] = uniqueParts([...current, ...extra]) as never;
 }
 
 function includesAny(text: string, patterns: string[]): boolean {
-  return patterns.some(pattern => text.includes(pattern));
+  return patterns.some((pattern) => text.includes(pattern));
 }
 
 function normalizeTextList(values: unknown[]): string[] {
@@ -169,7 +165,7 @@ function expandShotType(shotType: string): string[] {
   if (!value) {
     return [];
   }
-  const clauses = [ `景别采用${value}` ];
+  const clauses = [`景别采用${value}`];
   if (value.includes('特写')) {
     clauses.push('镜头压近到关键表情、眼神或手部细节');
   } else if (value.includes('近景')) {
@@ -187,7 +183,7 @@ function expandCameraDirection(direction: string): string[] {
   if (!value) {
     return [];
   }
-  const clauses = [ `机位使用${value}` ];
+  const clauses = [`机位使用${value}`];
   if (value.includes('低机位') || value.includes('仰拍')) {
     clauses.push('低机位仰拍强化主体压迫感与力量感');
   }
@@ -211,7 +207,7 @@ function expandCameraMotion(motion: string): string[] {
   if (!value) {
     return [];
   }
-  const clauses = [ `运镜方向采用${value}` ];
+  const clauses = [`运镜方向采用${value}`];
   if (value.includes('推')) {
     clauses.push('镜头向主体缓慢逼近，逐步收紧注意力');
   }
@@ -233,7 +229,12 @@ function expandCameraMotion(motion: string): string[] {
   return clauses;
 }
 
-function buildVideoTimeline(content: string, mood: string, motion: string, duration: number): PromptBeat[] {
+function buildVideoTimeline(
+  content: string,
+  mood: string,
+  motion: string,
+  duration: number,
+): PromptBeat[] {
   const safeContent = String(content || '').trim() || '主体动作逐步展开';
   const safeMood = String(mood || '').trim() || '情绪持续累积';
   const safeMotion = String(motion || '').trim() || '镜头平稳推进';
@@ -264,8 +265,16 @@ function parseStructuredVideoBeats(content: string): PromptBeat[] {
   }
 
   const beatPatterns: Array<{ label: string; regex: RegExp }> = [
-    { label: '开场', regex: /(?:首段|开场|0\s*[-~—至到]\s*\d+\s*秒)\s*[:：]\s*([\s\S]*?)(?=(?:中段|中场|\d+\s*[-~—至到]\s*\d+\s*秒)\s*[:：]|(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]|$)/i },
-    { label: '中段', regex: /(?:中段|中场|\d+\s*[-~—至到]\s*\d+\s*秒)\s*[:：]\s*([\s\S]*?)(?=(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]|$)/i },
+    {
+      label: '开场',
+      regex:
+        /(?:首段|开场|0\s*[-~—至到]\s*\d+\s*秒)\s*[:：]\s*([\s\S]*?)(?=(?:中段|中场|\d+\s*[-~—至到]\s*\d+\s*秒)\s*[:：]|(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]|$)/i,
+    },
+    {
+      label: '中段',
+      regex:
+        /(?:中段|中场|\d+\s*[-~—至到]\s*\d+\s*秒)\s*[:：]\s*([\s\S]*?)(?=(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]|$)/i,
+    },
     { label: '收束', regex: /(?:尾段|结尾|收束|高潮|结尾段)\s*[:：]\s*([\s\S]*?)$/i },
   ];
 
@@ -292,9 +301,9 @@ function summarizeVideoContent(content: string): string {
     const headline = text
       .replace(/【[\s\S]*?】/g, ' ')
       .split(/[。；;\n]/)
-      .map(item => item.trim())
+      .map((item) => item.trim())
       .filter(Boolean)
-      .find(item => !/(首段|中段|尾段|开场|高潮|收束)\s*[:：]/.test(item));
+      .find((item) => !/(首段|中段|尾段|开场|高潮|收束)\s*[:：]/.test(item));
     return headline || '按分段分镜脚本推进完整动作和情绪变化';
   }
   return text;
@@ -341,16 +350,37 @@ export function buildPromptBlueprint(input: Partial<PromptBlueprint>): PromptBlu
     timeline: Array.isArray(input.timeline) ? input.timeline : [],
   };
 
-  mergeSection(blueprint, 'subject', [ ...(templateDefaults.subject || []), ...(input.subject || []) ]);
-  mergeSection(blueprint, 'action', [ ...(templateDefaults.action || []), ...(input.action || []) ]);
-  mergeSection(blueprint, 'camera', [ ...(templateDefaults.camera || []), ...(input.camera || []) ]);
-  mergeSection(blueprint, 'style', [ ...(templateDefaults.style || []), ...(input.style || []) ]);
-  mergeSection(blueprint, 'effects', [ ...(templateDefaults.effects || []), ...(input.effects || []) ]);
-  mergeSection(blueprint, 'quality', [ ...COMMON_QUALITY, ...(templateDefaults.quality || []), ...(input.quality || []) ]);
-  mergeSection(blueprint, 'consistency', [ ...(templateDefaults.consistency || []), ...(input.consistency || []) ]);
-  mergeSection(blueprint, 'audio', [ ...(templateDefaults.audio || []), ...(input.audio || []) ]);
-  mergeSection(blueprint, 'output', [ ...COMMON_OUTPUT, ...(templateDefaults.output || []), ...(input.output || []) ]);
-  mergeSection(blueprint, 'negative', [ ...COMMON_NEGATIVE, ...(templateDefaults.negative || []), ...(input.negative || []) ]);
+  mergeSection(blueprint, 'subject', [
+    ...(templateDefaults.subject || []),
+    ...(input.subject || []),
+  ]);
+  mergeSection(blueprint, 'action', [...(templateDefaults.action || []), ...(input.action || [])]);
+  mergeSection(blueprint, 'camera', [...(templateDefaults.camera || []), ...(input.camera || [])]);
+  mergeSection(blueprint, 'style', [...(templateDefaults.style || []), ...(input.style || [])]);
+  mergeSection(blueprint, 'effects', [
+    ...(templateDefaults.effects || []),
+    ...(input.effects || []),
+  ]);
+  mergeSection(blueprint, 'quality', [
+    ...COMMON_QUALITY,
+    ...(templateDefaults.quality || []),
+    ...(input.quality || []),
+  ]);
+  mergeSection(blueprint, 'consistency', [
+    ...(templateDefaults.consistency || []),
+    ...(input.consistency || []),
+  ]);
+  mergeSection(blueprint, 'audio', [...(templateDefaults.audio || []), ...(input.audio || [])]);
+  mergeSection(blueprint, 'output', [
+    ...COMMON_OUTPUT,
+    ...(templateDefaults.output || []),
+    ...(input.output || []),
+  ]);
+  mergeSection(blueprint, 'negative', [
+    ...COMMON_NEGATIVE,
+    ...(templateDefaults.negative || []),
+    ...(input.negative || []),
+  ]);
 
   return blueprint;
 }
@@ -370,7 +400,12 @@ export function renderPromptBlueprint(blueprint: PromptBlueprint): string {
     sentence('负向约束', blueprint.negative || []),
   ];
   if (Array.isArray(blueprint.timeline) && blueprint.timeline.length) {
-    sections.push(sentence('节奏分段', blueprint.timeline.map(item => `${item.label}：${item.description}`)));
+    sections.push(
+      sentence(
+        '节奏分段',
+        blueprint.timeline.map((item) => `${item.label}：${item.description}`),
+      ),
+    );
   }
   return sections.filter(Boolean).join('\n');
 }
@@ -408,7 +443,7 @@ export function buildPromptDisplayBlocks(blueprint: PromptBlueprint): PromptDisp
 
   const timelineItems = Array.isArray(blueprint.timeline)
     ? blueprint.timeline
-        .map(item => {
+        .map((item) => {
           const label = String(item?.label || '').trim();
           const description = String(item?.description || '').trim();
           if (!label || !description) {
@@ -453,7 +488,7 @@ export function buildPromptDisplayTokens(options: {
   const finalPrompt = String(options.finalPrompt || '').trim();
   const characters = uniqueParts(Array.isArray(options.characters) ? options.characters : []);
   const timelineLabels = Array.isArray(options.timeline)
-    ? options.timeline.map(item => String(item?.label || '').trim()).filter(Boolean)
+    ? options.timeline.map((item) => String(item?.label || '').trim()).filter(Boolean)
     : [];
 
   if (options.useFirstFrame) {
@@ -476,7 +511,7 @@ export function buildPromptDisplayTokens(options: {
     tokens.push({
       type: 'badge',
       label: '运镜',
-      text: [ cameraDirection, cameraMotion ].filter(Boolean).join(' / '),
+      text: [cameraDirection, cameraMotion].filter(Boolean).join(' / '),
     });
   }
   if (options.audio) {
@@ -501,7 +536,10 @@ export function buildPromptDisplayTokens(options: {
  * buildStoryboardCoverPrompt({ scene_title: "便利店门口", content: "李明抬头" }, [{ type: "character" }])
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
-export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, references: Array<{ type: string }>) {
+export function buildStoryboardCoverPrompt(
+  fields: Record<string, unknown>,
+  references: Array<{ type: string }>,
+) {
   const stylePresetPrompt = resolveStylePresetPrompt(fields.style_preset);
   const template = selectImageCoverTemplate(fields.style_preset, [
     fields.style_notes,
@@ -518,7 +556,9 @@ export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, refe
       fields.location ? `地点位于${fields.location}` : '',
       fields.time_of_day ? `时间是${fields.time_of_day}` : '',
       fields.background ? `环境主体是${fields.background}` : '',
-      Array.isArray(fields.characters) && fields.characters.length ? `主要人物包括${fields.characters.join('、')}` : '',
+      Array.isArray(fields.characters) && fields.characters.length
+        ? `主要人物包括${fields.characters.join('、')}`
+        : '',
     ]),
     action: normalizeTextList([
       fields.content ? `核心动作是${fields.content}` : '',
@@ -526,18 +566,16 @@ export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, refe
       fields.notes ? `补充叙事重点${fields.notes}` : '',
       fields.mood ? `情绪状态为${fields.mood}` : '',
     ]),
-    camera: normalizeTextList([
-      '封面图只保留一个决定性瞬间，不做多画格拼贴',
-    ]),
+    camera: normalizeTextList(['封面图只保留一个决定性瞬间，不做多画格拼贴']),
     style: normalizeTextList([
       stylePresetPrompt ? `风格基调采用${stylePresetPrompt}` : '',
       fields.style_notes ? `风格补充强调${fields.style_notes}` : '',
       '适合作为剧情分镜封面，不做广告海报式排版',
     ]),
     consistency: references.length
-      ? [ '保持参考图中的角色造型、服装结构、发型和场景材质一致' ]
-      : [ '人物和环境关系清楚，主体识别度稳定' ],
-    output: [ '横版 16:9', '单幅完整镜头封面' ],
+      ? ['保持参考图中的角色造型、服装结构、发型和场景材质一致']
+      : ['人物和环境关系清楚，主体识别度稳定'],
+    output: ['横版 16:9', '单幅完整镜头封面'],
   });
   return {
     template,
@@ -556,12 +594,19 @@ export function buildStoryboardCoverPrompt(fields: Record<string, unknown>, refe
  * buildStoryboardVideoPrompt({ content: "李明抬头", camera_motion: "缓推" }, { title: "便利店门口" }, 5)
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
-export function buildStoryboardVideoPrompt(storyboard: Record<string, unknown>, scene: Record<string, unknown>, duration: number) {
-  const characters = Array.isArray(storyboard.character_names) && storyboard.character_names.length
-    ? storyboard.character_names
-    : Array.isArray(storyboard.characters)
-      ? storyboard.characters.map((item: Record<string, unknown>) => String(item?.name || '').trim()).filter(Boolean)
-      : [];
+export function buildStoryboardVideoPrompt(
+  storyboard: Record<string, unknown>,
+  scene: Record<string, unknown>,
+  duration: number,
+) {
+  const characters =
+    Array.isArray(storyboard.character_names) && storyboard.character_names.length
+      ? storyboard.character_names
+      : Array.isArray(storyboard.characters)
+        ? storyboard.characters
+            .map((item: Record<string, unknown>) => String(item?.name || '').trim())
+            .filter(Boolean)
+        : [];
   const template = selectPromptTemplate([
     storyboard.style_preset,
     scene.style_preset,
@@ -594,17 +639,23 @@ export function buildStoryboardVideoPrompt(storyboard: Record<string, unknown>, 
       '保持首帧主体和构图一致，所有变化都在同一镜头内完成',
     ]),
     style: normalizeTextList([
-      storyboard.style_preset || scene.style_preset ? `风格预设偏向${storyboard.style_preset || scene.style_preset}` : '',
-      storyboard.style_notes || scene.style_notes ? `风格补充强调${storyboard.style_notes || scene.style_notes}` : '',
+      storyboard.style_preset || scene.style_preset
+        ? `风格预设偏向${storyboard.style_preset || scene.style_preset}`
+        : '',
+      storyboard.style_notes || scene.style_notes
+        ? `风格补充强调${storyboard.style_notes || scene.style_notes}`
+        : '',
     ]),
-    audio: [
-      '自动生成环境音和氛围声',
-      '不要旁白',
-    ],
-    consistency: [ '动作连续', '光影稳定', '人物结构和服装一致', '不要突然改脸或改服装' ],
+    audio: ['自动生成环境音和氛围声', '不要旁白'],
+    consistency: ['动作连续', '光影稳定', '人物结构和服装一致', '不要突然改脸或改服装'],
     negative: VIDEO_NEGATIVE,
-    output: [ '单镜头连续动作', '画面收束稳定', '镜头语言清楚' ],
-    timeline: buildVideoTimeline(String(storyboard.content || ''), String(storyboard.mood || ''), String(storyboard.camera_motion || ''), duration),
+    output: ['单镜头连续动作', '画面收束稳定', '镜头语言清楚'],
+    timeline: buildVideoTimeline(
+      String(storyboard.content || ''),
+      String(storyboard.mood || ''),
+      String(storyboard.camera_motion || ''),
+      duration,
+    ),
   });
   return {
     template,
@@ -622,11 +673,18 @@ export function buildStoryboardVideoPrompt(storyboard: Record<string, unknown>, 
  * buildSceneCoverPrompt({ title: "便利店门口", location: "街角" }, [{ content: "李明抬头" }])
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
-export function buildSceneCoverPrompt(scene: Record<string, unknown>, storyboards: Array<Record<string, unknown>>) {
-  const backgrounds = uniqueParts(storyboards.map(item => item.background)).slice(0, 3);
-  const characters = uniqueParts(storyboards.flatMap(item => Array.isArray(item.character_names) ? item.character_names : [])).slice(0, 5);
-  const moods = uniqueParts(storyboards.map(item => item.mood)).slice(0, 4);
-  const content = uniqueParts(storyboards.map(item => item.content)).slice(0, 4);
+export function buildSceneCoverPrompt(
+  scene: Record<string, unknown>,
+  storyboards: Array<Record<string, unknown>>,
+) {
+  const backgrounds = uniqueParts(storyboards.map((item) => item.background)).slice(0, 3);
+  const characters = uniqueParts(
+    storyboards.flatMap((item) =>
+      Array.isArray(item.character_names) ? item.character_names : [],
+    ),
+  ).slice(0, 5);
+  const moods = uniqueParts(storyboards.map((item) => item.mood)).slice(0, 4);
+  const content = uniqueParts(storyboards.map((item) => item.content)).slice(0, 4);
   const stylePresetPrompt = resolveStylePresetPrompt(scene.style_preset);
   const template = selectImageCoverTemplate(scene.style_preset, [
     scene.style_notes,
@@ -649,13 +707,13 @@ export function buildSceneCoverPrompt(scene: Record<string, unknown>, storyboard
       content.length ? `关键镜头摘要包括${content.join('；')}` : '',
       moods.length ? `场景主情绪包括${moods.join('、')}` : '',
     ]),
-    camera: [ '只生成一张完整场景代表图，不要多画格，不要机械并排多个镜头' ],
+    camera: ['只生成一张完整场景代表图，不要多画格，不要机械并排多个镜头'],
     style: normalizeTextList([
       stylePresetPrompt ? `风格基调采用${stylePresetPrompt}` : '',
       scene.style_notes ? `风格补充强调${scene.style_notes}` : '',
       '适合作为场景树封面和场景头部预览',
     ]),
-    output: [ '横版 16:9', '单幅完整场景封面' ],
+    output: ['横版 16:9', '单幅完整场景封面'],
   });
   return {
     template,
@@ -673,7 +731,7 @@ export function buildSceneCoverPrompt(scene: Record<string, unknown>, storyboard
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
 export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
-  const template = selectPromptTemplate([ character.description ]);
+  const template = selectPromptTemplate([character.description]);
   const blueprint = buildPromptBlueprint({
     template,
     intro: '为漫剧分镜系统生成一张角色封面头像',
@@ -681,10 +739,10 @@ export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
       character.name ? `角色名称为${character.name}` : '',
       character.description ? `角色描述为${character.description}` : '',
     ]),
-    action: [ '突出人物识别度和角色气质，不引入剧情性大动作' ],
-    camera: [ '单人角色肖像构图', '画面聚焦头肩或半身，背景简洁' ],
-    style: [ '适合在资产库中展示', '不要夸张漫画化脸部比例' ],
-    output: [ '单人角色头像或半身封面', '构图干净' ],
+    action: ['突出人物识别度和角色气质，不引入剧情性大动作'],
+    camera: ['单人角色肖像构图', '画面聚焦头肩或半身，背景简洁'],
+    style: ['适合在资产库中展示', '不要夸张漫画化脸部比例'],
+    output: ['单人角色头像或半身封面', '构图干净'],
   });
   return {
     template,
@@ -757,7 +815,7 @@ export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
 export function buildAssetCoverPrompt(asset: Record<string, unknown>) {
-  const template = selectPromptTemplate([ asset.type, asset.meta, asset.name ]);
+  const template = selectPromptTemplate([asset.type, asset.meta, asset.name]);
   const blueprint = buildPromptBlueprint({
     template,
     intro: '为漫剧分镜系统生成一张场景资产封面图',
@@ -766,10 +824,10 @@ export function buildAssetCoverPrompt(asset: Record<string, unknown>) {
       asset.type ? `资产类型为${asset.type}` : '',
       asset.meta ? `资产说明为${asset.meta}` : '',
     ]),
-    action: [ '突出单一场景资产的结构、材质和空间氛围' ],
-    camera: [ '以清晰可读的横版构图展示资产主体' ],
-    style: [ '适合作为背景或场景资产预览' ],
-    output: [ '横版 16:9', '单一场景资产封面' ],
+    action: ['突出单一场景资产的结构、材质和空间氛围'],
+    camera: ['以清晰可读的横版构图展示资产主体'],
+    style: ['适合作为背景或场景资产预览'],
+    output: ['横版 16:9', '单一场景资产封面'],
   });
   return {
     template,
@@ -787,7 +845,7 @@ export function buildAssetCoverPrompt(asset: Record<string, unknown>) {
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
 export function buildCharacterVoicePromptText(character: Record<string, unknown>) {
-  const template = selectPromptTemplate([ character.description ]);
+  const template = selectPromptTemplate([character.description]);
   const blueprint = buildPromptBlueprint({
     template,
     intro: '为漫剧角色设计一段稳定可复用的中文主语音',
@@ -795,9 +853,9 @@ export function buildCharacterVoicePromptText(character: Record<string, unknown>
       character.name ? `角色名为${character.name}` : '',
       character.description ? `人设描述为${character.description}` : '',
     ]),
-    style: [ '自然真人感', '适合剧情对白', '声音气质贴合角色而不过度表演' ],
-    audio: [ '吐字清晰', '口语节奏自然', '一句 3-5 秒短句', '不要主持腔', '不要广告腔' ],
-    output: [ '生成 3-5 秒短句参考音频', '适合作为主语音参考' ],
+    style: ['自然真人感', '适合剧情对白', '声音气质贴合角色而不过度表演'],
+    audio: ['吐字清晰', '口语节奏自然', '一句 3-5 秒短句', '不要主持腔', '不要广告腔'],
+    output: ['生成 3-5 秒短句参考音频', '适合作为主语音参考'],
   });
   return {
     template,

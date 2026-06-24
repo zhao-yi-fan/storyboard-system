@@ -14,8 +14,8 @@ const CharacterService = require('../app/service/character');
 
 async function hasAudioTools() {
   try {
-    await execFileAsync('ffmpeg', [ '-version' ]);
-    await execFileAsync('ffprobe', [ '-version' ]);
+    await execFileAsync('ffmpeg', ['-version']);
+    await execFileAsync('ffprobe', ['-version']);
     return true;
   } catch {
     return false;
@@ -28,10 +28,14 @@ async function createToneBuffer(durationSeconds: number) {
   try {
     await execFileAsync('ffmpeg', [
       '-y',
-      '-f', 'lavfi',
-      '-i', `sine=frequency=440:duration=${durationSeconds}`,
-      '-ar', '24000',
-      '-ac', '1',
+      '-f',
+      'lavfi',
+      '-i',
+      `sine=frequency=440:duration=${durationSeconds}`,
+      '-ar',
+      '24000',
+      '-ac',
+      '1',
       outputPath,
     ]);
     return await fs.readFile(outputPath);
@@ -41,8 +45,8 @@ async function createToneBuffer(durationSeconds: number) {
 }
 
 describe('test/voice_reference_duration.test.ts', () => {
-  it('should trim generated voice references longer than 5 seconds', async function() {
-    if (!await hasAudioTools()) this.skip();
+  it('should trim generated voice references longer than 5 seconds', async function () {
+    if (!(await hasAudioTools())) this.skip();
     const buffer = await createToneBuffer(6.2);
 
     const result = await normalizeAudioDuration(buffer, {
@@ -53,12 +57,18 @@ describe('test/voice_reference_duration.test.ts', () => {
     });
 
     assert.equal(result.wasTrimmed, true);
-    assert.ok(result.originalDuration > 5, `expected original duration > 5, got ${result.originalDuration}`);
-    assert.ok(result.duration >= 4.8 && result.duration <= 5.05, `expected trimmed duration around 5, got ${result.duration}`);
+    assert.ok(
+      result.originalDuration > 5,
+      `expected original duration > 5, got ${result.originalDuration}`,
+    );
+    assert.ok(
+      result.duration >= 4.8 && result.duration <= 5.05,
+      `expected trimmed duration around 5, got ${result.duration}`,
+    );
   });
 
-  it('should keep generated voice references within 3-5 seconds unchanged', async function() {
-    if (!await hasAudioTools()) this.skip();
+  it('should keep generated voice references within 3-5 seconds unchanged', async function () {
+    if (!(await hasAudioTools())) this.skip();
     const buffer = await createToneBuffer(4);
 
     const result = await normalizeAudioDuration(buffer, {
@@ -70,21 +80,25 @@ describe('test/voice_reference_duration.test.ts', () => {
 
     assert.equal(result.wasTrimmed, false);
     assert.equal(result.audioBuffer, buffer);
-    assert.ok(result.duration >= 3.9 && result.duration <= 4.1, `expected duration around 4, got ${result.duration}`);
+    assert.ok(
+      result.duration >= 3.9 && result.duration <= 4.1,
+      `expected duration around 4, got ${result.duration}`,
+    );
   });
 
-  it('should reject generated voice references shorter than 3 seconds', async function() {
-    if (!await hasAudioTools()) this.skip();
+  it('should reject generated voice references shorter than 3 seconds', async function () {
+    if (!(await hasAudioTools())) this.skip();
     const buffer = await createToneBuffer(2);
 
     await assert.rejects(
-      () => normalizeAudioDuration(buffer, {
-        minSeconds: 3,
-        maxSeconds: 5,
-        extension: 'wav',
-        label: '生成的主语音参考',
-      }),
-      /低于目标下限 3\.0秒/
+      () =>
+        normalizeAudioDuration(buffer, {
+          minSeconds: 3,
+          maxSeconds: 5,
+          extension: 'wav',
+          label: '生成的主语音参考',
+        }),
+      /低于目标下限 3\.0秒/,
     );
   });
 
@@ -115,7 +129,7 @@ describe('test/voice_reference_duration.test.ts', () => {
 
     await assert.rejects(
       () => CharacterService.prototype.generateVoiceReference.call(fakeService, 8, '', ''),
-      /低于目标下限 3\.0秒/
+      /低于目标下限 3\.0秒/,
     );
     assert.deepStrictEqual(executedQueries, []);
   });

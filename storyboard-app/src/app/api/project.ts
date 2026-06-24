@@ -15,14 +15,14 @@ export function getProject(id: number) {
 
 export function createProject(
   data: { name: string; description?: string },
-  options?: RequestBehaviorOptions
+  options?: RequestBehaviorOptions,
 ) {
   return apiClient.post<Project>("/projects", data, options);
 }
 
 export function updateProject(
   id: number,
-  data: { name?: string; description?: string; script_text?: string }
+  data: { name?: string; description?: string; script_text?: string },
 ) {
   return apiClient.put<Project>(`/projects/${id}`, data);
 }
@@ -39,20 +39,20 @@ export function unpinProject(id: number) {
   return apiClient.delete<Project>(`/projects/${id}/pin`);
 }
 
-export function importScript(
-  id: number,
-  scriptText: string,
-  options?: RequestBehaviorOptions
-) {
+export function importScript(id: number, scriptText: string, options?: RequestBehaviorOptions) {
   return apiClient.post<{
     project_id: number;
     chapter_count: number;
     scene_count: number;
     storyboard_count: number;
     character_count: number;
-  }>(`/projects/${id}/import-script`, {
-    script_text: scriptText,
-  }, options);
+  }>(
+    `/projects/${id}/import-script`,
+    {
+      script_text: scriptText,
+    },
+    options,
+  );
 }
 
 export function composeProjectVideo(id: number, data?: { regenerate?: boolean }) {

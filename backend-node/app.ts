@@ -30,7 +30,10 @@ class AppBootHook {
       if (!isUnitTestEnvironment()) {
         throw error;
       }
-      this.app.coreLogger.warn('[auth] skip auth schema bootstrap in unittest: %s', error?.message || error);
+      this.app.coreLogger.warn(
+        '[auth] skip auth schema bootstrap in unittest: %s',
+        error?.message || error,
+      );
     }
   }
 

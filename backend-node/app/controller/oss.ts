@@ -15,7 +15,7 @@ class OssController extends Controller {
     try {
       const result = await this.ctx.service.oss.signUploadURL(
         String(this.ctx.query.filename || ''),
-        String(this.ctx.query.content_type || '')
+        String(this.ctx.query.content_type || ''),
       );
       response.success(this.ctx, result);
     } catch (err: any) {
@@ -37,7 +37,7 @@ class OssController extends Controller {
       const result = await this.ctx.service.oss.uploadStream(
         stream,
         String(stream.filename || ''),
-        String(stream.mimeType || stream.mime || '')
+        String(stream.mimeType || stream.mime || ''),
       );
       response.success(this.ctx, result);
     } catch (err: any) {

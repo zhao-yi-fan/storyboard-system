@@ -3,7 +3,12 @@
 
 const path = require('node:path');
 const Service = require('egg').Service;
-const { createOssClient, generatedPublicPath, uploadBuffer, isOssEnabled } = require('../lib/generated_asset');
+const {
+  createOssClient,
+  generatedPublicPath,
+  uploadBuffer,
+  isOssEnabled,
+} = require('../lib/generated_asset');
 
 class OssService extends Service {
   /**
@@ -77,7 +82,11 @@ class OssService extends Service {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
 
-    await uploadBuffer(this.app, Buffer.concat(chunks), generatedPublicPath(this.app, '', objectKey));
+    await uploadBuffer(
+      this.app,
+      Buffer.concat(chunks),
+      generatedPublicPath(this.app, '', objectKey),
+    );
 
     return {
       public_url: generatedPublicPath(this.app, '', objectKey),

@@ -9,7 +9,8 @@ const CODE_FENCE_PREFIX = /^```/;
 const CODE_FENCE_SUFFIX = /```$/;
 const TRAILING_SLASH_PATTERN = /\/$/;
 
-const SYSTEM_PROMPT = '你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你只能输出一个 JSON 对象，不要输出解释、不要输出 Markdown、不要输出代码块、不要输出额外文本。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。characters 字段只能填写人物/角色名字，绝对不能填写场景标题、地点、时间、氛围描述、镜头描述，也不能把多个信息用标点连接成一个字符串。每个 storyboard 都必须填写 visual_description，不能留空；如果原文没有直接描写，也要根据上下文补出可视化画面描述。';
+const SYSTEM_PROMPT =
+  '你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你只能输出一个 JSON 对象，不要输出解释、不要输出 Markdown、不要输出代码块、不要输出额外文本。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。characters 字段只能填写人物/角色名字，绝对不能填写场景标题、地点、时间、氛围描述、镜头描述，也不能把多个信息用标点连接成一个字符串。每个 storyboard 都必须填写 visual_description，不能留空；如果原文没有直接描写，也要根据上下文补出可视化画面描述。';
 
 type DeepSeekConfig = {
   deepSeekApiKey?: string;
@@ -22,7 +23,7 @@ function buildSchema() {
   return {
     type: 'object',
     additionalProperties: false,
-    required: [ 'chapters', 'characters' ],
+    required: ['chapters', 'characters'],
     properties: {
       chapters: {
         type: 'array',
@@ -30,7 +31,7 @@ function buildSchema() {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: [ 'title', 'summary', 'order', 'scenes' ],
+          required: ['title', 'summary', 'order', 'scenes'],
           properties: {
             title: { type: 'string' },
             summary: { type: 'string' },
@@ -41,7 +42,15 @@ function buildSchema() {
               items: {
                 type: 'object',
                 additionalProperties: false,
-                required: [ 'title', 'summary', 'location', 'time_of_day', 'order', 'characters', 'storyboards' ],
+                required: [
+                  'title',
+                  'summary',
+                  'location',
+                  'time_of_day',
+                  'order',
+                  'characters',
+                  'storyboards',
+                ],
                 properties: {
                   title: { type: 'string' },
                   summary: { type: 'string' },
@@ -55,7 +64,18 @@ function buildSchema() {
                     items: {
                       type: 'object',
                       additionalProperties: false,
-                      required: [ 'order', 'shot_number', 'visual_description', 'dialogue', 'duration_seconds', 'shot_type', 'camera_angle', 'mood', 'notes', 'characters' ],
+                      required: [
+                        'order',
+                        'shot_number',
+                        'visual_description',
+                        'dialogue',
+                        'duration_seconds',
+                        'shot_type',
+                        'camera_angle',
+                        'mood',
+                        'notes',
+                        'characters',
+                      ],
                       properties: {
                         order: { type: 'integer' },
                         shot_number: { type: 'integer' },
@@ -81,7 +101,7 @@ function buildSchema() {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: [ 'name', 'description', 'appearance', 'tags' ],
+          required: ['name', 'description', 'appearance', 'tags'],
           properties: {
             name: { type: 'string' },
             description: { type: 'string' },
@@ -130,22 +150,25 @@ export async function parseScriptWithDeepSeek(config: DeepSeekConfig, scriptText
 
   ensureConfigured(config);
 
-  const resp = await fetch(`${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`, {
-    method: POST_METHOD,
-    headers: {
-      Authorization: `Bearer ${config.deepSeekApiKey}`,
-      'Content-Type': JSON_CONTENT_TYPE,
+  const resp = await fetch(
+    `${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`,
+    {
+      method: POST_METHOD,
+      headers: {
+        Authorization: `Bearer ${config.deepSeekApiKey}`,
+        'Content-Type': JSON_CONTENT_TYPE,
+      },
+      body: JSON.stringify({
+        model: config.deepSeekModel,
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: buildUserPrompt(cleaned) },
+        ],
+      }),
+      signal: AbortSignal.timeout((config.deepSeekRequestTimeoutSeconds || 180) * 1000),
     },
-    body: JSON.stringify({
-      model: config.deepSeekModel,
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: buildUserPrompt(cleaned) },
-      ],
-    }),
-    signal: AbortSignal.timeout((config.deepSeekRequestTimeoutSeconds || 180) * 1000),
-  });
+  );
 
   const body = await resp.json().catch(() => null);
   if (!resp.ok) {
@@ -158,7 +181,11 @@ export async function parseScriptWithDeepSeek(config: DeepSeekConfig, scriptText
   }
 
   const normalized = extractJSONObject(
-    content.replace(JSON_FENCE_PREFIX, '').replace(CODE_FENCE_PREFIX, '').replace(CODE_FENCE_SUFFIX, '').trim()
+    content
+      .replace(JSON_FENCE_PREFIX, '')
+      .replace(CODE_FENCE_PREFIX, '')
+      .replace(CODE_FENCE_SUFFIX, '')
+      .trim(),
   );
 
   let document;

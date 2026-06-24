@@ -13,7 +13,11 @@ class AssetController extends Controller {
   async indexByProject() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try { response.success(this.ctx, await this.ctx.service.asset.findByProjectId(id)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(this.ctx, await this.ctx.service.asset.findByProjectId(id));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -26,7 +30,11 @@ class AssetController extends Controller {
   async indexByCharacter() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid character id');
-    try { response.success(this.ctx, await this.ctx.service.asset.findByCharacterId(id)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(this.ctx, await this.ctx.service.asset.findByCharacterId(id));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -39,7 +47,14 @@ class AssetController extends Controller {
   async create() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try { response.success(this.ctx, await this.ctx.service.asset.create(id, this.ctx.request.body || {})); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.asset.create(id, this.ctx.request.body || {}),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -52,7 +67,14 @@ class AssetController extends Controller {
   async update() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.asset.update(id, this.ctx.request.body || {})); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.asset.update(id, this.ctx.request.body || {}),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -65,7 +87,12 @@ class AssetController extends Controller {
   async destroy() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { await this.ctx.service.asset.softDelete(id); response.success(this.ctx, { success: true }); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      await this.ctx.service.asset.softDelete(id);
+      response.success(this.ctx, { success: true });
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -78,7 +105,11 @@ class AssetController extends Controller {
   async previewCoverGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.asset.previewCoverGeneration(id)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(this.ctx, await this.ctx.service.asset.previewCoverGeneration(id));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
   /**
    * 预览资产封面生成参数。
@@ -90,7 +121,11 @@ class AssetController extends Controller {
   async generateCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.asset.generateCover(id)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(this.ctx, await this.ctx.service.asset.generateCover(id));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**

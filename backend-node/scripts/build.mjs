@@ -14,7 +14,7 @@ async function removeDist() {
 }
 
 async function runTsc() {
-  await execFileAsync(path.join(rootDir, 'node_modules/.bin/tsc'), [ '-p', 'tsconfig.json' ], {
+  await execFileAsync(path.join(rootDir, 'node_modules/.bin/tsc'), ['-p', 'tsconfig.json'], {
     cwd: rootDir,
     maxBuffer: 20 * 1024 * 1024,
   });
@@ -38,7 +38,7 @@ async function main() {
   await writeDistPackageJson();
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error(error);
   process.exit(1);
 });

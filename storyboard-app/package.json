@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write .",
+    "format:check": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check ."
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -65,10 +69,19 @@
     "vaul": "1.1.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "4.1.12",
+    "@types/node": "^26.0.0",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "4.7.0",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "prettier": "^3.8.4",
     "tailwindcss": "4.1.12",
+    "typescript-eslint": "^8.62.0",
     "vite": "6.3.5"
   },
   "peerDependencies": {

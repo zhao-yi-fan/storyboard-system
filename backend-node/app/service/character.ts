@@ -48,19 +48,20 @@ class CharacterService extends Service {
       avatar_url: resolveUrl(
         this.app,
         normalizeGeneratedAssetReference(this.app, row.avatar_url || ''),
-        this.app.config.storyboard.publicAppBaseUrl || ''
+        this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       design_sheet_url: resolveUrl(
         this.app,
         normalizeGeneratedAssetReference(this.app, row.design_sheet_url || ''),
-        this.app.config.storyboard.publicAppBaseUrl || ''
+        this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       voice_reference_url: resolveUrl(
         this.app,
         normalizeGeneratedAssetReference(this.app, row.voice_reference_url || ''),
-        this.app.config.storyboard.publicAppBaseUrl || ''
+        this.app.config.storyboard.publicAppBaseUrl || '',
       ),
-      voice_reference_duration: row.voice_reference_duration == null ? 0 : Number(row.voice_reference_duration),
+      voice_reference_duration:
+        row.voice_reference_duration == null ? 0 : Number(row.voice_reference_duration),
       voice_reference_text: row.voice_reference_text || '',
       voice_name: row.voice_name || '',
       voice_prompt: row.voice_prompt || '',
@@ -78,7 +79,10 @@ class CharacterService extends Service {
    * // => void
    */
   async ensureProjectExists(projectId) {
-    const [rows] = await this.pool.query('SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL', [projectId]);
+    const [rows] = await this.pool.query(
+      'SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL',
+      [projectId],
+    );
     if (!rows.length) throw new Error('project not found');
   }
 
@@ -96,9 +100,9 @@ class CharacterService extends Service {
       `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
               voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
        FROM characters WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
-      [projectId]
+      [projectId],
     );
-    return rows.map(row => this.map(row));
+    return rows.map((row) => this.map(row));
   }
 
   /**
@@ -114,7 +118,7 @@ class CharacterService extends Service {
       `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
               voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
        FROM characters WHERE id = ? AND deleted_at IS NULL`,
-      [id]
+      [id],
     );
     return rows.length ? this.map(rows[0]) : null;
   }
@@ -132,8 +136,14 @@ class CharacterService extends Service {
     await this.ensureProjectExists(projectId);
     const name = String(payload.name || '').trim();
     if (!name) throw new Error('name is required');
-    const avatarUrl = normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim());
-    const designSheetUrl = normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || '').trim());
+    const avatarUrl = normalizeGeneratedAssetReference(
+      this.app,
+      String(payload.avatar_url || '').trim(),
+    );
+    const designSheetUrl = normalizeGeneratedAssetReference(
+      this.app,
+      String(payload.design_sheet_url || '').trim(),
+    );
     const [result] = await this.pool.execute(
       `INSERT INTO characters (
         project_id, name, description, avatar_url, design_sheet_url,
@@ -146,7 +156,7 @@ class CharacterService extends Service {
         avatarUrl,
         designSheetUrl,
         String(payload.voice_prompt || '').trim(),
-      ]
+      ],
     );
     return await this.findById(result.insertId);
   }
@@ -163,7 +173,9 @@ class CharacterService extends Service {
   async update(id, payload) {
     const current = await this.findById(id);
     if (!current) throw new Error('character not found');
-    const name = Object.prototype.hasOwnProperty.call(payload, 'name') ? String(payload.name || '').trim() : current.name;
+    const name = Object.prototype.hasOwnProperty.call(payload, 'name')
+      ? String(payload.name || '').trim()
+      : current.name;
     if (!name) throw new Error('name is required');
 
     await this.pool.execute(
@@ -172,16 +184,23 @@ class CharacterService extends Service {
        WHERE id = ?`,
       [
         name,
-        Object.prototype.hasOwnProperty.call(payload, 'description') ? String(payload.description || '').trim() : current.description,
+        Object.prototype.hasOwnProperty.call(payload, 'description')
+          ? String(payload.description || '').trim()
+          : current.description,
         Object.prototype.hasOwnProperty.call(payload, 'avatar_url')
           ? normalizeGeneratedAssetReference(this.app, String(payload.avatar_url || '').trim())
           : normalizeGeneratedAssetReference(this.app, current.avatar_url),
         Object.prototype.hasOwnProperty.call(payload, 'design_sheet_url')
-          ? normalizeGeneratedAssetReference(this.app, String(payload.design_sheet_url || '').trim())
+          ? normalizeGeneratedAssetReference(
+              this.app,
+              String(payload.design_sheet_url || '').trim(),
+            )
           : normalizeGeneratedAssetReference(this.app, current.design_sheet_url),
-        Object.prototype.hasOwnProperty.call(payload, 'voice_prompt') ? String(payload.voice_prompt || '').trim() : current.voice_prompt,
+        Object.prototype.hasOwnProperty.call(payload, 'voice_prompt')
+          ? String(payload.voice_prompt || '').trim()
+          : current.voice_prompt,
         id,
-      ]
+      ],
     );
     return await this.findById(id);
   }
@@ -221,11 +240,15 @@ class CharacterService extends Service {
   collectDesignReferenceImages(character) {
     const references = [];
     const missing = [];
-    const avatarUrl = resolveUrl(this.app, character.avatar_url, this.app.config.storyboard.publicAppBaseUrl || '');
+    const avatarUrl = resolveUrl(
+      this.app,
+      character.avatar_url,
+      this.app.config.storyboard.publicAppBaseUrl || '',
+    );
     const layoutUrl = resolveUrl(
       this.app,
       this.app.config.storyboard.characterDesignLayoutReferenceUrl || '',
-      this.app.config.storyboard.publicAppBaseUrl || ''
+      this.app.config.storyboard.publicAppBaseUrl || '',
     );
 
     if (avatarUrl) {
@@ -262,7 +285,8 @@ class CharacterService extends Service {
   async previewDesignSheetGeneration(id) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const { references, missing, avatarUrl, layoutUrl } = this.collectDesignReferenceImages(character);
+    const { references, missing, avatarUrl, layoutUrl } =
+      this.collectDesignReferenceImages(character);
     if (!avatarUrl) {
       throw new Error('生成主设定图前请先上传角色参考图');
     }
@@ -289,7 +313,7 @@ class CharacterService extends Service {
         layoutUrl
           ? '系统已附带设定板版式参考图。'
           : '当前未配置系统版式参考图，本次只会基于角色参考图和提示词生成。',
-        ...missing.map(item => `缺少参考项：${item}`),
+        ...missing.map((item) => `缺少参考项：${item}`),
       ],
     };
   }
@@ -307,7 +331,12 @@ class CharacterService extends Service {
   async previewVoiceReferenceGeneration(id, voicePrompt, previewText) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const preview = await createCharacterVoicePreview(this.app, character, voicePrompt, previewText);
+    const preview = await createCharacterVoicePreview(
+      this.app,
+      character,
+      voicePrompt,
+      previewText,
+    );
     return {
       action: 'character-voice-reference',
       model: preview.designModel,
@@ -347,12 +376,15 @@ class CharacterService extends Service {
     const imageUrl = await generateSeedreamImage(
       this.app,
       prompt,
-      layoutUrl ? [ avatarUrl, layoutUrl ] : [ avatarUrl ],
-      { size: SEEDREAM_DESIGN_SHEET_SIZE }
+      layoutUrl ? [avatarUrl, layoutUrl] : [avatarUrl],
+      { size: SEEDREAM_DESIGN_SHEET_SIZE },
     );
     const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
     const stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
-    await this.pool.execute('UPDATE characters SET design_sheet_url = ? WHERE id = ?', [ stored.publicPath, id ]);
+    await this.pool.execute('UPDATE characters SET design_sheet_url = ? WHERE id = ?', [
+      stored.publicPath,
+      id,
+    ]);
     return await this.findById(id);
   }
 
@@ -373,7 +405,13 @@ class CharacterService extends Service {
 
   async storeGeneratedVoiceReferenceAudio(id, audioBuffer, extension) {
     const filename = `${sanitizeFileName(`character-voice-reference-${id}`)}-${Date.now()}.${extension}`;
-    return await storeBuffer(this.app, audioBuffer, 'characters', filename, VOICE_REFERENCE_CONTENT_TYPE);
+    return await storeBuffer(
+      this.app,
+      audioBuffer,
+      'characters',
+      filename,
+      VOICE_REFERENCE_CONTENT_TYPE,
+    );
   }
 
   /**
@@ -391,13 +429,27 @@ class CharacterService extends Service {
     if (!character) throw new Error('character not found');
     const result = await this.generateVoiceReferenceAudio(character, voicePrompt, previewText);
     const extension = String(result.extension || 'wav').replace(/^\./, '') || 'wav';
-    const normalized = await this.normalizeGeneratedVoiceReferenceAudio(result.audioBuffer, extension);
-    const stored = await this.storeGeneratedVoiceReferenceAudio(id, normalized.audioBuffer, extension);
+    const normalized = await this.normalizeGeneratedVoiceReferenceAudio(
+      result.audioBuffer,
+      extension,
+    );
+    const stored = await this.storeGeneratedVoiceReferenceAudio(
+      id,
+      normalized.audioBuffer,
+      extension,
+    );
     await this.pool.execute(
       `UPDATE characters
        SET voice_reference_url = ?, voice_reference_duration = ?, voice_reference_text = ?, voice_name = ?, voice_prompt = ?
        WHERE id = ?`,
-      [ stored.publicPath, normalized.duration, result.voiceReferenceText, result.voiceName, result.voicePrompt, id ]
+      [
+        stored.publicPath,
+        normalized.duration,
+        result.voiceReferenceText,
+        result.voiceName,
+        result.voicePrompt,
+        id,
+      ],
     );
     return await this.findById(id);
   }
@@ -405,7 +457,10 @@ class CharacterService extends Service {
   async uploadVoiceReference(id, voiceReferenceUrl) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const normalizedUrl = normalizeGeneratedAssetReference(this.app, String(voiceReferenceUrl || '').trim());
+    const normalizedUrl = normalizeGeneratedAssetReference(
+      this.app,
+      String(voiceReferenceUrl || '').trim(),
+    );
     if (!normalizedUrl) {
       throw new Error('voice_reference_url is required');
     }
@@ -417,7 +472,7 @@ class CharacterService extends Service {
         `UPDATE characters
          SET voice_reference_url = ?, voice_reference_duration = ?, voice_name = ?
          WHERE id = ?`,
-        [ normalizedUrl, duration, 'manual-upload', id ]
+        [normalizedUrl, duration, 'manual-upload', id],
       );
     } finally {
       if (materialized) {

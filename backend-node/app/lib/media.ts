@@ -51,11 +51,11 @@ async function run(cmd, args) {
 }
 
 async function ensureFfmpeg() {
-  await run('ffmpeg', [ '-version' ]);
+  await run('ffmpeg', ['-version']);
 }
 
 async function ensureFfprobe() {
-  await run('ffprobe', [ '-version' ]);
+  await run('ffprobe', ['-version']);
 }
 
 async function downloadToBuffer(source, timeoutMs = 120000) {
@@ -73,26 +73,36 @@ async function materializeSourceToLocalFile(app, source, suffix = '') {
   }
 
   if (/^https?:\/\//.test(value) || value.startsWith('data:')) {
-    const tempPath = path.join(os.tmpdir(), `storyboard-src-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`);
+    const tempPath = path.join(
+      os.tmpdir(),
+      `storyboard-src-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`,
+    );
     if (value.startsWith('data:')) {
-      const [, dataPart = '' ] = value.split(',', 2);
+      const [, dataPart = ''] = value.split(',', 2);
       await fsp.writeFile(tempPath, Buffer.from(dataPart, 'base64'));
     } else {
       await fsp.writeFile(tempPath, await downloadToBuffer(value));
     }
     return {
       localPath: tempPath,
-      cleanup: async () => { await fsp.rm(tempPath, { force: true }); },
+      cleanup: async () => {
+        await fsp.rm(tempPath, { force: true });
+      },
     };
   }
 
   if (isGeneratedAssetPath(app, value)) {
     if (isOssEnabled(app)) {
-      const tempPath = path.join(os.tmpdir(), `storyboard-gen-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`);
+      const tempPath = path.join(
+        os.tmpdir(),
+        `storyboard-gen-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`,
+      );
       await downloadGeneratedToFile(app, value, tempPath);
       return {
         localPath: tempPath,
-        cleanup: async () => { await fsp.rm(tempPath, { force: true }); },
+        cleanup: async () => {
+          await fsp.rm(tempPath, { force: true });
+        },
       };
     }
     return {
@@ -120,9 +130,21 @@ async function createPreviewFromLocalPath(app, localPath, subdir, previewFilenam
   const publicPath = generatedPublicPath(app, subdir, previewFilename);
 
   if (isOssEnabled(app)) {
-    const tempOutput = path.join(os.tmpdir(), `storyboard-preview-${Date.now()}-${Math.random().toString(16).slice(2)}.webp`);
+    const tempOutput = path.join(
+      os.tmpdir(),
+      `storyboard-preview-${Date.now()}-${Math.random().toString(16).slice(2)}.webp`,
+    );
     try {
-      await run('ffmpeg', [ '-y', '-i', localPath, '-vf', buildScaleFilter(spec), '-frames:v', '1', tempOutput ]);
+      await run('ffmpeg', [
+        '-y',
+        '-i',
+        localPath,
+        '-vf',
+        buildScaleFilter(spec),
+        '-frames:v',
+        '1',
+        tempOutput,
+      ]);
       await uploadLocalFile(app, tempOutput, publicPath);
       return publicPath;
     } finally {
@@ -133,7 +155,16 @@ async function createPreviewFromLocalPath(app, localPath, subdir, previewFilenam
   const dir = path.join(await resolveGeneratedAssetRoot(app), subdir);
   await fsp.mkdir(dir, { recursive: true });
   const outputPath = path.join(dir, previewFilename);
-  await run('ffmpeg', [ '-y', '-i', localPath, '-vf', buildScaleFilter(spec), '-frames:v', '1', outputPath ]);
+  await run('ffmpeg', [
+    '-y',
+    '-i',
+    localPath,
+    '-vf',
+    buildScaleFilter(spec),
+    '-frames:v',
+    '1',
+    outputPath,
+  ]);
   return publicPath;
 }
 
@@ -141,16 +172,31 @@ async function createPreviewFromSource(app, source, subdir, baseName, spec) {
   const materialized = await materializeSourceToLocalFile(app, source);
   try {
     const previewFilename = `${sanitizeFileName(baseName)}.thumb.webp`;
-    return await createPreviewFromLocalPath(app, materialized.localPath, subdir, previewFilename, spec);
+    return await createPreviewFromLocalPath(
+      app,
+      materialized.localPath,
+      subdir,
+      previewFilename,
+      spec,
+    );
   } finally {
     await materialized.cleanup();
   }
 }
 
-async function storeBuffer(app, buffer, subdir, filename, contentType = 'application/octet-stream') {
+async function storeBuffer(
+  app,
+  buffer,
+  subdir,
+  filename,
+  contentType = 'application/octet-stream',
+) {
   const publicPath = generatedPublicPath(app, subdir, filename);
   if (isOssEnabled(app)) {
-    const tempPath = path.join(os.tmpdir(), `storyboard-store-${Date.now()}-${Math.random().toString(16).slice(2)}${path.extname(filename)}`);
+    const tempPath = path.join(
+      os.tmpdir(),
+      `storyboard-store-${Date.now()}-${Math.random().toString(16).slice(2)}${path.extname(filename)}`,
+    );
     try {
       await fsp.writeFile(tempPath, buffer);
       await uploadLocalFile(app, tempPath, publicPath, contentType);
@@ -168,7 +214,13 @@ async function storeBuffer(app, buffer, subdir, filename, contentType = 'applica
   return { publicPath, localPath };
 }
 
-async function downloadAndStore(app, sourceUrl, subdir, filename, contentType = 'application/octet-stream') {
+async function downloadAndStore(
+  app,
+  sourceUrl,
+  subdir,
+  filename,
+  contentType = 'application/octet-stream',
+) {
   const buffer = await downloadToBuffer(sourceUrl);
   return await storeBuffer(app, buffer, subdir, filename, contentType);
 }
@@ -176,9 +228,12 @@ async function downloadAndStore(app, sourceUrl, subdir, filename, contentType = 
 async function probeDuration(localPath) {
   await ensureFfprobe();
   const { stdout } = await run('ffprobe', [
-    '-v', 'error',
-    '-show_entries', 'format=duration',
-    '-of', 'default=noprint_wrappers=1:nokey=1',
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'default=noprint_wrappers=1:nokey=1',
     localPath,
   ]);
   const value = Number(String(stdout || '').trim());
@@ -209,18 +264,22 @@ async function normalizeAudioDuration(buffer: Buffer, options: any = {}) {
     }
     if (minSeconds > 0 && originalDuration < minSeconds) {
       throw new Error(
-        `${label}只有 ${formatDurationSeconds(originalDuration)}，低于目标下限 ${formatDurationSeconds(minSeconds)}。系统已保留原语音，请稍后重试。`
+        `${label}只有 ${formatDurationSeconds(originalDuration)}，低于目标下限 ${formatDurationSeconds(minSeconds)}。系统已保留原语音，请稍后重试。`,
       );
     }
     if (maxSeconds > 0 && originalDuration > maxSeconds) {
       await ensureFfmpeg();
       await run('ffmpeg', [
         '-y',
-        '-i', inputPath,
-        '-t', String(maxSeconds),
+        '-i',
+        inputPath,
+        '-t',
+        String(maxSeconds),
         '-vn',
-        '-ar', String(sampleRate),
-        '-ac', String(channels),
+        '-ar',
+        String(sampleRate),
+        '-ac',
+        String(channels),
         outputPath,
       ]);
       const duration = await probeDuration(outputPath);
@@ -256,35 +315,52 @@ async function composeVideos(app, sources, subdir, filename) {
       const transcoded = path.join(workDir, `transcoded-${String(index + 1).padStart(3, '0')}.mp4`);
       await run('ffmpeg', [
         '-y',
-        '-i', tempInput,
-        '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,fps=24',
-        '-c:v', 'libx264',
-        '-preset', 'veryfast',
-        '-crf', '28',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-ar', '48000',
+        '-i',
+        tempInput,
+        '-vf',
+        'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,fps=24',
+        '-c:v',
+        'libx264',
+        '-preset',
+        'veryfast',
+        '-crf',
+        '28',
+        '-c:a',
+        'aac',
+        '-b:a',
+        '128k',
+        '-ar',
+        '48000',
         transcoded,
       ]);
       inputPaths.push(transcoded);
     }
 
     const concatFile = path.join(workDir, 'inputs.txt');
-    const concatBody = `${inputPaths.map(item => `file '${item.replaceAll("'", "'\\''")}'`).join('\n')}\n`;
+    const concatBody = `${inputPaths.map((item) => `file '${item.replaceAll("'", "'\\''")}'`).join('\n')}\n`;
     await fsp.writeFile(concatFile, concatBody);
 
     const finalPath = path.join(workDir, filename);
     await run('ffmpeg', [
       '-y',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatFile,
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '23',
-      '-c:a', 'aac',
-      '-b:a', '160k',
-      '-movflags', '+faststart',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      concatFile,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '23',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '160k',
+      '-movflags',
+      '+faststart',
       finalPath,
     ]);
 

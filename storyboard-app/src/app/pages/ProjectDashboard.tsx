@@ -46,11 +46,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
 import { UserMenu } from "../components/UserMenu";
 import { projectApi, type Project } from "../api";
 
@@ -69,8 +65,10 @@ function deriveStats(project: Project) {
   const scenes = project.scene_count ?? 0;
   const shots = project.storyboard_count ?? 0;
   const targetShots = Math.max(scenes * 3, 1);
-  const progress = scenes === 0 && shots === 0 ? 0 : Math.min(100, Math.round((shots / targetShots) * 100));
-  const status: Exclude<StatusFilter, "all"> = progress >= 100 ? "已完成" : shots > 0 || scenes > 0 ? "进行中" : "草稿";
+  const progress =
+    scenes === 0 && shots === 0 ? 0 : Math.min(100, Math.round((shots / targetShots) * 100));
+  const status: Exclude<StatusFilter, "all"> =
+    progress >= 100 ? "已完成" : shots > 0 || scenes > 0 ? "进行中" : "草稿";
   const statusColor =
     status === "已完成" ? "bg-purple-600" : status === "进行中" ? "bg-green-600" : "bg-gray-600";
 
@@ -235,46 +233,70 @@ export default function ProjectDashboard() {
                     <Info className="w-4 h-4" />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" align="end" className="bg-[#111111] border-gray-800 text-gray-200 p-4 w-[500px]">
+                <TooltipContent
+                  side="bottom"
+                  align="end"
+                  className="bg-[#111111] border-gray-800 text-gray-200 p-4 w-[500px]"
+                >
                   <div className="space-y-4">
-                    <h4 className="font-medium text-white border-b border-gray-800 pb-2">当前项目大模型支持列表</h4>
+                    <h4 className="font-medium text-white border-b border-gray-800 pb-2">
+                      当前项目大模型支持列表
+                    </h4>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs">
                       <div>
-                        <span className="text-gray-400 font-medium flex items-center gap-1.5"><Video className="w-3.5 h-3.5"/> 视频生成 (图生视频/文生视频)</span>
+                        <span className="text-gray-400 font-medium flex items-center gap-1.5">
+                          <Video className="w-3.5 h-3.5" /> 视频生成 (图生视频/文生视频)
+                        </span>
                         <ul className="mt-3 space-y-3 text-purple-300/90">
                           <li>
                             <div className="font-medium">• Wan 2.7 I2V</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">画面连贯稳定，质感极佳，适合高精度的最终成片。</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">
+                              画面连贯稳定，质感极佳，适合高精度的最终成片。
+                            </div>
                           </li>
                           <li>
                             <div className="font-medium">• Seedance 2.0</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">支持角色主语音参考，适合保持跨镜头人物音色一致。</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">
+                              支持角色主语音参考，适合保持跨镜头人物音色一致。
+                            </div>
                           </li>
                         </ul>
                       </div>
                       <div>
-                        <span className="text-gray-400 font-medium flex items-center gap-1.5"><Camera className="w-3.5 h-3.5"/> 图像生成 (文生图/图生图)</span>
+                        <span className="text-gray-400 font-medium flex items-center gap-1.5">
+                          <Camera className="w-3.5 h-3.5" /> 图像生成 (文生图/图生图)
+                        </span>
                         <ul className="mt-3 space-y-3 text-blue-300/90">
                           <li>
                             <div className="font-medium">• Wan 2.7 Image Pro</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">强大的通用生图模型，色彩鲜艳，主体清晰。</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">
+                              强大的通用生图模型，色彩鲜艳，主体清晰。
+                            </div>
                           </li>
                           <li>
                             <div className="font-medium">• Seedream 4.5</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">擅长电影感、复杂光影和高真实度的高清场景刻画。</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">
+                              擅长电影感、复杂光影和高真实度的高清场景刻画。
+                            </div>
                           </li>
                         </ul>
                       </div>
                       <div className="col-span-2 pt-3 border-t border-gray-800/50">
-                        <span className="text-gray-400 font-medium flex items-center gap-1.5 mb-3">📝 文本处理与语音生成</span>
+                        <span className="text-gray-400 font-medium flex items-center gap-1.5 mb-3">
+                          📝 文本处理与语音生成
+                        </span>
                         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                           <div className="text-green-300/90">
                             <div className="font-medium">• Doubao Pro (文本大模型)</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">用于长文本剧本的结构化拆解与分镜提示词智能扩写。</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">
+                              用于长文本剧本的结构化拆解与分镜提示词智能扩写。
+                            </div>
                           </div>
                           <div className="text-green-300/90">
                             <div className="font-medium">• Qwen Voice (语音大模型)</div>
-                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">用于角色声音个性化复刻、情感音色设计与 TTS 配音。</div>
+                            <div className="text-gray-500 mt-1 pl-3 text-[11px] leading-tight">
+                              用于角色声音个性化复刻、情感音色设计与 TTS 配音。
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -284,7 +306,11 @@ export default function ProjectDashboard() {
               </Tooltip>
 
               <UserMenu />
-              <Button size="sm" className="h-9 bg-purple-600 hover:bg-purple-700" onClick={() => navigate("/import")}>
+              <Button
+                size="sm"
+                className="h-9 bg-purple-600 hover:bg-purple-700"
+                onClick={() => navigate("/import")}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 新建项目
               </Button>
@@ -319,7 +345,9 @@ export default function ProjectDashboard() {
                     key={option.value}
                     onClick={() => setStatusFilter(option.value)}
                     className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                      statusFilter === option.value ? "bg-purple-600 text-white" : "text-gray-400 hover:text-gray-200"
+                      statusFilter === option.value
+                        ? "bg-purple-600 text-white"
+                        : "text-gray-400 hover:text-gray-200"
                     }`}
                   >
                     {option.label}
@@ -369,13 +397,24 @@ export default function ProjectDashboard() {
                       className="bg-[#141414] border border-gray-800 rounded-lg overflow-hidden hover:border-gray-700 transition-all group cursor-pointer"
                       onClick={() => navigate(`/workspace?project=${project.id}`)}
                     >
-                      <div className={`h-40 bg-gradient-to-br ${gradient} relative flex items-center justify-center`}>
+                      <div
+                        className={`h-40 bg-gradient-to-br ${gradient} relative flex items-center justify-center`}
+                      >
                         <Film className="w-16 h-16 text-white/30" />
                         <div className="absolute top-3 right-3">
-                          <Badge className={`${stats.statusColor} text-white text-xs`}>{stats.status}</Badge>
+                          <Badge className={`${stats.statusColor} text-white text-xs`}>
+                            {stats.status}
+                          </Badge>
                         </div>
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <Button size="sm" className="bg-white/90 text-gray-900 hover:bg-white" onClick={(e) => { e.stopPropagation(); navigate(`/workspace?project=${project.id}`); }}>
+                          <Button
+                            size="sm"
+                            className="bg-white/90 text-gray-900 hover:bg-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/workspace?project=${project.id}`);
+                            }}
+                          >
                             <FolderOpen className="w-4 h-4 mr-2" />
                             打开项目
                           </Button>
@@ -386,7 +425,11 @@ export default function ProjectDashboard() {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex min-w-0 items-center gap-2">
                             <h3 className="truncate font-medium text-base">{project.name}</h3>
-                            {isPinned(project) ? <Badge className="bg-yellow-600/20 text-yellow-300 border border-yellow-500/30 text-[10px]">置顶</Badge> : null}
+                            {isPinned(project) ? (
+                              <Badge className="bg-yellow-600/20 text-yellow-300 border border-yellow-500/30 text-[10px]">
+                                置顶
+                              </Badge>
+                            ) : null}
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger
@@ -394,7 +437,7 @@ export default function ProjectDashboard() {
                               onPointerDown={(e) => e.stopPropagation()}
                               onClick={(e) => e.stopPropagation()}
                             >
-                                <MoreHorizontal className="w-4 h-4" />
+                              <MoreHorizontal className="w-4 h-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
@@ -408,8 +451,18 @@ export default function ProjectDashboard() {
                                   void togglePinProject(project);
                                 }}
                               >
-                                {isPinned(project) ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
-                                {pinningProjectId === project.id ? (isPinned(project) ? "取消置顶中..." : "置顶中...") : isPinned(project) ? "取消置顶" : "置顶项目"}
+                                {isPinned(project) ? (
+                                  <PinOff className="w-4 h-4" />
+                                ) : (
+                                  <Pin className="w-4 h-4" />
+                                )}
+                                {pinningProjectId === project.id
+                                  ? isPinned(project)
+                                    ? "取消置顶中..."
+                                    : "置顶中..."
+                                  : isPinned(project)
+                                    ? "取消置顶"
+                                    : "置顶项目"}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={(e) => {
@@ -435,7 +488,9 @@ export default function ProjectDashboard() {
                           </DropdownMenu>
                         </div>
 
-                        <p className="text-xs text-gray-400 line-clamp-2 mb-3">{project.description || "暂无描述"}</p>
+                        <p className="text-xs text-gray-400 line-clamp-2 mb-3">
+                          {project.description || "暂无描述"}
+                        </p>
 
                         <div className="grid grid-cols-3 gap-2 mb-3">
                           <div className="bg-[#1a1a1a] rounded px-2 py-1.5">
@@ -467,7 +522,10 @@ export default function ProjectDashboard() {
                             <span className="text-xs text-gray-400">{stats.progress}%</span>
                           </div>
                           <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all" style={{ width: `${stats.progress}%` }} />
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all"
+                              style={{ width: `${stats.progress}%` }}
+                            />
                           </div>
                         </div>
 
@@ -488,23 +546,48 @@ export default function ProjectDashboard() {
                   const stats = deriveStats(project);
                   const gradient = gradients[index % gradients.length];
                   return (
-                    <div key={project.id} className="bg-[#141414] border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-all group">
+                    <div
+                      key={project.id}
+                      className="bg-[#141414] border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-all group"
+                    >
                       <div className="flex items-center gap-4">
-                        <div className={`w-24 h-16 bg-gradient-to-br ${gradient} rounded flex items-center justify-center flex-shrink-0 relative`}>
+                        <div
+                          className={`w-24 h-16 bg-gradient-to-br ${gradient} rounded flex items-center justify-center flex-shrink-0 relative`}
+                        >
                           <Film className="w-8 h-8 text-white/30" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-medium">{project.name}</h3>
-                            {isPinned(project) ? <Badge className="bg-yellow-600/20 text-yellow-300 border border-yellow-500/30 text-[10px]">置顶</Badge> : null}
-                            <Badge className={`${stats.statusColor} text-white text-xs`}>{stats.status}</Badge>
+                            {isPinned(project) ? (
+                              <Badge className="bg-yellow-600/20 text-yellow-300 border border-yellow-500/30 text-[10px]">
+                                置顶
+                              </Badge>
+                            ) : null}
+                            <Badge className={`${stats.statusColor} text-white text-xs`}>
+                              {stats.status}
+                            </Badge>
                           </div>
-                          <p className="text-sm text-gray-400 line-clamp-1 mb-2">{project.description || "暂无描述"}</p>
+                          <p className="text-sm text-gray-400 line-clamp-1 mb-2">
+                            {project.description || "暂无描述"}
+                          </p>
                           <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1"><Layers className="w-3 h-3 text-purple-400" />{stats.chapters} 章节</span>
-                            <span className="flex items-center gap-1"><Video className="w-3 h-3 text-blue-400" />{stats.scenes} 场景</span>
-                            <span className="flex items-center gap-1"><Camera className="w-3 h-3 text-green-400" />{stats.shots} 镜头</span>
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(project.updated_at)}</span>
+                            <span className="flex items-center gap-1">
+                              <Layers className="w-3 h-3 text-purple-400" />
+                              {stats.chapters} 章节
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Video className="w-3 h-3 text-blue-400" />
+                              {stats.scenes} 场景
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Camera className="w-3 h-3 text-green-400" />
+                              {stats.shots} 镜头
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDate(project.updated_at)}
+                            </span>
                           </div>
                         </div>
                         <div className="w-32 flex-shrink-0">
@@ -513,11 +596,18 @@ export default function ProjectDashboard() {
                             <span className="text-xs text-gray-400">{stats.progress}%</span>
                           </div>
                           <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: `${stats.progress}%` }} />
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                              style={{ width: `${stats.progress}%` }}
+                            />
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <Button size="sm" className="h-8 bg-purple-600 hover:bg-purple-700" onClick={() => navigate(`/workspace?project=${project.id}`)}>
+                          <Button
+                            size="sm"
+                            className="h-8 bg-purple-600 hover:bg-purple-700"
+                            onClick={() => navigate(`/workspace?project=${project.id}`)}
+                          >
                             <FolderOpen className="w-4 h-4 mr-1.5" />
                             打开
                           </Button>
@@ -527,7 +617,7 @@ export default function ProjectDashboard() {
                               onPointerDown={(e) => e.stopPropagation()}
                               onClick={(e) => e.stopPropagation()}
                             >
-                                <MoreHorizontal className="w-4 h-4" />
+                              <MoreHorizontal className="w-4 h-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
@@ -541,8 +631,18 @@ export default function ProjectDashboard() {
                                   void togglePinProject(project);
                                 }}
                               >
-                                {isPinned(project) ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
-                                {pinningProjectId === project.id ? (isPinned(project) ? "取消置顶中..." : "置顶中...") : isPinned(project) ? "取消置顶" : "置顶项目"}
+                                {isPinned(project) ? (
+                                  <PinOff className="w-4 h-4" />
+                                ) : (
+                                  <Pin className="w-4 h-4" />
+                                )}
+                                {pinningProjectId === project.id
+                                  ? isPinned(project)
+                                    ? "取消置顶中..."
+                                    : "置顶中..."
+                                  : isPinned(project)
+                                    ? "取消置顶"
+                                    : "置顶项目"}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={(e) => {
@@ -580,8 +680,16 @@ export default function ProjectDashboard() {
                   <FolderOpen className="w-10 h-10 text-gray-600" />
                 </div>
                 <h3 className="text-base mb-2 text-gray-400">暂无项目</h3>
-                <p className="text-sm text-gray-600 mb-4">{searchQuery || statusFilter !== "all" ? "没有找到匹配的项目" : "开始创建你的第一个分镜项目"}</p>
-                <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => navigate("/import")}>
+                <p className="text-sm text-gray-600 mb-4">
+                  {searchQuery || statusFilter !== "all"
+                    ? "没有找到匹配的项目"
+                    : "开始创建你的第一个分镜项目"}
+                </p>
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={() => navigate("/import")}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   新建项目
                 </Button>
@@ -591,12 +699,18 @@ export default function ProjectDashboard() {
         </div>
       </main>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent className="bg-[#121212] border-gray-800 text-gray-100">
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除项目</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              该操作会从项目列表中移除项目《{deleteTarget?.name ?? ""}》，但不会删除服务器上的原始媒体文件。
+              该操作会从项目列表中移除项目《{deleteTarget?.name ?? ""}
+              》，但不会删除服务器上的原始媒体文件。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -614,7 +728,12 @@ export default function ProjectDashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={!!renameTarget} onOpenChange={(open) => { if (!open) closeRenameDialog(); }}>
+      <Dialog
+        open={!!renameTarget}
+        onOpenChange={(open) => {
+          if (!open) closeRenameDialog();
+        }}
+      >
         <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 sm:max-w-md">
           <DialogHeader>
             <DialogTitle>重命名项目</DialogTitle>

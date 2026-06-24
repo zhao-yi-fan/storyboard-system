@@ -2,7 +2,12 @@
 // @ts-nocheck
 
 const { Service } = require('egg');
-const { generateSessionToken, hashPassword, hashSessionToken, verifyPassword } = require('../lib/auth_crypto');
+const {
+  generateSessionToken,
+  hashPassword,
+  hashSessionToken,
+  verifyPassword,
+} = require('../lib/auth_crypto');
 
 function mapAuthUser(row) {
   if (!row) {
@@ -48,23 +53,23 @@ class AuthService extends Service {
   }
 
   async findUserByAccount(account) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT id, account, password_hash, password_salt, display_name, role_label, is_active, last_login_at, created_at, updated_at
        FROM auth_users
        WHERE account = ?
        LIMIT 1`,
-      [ account ],
+      [account],
     );
     return rows[0] || null;
   }
 
   async findUserById(id) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT id, account, password_hash, password_salt, display_name, role_label, is_active, last_login_at, created_at, updated_at
        FROM auth_users
        WHERE id = ?
        LIMIT 1`,
-      [ id ],
+      [id],
     );
     return rows[0] || null;
   }
@@ -85,10 +90,10 @@ class AuthService extends Service {
     }
 
     const passwordInfo = await hashPassword(password);
-    const [ result ] = await this.pool.execute(
+    const [result] = await this.pool.execute(
       `INSERT INTO auth_users (account, password_hash, password_salt, display_name, role_label, is_active)
        VALUES (?, ?, ?, ?, ?, 1)`,
-      [ account, passwordInfo.hash, passwordInfo.salt, displayName, roleLabel ],
+      [account, passwordInfo.hash, passwordInfo.salt, displayName, roleLabel],
     );
 
     const created = await this.findUserById(result.insertId);
@@ -107,7 +112,11 @@ class AuthService extends Service {
       throw new Error('账号或密码错误');
     }
 
-    const isValid = await verifyPassword(normalizedPassword, user.password_salt, user.password_hash);
+    const isValid = await verifyPassword(
+      normalizedPassword,
+      user.password_salt,
+      user.password_hash,
+    );
     if (!isValid) {
       throw new Error('账号或密码错误');
     }
@@ -118,9 +127,9 @@ class AuthService extends Service {
 
     await this.pool.execute(
       'UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL',
-      [ user.id ],
+      [user.id],
     );
-    const [ result ] = await this.pool.execute(
+    const [result] = await this.pool.execute(
       `INSERT INTO auth_sessions (user_id, session_token_hash, expires_at, last_seen_at, user_agent, ip_address)
        VALUES (?, ?, ?, NOW(), ?, ?)`,
       [
@@ -132,10 +141,7 @@ class AuthService extends Service {
       ],
     );
 
-    await this.pool.execute(
-      'UPDATE auth_users SET last_login_at = NOW() WHERE id = ?',
-      [ user.id ],
-    );
+    await this.pool.execute('UPDATE auth_users SET last_login_at = NOW() WHERE id = ?', [user.id]);
 
     const nextUser = await this.findUserById(user.id);
     return {
@@ -151,7 +157,7 @@ class AuthService extends Service {
 
   async getCurrentUserByToken(token) {
     const sessionTokenHash = hashSessionToken(String(token || ''));
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT
          s.id AS session_id,
          s.user_id,
@@ -174,7 +180,7 @@ class AuthService extends Service {
          AND s.expires_at > NOW()
          AND u.is_active = 1
        LIMIT 1`,
-      [ sessionTokenHash ],
+      [sessionTokenHash],
     );
 
     const row = rows[0];
@@ -194,10 +200,9 @@ class AuthService extends Service {
   }
 
   async touchSession(sessionId) {
-    await this.pool.execute(
-      'UPDATE auth_sessions SET last_seen_at = NOW() WHERE id = ?',
-      [ sessionId ],
-    );
+    await this.pool.execute('UPDATE auth_sessions SET last_seen_at = NOW() WHERE id = ?', [
+      sessionId,
+    ]);
   }
 
   async revokeSessionByToken(token) {
@@ -207,7 +212,7 @@ class AuthService extends Service {
     }
     await this.pool.execute(
       'UPDATE auth_sessions SET revoked_at = NOW() WHERE session_token_hash = ? AND revoked_at IS NULL',
-      [ hashSessionToken(normalizedToken) ],
+      [hashSessionToken(normalizedToken)],
     );
   }
 }

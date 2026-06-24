@@ -22,18 +22,25 @@ function resolveBackendNodeRootDir(app) {
 }
 
 function normalizedGeneratedBasePath(app) {
-  const base = String(storyboardConfig(app).generatedAssetBasePath || '/generated').trim() || '/generated';
+  const base =
+    String(storyboardConfig(app).generatedAssetBasePath || '/generated').trim() || '/generated';
   return `/${base.replace(/^\/+|\/+$/g, '')}`;
 }
 
 function generatedPublicPathFromObjectKey(app, objectKey) {
-  const cleaned = String(objectKey || '').trim().replace(/^\/+/, '');
+  const cleaned = String(objectKey || '')
+    .trim()
+    .replace(/^\/+/, '');
   return `${normalizedGeneratedBasePath(app)}/${cleaned}`;
 }
 
 function generatedPublicPath(app, subdir, filename) {
-  const left = String(subdir || '').trim().replace(/^\/+|\/+$/g, '');
-  const right = String(filename || '').trim().replace(/^\/+/, '');
+  const left = String(subdir || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  const right = String(filename || '')
+    .trim()
+    .replace(/^\/+/, '');
   return generatedPublicPathFromObjectKey(app, left ? `${left}/${right}` : right);
 }
 
@@ -72,7 +79,8 @@ function isGeneratedAssetPath(app, raw) {
 }
 
 async function resolveGeneratedAssetRoot(app) {
-  const configured = String(storyboardConfig(app).generatedAssetDir || '../storage').trim() || '../storage';
+  const configured =
+    String(storyboardConfig(app).generatedAssetDir || '../storage').trim() || '../storage';
   if (path.isAbsolute(configured)) {
     return configured;
   }
@@ -84,7 +92,9 @@ async function generatedObjectKeyToLocalPath(app, objectKey) {
 }
 
 function buildOssEndpoint(raw) {
-  return String(raw || '').trim().replace(/^https?:\/\//, '');
+  return String(raw || '')
+    .trim()
+    .replace(/^https?:\/\//, '');
 }
 
 function derivePublicOssEndpoint(endpoint) {
@@ -93,7 +103,12 @@ function derivePublicOssEndpoint(endpoint) {
 
 function isOssEnabled(app) {
   const cfg = storyboardConfig(app);
-  return Boolean(cfg.aliyunOssEndpoint && cfg.aliyunOssAccessKeyId && cfg.aliyunOssAccessKeySecret && cfg.aliyunOssBucket);
+  return Boolean(
+    cfg.aliyunOssEndpoint &&
+    cfg.aliyunOssAccessKeyId &&
+    cfg.aliyunOssAccessKeySecret &&
+    cfg.aliyunOssBucket,
+  );
 }
 
 function createOssClient(app, usePublicEndpoint = false) {
@@ -102,7 +117,8 @@ function createOssClient(app, usePublicEndpoint = false) {
     throw new Error('OSS not configured');
   }
   const endpoint = usePublicEndpoint
-    ? buildOssEndpoint(cfg.aliyunOssPublicEndpoint) || derivePublicOssEndpoint(cfg.aliyunOssEndpoint)
+    ? buildOssEndpoint(cfg.aliyunOssPublicEndpoint) ||
+      derivePublicOssEndpoint(cfg.aliyunOssEndpoint)
     : buildOssEndpoint(cfg.aliyunOssEndpoint);
   return new OSS({
     endpoint,
@@ -133,7 +149,10 @@ function resolveGeneratedUrl(app, raw) {
     return publicBaseUrl ? `${publicBaseUrl.replace(/\/$/, '')}${value}` : value;
   }
   const client = createOssClient(app, true);
-  const signed = client.signatureUrl(generatedObjectKey(app, value), { method: 'GET', expires: 3600 });
+  const signed = client.signatureUrl(generatedObjectKey(app, value), {
+    method: 'GET',
+    expires: 3600,
+  });
   return normalizeSignedUrl(signed);
 }
 
@@ -155,18 +174,26 @@ function resolveUrl(app, raw, publicBaseUrl = '') {
 }
 
 function isManagedOssHost(app, host) {
-  const value = String(host || '').trim().toLowerCase();
+  const value = String(host || '')
+    .trim()
+    .toLowerCase();
   if (!value) {
     return false;
   }
   const cfg = storyboardConfig(app);
-  const bucket = String(cfg.aliyunOssBucket || '').trim().toLowerCase();
+  const bucket = String(cfg.aliyunOssBucket || '')
+    .trim()
+    .toLowerCase();
   const hosts = [
     buildOssEndpoint(cfg.aliyunOssEndpoint),
     buildOssEndpoint(cfg.aliyunOssPublicEndpoint),
     derivePublicOssEndpoint(cfg.aliyunOssEndpoint),
-  ].map(item => item.toLowerCase()).filter(Boolean);
-  return hosts.some(candidate => value === candidate || (bucket && value === `${bucket}.${candidate}`));
+  ]
+    .map((item) => item.toLowerCase())
+    .filter(Boolean);
+  return hosts.some(
+    (candidate) => value === candidate || (bucket && value === `${bucket}.${candidate}`),
+  );
 }
 
 function normalizeGeneratedAssetReference(app, raw) {
@@ -236,7 +263,10 @@ async function downloadGeneratedToFile(app, generatedPath, localPath) {
 }
 
 async function writeBufferToTempFile(buffer, suffix = '') {
-  const tempPath = path.join(os.tmpdir(), `storyboard-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`);
+  const tempPath = path.join(
+    os.tmpdir(),
+    `storyboard-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`,
+  );
   await fsp.writeFile(tempPath, buffer);
   return tempPath;
 }

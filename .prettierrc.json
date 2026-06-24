@@ -1,0 +1,22 @@
+{
+  "semi": true,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "endOfLine": "lf",
+  "proseWrap": "preserve",
+  "overrides": [
+    {
+      "files": "storyboard-app/**/*.{js,jsx,ts,tsx,mjs,cjs}",
+      "options": {
+        "singleQuote": false
+      }
+    },
+    {
+      "files": "backend-node/**/*.{js,ts,mjs,cjs}",
+      "options": {
+        "singleQuote": true
+      }
+    }
+  ]
+}

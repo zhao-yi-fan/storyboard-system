@@ -4,7 +4,13 @@
 const Service = require('egg').Service;
 const path = require('node:path');
 const { mapScene } = require('../lib/entity');
-const { sanitizeFileName, storyboardPreviewSpec, downloadAndStore, createPreviewFromLocalPath, composeVideos } = require('../lib/media');
+const {
+  sanitizeFileName,
+  storyboardPreviewSpec,
+  downloadAndStore,
+  createPreviewFromLocalPath,
+  composeVideos,
+} = require('../lib/media');
 const { generateWanxImage } = require('../lib/ai_clients');
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
 const { buildSceneCoverPrompt } = require('../lib/prompt_library');
@@ -23,9 +29,9 @@ class SceneService extends Service {
    * // => { id: 11, project_id: 19 }
    */
   async findChapterById(id) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       'SELECT id, project_id FROM chapters WHERE id = ? AND deleted_at IS NULL',
-      [ id ]
+      [id],
     );
     return rows[0] || null;
   }
@@ -44,17 +50,17 @@ class SceneService extends Service {
       throw new Error('chapter not found');
     }
 
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT id, chapter_id, project_id, title, description, location, time_of_day, style_preset, style_notes,
               cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration,
               sort_order, created_at, updated_at
        FROM scenes
        WHERE chapter_id = ? AND deleted_at IS NULL
        ORDER BY sort_order ASC, id ASC`,
-      [ chapterId ]
+      [chapterId],
     );
 
-    return rows.map(row => mapScene(this.app, row));
+    return rows.map((row) => mapScene(this.app, row));
   }
 
   /**
@@ -66,13 +72,13 @@ class SceneService extends Service {
    * // => { id: 21, title: "便利店门口", chapter_id: 11, project_id: 19 }
    */
   async findById(id) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT id, chapter_id, project_id, title, description, location, time_of_day, style_preset, style_notes,
               cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration,
               sort_order, created_at, updated_at
        FROM scenes
        WHERE id = ? AND deleted_at IS NULL`,
-      [ id ]
+      [id],
     );
 
     return rows.length ? mapScene(this.app, rows[0]) : null;
@@ -87,9 +93,9 @@ class SceneService extends Service {
    * // => 4
    */
   async getMaxSortOrder(chapterId) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       'SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM scenes WHERE chapter_id = ? AND deleted_at IS NULL',
-      [ chapterId ]
+      [chapterId],
     );
     return Number(rows[0]?.max_sort || 0);
   }
@@ -115,7 +121,7 @@ class SceneService extends Service {
     }
 
     const sortOrder = (await this.getMaxSortOrder(chapterId)) + 1;
-    const [ result ] = await this.pool.execute(
+    const [result] = await this.pool.execute(
       `INSERT INTO scenes (
         chapter_id, project_id, title, description, location, time_of_day, style_preset, style_notes,
         cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order
@@ -130,7 +136,7 @@ class SceneService extends Service {
         String(payload.style_preset || ''),
         String(payload.style_notes || ''),
         sortOrder,
-      ]
+      ],
     );
 
     return await this.findById(result.insertId);
@@ -151,16 +157,18 @@ class SceneService extends Service {
       throw new Error('scene not found');
     }
 
-    const title = Object.prototype.hasOwnProperty.call(payload, 'title') && String(payload.title || '').trim()
-      ? String(payload.title || '').trim()
-      : current.title;
+    const title =
+      Object.prototype.hasOwnProperty.call(payload, 'title') && String(payload.title || '').trim()
+        ? String(payload.title || '').trim()
+        : current.title;
     if (!title) {
       throw new Error('title is required');
     }
 
-    const sortOrder = Object.prototype.hasOwnProperty.call(payload, 'sort_order') && Number(payload.sort_order)
-      ? Number(payload.sort_order)
-      : current.sort_order;
+    const sortOrder =
+      Object.prototype.hasOwnProperty.call(payload, 'sort_order') && Number(payload.sort_order)
+        ? Number(payload.sort_order)
+        : current.sort_order;
 
     await this.pool.execute(
       `UPDATE scenes
@@ -170,23 +178,47 @@ class SceneService extends Service {
        WHERE id = ?`,
       [
         title,
-        Object.prototype.hasOwnProperty.call(payload, 'description') ? String(payload.description || '') : current.description,
-        Object.prototype.hasOwnProperty.call(payload, 'location') ? String(payload.location || '') : current.location,
-        Object.prototype.hasOwnProperty.call(payload, 'time_of_day') ? String(payload.time_of_day || '') : current.time_of_day,
-        Object.prototype.hasOwnProperty.call(payload, 'style_preset') ? String(payload.style_preset || '') : current.style_preset,
-        Object.prototype.hasOwnProperty.call(payload, 'style_notes') ? String(payload.style_notes || '') : current.style_notes,
-        Object.prototype.hasOwnProperty.call(payload, 'cover_url') ? normalizeGeneratedAssetReference(this.app, String(payload.cover_url || '')) : normalizeGeneratedAssetReference(this.app, current.cover_url),
-        Object.prototype.hasOwnProperty.call(payload, 'cover_preview_url') ? normalizeGeneratedAssetReference(this.app, String(payload.cover_preview_url || '')) : normalizeGeneratedAssetReference(this.app, current.cover_preview_url),
-        Object.prototype.hasOwnProperty.call(payload, 'video_url') ? normalizeGeneratedAssetReference(this.app, String(payload.video_url || '')) : normalizeGeneratedAssetReference(this.app, current.video_url),
-        Object.prototype.hasOwnProperty.call(payload, 'video_preview_url') ? normalizeGeneratedAssetReference(this.app, String(payload.video_preview_url || '')) : normalizeGeneratedAssetReference(this.app, current.video_preview_url),
-        Object.prototype.hasOwnProperty.call(payload, 'video_status') ? String(payload.video_status || '') : current.video_status,
-        Object.prototype.hasOwnProperty.call(payload, 'video_error') ? String(payload.video_error || '') : current.video_error,
+        Object.prototype.hasOwnProperty.call(payload, 'description')
+          ? String(payload.description || '')
+          : current.description,
+        Object.prototype.hasOwnProperty.call(payload, 'location')
+          ? String(payload.location || '')
+          : current.location,
+        Object.prototype.hasOwnProperty.call(payload, 'time_of_day')
+          ? String(payload.time_of_day || '')
+          : current.time_of_day,
+        Object.prototype.hasOwnProperty.call(payload, 'style_preset')
+          ? String(payload.style_preset || '')
+          : current.style_preset,
+        Object.prototype.hasOwnProperty.call(payload, 'style_notes')
+          ? String(payload.style_notes || '')
+          : current.style_notes,
+        Object.prototype.hasOwnProperty.call(payload, 'cover_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.cover_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.cover_url),
+        Object.prototype.hasOwnProperty.call(payload, 'cover_preview_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.cover_preview_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.cover_preview_url),
+        Object.prototype.hasOwnProperty.call(payload, 'video_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.video_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.video_url),
+        Object.prototype.hasOwnProperty.call(payload, 'video_preview_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.video_preview_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.video_preview_url),
+        Object.prototype.hasOwnProperty.call(payload, 'video_status')
+          ? String(payload.video_status || '')
+          : current.video_status,
+        Object.prototype.hasOwnProperty.call(payload, 'video_error')
+          ? String(payload.video_error || '')
+          : current.video_error,
         Object.prototype.hasOwnProperty.call(payload, 'video_duration')
-          ? (payload.video_duration == null || payload.video_duration === '' ? null : Number(payload.video_duration))
+          ? payload.video_duration == null || payload.video_duration === ''
+            ? null
+            : Number(payload.video_duration)
           : current.video_duration,
         sortOrder,
         id,
-      ]
+      ],
     );
 
     return await this.findById(id);
@@ -201,7 +233,7 @@ class SceneService extends Service {
    * // => void
    */
   async softDelete(id) {
-    await this.pool.execute('UPDATE scenes SET deleted_at = NOW() WHERE id = ?', [ id ]);
+    await this.pool.execute('UPDATE scenes SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
   /**
@@ -246,7 +278,7 @@ class SceneService extends Service {
       template: coverPrompt.template,
       prompt_blueprint: coverPrompt.blueprint,
       final_prompt: coverPrompt.prompt,
-      notes: [ '场景封面用于场景树和场景头部预览，强调代表性和叙事感。' ],
+      notes: ['场景封面用于场景树和场景头部预览，强调代表性和叙事感。'],
     };
   }
 
@@ -265,11 +297,27 @@ class SceneService extends Service {
     }
     const storyboards = await this.ctx.service.storyboard.findBySceneId(id);
     const prompt = this.buildCoverPrompt(scene, storyboards);
-    const imageUrl = await generateWanxImage(this.app, prompt, this.app.config.storyboard.wanxModel || 'wan2.7-image-pro');
+    const imageUrl = await generateWanxImage(
+      this.app,
+      prompt,
+      this.app.config.storyboard.wanxModel || 'wan2.7-image-pro',
+    );
     const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.png`;
-    const stored = await downloadAndStore(this.app, imageUrl, 'scene-covers', filename, 'image/png');
+    const stored = await downloadAndStore(
+      this.app,
+      imageUrl,
+      'scene-covers',
+      filename,
+      'image/png',
+    );
     const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
-    const previewPath = await createPreviewFromLocalPath(this.app, stored.localPath, 'scene-covers', previewFilename, storyboardPreviewSpec());
+    const previewPath = await createPreviewFromLocalPath(
+      this.app,
+      stored.localPath,
+      'scene-covers',
+      previewFilename,
+      storyboardPreviewSpec(),
+    );
     return await this.update(id, {
       cover_url: stored.publicPath,
       cover_preview_url: previewPath,
@@ -328,7 +376,12 @@ class SceneService extends Service {
     await this.update(id, { video_status: 'generating', video_error: '' });
     try {
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
-      const composed = await composeVideos(this.app, inputs.map(item => item.source), 'scene-videos', filename);
+      const composed = await composeVideos(
+        this.app,
+        inputs.map((item) => item.source),
+        'scene-videos',
+        filename,
+      );
       return await this.update(id, {
         video_url: composed.publicPath,
         video_preview_url: composed.previewPath,

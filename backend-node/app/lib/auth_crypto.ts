@@ -10,7 +10,7 @@ const SESSION_TOKEN_BYTES = 32;
 
 export async function hashPassword(password: string, salt?: string) {
   const effectiveSalt = salt || randomBytes(16).toString(PASSWORD_ENCODING);
-  const derived = await scryptAsync(password, effectiveSalt, PASSWORD_KEY_LENGTH) as Buffer;
+  const derived = (await scryptAsync(password, effectiveSalt, PASSWORD_KEY_LENGTH)) as Buffer;
   return {
     salt: effectiveSalt,
     hash: derived.toString(PASSWORD_ENCODING),
@@ -18,7 +18,7 @@ export async function hashPassword(password: string, salt?: string) {
 }
 
 export async function verifyPassword(password: string, salt: string, passwordHash: string) {
-  const derived = await scryptAsync(password, salt, PASSWORD_KEY_LENGTH) as Buffer;
+  const derived = (await scryptAsync(password, salt, PASSWORD_KEY_LENGTH)) as Buffer;
   const expected = Buffer.from(passwordHash, PASSWORD_ENCODING);
   if (derived.length !== expected.length) {
     return false;

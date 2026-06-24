@@ -1,6 +1,6 @@
-@import './fonts.css';
-@import './tailwind.css';
-@import './theme.css';
+@import "./fonts.css";
+@import "./tailwind.css";
+@import "./theme.css";
 
 * {
   scrollbar-width: thin;
@@ -50,7 +50,10 @@ img {
   width: 1px;
   transform: translateX(-50%);
   background: rgba(156, 163, 175, 0.42);
-  transition: background 0.2s, box-shadow 0.2s, width 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    width 0.2s;
 }
 
 .resize-handle::after {
@@ -62,13 +65,20 @@ img {
   height: 24px;
   transform: translate(-50%, -50%);
   border-radius: 9999px;
-  background: linear-gradient(to bottom, rgba(156, 163, 175, 0.12), rgba(156, 163, 175, 0.55), rgba(156, 163, 175, 0.12));
-  transition: background 0.2s, box-shadow 0.2s;
+  background: linear-gradient(
+    to bottom,
+    rgba(156, 163, 175, 0.12),
+    rgba(156, 163, 175, 0.55),
+    rgba(156, 163, 175, 0.12)
+  );
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
 }
 
 .resize-handle:hover,
 .resize-handle.dragging {
-  background: rgba(168, 85, 247, 0.10);
+  background: rgba(168, 85, 247, 0.1);
 }
 
 .resize-handle:hover::before,
@@ -80,7 +90,12 @@ img {
 
 .resize-handle:hover::after,
 .resize-handle.dragging::after {
-  background: linear-gradient(to bottom, rgba(216, 180, 254, 0.2), rgba(168, 85, 247, 0.95), rgba(216, 180, 254, 0.2));
+  background: linear-gradient(
+    to bottom,
+    rgba(216, 180, 254, 0.2),
+    rgba(168, 85, 247, 0.95),
+    rgba(216, 180, 254, 0.2)
+  );
   box-shadow: 0 0 10px rgba(168, 85, 247, 0.45);
 }
 

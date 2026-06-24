@@ -11,14 +11,14 @@ export function getAssetsByCharacter(characterId: number) {
 
 export function createAsset(
   projectId: number,
-  data: { character_id?: number; name: string; type: string; file_url?: string; meta?: string }
+  data: { character_id?: number; name: string; type: string; file_url?: string; meta?: string },
 ) {
   return apiClient.post<Asset>(`/projects/${projectId}/assets`, data);
 }
 
 export function updateAsset(
   id: number,
-  data: { character_id?: number; name?: string; type?: string; file_url?: string; meta?: string }
+  data: { character_id?: number; name?: string; type?: string; file_url?: string; meta?: string },
 ) {
   return apiClient.put<Asset>(`/assets/${id}`, data);
 }

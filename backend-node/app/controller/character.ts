@@ -13,7 +13,11 @@ class CharacterController extends Controller {
   async indexByProject() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try { response.success(this.ctx, await this.ctx.service.character.findByProjectId(id)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(this.ctx, await this.ctx.service.character.findByProjectId(id));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -30,7 +34,9 @@ class CharacterController extends Controller {
       const item = await this.ctx.service.character.findById(id);
       if (!item) return response.error(this.ctx, 'character not found');
       response.success(this.ctx, item);
-    } catch (err) { response.error(this.ctx, err.message); }
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -43,7 +49,14 @@ class CharacterController extends Controller {
   async create() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try { response.success(this.ctx, await this.ctx.service.character.create(id, this.ctx.request.body || {})); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.character.create(id, this.ctx.request.body || {}),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -56,7 +69,14 @@ class CharacterController extends Controller {
   async update() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.character.update(id, this.ctx.request.body || {})); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.character.update(id, this.ctx.request.body || {}),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -69,7 +89,12 @@ class CharacterController extends Controller {
   async destroy() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { await this.ctx.service.character.softDelete(id); response.success(this.ctx, { success: true }); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      await this.ctx.service.character.softDelete(id);
+      response.success(this.ctx, { success: true });
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**
@@ -82,7 +107,18 @@ class CharacterController extends Controller {
   async previewDesignSheetGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.character.previewDesignSheetGeneration(id, this.ctx.query.model, this.ctx.query.mode)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.character.previewDesignSheetGeneration(
+          id,
+          this.ctx.query.model,
+          this.ctx.query.mode,
+        ),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
   /**
    * 预览角色主设定图生成参数。
@@ -94,7 +130,18 @@ class CharacterController extends Controller {
   async previewVoiceReferenceGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try { response.success(this.ctx, await this.ctx.service.character.previewVoiceReferenceGeneration(id, this.ctx.query.voice_prompt, this.ctx.query.preview_text)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.character.previewVoiceReferenceGeneration(
+          id,
+          this.ctx.query.voice_prompt,
+          this.ctx.query.preview_text,
+        ),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
   /**
    * 预览角色主语音参考生成参数。
@@ -107,7 +154,14 @@ class CharacterController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
-    try { response.success(this.ctx, await this.ctx.service.character.generateDesignSheet(id, body.model, body.mode)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.character.generateDesignSheet(id, body.model, body.mode),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
   /**
    * 生成角色主设定图。
@@ -120,14 +174,32 @@ class CharacterController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
-    try { response.success(this.ctx, await this.ctx.service.character.generateVoiceReference(id, body.voice_prompt, body.preview_text)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.character.generateVoiceReference(
+          id,
+          body.voice_prompt,
+          body.preview_text,
+        ),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   async uploadVoiceReference() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
-    try { response.success(this.ctx, await this.ctx.service.character.uploadVoiceReference(id, body.voice_reference_url)); } catch (err) { response.error(this.ctx, err.message); }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.character.uploadVoiceReference(id, body.voice_reference_url),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
   }
 
   /**

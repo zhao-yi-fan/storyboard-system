@@ -69,7 +69,10 @@ class StoryboardController extends Controller {
     }
 
     try {
-      const storyboard = await this.ctx.service.storyboard.create(sceneId, this.ctx.request.body || {});
+      const storyboard = await this.ctx.service.storyboard.create(
+        sceneId,
+        this.ctx.request.body || {},
+      );
       response.success(this.ctx, storyboard);
     } catch (err) {
       response.error(this.ctx, err.message);
@@ -164,8 +167,15 @@ class StoryboardController extends Controller {
         response.error(this.ctx, 'only succeeded history can be set as current');
         return;
       }
-      await this.ctx.service.mediaGeneration.markCurrent(storyboardId, generation.media_type, generationId);
-      const storyboard = await this.ctx.service.storyboard.applyMediaGeneration(storyboardId, generation);
+      await this.ctx.service.mediaGeneration.markCurrent(
+        storyboardId,
+        generation.media_type,
+        generationId,
+      );
+      const storyboard = await this.ctx.service.storyboard.applyMediaGeneration(
+        storyboardId,
+        generation,
+      );
       response.success(this.ctx, {
         storyboard,
         media_generations: await this.ctx.service.mediaGeneration.listByStoryboardId(storyboardId),
@@ -202,12 +212,26 @@ class StoryboardController extends Controller {
       await this.ctx.service.mediaGeneration.softDelete(generationId);
       let storyboard;
       if (generation.is_current) {
-        const fallback = await this.ctx.service.mediaGeneration.findLatestSucceeded(storyboardId, generation.media_type, generationId);
+        const fallback = await this.ctx.service.mediaGeneration.findLatestSucceeded(
+          storyboardId,
+          generation.media_type,
+          generationId,
+        );
         if (fallback) {
-          await this.ctx.service.mediaGeneration.markCurrent(storyboardId, generation.media_type, fallback.id);
-          storyboard = await this.ctx.service.storyboard.applyMediaGeneration(storyboardId, fallback);
+          await this.ctx.service.mediaGeneration.markCurrent(
+            storyboardId,
+            generation.media_type,
+            fallback.id,
+          );
+          storyboard = await this.ctx.service.storyboard.applyMediaGeneration(
+            storyboardId,
+            fallback,
+          );
         } else {
-          storyboard = await this.ctx.service.storyboard.clearMedia(storyboardId, generation.media_type);
+          storyboard = await this.ctx.service.storyboard.clearMedia(
+            storyboardId,
+            generation.media_type,
+          );
         }
       } else {
         storyboard = await this.ctx.service.storyboard.findById(storyboardId);
@@ -232,7 +256,10 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.previewCoverGeneration(id, this.ctx.query.model));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.previewCoverGeneration(id, this.ctx.query.model),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -249,7 +276,15 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.previewVideoGeneration(id, this.ctx.query.model, this.ctx.query.duration, this.ctx.query.use_first_frame));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.previewVideoGeneration(
+          id,
+          this.ctx.query.model,
+          this.ctx.query.duration,
+          this.ctx.query.use_first_frame,
+        ),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -266,7 +301,14 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.generateCover(id, (this.ctx.request.body || {}).model, Boolean((this.ctx.request.body || {}).use_text_only)));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.generateCover(
+          id,
+          (this.ctx.request.body || {}).model,
+          Boolean((this.ctx.request.body || {}).use_text_only),
+        ),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -283,7 +325,13 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.uploadCover(id, (this.ctx.request.body || {}).thumbnail_url));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.uploadCover(
+          id,
+          (this.ctx.request.body || {}).thumbnail_url,
+        ),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -300,7 +348,15 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.generateVideo(id, (this.ctx.request.body || {}).model, (this.ctx.request.body || {}).duration, (this.ctx.request.body || {}).use_first_frame));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.generateVideo(
+          id,
+          (this.ctx.request.body || {}).model,
+          (this.ctx.request.body || {}).duration,
+          (this.ctx.request.body || {}).use_first_frame,
+        ),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -317,7 +373,10 @@ class StoryboardController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.shotDirection.applySuggestion(id, this.ctx.request.body || {}));
+      response.success(
+        this.ctx,
+        await this.ctx.service.shotDirection.applySuggestion(id, this.ctx.request.body || {}),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -338,7 +397,10 @@ class StoryboardController extends Controller {
       return;
     }
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.addCharacter(storyboardId, characterId));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.addCharacter(storyboardId, characterId),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -380,7 +442,10 @@ class StoryboardController extends Controller {
       return;
     }
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.removeCharacter(storyboardId, characterId));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.removeCharacter(storyboardId, characterId),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -401,7 +466,10 @@ class StoryboardController extends Controller {
       return;
     }
     try {
-      response.success(this.ctx, await this.ctx.service.storyboard.removeAsset(storyboardId, assetId));
+      response.success(
+        this.ctx,
+        await this.ctx.service.storyboard.removeAsset(storyboardId, assetId),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }

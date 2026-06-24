@@ -20,10 +20,7 @@ type ToastHandledError = Error & {
 };
 
 // 统一请求封装
-async function request<T = any>(
-  url: string,
-  options: RequestOptions = {}
-): Promise<T> {
+async function request<T = any>(url: string, options: RequestOptions = {}): Promise<T> {
   const { suppressToast = false, ...requestOptions } = options;
   const defaultHeaders: Record<string, string> = {
     "Content-Type": "application/json",
@@ -73,7 +70,11 @@ async function request<T = any>(
 }
 
 // GET 方法封装
-function get<T = any>(url: string, params?: Record<string, any>, options?: RequestOptions): Promise<T> {
+function get<T = any>(
+  url: string,
+  params?: Record<string, any>,
+  options?: RequestOptions,
+): Promise<T> {
   let queryString = "";
   if (params && Object.keys(params).length > 0) {
     const searchParams = new URLSearchParams();

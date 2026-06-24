@@ -1,0 +1,17 @@
+backend/
+backend-node/.autod.conf.js
+backend-node/dist/
+backend-node/logs/
+backend-node/node_modules/
+backend-node/run/
+coverage/
+dist/
+node_modules/
+storyboard-app/dist/
+storyboard-app/node_modules/
+storyboard-app/src/imports/
+tmp/
+*.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

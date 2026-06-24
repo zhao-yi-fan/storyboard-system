@@ -3,8 +3,8 @@
 import { hashPassword } from './auth_crypto';
 
 type PoolLike = {
-  query: (sql: string, params?: unknown[]) => Promise<[ any[], unknown ]>;
-  execute: (sql: string, params?: unknown[]) => Promise<[ any, unknown ]>;
+  query: (sql: string, params?: unknown[]) => Promise<[any[], unknown]>;
+  execute: (sql: string, params?: unknown[]) => Promise<[any, unknown]>;
 };
 
 type AuthConfig = {
@@ -62,17 +62,14 @@ export async function ensureBootstrapAuthUser(pool: PoolLike, authConfig: AuthCo
   const displayName = String(authConfig.bootstrapDisplayName || '').trim() || '创作者';
   const roleLabel = String(authConfig.bootstrapRoleLabel || '').trim() || '分镜工作室';
   const passwordInfo = await hashPassword(password);
-  const [ rows ] = await pool.query(
-    'SELECT id FROM auth_users WHERE account = ? LIMIT 1',
-    [ account ],
-  );
+  const [rows] = await pool.query('SELECT id FROM auth_users WHERE account = ? LIMIT 1', [account]);
 
   if (rows.length) {
     await pool.execute(
       `UPDATE auth_users
        SET password_hash = ?, password_salt = ?, display_name = ?, role_label = ?, is_active = 1
        WHERE account = ?`,
-      [ passwordInfo.hash, passwordInfo.salt, displayName, roleLabel, account ],
+      [passwordInfo.hash, passwordInfo.salt, displayName, roleLabel, account],
     );
     return;
   }
@@ -80,6 +77,6 @@ export async function ensureBootstrapAuthUser(pool: PoolLike, authConfig: AuthCo
   await pool.execute(
     `INSERT INTO auth_users (account, password_hash, password_salt, display_name, role_label, is_active)
      VALUES (?, ?, ?, ?, ?, 1)`,
-    [ account, passwordInfo.hash, passwordInfo.salt, displayName, roleLabel ],
+    [account, passwordInfo.hash, passwordInfo.salt, displayName, roleLabel],
   );
 }

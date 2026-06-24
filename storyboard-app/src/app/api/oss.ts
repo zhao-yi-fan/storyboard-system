@@ -18,7 +18,7 @@ export async function uploadFileToOss(file: File): Promise<string> {
     credentials: "include",
     body: formData,
   });
-  const result = await uploadResponse.json() as OssUploadResponse;
+  const result = (await uploadResponse.json()) as OssUploadResponse;
 
   if (!uploadResponse.ok) {
     throw new Error(`上传文件失败: HTTP ${uploadResponse.status}`);

@@ -11,14 +11,26 @@ export function getCharacter(id: number) {
 
 export function createCharacter(
   projectId: number,
-  data: { name: string; description?: string; avatar_url?: string; design_sheet_url?: string; voice_prompt?: string }
+  data: {
+    name: string;
+    description?: string;
+    avatar_url?: string;
+    design_sheet_url?: string;
+    voice_prompt?: string;
+  },
 ) {
   return apiClient.post<Character>(`/projects/${projectId}/characters`, data);
 }
 
 export function updateCharacter(
   id: number,
-  data: { name?: string; description?: string; avatar_url?: string; design_sheet_url?: string; voice_prompt?: string }
+  data: {
+    name?: string;
+    description?: string;
+    avatar_url?: string;
+    design_sheet_url?: string;
+    voice_prompt?: string;
+  },
 ) {
   return apiClient.put<Character>(`/characters/${id}`, data);
 }
@@ -31,15 +43,23 @@ export function generateCharacterDesignSheet(id: number) {
   return apiClient.post<Character>(`/characters/${id}/generate-design-sheet`, {});
 }
 
-export function getCharacterVoiceReferenceGenerationPreview(id: number, data?: { voice_prompt?: string; preview_text?: string }) {
+export function getCharacterVoiceReferenceGenerationPreview(
+  id: number,
+  data?: { voice_prompt?: string; preview_text?: string },
+) {
   const params = new URLSearchParams();
   if (data?.voice_prompt) params.set("voice_prompt", data.voice_prompt);
   if (data?.preview_text) params.set("preview_text", data.preview_text);
   const query = params.toString();
-  return apiClient.get<AIGenerationPreview>(`/characters/${id}/voice-reference-generation-preview${query ? `?${query}` : ""}`);
+  return apiClient.get<AIGenerationPreview>(
+    `/characters/${id}/voice-reference-generation-preview${query ? `?${query}` : ""}`,
+  );
 }
 
-export function generateCharacterVoiceReference(id: number, data?: { voice_prompt?: string; preview_text?: string }) {
+export function generateCharacterVoiceReference(
+  id: number,
+  data?: { voice_prompt?: string; preview_text?: string },
+) {
   return apiClient.post<Character>(`/characters/${id}/generate-voice-reference`, data ?? {});
 }
 

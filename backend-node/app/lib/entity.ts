@@ -5,7 +5,11 @@ import { normalizeGeneratedAssetReference, resolveUrl } from './generated_asset'
 import { toNullableDate, toNullableNumber, toNullableString } from './common';
 
 function resolvePublicUrl(app: any, raw: unknown): string {
-  return resolveUrl(app, normalizeGeneratedAssetReference(app, raw), app.config.storyboard.publicAppBaseUrl || '');
+  return resolveUrl(
+    app,
+    normalizeGeneratedAssetReference(app, raw),
+    app.config.storyboard.publicAppBaseUrl || '',
+  );
 }
 
 export function mapChapter(row: Record<string, any>) {

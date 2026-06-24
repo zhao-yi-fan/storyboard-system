@@ -6,9 +6,9 @@ const POST_METHOD = 'POST';
 const HTTP_PROTOCOL_PATTERN = /^https?:\/\//;
 const MP4_SUFFIX = '.mp4';
 
-const HTTP_STATUS_KEYS = [ 'message', 'msg' ];
-const SUCCESS_VIDEO_STATUSES = [ 'succeeded', 'success', 'completed' ];
-const FAILED_VIDEO_STATUSES = [ 'failed', 'error', 'canceled', 'cancelled' ];
+const HTTP_STATUS_KEYS = ['message', 'msg'];
+const SUCCESS_VIDEO_STATUSES = ['succeeded', 'success', 'completed'];
+const FAILED_VIDEO_STATUSES = ['failed', 'error', 'canceled', 'cancelled'];
 
 const DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
 const ARK_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
@@ -39,7 +39,8 @@ const DEFAULT_WANX_TEXT_VIDEO_MODEL = 'wan2.7-t2v-2026-04-25';
 const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-2-0-260128';
 const DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL = 'qwen-voice-design';
 const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
-const VOICE_REFERENCE_DURATION_INSTRUCTION = '试听参考音频必须控制在3-5秒内，使用一句中文短句，语速自然，不要拉长停顿。';
+const VOICE_REFERENCE_DURATION_INSTRUCTION =
+  '试听参考音频必须控制在3-5秒内，使用一句中文短句，语速自然，不要拉长停顿。';
 const FIXED_VOICE_REFERENCE_TEXT = '这一次，我不会再退让，也不会再逃避，我要亲手改写命运。';
 
 function getConfig(app) {
@@ -103,7 +104,7 @@ function resolveTimeoutMs(value, fallbackSeconds, fallbackTimeoutMs) {
 }
 
 async function wait(ms) {
-  await new Promise(resolve => setTimeout(resolve, ms));
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -126,10 +127,12 @@ async function generateWanxImage(app, prompt, model) {
   const payload = {
     model: selectedModel,
     input: {
-      messages: [{
-        role: 'user',
-        content: [{ type: 'text', text: prompt }],
-      }],
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: prompt }],
+        },
+      ],
     },
     parameters: {
       negative_prompt: NEGATIVE_PROMPT,
@@ -139,8 +142,13 @@ async function generateWanxImage(app, prompt, model) {
     },
   };
 
-  const data = await postJson(`${baseUrl}/services/aigc/multimodal-generation/generation`, cfg.dashScopeApiKey, payload, timeoutMs);
-  const image = data?.output?.choices?.[0]?.message?.content?.find(item => item.image)?.image;
+  const data = await postJson(
+    `${baseUrl}/services/aigc/multimodal-generation/generation`,
+    cfg.dashScopeApiKey,
+    payload,
+    timeoutMs,
+  );
+  const image = data?.output?.choices?.[0]?.message?.content?.find((item) => item.image)?.image;
   if (!image) {
     throw new Error('万相生图成功但未返回图片 URL');
   }
@@ -167,13 +175,15 @@ async function generateWanxImageWithReferences(app, prompt, imageUrls, model) {
   const payload = {
     model: selectedModel,
     input: {
-      messages: [{
-        role: 'user',
-        content: [
-          ...imageUrls.filter(Boolean).map(url => ({ type: 'image', image: url })),
-          { type: 'text', text: prompt },
-        ],
-      }],
+      messages: [
+        {
+          role: 'user',
+          content: [
+            ...imageUrls.filter(Boolean).map((url) => ({ type: 'image', image: url })),
+            { type: 'text', text: prompt },
+          ],
+        },
+      ],
     },
     parameters: {
       negative_prompt: NEGATIVE_PROMPT,
@@ -182,8 +192,13 @@ async function generateWanxImageWithReferences(app, prompt, imageUrls, model) {
       size: WANX_IMAGE_SIZE,
     },
   };
-  const data = await postJson(`${baseUrl}/services/aigc/multimodal-generation/generation`, cfg.dashScopeApiKey, payload, timeoutMs);
-  const image = data?.output?.choices?.[0]?.message?.content?.find(item => item.image)?.image;
+  const data = await postJson(
+    `${baseUrl}/services/aigc/multimodal-generation/generation`,
+    cfg.dashScopeApiKey,
+    payload,
+    timeoutMs,
+  );
+  const image = data?.output?.choices?.[0]?.message?.content?.find((item) => item.image)?.image;
   if (!image) {
     throw new Error('参考图生图成功但未返回图片 URL');
   }
@@ -205,7 +220,11 @@ async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.seedreamImageBaseUrl, ARK_BASE_URL);
-  const timeoutMs = resolveTimeoutMs(cfg.seedreamImageTimeoutSeconds, 180, DEFAULT_IMAGE_TIMEOUT_MS);
+  const timeoutMs = resolveTimeoutMs(
+    cfg.seedreamImageTimeoutSeconds,
+    180,
+    DEFAULT_IMAGE_TIMEOUT_MS,
+  );
   const payload = {
     model: String(cfg.seedreamImageModel || DEFAULT_SEEDREAM_MODEL).trim(),
     prompt: String(prompt || '').trim(),
@@ -219,7 +238,12 @@ async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
   } else if (refs.length > 1) {
     payload.image = refs;
   }
-  const data = await postJson(`${baseUrl}/images/generations`, cfg.seedreamImageApiKey, payload, timeoutMs);
+  const data = await postJson(
+    `${baseUrl}/images/generations`,
+    cfg.seedreamImageApiKey,
+    payload,
+    timeoutMs,
+  );
   const image = data?.data?.data?.[0]?.url || data?.data?.[0]?.url;
   if (!image) {
     throw new Error('Seedream 4.5 生图成功但未返回图片 URL');
@@ -251,7 +275,12 @@ async function generateOpenAIImage(app, prompt, model) {
     background: 'opaque',
     n: 1,
   };
-  const data = await postJson(`${baseUrl}/images/generations`, cfg.openAiApiKey, payload, timeoutMs);
+  const data = await postJson(
+    `${baseUrl}/images/generations`,
+    cfg.openAiApiKey,
+    payload,
+    timeoutMs,
+  );
   const b64 = data?.data?.[0]?.b64_json;
   if (!b64) {
     throw new Error('GPT Image 2 成功响应但未返回图片内容');
@@ -276,7 +305,11 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '镜头视频生成未配置：缺少 DASHSCOPE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.wanxVideoBaseUrl, DASHSCOPE_BASE_URL);
-  const timeoutMs = resolveTimeoutMs(cfg.wanxVideoRequestTimeoutSeconds, 300, DEFAULT_VIDEO_TIMEOUT_MS);
+  const timeoutMs = resolveTimeoutMs(
+    cfg.wanxVideoRequestTimeoutSeconds,
+    300,
+    DEFAULT_VIDEO_TIMEOUT_MS,
+  );
   const selectedModel = useFirstFrame
     ? String(model || cfg.wanxVideoModel || DEFAULT_WANX_VIDEO_MODEL).trim()
     : String(cfg.wanxTextVideoModel || DEFAULT_WANX_TEXT_VIDEO_MODEL).trim();
@@ -329,7 +362,12 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
       if (!videoUrl) {
         throw new Error('视频任务成功但未返回 video_url');
       }
-      const actualDuration = Number(taskData?.usage?.output_video_duration || taskData?.usage?.duration || duration || DEFAULT_IMAGE_DURATION_SECONDS);
+      const actualDuration = Number(
+        taskData?.usage?.output_video_duration ||
+          taskData?.usage?.duration ||
+          duration ||
+          DEFAULT_IMAGE_DURATION_SECONDS,
+      );
       return { videoUrl, duration: actualDuration };
     }
     if (status === 'FAILED' || status === 'CANCELED') {
@@ -353,11 +391,23 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
  * await generateSeedanceVideo(app, "金色粒子汇聚，神女结印", "https://cover.png", 5, true, [], ["https://voice.wav"])
  * // => "https://..."
  */
-async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFrame = true, referenceImageUrls = [], referenceAudioUrls = []) {
+async function generateSeedanceVideo(
+  app,
+  prompt,
+  imageUrl,
+  duration,
+  useFirstFrame = true,
+  referenceImageUrls = [],
+  referenceAudioUrls = [],
+) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
   const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, ARK_BASE_URL);
-  const timeoutMs = resolveTimeoutMs(cfg.seedanceRequestTimeoutSeconds, 300, DEFAULT_VIDEO_TIMEOUT_MS);
+  const timeoutMs = resolveTimeoutMs(
+    cfg.seedanceRequestTimeoutSeconds,
+    300,
+    DEFAULT_VIDEO_TIMEOUT_MS,
+  );
   const content = [{ type: 'text', text: prompt }];
   if (useFirstFrame && String(imageUrl || '').trim()) {
     content.push({ type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } });
@@ -376,9 +426,16 @@ async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFr
     generate_audio: true,
   };
   if (payload.model.includes('1-5') || payload.model.includes('1.5')) {
-    throw new Error('Seedance 2.0 生成未配置正确模型 ID，请将 SEEDANCE_MODEL 设置为 doubao-seedance-2-0-260128');
+    throw new Error(
+      'Seedance 2.0 生成未配置正确模型 ID，请将 SEEDANCE_MODEL 设置为 doubao-seedance-2-0-260128',
+    );
   }
-  const createData = await postJson(`${baseUrl}/contents/generations/tasks`, cfg.seedanceApiKey, payload, timeoutMs);
+  const createData = await postJson(
+    `${baseUrl}/contents/generations/tasks`,
+    cfg.seedanceApiKey,
+    payload,
+    timeoutMs,
+  );
   const taskId = createData?.id;
   if (!taskId) {
     throw new Error('提交 Seedance 视频任务失败: 未返回任务 ID');
@@ -387,7 +444,11 @@ async function generateSeedanceVideo(app, prompt, imageUrl, duration, useFirstFr
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await wait(DEFAULT_SEEDANCE_POLL_INTERVAL_MS);
-    const taskData = await getJson(`${baseUrl}/contents/generations/tasks/${taskId}`, cfg.seedanceApiKey, timeoutMs);
+    const taskData = await getJson(
+      `${baseUrl}/contents/generations/tasks/${taskId}`,
+      cfg.seedanceApiKey,
+      timeoutMs,
+    );
     const status = String(taskData?.status || '').toLowerCase();
     if (SUCCESS_VIDEO_STATUSES.includes(status)) {
       const videoUrl = findFirstVideoUrl(taskData);
@@ -434,8 +495,12 @@ function findFirstVideoUrl(value) {
   if (!value || typeof value !== 'object') {
     return '';
   }
-  for (const [ key, child ] of Object.entries(value)) {
-    if (typeof child === 'string' && HTTP_PROTOCOL_PATTERN.test(child) && (key.toLowerCase().includes('video') || child.toLowerCase().endsWith(MP4_SUFFIX))) {
+  for (const [key, child] of Object.entries(value)) {
+    if (
+      typeof child === 'string' &&
+      HTTP_PROTOCOL_PATTERN.test(child) &&
+      (key.toLowerCase().includes('video') || child.toLowerCase().endsWith(MP4_SUFFIX))
+    ) {
       return child;
     }
     if (Array.isArray(child)) {
@@ -468,11 +533,17 @@ function findFirstVideoUrl(value) {
  */
 async function createCharacterVoicePreview(app, character, customPrompt, customText) {
   const cfg = getConfig(app);
-  const voicePrompt = withVoiceDurationInstruction(String(customPrompt || '').trim() || buildCharacterVoicePrompt(character));
+  const voicePrompt = withVoiceDurationInstruction(
+    String(customPrompt || '').trim() || buildCharacterVoicePrompt(character),
+  );
   const previewText = buildCharacterVoiceReferenceText(character);
   return {
-    designModel: String(cfg.dashScopeVoiceDesignModel || DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL).trim(),
-    targetModel: String(cfg.dashScopeVoiceTargetModel || DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL).trim(),
+    designModel: String(
+      cfg.dashScopeVoiceDesignModel || DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL,
+    ).trim(),
+    targetModel: String(
+      cfg.dashScopeVoiceTargetModel || DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL,
+    ).trim(),
     voicePrompt,
     previewText,
     preferredVoiceName: preferredVoiceName(character),
@@ -494,23 +565,32 @@ async function generateCharacterVoiceReference(app, character, customPrompt, cus
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '角色主语音参考生成未配置：缺少 DASHSCOPE_API_KEY');
   const preview = await createCharacterVoicePreview(app, character, customPrompt, customText);
-  const timeoutMs = resolveTimeoutMs(cfg.dashScopeVoiceRequestTimeoutSeconds, 120, DEFAULT_AUDIO_TIMEOUT_MS);
+  const timeoutMs = resolveTimeoutMs(
+    cfg.dashScopeVoiceRequestTimeoutSeconds,
+    120,
+    DEFAULT_AUDIO_TIMEOUT_MS,
+  );
   const baseUrl = normalizeBaseUrl(cfg.dashScopeVoiceBaseUrl, DASHSCOPE_BASE_URL);
-  const data = await postJson(`${baseUrl}/services/audio/tts/customization`, cfg.dashScopeApiKey, {
-    model: preview.designModel,
-    input: {
-      action: 'create',
-      target_model: preview.targetModel,
-      voice_prompt: preview.voicePrompt,
-      preview_text: preview.previewText,
-      preferred_name: preview.preferredVoiceName,
-      language: VOICE_LANGUAGE_ZH,
+  const data = await postJson(
+    `${baseUrl}/services/audio/tts/customization`,
+    cfg.dashScopeApiKey,
+    {
+      model: preview.designModel,
+      input: {
+        action: 'create',
+        target_model: preview.targetModel,
+        voice_prompt: preview.voicePrompt,
+        preview_text: preview.previewText,
+        preferred_name: preview.preferredVoiceName,
+        language: VOICE_LANGUAGE_ZH,
+      },
+      parameters: {
+        sample_rate: 24000,
+        response_format: VOICE_RESPONSE_FORMAT_WAV,
+      },
     },
-    parameters: {
-      sample_rate: 24000,
-      response_format: VOICE_RESPONSE_FORMAT_WAV,
-    },
-  }, timeoutMs);
+    timeoutMs,
+  );
 
   const voiceName = data?.output?.voice;
   const audioB64 = data?.output?.preview_audio?.data;
@@ -527,7 +607,12 @@ async function generateCharacterVoiceReference(app, character, customPrompt, cus
 }
 
 function preferredVoiceName(character) {
-  const token = String(character?.name || 'character').toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 12) || 'character';
+  const token =
+    String(character?.name || 'character')
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 12) || 'character';
   return `${token}_${character.id}`;
 }
 

@@ -45,12 +45,16 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import { UserMenu } from "../components/UserMenu";
-import { characterApi, assetApi, ossApi, type Character, type Asset, type AIGenerationPreview } from "../api";
+import {
+  characterApi,
+  assetApi,
+  ossApi,
+  type Character,
+  type Asset,
+  type AIGenerationPreview,
+} from "../api";
 
-type SelectedAsset =
-  | { type: "character"; data: Character }
-  | { type: "asset"; data: Asset }
-  | null;
+type SelectedAsset = { type: "character"; data: Character } | { type: "asset"; data: Asset } | null;
 
 type CreateMode = "character" | "asset";
 
@@ -85,9 +89,12 @@ const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
 
 const CHARACTER_DESIGN_SHEET_MODEL_LABEL = "Seedream 4.5 图生图";
-const FIXED_CHARACTER_VOICE_REFERENCE_TEXT = "这一次，我不会再退让，也不会再逃避，我要亲手改写命运。";
-const CHARACTER_VOICE_REFERENCE_DURATION_HINT = "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。";
-const CHARACTER_VOICE_REFERENCE_TEXT_HINT = "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。";
+const FIXED_CHARACTER_VOICE_REFERENCE_TEXT =
+  "这一次，我不会再退让，也不会再逃避，我要亲手改写命运。";
+const CHARACTER_VOICE_REFERENCE_DURATION_HINT =
+  "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。";
+const CHARACTER_VOICE_REFERENCE_TEXT_HINT =
+  "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。";
 
 const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
@@ -128,7 +135,9 @@ const formatPromptForDisplay = (prompt: string | null | undefined) => {
 export default function AssetLibrary() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const currentProjectId = Number(searchParams.get("project") || window.localStorage.getItem("currentProjectId") || "0");
+  const currentProjectId = Number(
+    searchParams.get("project") || window.localStorage.getItem("currentProjectId") || "0",
+  );
   const [activeTab, setActiveTab] = useState("characters");
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -150,11 +159,22 @@ export default function AssetLibrary() {
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingCharacter, setIsSavingCharacter] = useState(false);
   const [isSavingAsset, setIsSavingAsset] = useState(false);
-  const [uploadingCharacterReferenceId, setUploadingCharacterReferenceId] = useState<number | null>(null);
-  const [uploadingCharacterVoiceReferenceId, setUploadingCharacterVoiceReferenceId] = useState<number | null>(null);
-  const [generatingCharacterDesignSheetId, setGeneratingCharacterDesignSheetId] = useState<number | null>(null);
-  const [generatingCharacterVoiceReferenceId, setGeneratingCharacterVoiceReferenceId] = useState<number | null>(null);
-  const [characterVoiceReferenceError, setCharacterVoiceReferenceError] = useState<{ id: number; message: string } | null>(null);
+  const [uploadingCharacterReferenceId, setUploadingCharacterReferenceId] = useState<number | null>(
+    null,
+  );
+  const [uploadingCharacterVoiceReferenceId, setUploadingCharacterVoiceReferenceId] = useState<
+    number | null
+  >(null);
+  const [generatingCharacterDesignSheetId, setGeneratingCharacterDesignSheetId] = useState<
+    number | null
+  >(null);
+  const [generatingCharacterVoiceReferenceId, setGeneratingCharacterVoiceReferenceId] = useState<
+    number | null
+  >(null);
+  const [characterVoiceReferenceError, setCharacterVoiceReferenceError] = useState<{
+    id: number;
+    message: string;
+  } | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
   const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
@@ -201,7 +221,7 @@ export default function AssetLibrary() {
     return characters.filter(
       (char) =>
         char.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        char.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        char.description?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [characters, searchQuery]);
 
@@ -420,11 +440,14 @@ export default function AssetLibrary() {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setIsLoadingAIPreview(true);
     try {
-      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(selectedAsset.data.id);
+      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(
+        selectedAsset.data.id,
+      );
       openAIPreviewDialog({
         action: "character-design-sheet",
         title: "确认生成主设定图",
-        description: "会用 Seedream 图生图生成当前角色的主设定图。角色参考图只用于这次生成，不参与其他展示链路。",
+        description:
+          "会用 Seedream 图生图生成当前角色的主设定图。角色参考图只用于这次生成，不参与其他展示链路。",
         confirmLabel: "确认生成",
         preview,
       });
@@ -463,7 +486,10 @@ export default function AssetLibrary() {
     setUploadingCharacterVoiceReferenceId(selectedAsset.data.id);
     try {
       const voiceReferenceURL = await ossApi.uploadFileToOss(file);
-      const updated = await characterApi.uploadCharacterVoiceReference(selectedAsset.data.id, voiceReferenceURL);
+      const updated = await characterApi.uploadCharacterVoiceReference(
+        selectedAsset.data.id,
+        voiceReferenceURL,
+      );
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
       setCharacterVoiceReferenceError(null);
@@ -483,9 +509,12 @@ export default function AssetLibrary() {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setIsLoadingAIPreview(true);
     try {
-      const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(selectedAsset.data.id, {
-        voice_prompt: selectedAsset.data.voice_prompt || "",
-      });
+      const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(
+        selectedAsset.data.id,
+        {
+          voice_prompt: selectedAsset.data.voice_prompt || "",
+        },
+      );
       openAIPreviewDialog({
         action: "character-voice-reference",
         title: "确认生成主语音参考",
@@ -565,7 +594,12 @@ export default function AssetLibrary() {
 
   const deriveAssetPrimaryTag = (asset: Asset) => {
     const type = asset.type?.toLowerCase?.() || "";
-    if (type.includes("scene") || type.includes("background") || type.includes("场景") || type.includes("背景")) {
+    if (
+      type.includes("scene") ||
+      type.includes("background") ||
+      type.includes("场景") ||
+      type.includes("背景")
+    ) {
       return "场景";
     }
     if (type.includes("prop") || type.includes("道具")) {
@@ -576,19 +610,32 @@ export default function AssetLibrary() {
 
   const deriveAssetSecondaryTag = (asset: Asset) => asset.type?.trim() || "资源";
   const deriveAssetDescription = (asset: Asset) => asset.meta?.trim() || `${asset.name} 资源文件`;
-  const deriveAssetTags = (asset: Asset) => Array.from(new Set([deriveAssetPrimaryTag(asset), asset.type].filter(Boolean))).slice(0, 3);
+  const deriveAssetTags = (asset: Asset) =>
+    Array.from(new Set([deriveAssetPrimaryTag(asset), asset.type].filter(Boolean))).slice(0, 3);
 
   return (
     <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="ghost" onClick={() => navigate("/projects")} className="h-8 text-gray-400 hover:text-gray-200">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate("/projects")}
+              className="h-8 text-gray-400 hover:text-gray-200"
+            >
               <ArrowLeft className="w-4 h-4 mr-1.5" />
               项目列表
             </Button>
             <div className="h-6 w-px bg-gray-700"></div>
-            <Button size="sm" variant="ghost" onClick={() => navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/workspace")} className="h-8 text-gray-400 hover:text-gray-200">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/workspace")
+              }
+              className="h-8 text-gray-400 hover:text-gray-200"
+            >
               <ArrowLeft className="w-4 h-4 mr-1.5" />
               返回工作台
             </Button>
@@ -602,7 +649,11 @@ export default function AssetLibrary() {
           </div>
           <div className="flex items-center gap-3">
             <UserMenu />
-            <Button size="sm" className="h-8 bg-purple-600 hover:bg-purple-700" onClick={() => setShowCreateDialog(true)}>
+            <Button
+              size="sm"
+              className="h-8 bg-purple-600 hover:bg-purple-700"
+              onClick={() => setShowCreateDialog(true)}
+            >
               <Plus className="w-4 h-4 mr-1.5" />
               新建资产
             </Button>
@@ -612,55 +663,123 @@ export default function AssetLibrary() {
 
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex-1 flex flex-col min-h-0"
+          >
             <div className="border-b border-gray-800 bg-[#0f0f0f] px-4">
               <div className="flex items-center justify-between">
                 <TabsList className="bg-transparent border-0">
-                  <TabsTrigger value="characters" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none px-4">
-                    <Users className="w-4 h-4 mr-2" />角色资产
-                    <Badge className="ml-2 bg-gray-800 text-gray-400 text-xs">{characters.length}</Badge>
+                  <TabsTrigger
+                    value="characters"
+                    className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none px-4"
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    角色资产
+                    <Badge className="ml-2 bg-gray-800 text-gray-400 text-xs">
+                      {characters.length}
+                    </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="assets" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none px-4">
-                    <MapPin className="w-4 h-4 mr-2" />场景资产
-                    <Badge className="ml-2 bg-gray-800 text-gray-400 text-xs">{assets.length}</Badge>
+                  <TabsTrigger
+                    value="assets"
+                    className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none px-4"
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
+                    场景资产
+                    <Badge className="ml-2 bg-gray-800 text-gray-400 text-xs">
+                      {assets.length}
+                    </Badge>
                   </TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-2 py-2">
                   <div className="relative w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <Input placeholder="搜索资产..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-8 bg-[#1a1a1a] border-gray-700 text-sm" />
+                    <Input
+                      placeholder="搜索资产..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 h-8 bg-[#1a1a1a] border-gray-700 text-sm"
+                    />
                   </div>
                   <div className="flex bg-[#1a1a1a] rounded border border-gray-700">
-                    <Button size="sm" variant="ghost" className={`h-8 w-8 p-0 rounded-none ${viewMode === "grid" ? "bg-gray-800" : ""}`} onClick={() => setViewMode("grid")}><Grid3x3 className="w-4 h-4" /></Button>
-                    <Button size="sm" variant="ghost" className={`h-8 w-8 p-0 rounded-none ${viewMode === "list" ? "bg-gray-800" : ""}`} onClick={() => setViewMode("list")}><List className="w-4 h-4" /></Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-8 w-8 p-0 rounded-none ${viewMode === "grid" ? "bg-gray-800" : ""}`}
+                      onClick={() => setViewMode("grid")}
+                    >
+                      <Grid3x3 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-8 w-8 p-0 rounded-none ${viewMode === "list" ? "bg-gray-800" : ""}`}
+                      onClick={() => setViewMode("list")}
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <TabsContent value="characters" className="flex-1 m-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+            <TabsContent
+              value="characters"
+              className="flex-1 m-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+            >
               <div className="flex-1 min-h-0 overflow-y-auto p-4">
                 {loading ? (
-                  <div className="h-full flex items-center justify-center text-gray-500"><Loader2 className="w-12 h-12 animate-spin opacity-30" /></div>
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    <Loader2 className="w-12 h-12 animate-spin opacity-30" />
+                  </div>
                 ) : filteredCharacters.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-gray-500 text-sm">暂无角色资产</div>
+                  <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+                    暂无角色资产
+                  </div>
                 ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-3 gap-4 pb-4">
                     {filteredCharacters.map((character) => (
-                      <button key={character.id} onClick={() => setSelectedAsset({ type: "character", data: character })} className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}>
+                      <button
+                        key={character.id}
+                        onClick={() => setSelectedAsset({ type: "character", data: character })}
+                        className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}
+                      >
                         <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 relative flex items-center justify-center">
-                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-contain" /> : <Users className="w-16 h-16 text-gray-700" />}
+                          {getCharacterPreviewSrc(character) ? (
+                            <img
+                              src={getCharacterPreviewSrc(character)}
+                              alt={character.name}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <Users className="w-16 h-16 text-gray-700" />
+                          )}
                           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[70%]">
-                            {hasCharacterVoiceReference(character) ? <Badge className="bg-emerald-600/90 text-white text-[10px]">角色语音</Badge> : null}
+                            {hasCharacterVoiceReference(character) ? (
+                              <Badge className="bg-emerald-600/90 text-white text-[10px]">
+                                角色语音
+                              </Badge>
+                            ) : null}
                           </div>
-                          <div className="absolute top-3 right-3"><Badge className="bg-purple-600 text-white text-xs">角色</Badge></div>
+                          <div className="absolute top-3 right-3">
+                            <Badge className="bg-purple-600 text-white text-xs">角色</Badge>
+                          </div>
                         </div>
                         <div className="p-3 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-medium">{character.name}</h4>
-                            {hasCharacterVoiceReference(character) ? <Badge className="bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 text-[10px]">角色语音</Badge> : null}
+                            {hasCharacterVoiceReference(character) ? (
+                              <Badge className="bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 text-[10px]">
+                                角色语音
+                              </Badge>
+                            ) : null}
                           </div>
-                          <p className="text-xs text-gray-400 line-clamp-2">{character.description}</p>
+                          <p className="text-xs text-gray-400 line-clamp-2">
+                            {character.description}
+                          </p>
                         </div>
                       </button>
                     ))}
@@ -668,17 +787,37 @@ export default function AssetLibrary() {
                 ) : (
                   <div className="space-y-2 pb-4">
                     {filteredCharacters.map((character) => (
-                      <button key={character.id} onClick={() => setSelectedAsset({ type: "character", data: character })} className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}>
+                      <button
+                        key={character.id}
+                        onClick={() => setSelectedAsset({ type: "character", data: character })}
+                        className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "character" && selectedAsset.data.id === character.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}
+                      >
                         <div className="w-16 h-16 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded flex items-center justify-center flex-shrink-0">
-                          {getCharacterPreviewSrc(character) ? <img src={getCharacterPreviewSrc(character)} alt={character.name} loading="lazy" decoding="async" className="w-full h-full object-contain rounded" /> : <Users className="w-8 h-8 text-gray-700" />}
+                          {getCharacterPreviewSrc(character) ? (
+                            <img
+                              src={getCharacterPreviewSrc(character)}
+                              alt={character.name}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain rounded"
+                            />
+                          ) : (
+                            <Users className="w-8 h-8 text-gray-700" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <h4 className="font-medium">{character.name}</h4>
                             <Badge className="bg-purple-600 text-white text-xs">角色</Badge>
-                            {hasCharacterVoiceReference(character) ? <Badge className="bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 text-[10px]">角色语音</Badge> : null}
+                            {hasCharacterVoiceReference(character) ? (
+                              <Badge className="bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 text-[10px]">
+                                角色语音
+                              </Badge>
+                            ) : null}
                           </div>
-                          <p className="text-sm text-gray-400 line-clamp-1">{character.description}</p>
+                          <p className="text-sm text-gray-400 line-clamp-1">
+                            {character.description}
+                          </p>
                         </div>
                       </button>
                     ))}
@@ -687,33 +826,91 @@ export default function AssetLibrary() {
               </div>
             </TabsContent>
 
-            <TabsContent value="assets" className="flex-1 m-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+            <TabsContent
+              value="assets"
+              className="flex-1 m-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+            >
               <div className="flex-1 min-h-0 overflow-y-auto p-4">
                 {loading ? (
-                  <div className="h-full flex items-center justify-center text-gray-500"><Loader2 className="w-12 h-12 animate-spin opacity-30" /></div>
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    <Loader2 className="w-12 h-12 animate-spin opacity-30" />
+                  </div>
                 ) : filteredAssets.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-gray-500 text-sm">暂无场景资产</div>
+                  <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+                    暂无场景资产
+                  </div>
                 ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-3 gap-4 pb-4">
                     {filteredAssets.map((asset) => (
-                      <button key={asset.id} onClick={() => setSelectedAsset({ type: "asset", data: asset })} className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}>
+                      <button
+                        key={asset.id}
+                        onClick={() => setSelectedAsset({ type: "asset", data: asset })}
+                        className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}
+                      >
                         <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 relative flex items-center justify-center">
-                          {getAssetPreviewSrc(asset) ? <img src={getAssetPreviewSrc(asset)} alt={asset.name} loading="lazy" decoding="async" className="w-full h-full object-contain" /> : <MapPin className="w-16 h-16 text-gray-700" />}
-                          <div className="absolute top-3 left-3"><Badge className="bg-green-600 text-white text-xs">{deriveAssetPrimaryTag(asset)}</Badge></div>
-                          <div className="absolute top-3 right-3"><Badge className="bg-blue-600 text-white text-xs">{deriveAssetSecondaryTag(asset)}</Badge></div>
+                          {getAssetPreviewSrc(asset) ? (
+                            <img
+                              src={getAssetPreviewSrc(asset)}
+                              alt={asset.name}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <MapPin className="w-16 h-16 text-gray-700" />
+                          )}
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-green-600 text-white text-xs">
+                              {deriveAssetPrimaryTag(asset)}
+                            </Badge>
+                          </div>
+                          <div className="absolute top-3 right-3">
+                            <Badge className="bg-blue-600 text-white text-xs">
+                              {deriveAssetSecondaryTag(asset)}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="p-3 space-y-2"><h4 className="font-medium">{asset.name}</h4><p className="text-xs text-gray-400 line-clamp-2">{deriveAssetDescription(asset)}</p></div>
+                        <div className="p-3 space-y-2">
+                          <h4 className="font-medium">{asset.name}</h4>
+                          <p className="text-xs text-gray-400 line-clamp-2">
+                            {deriveAssetDescription(asset)}
+                          </p>
+                        </div>
                       </button>
                     ))}
                   </div>
                 ) : (
                   <div className="space-y-2 pb-4">
                     {filteredAssets.map((asset) => (
-                      <button key={asset.id} onClick={() => setSelectedAsset({ type: "asset", data: asset })} className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}>
+                      <button
+                        key={asset.id}
+                        onClick={() => setSelectedAsset({ type: "asset", data: asset })}
+                        className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}
+                      >
                         <div className="w-20 h-14 bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded flex items-center justify-center flex-shrink-0">
-                          {getAssetPreviewSrc(asset) ? <img src={getAssetPreviewSrc(asset)} alt={asset.name} loading="lazy" decoding="async" className="w-full h-full object-contain rounded" /> : <MapPin className="w-8 h-8 text-gray-700" />}
+                          {getAssetPreviewSrc(asset) ? (
+                            <img
+                              src={getAssetPreviewSrc(asset)}
+                              alt={asset.name}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain rounded"
+                            />
+                          ) : (
+                            <MapPin className="w-8 h-8 text-gray-700" />
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-1"><h4 className="font-medium">{asset.name}</h4><Badge className="bg-green-600 text-white text-xs">{deriveAssetPrimaryTag(asset)}</Badge></div><p className="text-sm text-gray-400 line-clamp-1">{deriveAssetDescription(asset)}</p></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium">{asset.name}</h4>
+                            <Badge className="bg-green-600 text-white text-xs">
+                              {deriveAssetPrimaryTag(asset)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-400 line-clamp-1">
+                            {deriveAssetDescription(asset)}
+                          </p>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -730,281 +927,506 @@ export default function AssetLibrary() {
               onMouseDown={handleDetailSidebarMouseDown}
             />
 
-            <aside style={{ width: detailSidebarWidth }} className="border-l border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0">
-            <>
-              <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
-                <h3 className="text-sm">{selectedAsset.type === "character" ? "角色详情" : "场景详情"}</h3>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0"><MoreHorizontal className="w-4 h-4" /></Button>
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setSelectedAsset(null)}><X className="w-4 h-4" /></Button>
+            <aside
+              style={{ width: detailSidebarWidth }}
+              className="border-l border-gray-800 bg-[#0f0f0f] flex flex-col flex-shrink-0"
+            >
+              <>
+                <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
+                  <h3 className="text-sm">
+                    {selectedAsset.type === "character" ? "角色详情" : "场景详情"}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      onClick={() => setSelectedAsset(null)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                {selectedAsset.type === "character" ? (
-                  <div className="space-y-4">
-                    <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm text-gray-100">角色参考图</div>
-                          <div className="text-xs text-gray-500">只用于生成主设定图，不参与其他展示和分镜参考链路</div>
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  {selectedAsset.type === "character" ? (
+                    <div className="space-y-4">
+                      <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-gray-100">角色参考图</div>
+                            <div className="text-xs text-gray-500">
+                              只用于生成主设定图，不参与其他展示和分镜参考链路
+                            </div>
+                          </div>
+                          <Badge className="bg-amber-600 text-white text-xs">内部参考</Badge>
                         </div>
-                        <Badge className="bg-amber-600 text-white text-xs">内部参考</Badge>
-                      </div>
-                      <div className="aspect-square bg-gradient-to-br from-amber-900/20 to-orange-900/10 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
-                        {getCharacterReferenceSrc(selectedAsset.data) ? (
-                          <button
-                            type="button"
-                            className="w-full h-full"
-                            onClick={() =>
-                              setPreviewImage({
-                                src: getCharacterReferenceSrc(selectedAsset.data),
-                                alt: `${selectedAsset.data.name} 角色参考图`,
+                        <div className="aspect-square bg-gradient-to-br from-amber-900/20 to-orange-900/10 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
+                          {getCharacterReferenceSrc(selectedAsset.data) ? (
+                            <button
+                              type="button"
+                              className="w-full h-full"
+                              onClick={() =>
+                                setPreviewImage({
+                                  src: getCharacterReferenceSrc(selectedAsset.data),
+                                  alt: `${selectedAsset.data.name} 角色参考图`,
+                                })
+                              }
+                            >
+                              <img
+                                src={getCharacterReferenceSrc(selectedAsset.data)}
+                                alt={`${selectedAsset.data.name} 角色参考图`}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-contain rounded"
+                              />
+                            </button>
+                          ) : (
+                            <Users className="w-24 h-24 text-gray-700" />
+                          )}
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-400">角色参考图地址</Label>
+                          <Input
+                            value={selectedAsset.data.avatar_url || ""}
+                            onChange={(e) =>
+                              setSelectedAsset({
+                                type: "character",
+                                data: { ...selectedAsset.data, avatar_url: e.target.value },
                               })
                             }
+                            placeholder="https://..."
+                            className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            ref={selectedCharacterReferenceInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) =>
+                              void handleUploadSelectedCharacterReference(
+                                e.target.files?.[0] || null,
+                              )
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 border-gray-700 text-gray-200 hover:bg-gray-900"
+                            disabled={uploadingCharacterReferenceId === selectedAsset.data.id}
+                            onClick={() => selectedCharacterReferenceInputRef.current?.click()}
                           >
-                            <img
-                              src={getCharacterReferenceSrc(selectedAsset.data)}
-                              alt={`${selectedAsset.data.name} 角色参考图`}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-contain rounded"
-                            />
-                          </button>
-                        ) : (
-                          <Users className="w-24 h-24 text-gray-700" />
-                        )}
+                            {uploadingCharacterReferenceId === selectedAsset.data.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                上传中
+                              </>
+                            ) : (
+                              <>上传参考图</>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-gray-100">角色主设定图</div>
+                            <div className="text-xs text-gray-500">
+                              角色正式展示图，以及后续分镜封面的人物核心参考图
+                            </div>
+                          </div>
+                          <Badge className="bg-blue-600 text-white text-xs">角色设定</Badge>
+                        </div>
+                        <div className="aspect-square bg-gradient-to-br from-slate-900/30 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
+                          {getCharacterDesignSheetPreviewSrc(selectedAsset.data) ? (
+                            <button
+                              type="button"
+                              className="w-full h-full"
+                              onClick={() =>
+                                setPreviewImage({
+                                  src: selectedAsset.data.design_sheet_url || "",
+                                  alt: `${selectedAsset.data.name} 设定图`,
+                                })
+                              }
+                            >
+                              <img
+                                src={getCharacterDesignSheetPreviewSrc(selectedAsset.data)}
+                                alt={`${selectedAsset.data.name} 设定图`}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-contain rounded"
+                              />
+                            </button>
+                          ) : (
+                            <Users className="w-24 h-24 text-gray-700" />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <div className="rounded border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-200">
+                            {CHARACTER_DESIGN_SHEET_MODEL_LABEL}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
+                            disabled={generatingCharacterDesignSheetId === selectedAsset.data.id}
+                            onClick={() => void handleGenerateCharacterDesignSheet()}
+                          >
+                            {generatingCharacterDesignSheetId === selectedAsset.data.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                正在生成主设定图
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                生成主设定图
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       <div>
-                        <Label className="text-xs text-gray-400">角色参考图地址</Label>
+                        <Label className="text-xs text-gray-400">角色名称</Label>
                         <Input
-                          value={selectedAsset.data.avatar_url || ""}
+                          value={selectedAsset.data.name}
                           onChange={(e) =>
-                            setSelectedAsset({ type: "character", data: { ...selectedAsset.data, avatar_url: e.target.value } })
+                            setSelectedAsset({
+                              type: "character",
+                              data: { ...selectedAsset.data, name: e.target.value },
+                            })
                           }
-                          placeholder="https://..."
                           className="mt-1.5 bg-[#1a1a1a] border-gray-700"
                         />
                       </div>
-                      <div className="flex gap-2">
+                      <div>
+                        <Label className="text-xs text-gray-400">角色描述</Label>
+                        <Textarea
+                          value={selectedAsset.data.description || ""}
+                          onChange={(e) =>
+                            setSelectedAsset({
+                              type: "character",
+                              data: { ...selectedAsset.data, description: e.target.value },
+                            })
+                          }
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
+                        />
+                      </div>
+                      <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-sm text-gray-100">主语音参考</div>
+                            <div className="text-xs text-gray-500">
+                              {CHARACTER_VOICE_REFERENCE_DURATION_HINT}
+                            </div>
+                          </div>
+                          <Badge className="bg-emerald-600 text-white text-xs">角色语音</Badge>
+                        </div>
+                        {characterVoiceReferenceError?.id === selectedAsset.data.id ? (
+                          <div className="rounded border border-red-900/60 bg-red-950/30 px-3 py-2 text-xs text-red-200">
+                            {characterVoiceReferenceError.message}
+                          </div>
+                        ) : null}
+                        {getCharacterVoiceReferenceSrc(selectedAsset.data) ? (
+                          <audio
+                            key={selectedAsset.data.voice_reference_url}
+                            controls
+                            className="w-full"
+                          >
+                            <source src={getCharacterVoiceReferenceSrc(selectedAsset.data)} />
+                          </audio>
+                        ) : (
+                          <div className="rounded border border-dashed border-gray-700 px-3 py-4 text-xs text-gray-500">
+                            还没有主语音参考。生成后会自动绑定到这个角色。
+                          </div>
+                        )}
+                        <div>
+                          <Label className="text-xs text-gray-400">声音提示词</Label>
+                          <Textarea
+                            value={selectedAsset.data.voice_prompt || ""}
+                            onChange={(e) =>
+                              setSelectedAsset({
+                                type: "character",
+                                data: { ...selectedAsset.data, voice_prompt: e.target.value },
+                              })
+                            }
+                            className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
+                            placeholder="例如：年轻男性，低沉克制，略带疲惫感，真实自然，不要播音腔。"
+                          />
+                          <div className="mt-1 text-[11px] text-gray-500">
+                            系统会在生成时追加 3-5 秒短句约束。
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-400">参考文本</Label>
+                          <div className="mt-1.5 rounded border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-200">
+                            {FIXED_CHARACTER_VOICE_REFERENCE_TEXT}
+                          </div>
+                          <div className="mt-1 text-[11px] text-gray-500">
+                            {CHARACTER_VOICE_REFERENCE_TEXT_HINT}
+                          </div>
+                        </div>
+                        {selectedAsset.data.voice_name ||
+                        selectedAsset.data.voice_reference_duration ? (
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                            <div className="rounded border border-gray-800 bg-[#0d0d0d] px-3 py-2">
+                              <div className="text-[11px] text-gray-500">音色名称</div>
+                              <div className="mt-1 text-gray-200 break-all">
+                                {selectedAsset.data.voice_name || "未生成"}
+                              </div>
+                            </div>
+                            <div className="rounded border border-gray-800 bg-[#0d0d0d] px-3 py-2">
+                              <div className="text-[11px] text-gray-500">音频时长</div>
+                              <div className="mt-1 text-gray-200">
+                                {selectedAsset.data.voice_reference_duration
+                                  ? `${selectedAsset.data.voice_reference_duration.toFixed(1)}s`
+                                  : "未生成"}
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
+                          disabled={generatingCharacterVoiceReferenceId === selectedAsset.data.id}
+                          onClick={() => void handleGenerateCharacterVoiceReference()}
+                        >
+                          {generatingCharacterVoiceReferenceId === selectedAsset.data.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              生成中
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              生成主语音参考
+                            </>
+                          )}
+                        </Button>
                         <input
-                          ref={selectedCharacterReferenceInputRef}
+                          ref={selectedCharacterVoiceReferenceInputRef}
                           type="file"
-                          accept="image/*"
+                          accept="audio/wav,audio/mpeg,.wav,.mp3"
                           className="hidden"
-                          onChange={(e) => void handleUploadSelectedCharacterReference(e.target.files?.[0] || null)}
+                          onChange={(event) =>
+                            void handleUploadSelectedCharacterVoiceReference(
+                              event.target.files?.[0] || null,
+                            )
+                          }
                         />
                         <Button
                           type="button"
                           variant="outline"
-                          className="flex-1 border-gray-700 text-gray-200 hover:bg-gray-900"
-                          disabled={uploadingCharacterReferenceId === selectedAsset.data.id}
-                          onClick={() => selectedCharacterReferenceInputRef.current?.click()}
+                          className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
+                          disabled={uploadingCharacterVoiceReferenceId === selectedAsset.data.id}
+                          onClick={() => selectedCharacterVoiceReferenceInputRef.current?.click()}
                         >
-                          {uploadingCharacterReferenceId === selectedAsset.data.id ? (
+                          {uploadingCharacterVoiceReferenceId === selectedAsset.data.id ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                               上传中
                             </>
                           ) : (
-                            <>上传参考图</>
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              上传/替换主语音参考
+                            </>
                           )}
                         </Button>
                       </div>
-                    </div>
-                    <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm text-gray-100">角色主设定图</div>
-                          <div className="text-xs text-gray-500">角色正式展示图，以及后续分镜封面的人物核心参考图</div>
-                        </div>
-                        <Badge className="bg-blue-600 text-white text-xs">角色设定</Badge>
+                      <div className="pt-4 border-t border-gray-800">
+                        <Button
+                          className="w-full bg-purple-600 hover:bg-purple-700"
+                          disabled={isSavingCharacter}
+                          onClick={saveSelectedCharacter}
+                        >
+                          {isSavingCharacter ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              保存中
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 mr-2" />
+                              保存修改
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full mt-2 border-red-800 text-red-400 hover:bg-red-900/20"
+                          onClick={() =>
+                            setDeleteTarget({
+                              type: "character",
+                              id: selectedAsset.data.id,
+                              name: selectedAsset.data.name,
+                            })
+                          }
+                        >
+                          {" "}
+                          <Trash2 className="w-4 h-4 mr-2" /> 删除角色
+                        </Button>
                       </div>
-                      <div className="aspect-square bg-gradient-to-br from-slate-900/30 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
-                        {getCharacterDesignSheetPreviewSrc(selectedAsset.data) ? (
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
+                        {getAssetPreviewSrc(selectedAsset.data) ? (
                           <button
                             type="button"
                             className="w-full h-full"
                             onClick={() =>
                               setPreviewImage({
-                                src: selectedAsset.data.design_sheet_url || "",
-                                alt: `${selectedAsset.data.name} 设定图`,
+                                src: getAssetOriginalSrc(selectedAsset.data),
+                                alt: selectedAsset.data.name,
                               })
                             }
                           >
                             <img
-                              src={getCharacterDesignSheetPreviewSrc(selectedAsset.data)}
-                              alt={`${selectedAsset.data.name} 设定图`}
+                              src={getAssetPreviewSrc(selectedAsset.data)}
+                              alt={selectedAsset.data.name}
                               loading="lazy"
                               decoding="async"
                               className="w-full h-full object-contain rounded"
                             />
                           </button>
                         ) : (
-                          <Users className="w-24 h-24 text-gray-700" />
+                          <MapPin className="w-24 h-24 text-gray-700" />
                         )}
                       </div>
-                      <div className="space-y-2">
-                        <div className="rounded border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-200">
-                          {CHARACTER_DESIGN_SHEET_MODEL_LABEL}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
-                          disabled={generatingCharacterDesignSheetId === selectedAsset.data.id}
-                          onClick={() => void handleGenerateCharacterDesignSheet()}
-                        >
-                          {generatingCharacterDesignSheetId === selectedAsset.data.id ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              正在生成主设定图
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              生成主设定图
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    <div><Label className="text-xs text-gray-400">角色名称</Label><Input value={selectedAsset.data.name} onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, name: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                    <div><Label className="text-xs text-gray-400">角色描述</Label><Textarea value={selectedAsset.data.description || ""} onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, description: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
-                    <div className="space-y-3 rounded border border-gray-800 bg-[#111111] p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-sm text-gray-100">主语音参考</div>
-                          <div className="text-xs text-gray-500">{CHARACTER_VOICE_REFERENCE_DURATION_HINT}</div>
-                        </div>
-                        <Badge className="bg-emerald-600 text-white text-xs">角色语音</Badge>
-                      </div>
-                      {characterVoiceReferenceError?.id === selectedAsset.data.id ? (
-                        <div className="rounded border border-red-900/60 bg-red-950/30 px-3 py-2 text-xs text-red-200">
-                          {characterVoiceReferenceError.message}
-                        </div>
-                      ) : null}
-                      {getCharacterVoiceReferenceSrc(selectedAsset.data) ? (
-                        <audio key={selectedAsset.data.voice_reference_url} controls className="w-full">
-                          <source src={getCharacterVoiceReferenceSrc(selectedAsset.data)} />
-                        </audio>
-                      ) : (
-                        <div className="rounded border border-dashed border-gray-700 px-3 py-4 text-xs text-gray-500">
-                          还没有主语音参考。生成后会自动绑定到这个角色。
-                        </div>
-                      )}
-                      <div>
-                        <Label className="text-xs text-gray-400">声音提示词</Label>
-                        <Textarea
-                          value={selectedAsset.data.voice_prompt || ""}
-                          onChange={(e) => setSelectedAsset({ type: "character", data: { ...selectedAsset.data, voice_prompt: e.target.value } })}
-                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[88px]"
-                          placeholder="例如：年轻男性，低沉克制，略带疲惫感，真实自然，不要播音腔。"
-                        />
-                        <div className="mt-1 text-[11px] text-gray-500">系统会在生成时追加 3-5 秒短句约束。</div>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-gray-400">参考文本</Label>
-                        <div className="mt-1.5 rounded border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-200">
-                          {FIXED_CHARACTER_VOICE_REFERENCE_TEXT}
-                        </div>
-                        <div className="mt-1 text-[11px] text-gray-500">{CHARACTER_VOICE_REFERENCE_TEXT_HINT}</div>
-                      </div>
-                      {(selectedAsset.data.voice_name || selectedAsset.data.voice_reference_duration) ? (
-                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
-                          <div className="rounded border border-gray-800 bg-[#0d0d0d] px-3 py-2">
-                            <div className="text-[11px] text-gray-500">音色名称</div>
-                            <div className="mt-1 text-gray-200 break-all">{selectedAsset.data.voice_name || "未生成"}</div>
-                          </div>
-                          <div className="rounded border border-gray-800 bg-[#0d0d0d] px-3 py-2">
-                            <div className="text-[11px] text-gray-500">音频时长</div>
-                            <div className="mt-1 text-gray-200">{selectedAsset.data.voice_reference_duration ? `${selectedAsset.data.voice_reference_duration.toFixed(1)}s` : "未生成"}</div>
-                          </div>
-                        </div>
-                      ) : null}
                       <Button
                         type="button"
                         variant="outline"
                         className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
-                        disabled={generatingCharacterVoiceReferenceId === selectedAsset.data.id}
-                        onClick={() => void handleGenerateCharacterVoiceReference()}
+                        disabled={generatingAssetCoverId === selectedAsset.data.id}
+                        onClick={() => void handleGenerateAssetCover()}
                       >
-                        {generatingCharacterVoiceReferenceId === selectedAsset.data.id ? (
+                        {generatingAssetCoverId === selectedAsset.data.id ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            生成中
+                            正在生成
                           </>
                         ) : (
                           <>
                             <Sparkles className="w-4 h-4 mr-2" />
-                            生成主语音参考
+                            生成封面
                           </>
                         )}
                       </Button>
-                      <input
-                        ref={selectedCharacterVoiceReferenceInputRef}
-                        type="file"
-                        accept="audio/wav,audio/mpeg,.wav,.mp3"
-                        className="hidden"
-                        onChange={(event) => void handleUploadSelectedCharacterVoiceReference(event.target.files?.[0] || null)}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
-                        disabled={uploadingCharacterVoiceReferenceId === selectedAsset.data.id}
-                        onClick={() => selectedCharacterVoiceReferenceInputRef.current?.click()}
-                      >
-                        {uploadingCharacterVoiceReferenceId === selectedAsset.data.id ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            上传中
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4 mr-2" />
-                            上传/替换主语音参考
-                          </>
-                        )}
-                      </Button>
+                      <div>
+                        <Label className="text-xs text-gray-400">场景名称</Label>
+                        <Input
+                          value={selectedAsset.data.name}
+                          onChange={(e) =>
+                            setSelectedAsset({
+                              type: "asset",
+                              data: { ...selectedAsset.data, name: e.target.value },
+                            })
+                          }
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">资源类型</Label>
+                        <Input
+                          value={selectedAsset.data.type}
+                          onChange={(e) =>
+                            setSelectedAsset({
+                              type: "asset",
+                              data: { ...selectedAsset.data, type: e.target.value },
+                            })
+                          }
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">场景描述</Label>
+                        <Textarea
+                          value={selectedAsset.data.meta || ""}
+                          onChange={(e) =>
+                            setSelectedAsset({
+                              type: "asset",
+                              data: { ...selectedAsset.data, meta: e.target.value },
+                            })
+                          }
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">资源地址</Label>
+                        <Textarea
+                          value={selectedAsset.data.file_url || ""}
+                          className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]"
+                          readOnly
+                        />
+                      </div>
+                      <div className="pt-4 border-t border-gray-800">
+                        <Button
+                          variant="outline"
+                          className="w-full border-gray-700 text-gray-300 hover:bg-gray-900"
+                          onClick={() =>
+                            navigate(
+                              currentProjectId
+                                ? `/workspace?project=${currentProjectId}`
+                                : "/workspace",
+                            )
+                          }
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          插入到当前镜头
+                        </Button>
+                        <Button
+                          className="w-full mt-2 bg-purple-600 hover:bg-purple-700"
+                          disabled={isSavingAsset}
+                          onClick={saveSelectedAsset}
+                        >
+                          {isSavingAsset ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              保存中
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 mr-2" />
+                              保存修改
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full mt-2 border-red-800 text-red-400 hover:bg-red-900/20"
+                          onClick={() =>
+                            setDeleteTarget({
+                              type: "asset",
+                              id: selectedAsset.data.id,
+                              name: selectedAsset.data.name,
+                            })
+                          }
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          删除资产
+                        </Button>
+                      </div>
                     </div>
-                    <div className="pt-4 border-t border-gray-800">
-                      <Button className="w-full bg-purple-600 hover:bg-purple-700" disabled={isSavingCharacter} onClick={saveSelectedCharacter}>{isSavingCharacter ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />保存中</> : <><Save className="w-4 h-4 mr-2" />保存修改</>}</Button>
-                      <Button variant="outline" className="w-full mt-2 border-red-800 text-red-400 hover:bg-red-900/20" onClick={() => setDeleteTarget({ type: "character", id: selectedAsset.data.id, name: selectedAsset.data.name })}> <Trash2 className="w-4 h-4 mr-2" /> 删除角色</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
-                      {getAssetPreviewSrc(selectedAsset.data) ? (
-                        <button type="button" className="w-full h-full" onClick={() => setPreviewImage({ src: getAssetOriginalSrc(selectedAsset.data), alt: selectedAsset.data.name })}>
-                          <img src={getAssetPreviewSrc(selectedAsset.data)} alt={selectedAsset.data.name} loading="lazy" decoding="async" className="w-full h-full object-contain rounded" />
-                        </button>
-                      ) : (
-                        <MapPin className="w-24 h-24 text-gray-700" />
-                      )}
-                    </div>
-                    <Button type="button" variant="outline" className="w-full border-gray-700 text-gray-200 hover:bg-gray-900" disabled={generatingAssetCoverId === selectedAsset.data.id} onClick={() => void handleGenerateAssetCover()}>
-                      {generatingAssetCoverId === selectedAsset.data.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />正在生成</> : <><Sparkles className="w-4 h-4 mr-2" />生成封面</>}
-                    </Button>
-                    <div><Label className="text-xs text-gray-400">场景名称</Label><Input value={selectedAsset.data.name} onChange={(e) => setSelectedAsset({ type: "asset", data: { ...selectedAsset.data, name: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                    <div><Label className="text-xs text-gray-400">资源类型</Label><Input value={selectedAsset.data.type} onChange={(e) => setSelectedAsset({ type: "asset", data: { ...selectedAsset.data, type: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                    <div><Label className="text-xs text-gray-400">场景描述</Label><Textarea value={selectedAsset.data.meta || ""} onChange={(e) => setSelectedAsset({ type: "asset", data: { ...selectedAsset.data, meta: e.target.value } })} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
-                    <div><Label className="text-xs text-gray-400">资源地址</Label><Textarea value={selectedAsset.data.file_url || ""} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[60px]" readOnly /></div>
-                    <div className="pt-4 border-t border-gray-800">
-                      <Button variant="outline" className="w-full border-gray-700 text-gray-300 hover:bg-gray-900" onClick={() => navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/workspace")}><Check className="w-4 h-4 mr-2" />插入到当前镜头</Button>
-                      <Button className="w-full mt-2 bg-purple-600 hover:bg-purple-700" disabled={isSavingAsset} onClick={saveSelectedAsset}>{isSavingAsset ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />保存中</> : <><Save className="w-4 h-4 mr-2" />保存修改</>}</Button>
-                      <Button variant="outline" className="w-full mt-2 border-red-800 text-red-400 hover:bg-red-900/20" onClick={() => setDeleteTarget({ type: "asset", id: selectedAsset.data.id, name: selectedAsset.data.name })}><Trash2 className="w-4 h-4 mr-2" />删除资产</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
+                  )}
+                </div>
+              </>
             </aside>
           </>
         ) : null}
       </div>
 
-      <Dialog open={!!aiPreviewDialog} onOpenChange={(open) => { if (!open) setAiPreviewDialog(null); }}>
+      <Dialog
+        open={!!aiPreviewDialog}
+        onOpenChange={(open) => {
+          if (!open) setAiPreviewDialog(null);
+        }}
+      >
         <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{aiPreviewDialog?.title || "确认 AI 生成"}</DialogTitle>
@@ -1014,7 +1436,10 @@ export default function AssetLibrary() {
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
-              <div className="flex justify-between gap-4"><span className="text-gray-500">实际模型</span><span>{aiPreviewDialog?.preview.model || "-"}</span></div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500">实际模型</span>
+                <span>{aiPreviewDialog?.preview.model || "-"}</span>
+              </div>
               {aiPreviewDialog?.preview.notes?.length ? (
                 <div>
                   <div className="text-gray-500 mb-1">说明</div>
@@ -1030,7 +1455,10 @@ export default function AssetLibrary() {
               <div className="text-gray-300 font-medium">详细参数</div>
               <div className="grid gap-2 md:grid-cols-2 text-xs">
                 {Object.entries(aiPreviewDialog?.preview.fields || {}).map(([key, value]) => (
-                  <div key={key}><span className="text-gray-500">{key}：</span><span>{value || "-"}</span></div>
+                  <div key={key}>
+                    <span className="text-gray-500">{key}：</span>
+                    <span>{value || "-"}</span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1046,7 +1474,13 @@ export default function AssetLibrary() {
                       onClick={() => setPreviewImage({ src: image.url, alt: image.name })}
                     >
                       <div className="aspect-[4/3] overflow-hidden rounded border border-gray-800 bg-black/20">
-                        <img src={image.url} alt={image.name} className="h-full w-full object-contain" loading="lazy" decoding="async" />
+                        <img
+                          src={image.url}
+                          alt={image.name}
+                          className="h-full w-full object-contain"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       </div>
                       <div className="mt-2 text-xs text-gray-200">{image.name}</div>
                       <div className="mt-1 text-[11px] text-gray-500">{image.source}</div>
@@ -1057,17 +1491,34 @@ export default function AssetLibrary() {
             ) : null}
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
               <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">{formatPromptForDisplay(aiPreviewDialog?.preview.final_prompt)}</pre>
+              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">
+                {formatPromptForDisplay(aiPreviewDialog?.preview.final_prompt)}
+              </pre>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => setAiPreviewDialog(null)}>取消</Button>
-            <Button type="button" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => void confirmAIPreviewGeneration()} disabled={isLoadingAIPreview}>{aiPreviewDialog?.confirmLabel || "确认生成"}</Button>
+            <Button type="button" variant="outline" onClick={() => setAiPreviewDialog(null)}>
+              取消
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => void confirmAIPreviewGeneration()}
+              disabled={isLoadingAIPreview}
+            >
+              {aiPreviewDialog?.confirmLabel || "确认生成"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) resetCreateState(); }}>
+      <Dialog
+        open={showCreateDialog}
+        onOpenChange={(open) => {
+          setShowCreateDialog(open);
+          if (!open) resetCreateState();
+        }}
+      >
         <DialogContent
           className="bg-[#121212] border-gray-800 text-gray-100 sm:max-w-lg"
           onInteractOutside={(event) => event.preventDefault()}
@@ -1075,44 +1526,167 @@ export default function AssetLibrary() {
         >
           <DialogHeader>
             <DialogTitle>新建资产</DialogTitle>
-            <DialogDescription className="text-gray-400">先选择创建角色资产还是场景资产。</DialogDescription>
+            <DialogDescription className="text-gray-400">
+              先选择创建角色资产还是场景资产。
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-gray-400">资产类型</Label>
               <div className="mt-1.5 flex gap-2">
-                <Button type="button" variant={createMode === "character" ? "default" : "outline"} className={createMode === "character" ? "bg-purple-600 hover:bg-purple-700" : "border-gray-700 text-gray-300"} onClick={() => setCreateMode("character")}>角色资产</Button>
-                <Button type="button" variant={createMode === "asset" ? "default" : "outline"} className={createMode === "asset" ? "bg-purple-600 hover:bg-purple-700" : "border-gray-700 text-gray-300"} onClick={() => setCreateMode("asset")}>场景资产</Button>
+                <Button
+                  type="button"
+                  variant={createMode === "character" ? "default" : "outline"}
+                  className={
+                    createMode === "character"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "border-gray-700 text-gray-300"
+                  }
+                  onClick={() => setCreateMode("character")}
+                >
+                  角色资产
+                </Button>
+                <Button
+                  type="button"
+                  variant={createMode === "asset" ? "default" : "outline"}
+                  className={
+                    createMode === "asset"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "border-gray-700 text-gray-300"
+                  }
+                  onClick={() => setCreateMode("asset")}
+                >
+                  场景资产
+                </Button>
               </div>
             </div>
             {createMode === "character" ? (
               <>
-                <div><Label className="text-xs text-gray-400">名称</Label><Input value={newCharacter.name} onChange={(e) => setNewCharacter((prev) => ({ ...prev, name: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                <div><Label className="text-xs text-gray-400">描述</Label><Textarea value={newCharacter.description} onChange={(e) => setNewCharacter((prev) => ({ ...prev, description: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
-                <div><Label className="text-xs text-gray-400">角色参考图地址（可选）</Label><Input value={newCharacter.avatar_url} onChange={(e) => setNewCharacter((prev) => ({ ...prev, avatar_url: e.target.value }))} placeholder="https://..." className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                <div><Label className="text-xs text-gray-400">上传角色参考图（可选）</Label><Input type="file" accept="image/*" onChange={(e) => setCreateCharacterFile(e.target.files?.[0] || null)} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
+                <div>
+                  <Label className="text-xs text-gray-400">名称</Label>
+                  <Input
+                    value={newCharacter.name}
+                    onChange={(e) => setNewCharacter((prev) => ({ ...prev, name: e.target.value }))}
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400">描述</Label>
+                  <Textarea
+                    value={newCharacter.description}
+                    onChange={(e) =>
+                      setNewCharacter((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400">角色参考图地址（可选）</Label>
+                  <Input
+                    value={newCharacter.avatar_url}
+                    onChange={(e) =>
+                      setNewCharacter((prev) => ({ ...prev, avatar_url: e.target.value }))
+                    }
+                    placeholder="https://..."
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400">上传角色参考图（可选）</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setCreateCharacterFile(e.target.files?.[0] || null)}
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                  />
+                </div>
               </>
             ) : (
               <>
-                <div><Label className="text-xs text-gray-400">名称</Label><Input value={newAsset.name} onChange={(e) => setNewAsset((prev) => ({ ...prev, name: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                <div><Label className="text-xs text-gray-400">类型</Label><Input value={newAsset.type} onChange={(e) => setNewAsset((prev) => ({ ...prev, type: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                <div><Label className="text-xs text-gray-400">说明</Label><Textarea value={newAsset.meta} onChange={(e) => setNewAsset((prev) => ({ ...prev, meta: e.target.value }))} className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]" /></div>
-                <div><Label className="text-xs text-gray-400">资源地址（可选）</Label><Input value={newAsset.file_url} onChange={(e) => setNewAsset((prev) => ({ ...prev, file_url: e.target.value }))} placeholder="https://..." className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
-                <div><Label className="text-xs text-gray-400">上传图片（可选）</Label><Input type="file" accept="image/*" onChange={(e) => setCreateAssetFile(e.target.files?.[0] || null)} className="mt-1.5 bg-[#1a1a1a] border-gray-700" /></div>
+                <div>
+                  <Label className="text-xs text-gray-400">名称</Label>
+                  <Input
+                    value={newAsset.name}
+                    onChange={(e) => setNewAsset((prev) => ({ ...prev, name: e.target.value }))}
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400">类型</Label>
+                  <Input
+                    value={newAsset.type}
+                    onChange={(e) => setNewAsset((prev) => ({ ...prev, type: e.target.value }))}
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400">说明</Label>
+                  <Textarea
+                    value={newAsset.meta}
+                    onChange={(e) => setNewAsset((prev) => ({ ...prev, meta: e.target.value }))}
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700 min-h-[100px]"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400">资源地址（可选）</Label>
+                  <Input
+                    value={newAsset.file_url}
+                    onChange={(e) => setNewAsset((prev) => ({ ...prev, file_url: e.target.value }))}
+                    placeholder="https://..."
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400">上传图片（可选）</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setCreateAssetFile(e.target.files?.[0] || null)}
+                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
+                  />
+                </div>
               </>
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white" onClick={() => setShowCreateDialog(false)}>取消</Button>
-            <Button type="button" className="bg-purple-600 hover:bg-purple-700" disabled={isCreating} onClick={handleCreate}>{isCreating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />创建中</> : "确认创建"}</Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white"
+              onClick={() => setShowCreateDialog(false)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700"
+              disabled={isCreating}
+              onClick={handleCreate}
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  创建中
+                </>
+              ) : (
+                "确认创建"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent className="bg-[#121212] border-gray-800 text-gray-100">
           <AlertDialogHeader>
-            <AlertDialogTitle>{deleteTarget?.type === "character" ? "确认删除角色" : "确认删除场景资产"}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteTarget?.type === "character" ? "确认删除角色" : "确认删除场景资产"}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
               {deleteTarget?.type === "character"
                 ? "该操作会从资产库隐藏该角色，不会删除服务器原始文件。"
@@ -1120,15 +1694,32 @@ export default function AssetLibrary() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white">取消</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}`} onClick={confirmDelete}>
-              {deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : "确认删除"}
+            <AlertDialogCancel className="border-gray-600 bg-[#1a1a1a] text-gray-100 hover:bg-[#262626] hover:text-white">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}`}
+              onClick={confirmDelete}
+            >
+              {deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}` ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "确认删除"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <ImagePreviewDialog open={!!previewImage} onOpenChange={(open) => { if (!open) setPreviewImage(null); }} src={previewImage?.src || ""} alt={previewImage?.alt || "资产预览图"} />
+      <ImagePreviewDialog
+        open={!!previewImage}
+        onOpenChange={(open) => {
+          if (!open) setPreviewImage(null);
+        }}
+        src={previewImage?.src || ""}
+        alt={previewImage?.alt || "资产预览图"}
+      />
     </div>
   );
 }

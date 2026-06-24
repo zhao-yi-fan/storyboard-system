@@ -3,7 +3,11 @@
 
 const Service = require('egg').Service;
 const { parseScriptWithDeepSeek } = require('../lib/deepseek');
-const { normalizeLLMStoryboardDocument, buildCharacterDescription, uniqueNonEmpty } = require('../lib/script_import');
+const {
+  normalizeLLMStoryboardDocument,
+  buildCharacterDescription,
+  uniqueNonEmpty,
+} = require('../lib/script_import');
 
 class ScriptImportService extends Service {
   get pool() {
@@ -25,25 +29,48 @@ class ScriptImportService extends Service {
       throw new Error('project not found');
     }
 
-    const { cleaned, document } = await parseScriptWithDeepSeek(this.app.config.storyboard, scriptText);
+    const { cleaned, document } = await parseScriptWithDeepSeek(
+      this.app.config.storyboard,
+      scriptText,
+    );
     const { parsed, normalizedCharacters } = normalizeLLMStoryboardDocument(document);
 
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
-      await conn.execute('UPDATE projects SET script_text = ? WHERE id = ? AND deleted_at IS NULL', [ cleaned, projectId ]);
+      await conn.execute(
+        'UPDATE projects SET script_text = ? WHERE id = ? AND deleted_at IS NULL',
+        [cleaned, projectId],
+      );
 
-      await conn.query(`
+      await conn.query(
+        `
         DELETE sc FROM storyboard_characters sc
         JOIN storyboards sb ON sc.storyboard_id = sb.id
         WHERE sb.project_id = ?
-      `, [ projectId ]);
-      await conn.execute('UPDATE storyboards SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL', [ projectId ]);
-      await conn.execute('UPDATE scenes SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL', [ projectId ]);
-      await conn.execute('UPDATE chapters SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL', [ projectId ]);
+      `,
+        [projectId],
+      );
+      await conn.execute(
+        'UPDATE storyboards SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL',
+        [projectId],
+      );
+      await conn.execute(
+        'UPDATE scenes SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL',
+        [projectId],
+      );
+      await conn.execute(
+        'UPDATE chapters SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL',
+        [projectId],
+      );
 
-      const [ characterRows ] = await conn.query('SELECT id, name FROM characters WHERE project_id = ? AND deleted_at IS NULL', [ projectId ]);
-      const characterIds = new Map(characterRows.map(row => [ String(row.name).trim(), Number(row.id) ]));
+      const [characterRows] = await conn.query(
+        'SELECT id, name FROM characters WHERE project_id = ? AND deleted_at IS NULL',
+        [projectId],
+      );
+      const characterIds = new Map(
+        characterRows.map((row) => [String(row.name).trim(), Number(row.id)]),
+      );
 
       const result = {
         project_id: projectId,
@@ -55,15 +82,22 @@ class ScriptImportService extends Service {
 
       const parsedCharacters = new Set();
 
-      const upsertCharacter = async name => {
-        const detail = normalizedCharacters.get(name) || { description: '', appearance: '', tags: [] };
+      const upsertCharacter = async (name) => {
+        const detail = normalizedCharacters.get(name) || {
+          description: '',
+          appearance: '',
+          tags: [],
+        };
         if (characterIds.has(name)) {
-          await conn.execute('UPDATE characters SET description = ? WHERE id = ?', [ buildCharacterDescription(detail), characterIds.get(name) ]);
+          await conn.execute('UPDATE characters SET description = ? WHERE id = ?', [
+            buildCharacterDescription(detail),
+            characterIds.get(name),
+          ]);
           return characterIds.get(name);
         }
-        const [ insertResult ] = await conn.execute(
+        const [insertResult] = await conn.execute(
           `INSERT INTO characters (project_id, name, description, avatar_url) VALUES (?, ?, ?, '')`,
-          [ projectId, name, buildCharacterDescription(detail) ]
+          [projectId, name, buildCharacterDescription(detail)],
         );
         characterIds.set(name, insertResult.insertId);
         return insertResult.insertId;
@@ -71,24 +105,32 @@ class ScriptImportService extends Service {
 
       for (let chapterIndex = 0; chapterIndex < parsed.chapters.length; chapterIndex++) {
         const chapter = parsed.chapters[chapterIndex];
-        const [ chapterInsert ] = await conn.execute(
+        const [chapterInsert] = await conn.execute(
           'INSERT INTO chapters (project_id, title, summary, sort_order) VALUES (?, ?, ?, ?)',
-          [ projectId, chapter.title, chapter.summary, chapterIndex + 1 ]
+          [projectId, chapter.title, chapter.summary, chapterIndex + 1],
         );
         result.chapter_count++;
 
         for (let sceneIndex = 0; sceneIndex < chapter.scenes.length; sceneIndex++) {
           const scene = chapter.scenes[sceneIndex];
-          const [ sceneInsert ] = await conn.execute(
+          const [sceneInsert] = await conn.execute(
             `INSERT INTO scenes (chapter_id, project_id, title, description, location, time_of_day, sort_order)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [ chapterInsert.insertId, projectId, scene.title, scene.description, scene.location, scene.timeOfDay, sceneIndex + 1 ]
+            [
+              chapterInsert.insertId,
+              projectId,
+              scene.title,
+              scene.description,
+              scene.location,
+              scene.timeOfDay,
+              sceneIndex + 1,
+            ],
           );
           result.scene_count++;
 
           for (let shotIndex = 0; shotIndex < scene.storyboards.length; shotIndex++) {
             const storyboard = scene.storyboards[shotIndex];
-            const [ storyboardInsert ] = await conn.execute(
+            const [storyboardInsert] = await conn.execute(
               `INSERT INTO storyboards (
                 scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, camera_direction, camera_motion, duration, background, thumbnail_url, notes, sort_order
               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)`,
@@ -107,7 +149,7 @@ class ScriptImportService extends Service {
                 storyboard.background,
                 storyboard.notes,
                 shotIndex + 1,
-              ]
+              ],
             );
             result.storyboard_count++;
 
@@ -118,7 +160,7 @@ class ScriptImportService extends Service {
                 `INSERT INTO storyboard_characters (storyboard_id, character_id, line)
                  VALUES (?, ?, ?)
                  ON DUPLICATE KEY UPDATE line = VALUES(line)`,
-                [ storyboardInsert.insertId, characterId, storyboard.dialogue || storyboard.content ]
+                [storyboardInsert.insertId, characterId, storyboard.dialogue || storyboard.content],
               );
             }
           }

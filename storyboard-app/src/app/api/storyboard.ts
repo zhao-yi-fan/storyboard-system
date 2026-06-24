@@ -23,11 +23,15 @@ export function getStoryboardMediaGenerations(id: number) {
 }
 
 export function setStoryboardMediaGenerationCurrent(storyboardId: number, generationId: number) {
-  return apiClient.post<StoryboardMediaMutationResult>(`/storyboards/${storyboardId}/media-generations/${generationId}/set-current`);
+  return apiClient.post<StoryboardMediaMutationResult>(
+    `/storyboards/${storyboardId}/media-generations/${generationId}/set-current`,
+  );
 }
 
 export function deleteStoryboardMediaGeneration(storyboardId: number, generationId: number) {
-  return apiClient.delete<StoryboardMediaMutationResult>(`/storyboards/${storyboardId}/media-generations/${generationId}`);
+  return apiClient.delete<StoryboardMediaMutationResult>(
+    `/storyboards/${storyboardId}/media-generations/${generationId}`,
+  );
 }
 
 export function createStoryboard(
@@ -46,7 +50,7 @@ export function createStoryboard(
     background?: string;
     thumbnail_url?: string;
     notes?: string;
-  }
+  },
 ) {
   return apiClient.post<Storyboard>(`/scenes/${sceneId}/storyboards`, data);
 }
@@ -68,7 +72,7 @@ export function updateStoryboard(
     thumbnail_url?: string;
     notes?: string;
     sort_order?: number;
-  }
+  },
 ) {
   return apiClient.put<Storyboard>(`/storyboards/${id}`, data);
 }
@@ -99,14 +103,25 @@ export function getStoryboardCoverGenerationPreview(id: number, data?: { model?:
     params.set("model", data.model);
   }
   const query = params.toString();
-  return apiClient.get<StoryboardCoverGenerationPreview>(`/storyboards/${id}/cover-generation-preview${query ? `?${query}` : ""}`);
+  return apiClient.get<StoryboardCoverGenerationPreview>(
+    `/storyboards/${id}/cover-generation-preview${query ? `?${query}` : ""}`,
+  );
 }
 
-export function generateStoryboardCover(id: number, data?: { model?: string; use_text_only?: boolean }) {
-  return apiClient.post<GenerateStoryboardCoverResult>(`/storyboards/${id}/generate-cover`, data ?? {});
+export function generateStoryboardCover(
+  id: number,
+  data?: { model?: string; use_text_only?: boolean },
+) {
+  return apiClient.post<GenerateStoryboardCoverResult>(
+    `/storyboards/${id}/generate-cover`,
+    data ?? {},
+  );
 }
 
-export function getStoryboardVideoGenerationPreview(id: number, data?: { model?: string; duration?: number; use_first_frame?: boolean }) {
+export function getStoryboardVideoGenerationPreview(
+  id: number,
+  data?: { model?: string; duration?: number; use_first_frame?: boolean },
+) {
   const params = new URLSearchParams();
   if (data?.model) {
     params.set("model", data.model);
@@ -118,10 +133,15 @@ export function getStoryboardVideoGenerationPreview(id: number, data?: { model?:
     params.set("use_first_frame", String(data.use_first_frame));
   }
   const query = params.toString();
-  return apiClient.get<StoryboardVideoGenerationPreview>(`/storyboards/${id}/video-generation-preview${query ? `?${query}` : ""}`);
+  return apiClient.get<StoryboardVideoGenerationPreview>(
+    `/storyboards/${id}/video-generation-preview${query ? `?${query}` : ""}`,
+  );
 }
 
-export function generateStoryboardVideo(id: number, data?: { model?: string; duration?: number; use_first_frame?: boolean }) {
+export function generateStoryboardVideo(
+  id: number,
+  data?: { model?: string; duration?: number; use_first_frame?: boolean },
+) {
   return apiClient.post<GenerateStoryboardVideoResult>(`/storyboards/${id}/generate-video`, data);
 }
 
@@ -133,7 +153,10 @@ export function uploadStoryboardCover(id: number, thumbnailUrl: string) {
 
 export function applyShotDirectionSuggestion(
   id: number,
-  data?: { camera_motion?: boolean; shot_type?: boolean; notes?: boolean }
+  data?: { camera_motion?: boolean; shot_type?: boolean; notes?: boolean },
 ) {
-  return apiClient.post<Storyboard>(`/storyboards/${id}/apply-shot-direction-suggestion`, data ?? {});
+  return apiClient.post<Storyboard>(
+    `/storyboards/${id}/apply-shot-direction-suggestion`,
+    data ?? {},
+  );
 }

@@ -6,8 +6,8 @@ const { mapProject, mapProjectWithStats } = require('../lib/project');
 const { composeVideos, sanitizeFileName } = require('../lib/media');
 const { hasOwn } = require('../lib/common');
 
-const EMPTY_MEDIA_FIELDS = [ '', '', 'generating', '', 0 ];
-const FAILED_MEDIA_PREFIX = [ '', '', 'failed' ];
+const EMPTY_MEDIA_FIELDS = ['', '', 'generating', '', 0];
+const FAILED_MEDIA_PREFIX = ['', '', 'failed'];
 
 class ProjectService extends Service {
   get pool() {
@@ -22,7 +22,7 @@ class ProjectService extends Service {
    * // => [{ id: 19, name: "便利店门口", chapter_count: 2, scene_count: 8, storyboard_count: 24 }]
    */
   async findAll() {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT
         p.id,
         p.name,
@@ -53,7 +53,7 @@ class ProjectService extends Service {
         ) AS storyboard_count
       FROM projects p
       WHERE p.deleted_at IS NULL
-      ORDER BY CASE WHEN p.pinned_at IS NULL THEN 1 ELSE 0 END, p.pinned_at DESC, p.created_at DESC`
+      ORDER BY CASE WHEN p.pinned_at IS NULL THEN 1 ELSE 0 END, p.pinned_at DESC, p.created_at DESC`,
     );
 
     return rows.map((row: Record<string, unknown>) => mapProjectWithStats(this.app, row));
@@ -68,7 +68,7 @@ class ProjectService extends Service {
    * // => { id: 19, name: "便利店门口", description: "", video_status: "succeeded" }
    */
   async findById(id: number) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT
         id,
         name,
@@ -84,7 +84,7 @@ class ProjectService extends Service {
         updated_at
       FROM projects
       WHERE id = ? AND deleted_at IS NULL`,
-      [ id ]
+      [id],
     );
 
     if (!rows.length) {
@@ -103,9 +103,9 @@ class ProjectService extends Service {
    * // => { id: 19 }
    */
   async findByName(name: string) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       'SELECT id FROM projects WHERE name = ? AND deleted_at IS NULL LIMIT 1',
-      [ name ]
+      [name],
     );
     return rows[0] || null;
   }
@@ -120,9 +120,9 @@ class ProjectService extends Service {
    * // => null
    */
   async findByNameExceptId(name: string, id: number) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       'SELECT id FROM projects WHERE name = ? AND id <> ? AND deleted_at IS NULL LIMIT 1',
-      [ name, id ]
+      [name, id],
     );
     return rows[0] || null;
   }
@@ -146,9 +146,9 @@ class ProjectService extends Service {
       throw new Error('项目名称已存在，请更换名称');
     }
 
-    const [ result ] = await this.pool.execute(
+    const [result] = await this.pool.execute(
       'INSERT INTO projects (name, description, script_text) VALUES (?, ?, ?)',
-      [ name, String(payload.description || ''), '' ]
+      [name, String(payload.description || ''), ''],
     );
 
     return await this.findById(result.insertId);
@@ -191,7 +191,7 @@ class ProjectService extends Service {
 
     await this.pool.execute(
       'UPDATE projects SET name = ?, description = ?, script_text = ? WHERE id = ?',
-      [ nextName, nextDescription, nextScriptText, id ]
+      [nextName, nextDescription, nextScriptText, id],
     );
 
     return await this.findById(id);
@@ -206,7 +206,7 @@ class ProjectService extends Service {
    * // => void
    */
   async softDelete(id: number) {
-    await this.pool.execute('UPDATE projects SET deleted_at = NOW() WHERE id = ?', [ id ]);
+    await this.pool.execute('UPDATE projects SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
   /**
@@ -225,7 +225,7 @@ class ProjectService extends Service {
 
     await this.pool.execute(
       'UPDATE projects SET pinned_at = NOW() WHERE id = ? AND deleted_at IS NULL',
-      [ id ]
+      [id],
     );
     return await this.findById(id);
   }
@@ -246,7 +246,7 @@ class ProjectService extends Service {
 
     await this.pool.execute(
       'UPDATE projects SET pinned_at = NULL WHERE id = ? AND deleted_at IS NULL',
-      [ id ]
+      [id],
     );
     return await this.findById(id);
   }
@@ -268,18 +268,18 @@ class ProjectService extends Service {
     if (!regenerate && project.video_url) {
       return project;
     }
-    const [ chapters ] = await this.pool.query(
+    const [chapters] = await this.pool.query(
       'SELECT id, sort_order FROM chapters WHERE project_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC',
-      [ id ]
+      [id],
     );
     const inputs: string[] = [];
     for (const chapter of chapters) {
-      const [ scenes ] = await this.pool.query(
+      const [scenes] = await this.pool.query(
         `SELECT id, video_url, video_status, video_duration, sort_order
          FROM scenes
          WHERE chapter_id = ? AND deleted_at IS NULL
          ORDER BY sort_order ASC, id ASC`,
-        [ chapter.id ]
+        [chapter.id],
       );
       for (const scene of scenes) {
         if (scene.video_status === 'succeeded' && scene.video_url) {
@@ -292,20 +292,20 @@ class ProjectService extends Service {
     }
     await this.pool.execute(
       'UPDATE projects SET video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-      [ ...EMPTY_MEDIA_FIELDS, id ]
+      [...EMPTY_MEDIA_FIELDS, id],
     );
     try {
       const filename = `${sanitizeFileName(`project-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(this.app, inputs, 'project-videos', filename);
       await this.pool.execute(
         'UPDATE projects SET video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-        [ composed.publicPath, composed.previewPath, 'succeeded', '', composed.duration, id ]
+        [composed.publicPath, composed.previewPath, 'succeeded', '', composed.duration, id],
       );
       return await this.findById(id);
     } catch (error: any) {
       await this.pool.execute(
         'UPDATE projects SET video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-        [ ...FAILED_MEDIA_PREFIX, error.message, 0, id ]
+        [...FAILED_MEDIA_PREFIX, error.message, 0, id],
       );
       throw error;
     }

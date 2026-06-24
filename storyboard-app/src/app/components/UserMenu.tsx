@@ -102,18 +102,17 @@ export function UserMenu() {
           </div>
 
           <div className="p-1">
-            <MenuItem icon={<Settings size={13} />} label="账号设置" onClick={handleAccountSettings} />
+            <MenuItem
+              icon={<Settings size={13} />}
+              label="账号设置"
+              onClick={handleAccountSettings}
+            />
           </div>
 
           <div className="mx-1 border-t border-gray-800/80" />
 
           <div className="p-1">
-            <MenuItem
-              icon={<LogOut size={13} />}
-              label="退出登录"
-              onClick={handleLogout}
-              subtle
-            />
+            <MenuItem icon={<LogOut size={13} />} label="退出登录" onClick={handleLogout} subtle />
           </div>
         </div>
       ) : null}

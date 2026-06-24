@@ -349,7 +349,6 @@ export type ComposeProjectVideoResult = {
   project: Project;
 };
 
-
 export type AIGenerationPreview = {
   action: string;
   model: string;

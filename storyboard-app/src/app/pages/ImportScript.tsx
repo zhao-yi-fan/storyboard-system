@@ -164,9 +164,24 @@ export default function ImportScript() {
 
       const stageSnapshots: ParsingStats[] = [
         { chapters: estimatedStats.chapters, scenes: 0, shots: 0, characters: 0 },
-        { chapters: estimatedStats.chapters, scenes: estimatedStats.scenes, shots: 0, characters: 0 },
-        { chapters: estimatedStats.chapters, scenes: estimatedStats.scenes, shots: estimatedStats.shots, characters: 0 },
-        { chapters: estimatedStats.chapters, scenes: estimatedStats.scenes, shots: estimatedStats.shots, characters: estimatedStats.characters },
+        {
+          chapters: estimatedStats.chapters,
+          scenes: estimatedStats.scenes,
+          shots: 0,
+          characters: 0,
+        },
+        {
+          chapters: estimatedStats.chapters,
+          scenes: estimatedStats.scenes,
+          shots: estimatedStats.shots,
+          characters: 0,
+        },
+        {
+          chapters: estimatedStats.chapters,
+          scenes: estimatedStats.scenes,
+          shots: estimatedStats.shots,
+          characters: estimatedStats.characters,
+        },
       ];
 
       for (let index = 0; index < parsingStages.length; index += 1) {
@@ -200,10 +215,13 @@ export default function ImportScript() {
     let parsingShown = false;
     let parsingTimer: number | null = null;
     try {
-      const project = await projectApi.createProject({
-        name: projectName,
-        description: projectDescription,
-      }, { suppressToast: true });
+      const project = await projectApi.createProject(
+        {
+          name: projectName,
+          description: projectDescription,
+        },
+        { suppressToast: true },
+      );
 
       const targetProjectId = project.id;
       window.localStorage.setItem("currentProjectId", String(targetProjectId));
@@ -212,7 +230,9 @@ export default function ImportScript() {
         setIsParsing(true);
       }, 300);
 
-      const importResult = await projectApi.importScript(project.id, scriptText, { suppressToast: true });
+      const importResult = await projectApi.importScript(project.id, scriptText, {
+        suppressToast: true,
+      });
       if (parsingTimer !== null) {
         window.clearTimeout(parsingTimer);
       }
@@ -285,7 +305,9 @@ export default function ImportScript() {
                   <Film className="w-8 h-8 text-white" />
                 </div>
               </div>
-              <h2 className="text-2xl text-center font-semibold mb-2">《{projectName || "未命名项目"}》</h2>
+              <h2 className="text-2xl text-center font-semibold mb-2">
+                《{projectName || "未命名项目"}》
+              </h2>
               <p className="text-sm text-gray-400 text-center">正在创建你的分镜项目...</p>
             </div>
 
@@ -309,7 +331,11 @@ export default function ImportScript() {
                     >
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          isCompleted ? "bg-gray-700" : isCurrent ? `${colors.bg} animate-pulse` : "bg-gray-800"
+                          isCompleted
+                            ? "bg-gray-700"
+                            : isCurrent
+                              ? `${colors.bg} animate-pulse`
+                              : "bg-gray-800"
                         }`}
                       >
                         {isCompleted ? (
@@ -324,7 +350,11 @@ export default function ImportScript() {
                       <div className="flex-1">
                         <div
                           className={`text-sm ${
-                            isCompleted ? "text-gray-400" : isCurrent ? "text-white font-medium" : "text-gray-600"
+                            isCompleted
+                              ? "text-gray-400"
+                              : isCurrent
+                                ? "text-white font-medium"
+                                : "text-gray-600"
                           }`}
                         >
                           {stage.label}
@@ -339,7 +369,9 @@ export default function ImportScript() {
                       </div>
                     </div>
                     {index < parsingStages.length - 1 && (
-                      <div className={`w-px h-4 ml-6 ${index < currentStage ? "bg-gray-700" : "bg-gray-800"}`}></div>
+                      <div
+                        className={`w-px h-4 ml-6 ${index < currentStage ? "bg-gray-700" : "bg-gray-800"}`}
+                      ></div>
                     )}
                   </div>
                 );
@@ -354,35 +386,47 @@ export default function ImportScript() {
                 </div>
                 <div className="grid grid-cols-4 gap-6">
                   <div className="text-center">
-                    <div className={`text-3xl font-bold mb-2 transition-all ${parsingStats.chapters > 0 ? "text-purple-400 scale-110" : "text-gray-700"}`}>
+                    <div
+                      className={`text-3xl font-bold mb-2 transition-all ${parsingStats.chapters > 0 ? "text-purple-400 scale-110" : "text-gray-700"}`}
+                    >
                       {parsingStats.chapters}
                     </div>
                     <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                      <Layers className="w-3 h-3" />已识别章节
+                      <Layers className="w-3 h-3" />
+                      已识别章节
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className={`text-3xl font-bold mb-2 transition-all ${parsingStats.scenes > 0 ? "text-blue-400 scale-110" : "text-gray-700"}`}>
+                    <div
+                      className={`text-3xl font-bold mb-2 transition-all ${parsingStats.scenes > 0 ? "text-blue-400 scale-110" : "text-gray-700"}`}
+                    >
                       {parsingStats.scenes}
                     </div>
                     <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                      <Video className="w-3 h-3" />已拆分场景
+                      <Video className="w-3 h-3" />
+                      已拆分场景
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className={`text-3xl font-bold mb-2 transition-all ${parsingStats.shots > 0 ? "text-emerald-400 scale-110" : "text-gray-700"}`}>
+                    <div
+                      className={`text-3xl font-bold mb-2 transition-all ${parsingStats.shots > 0 ? "text-emerald-400 scale-110" : "text-gray-700"}`}
+                    >
                       {parsingStats.shots}
                     </div>
                     <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                      <Camera className="w-3 h-3" />已生成镜头
+                      <Camera className="w-3 h-3" />
+                      已生成镜头
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className={`text-3xl font-bold mb-2 transition-all ${parsingStats.characters > 0 ? "text-pink-400 scale-110" : "text-gray-700"}`}>
+                    <div
+                      className={`text-3xl font-bold mb-2 transition-all ${parsingStats.characters > 0 ? "text-pink-400 scale-110" : "text-gray-700"}`}
+                    >
                       {parsingStats.characters}
                     </div>
                     <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                      <Users className="w-3 h-3" />已提取角色
+                      <Users className="w-3 h-3" />
+                      已提取角色
                     </div>
                   </div>
                 </div>
@@ -430,7 +474,9 @@ export default function ImportScript() {
             <div className="space-y-6">
               <div>
                 <h2 className="mb-2 text-[28px] font-semibold tracking-tight">剧本导入</h2>
-                <p className="text-sm text-gray-400">支持文本粘贴或文件上传，系统将自动解析剧本结构</p>
+                <p className="text-sm text-gray-400">
+                  支持文本粘贴或文件上传，系统将自动解析剧本结构
+                </p>
               </div>
 
               <div className="bg-[#141414] border border-gray-800 rounded-lg overflow-hidden">
@@ -548,10 +594,15 @@ export default function ImportScript() {
                       </div>
                       <div className="ml-4 space-y-3">
                         {previewScenes.map((scene) => (
-                          <div key={scene.title} className="bg-[#0a0a0a] border border-gray-800 rounded p-3 space-y-2">
+                          <div
+                            key={scene.title}
+                            className="bg-[#0a0a0a] border border-gray-800 rounded p-3 space-y-2"
+                          >
                             <div className="flex items-center justify-between">
                               <span className="text-sm">{scene.title}</span>
-                              <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">{scene.shotEstimate}</span>
+                              <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
+                                {scene.shotEstimate}
+                              </span>
                             </div>
                             <p className="text-xs text-gray-500">{scene.description}</p>
                           </div>
@@ -569,7 +620,9 @@ export default function ImportScript() {
                         <div className="text-xs text-gray-500 mt-1">场景</div>
                       </div>
                       <div>
-                        <div className="text-2xl text-blue-400">~{Math.max(previewScenes.length * 2, 1)}</div>
+                        <div className="text-2xl text-blue-400">
+                          ~{Math.max(previewScenes.length * 2, 1)}
+                        </div>
                         <div className="text-xs text-gray-500 mt-1">预估镜头</div>
                       </div>
                     </div>

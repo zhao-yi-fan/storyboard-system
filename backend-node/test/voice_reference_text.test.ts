@@ -44,12 +44,13 @@ describe('test/voice_reference_text.test.ts', () => {
       requestBody = JSON.parse(String(options.body || '{}'));
       return {
         ok: true,
-        text: async () => JSON.stringify({
-          output: {
-            voice: 'linwan_8',
-            preview_audio: { data: Buffer.from('audio').toString('base64') },
-          },
-        }),
+        text: async () =>
+          JSON.stringify({
+            output: {
+              voice: 'linwan_8',
+              preview_audio: { data: Buffer.from('audio').toString('base64') },
+            },
+          }),
       };
     };
 
@@ -58,7 +59,7 @@ describe('test/voice_reference_text.test.ts', () => {
         mockApp(),
         { id: 8, name: '林婉', description: '温婉端庄' },
         '',
-        '我叫林婉。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。'
+        '我叫林婉。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。',
       );
 
       assert.equal(requestBody?.input?.preview_text, FIXED_REFERENCE_TEXT);

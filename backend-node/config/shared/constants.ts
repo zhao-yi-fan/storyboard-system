@@ -14,7 +14,8 @@ export const DEFAULT_DB_NAME = 'storyboard';
 export const DEFAULT_PUBLIC_APP_BASE_URL = '';
 export const DEFAULT_GENERATED_ASSET_DIR = '../storage';
 export const DEFAULT_GENERATED_ASSET_BASE_PATH = '/generated';
-export const DEFAULT_CHARACTER_DESIGN_LAYOUT_REFERENCE_URL = '/generated/assets/1780043684268-1s8z3t9mzjn.png';
+export const DEFAULT_CHARACTER_DESIGN_LAYOUT_REFERENCE_URL =
+  '/generated/assets/1780043684268-1s8z3t9mzjn.png';
 export const DEFAULT_AUTH_COOKIE_NAME = 'storyboard_session';
 export const DEFAULT_AUTH_SESSION_TTL_DAYS = 14;
 export const DEFAULT_AUTH_BOOTSTRAP_DISPLAY_NAME = '创作者';

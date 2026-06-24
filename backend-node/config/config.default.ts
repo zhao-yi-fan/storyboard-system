@@ -15,7 +15,7 @@ import { buildOpenAIConfig } from './providers/openai';
 import { buildOssConfig } from './providers/oss';
 import { FALLBACK_GO_ENV_PATH, LOCAL_ENV_PATH } from './shared/constants';
 
-const ENV_PATHS = [ LOCAL_ENV_PATH, FALLBACK_GO_ENV_PATH ];
+const ENV_PATHS = [LOCAL_ENV_PATH, FALLBACK_GO_ENV_PATH];
 const DIST_DIR_NAME = 'dist';
 
 function resolveBackendNodeRootDir(): string {
@@ -38,7 +38,7 @@ module.exports = (appInfo: { name: string }) => {
 
   config.keys = `${appInfo.name}-migration-key`;
 
-  config.middleware = [ 'apiCors', 'authSession' ];
+  config.middleware = ['apiCors', 'authSession'];
   config.authSession = {
     publicPaths: authConfig.publicPaths,
     sessionCookieName: authConfig.sessionCookieName,

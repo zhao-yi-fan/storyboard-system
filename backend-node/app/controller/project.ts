@@ -200,7 +200,9 @@ class ProjectController extends Controller {
       response.error(this.ctx, 'invalid id');
       return;
     }
-    const regenerate = !Object.prototype.hasOwnProperty.call(this.ctx.request.body || {}, 'regenerate') || Boolean((this.ctx.request.body || {}).regenerate);
+    const regenerate =
+      !Object.prototype.hasOwnProperty.call(this.ctx.request.body || {}, 'regenerate') ||
+      Boolean((this.ctx.request.body || {}).regenerate);
     try {
       const project = await this.ctx.service.project.composeVideo(id, regenerate);
       response.success(this.ctx, {

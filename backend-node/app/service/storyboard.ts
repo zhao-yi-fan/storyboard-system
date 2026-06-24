@@ -43,9 +43,9 @@ class StoryboardService extends Service {
   }
 
   async findSceneById(id) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       'SELECT id, chapter_id, project_id FROM scenes WHERE id = ? AND deleted_at IS NULL',
-      [ id ]
+      [id],
     );
     return rows[0] || null;
   }
@@ -56,45 +56,45 @@ class StoryboardService extends Service {
       throw new Error('scene not found');
     }
 
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes,
               camera_direction, camera_motion, duration, background, thumbnail_url, thumbnail_preview_url, video_url,
               video_preview_url, video_status, video_error, video_duration, notes, sort_order, created_at, updated_at
        FROM storyboards
        WHERE scene_id = ? AND deleted_at IS NULL
        ORDER BY sort_order ASC, id ASC`,
-      [ sceneId ]
+      [sceneId],
     );
 
-    const items = rows.map(row => mapStoryboard(this.app, row));
+    const items = rows.map((row) => mapStoryboard(this.app, row));
     await this.attachCharacters(items);
     await this.attachAssets(items);
     return items;
   }
 
   async findById(id) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes,
               camera_direction, camera_motion, duration, background, thumbnail_url, thumbnail_preview_url, video_url,
               video_preview_url, video_status, video_error, video_duration, notes, sort_order, created_at, updated_at
        FROM storyboards
        WHERE id = ? AND deleted_at IS NULL`,
-      [ id ]
+      [id],
     );
 
     if (!rows.length) {
       return null;
     }
     const item = mapStoryboard(this.app, rows[0]);
-    await this.attachCharacters([ item ]);
-    await this.attachAssets([ item ]);
+    await this.attachCharacters([item]);
+    await this.attachAssets([item]);
     return item;
   }
 
   async getMaxSortOrder(sceneId) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       'SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM storyboards WHERE scene_id = ? AND deleted_at IS NULL',
-      [ sceneId ]
+      [sceneId],
     );
     return Number(rows[0]?.max_sort || 0);
   }
@@ -113,7 +113,7 @@ class StoryboardService extends Service {
     const sortOrder = (await this.getMaxSortOrder(sceneId)) + 1;
     const shotNumber = Number(payload.shot_number) || sortOrder;
 
-    const [ result ] = await this.pool.execute(
+    const [result] = await this.pool.execute(
       `INSERT INTO storyboards (
         scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes,
         camera_direction, camera_motion, duration, background, thumbnail_url, thumbnail_preview_url, video_url, video_preview_url,
@@ -138,7 +138,7 @@ class StoryboardService extends Service {
         String(payload.thumbnail_preview_url || ''),
         String(payload.notes || ''),
         sortOrder,
-      ]
+      ],
     );
 
     return await this.findById(result.insertId);
@@ -157,9 +157,10 @@ class StoryboardService extends Service {
       throw new Error('content is required');
     }
 
-    const sortOrder = Object.prototype.hasOwnProperty.call(payload, 'sort_order') && Number(payload.sort_order)
-      ? Number(payload.sort_order)
-      : current.sort_order;
+    const sortOrder =
+      Object.prototype.hasOwnProperty.call(payload, 'sort_order') && Number(payload.sort_order)
+        ? Number(payload.sort_order)
+        : current.sort_order;
 
     await this.pool.execute(
       `UPDATE storyboards
@@ -168,48 +169,84 @@ class StoryboardService extends Service {
            video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ?, notes = ?, sort_order = ?
        WHERE id = ?`,
       [
-        Object.prototype.hasOwnProperty.call(payload, 'shot_number') ? Number(payload.shot_number || 0) : current.shot_number,
+        Object.prototype.hasOwnProperty.call(payload, 'shot_number')
+          ? Number(payload.shot_number || 0)
+          : current.shot_number,
         content,
-        Object.prototype.hasOwnProperty.call(payload, 'dialogue') ? String(payload.dialogue || '') : current.dialogue,
-        Object.prototype.hasOwnProperty.call(payload, 'shot_type') ? String(payload.shot_type || '') : current.shot_type,
-        Object.prototype.hasOwnProperty.call(payload, 'mood') ? String(payload.mood || '') : current.mood,
-        Object.prototype.hasOwnProperty.call(payload, 'style_preset') ? String(payload.style_preset || '') : current.style_preset,
-        Object.prototype.hasOwnProperty.call(payload, 'style_notes') ? String(payload.style_notes || '') : current.style_notes,
-        Object.prototype.hasOwnProperty.call(payload, 'camera_direction') ? String(payload.camera_direction || '') : current.camera_direction,
-        Object.prototype.hasOwnProperty.call(payload, 'camera_motion') ? String(payload.camera_motion || '') : current.camera_motion,
+        Object.prototype.hasOwnProperty.call(payload, 'dialogue')
+          ? String(payload.dialogue || '')
+          : current.dialogue,
+        Object.prototype.hasOwnProperty.call(payload, 'shot_type')
+          ? String(payload.shot_type || '')
+          : current.shot_type,
+        Object.prototype.hasOwnProperty.call(payload, 'mood')
+          ? String(payload.mood || '')
+          : current.mood,
+        Object.prototype.hasOwnProperty.call(payload, 'style_preset')
+          ? String(payload.style_preset || '')
+          : current.style_preset,
+        Object.prototype.hasOwnProperty.call(payload, 'style_notes')
+          ? String(payload.style_notes || '')
+          : current.style_notes,
+        Object.prototype.hasOwnProperty.call(payload, 'camera_direction')
+          ? String(payload.camera_direction || '')
+          : current.camera_direction,
+        Object.prototype.hasOwnProperty.call(payload, 'camera_motion')
+          ? String(payload.camera_motion || '')
+          : current.camera_motion,
         Object.prototype.hasOwnProperty.call(payload, 'duration')
-          ? (payload.duration == null || payload.duration === '' ? null : Number(payload.duration))
+          ? payload.duration == null || payload.duration === ''
+            ? null
+            : Number(payload.duration)
           : current.duration,
-        Object.prototype.hasOwnProperty.call(payload, 'background') ? String(payload.background || '') : current.background,
-        Object.prototype.hasOwnProperty.call(payload, 'thumbnail_url') ? normalizeGeneratedAssetReference(this.app, String(payload.thumbnail_url || '')) : normalizeGeneratedAssetReference(this.app, current.thumbnail_url),
-        Object.prototype.hasOwnProperty.call(payload, 'thumbnail_preview_url') ? normalizeGeneratedAssetReference(this.app, String(payload.thumbnail_preview_url || '')) : normalizeGeneratedAssetReference(this.app, current.thumbnail_preview_url),
-        Object.prototype.hasOwnProperty.call(payload, 'video_url') ? normalizeGeneratedAssetReference(this.app, String(payload.video_url || '')) : normalizeGeneratedAssetReference(this.app, current.video_url),
-        Object.prototype.hasOwnProperty.call(payload, 'video_preview_url') ? normalizeGeneratedAssetReference(this.app, String(payload.video_preview_url || '')) : normalizeGeneratedAssetReference(this.app, current.video_preview_url),
-        Object.prototype.hasOwnProperty.call(payload, 'video_status') ? String(payload.video_status || '') : current.video_status,
-        Object.prototype.hasOwnProperty.call(payload, 'video_error') ? String(payload.video_error || '') : current.video_error,
+        Object.prototype.hasOwnProperty.call(payload, 'background')
+          ? String(payload.background || '')
+          : current.background,
+        Object.prototype.hasOwnProperty.call(payload, 'thumbnail_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.thumbnail_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.thumbnail_url),
+        Object.prototype.hasOwnProperty.call(payload, 'thumbnail_preview_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.thumbnail_preview_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.thumbnail_preview_url),
+        Object.prototype.hasOwnProperty.call(payload, 'video_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.video_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.video_url),
+        Object.prototype.hasOwnProperty.call(payload, 'video_preview_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.video_preview_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.video_preview_url),
+        Object.prototype.hasOwnProperty.call(payload, 'video_status')
+          ? String(payload.video_status || '')
+          : current.video_status,
+        Object.prototype.hasOwnProperty.call(payload, 'video_error')
+          ? String(payload.video_error || '')
+          : current.video_error,
         Object.prototype.hasOwnProperty.call(payload, 'video_duration')
-          ? (payload.video_duration == null || payload.video_duration === '' ? null : Number(payload.video_duration))
+          ? payload.video_duration == null || payload.video_duration === ''
+            ? null
+            : Number(payload.video_duration)
           : current.video_duration,
-        Object.prototype.hasOwnProperty.call(payload, 'notes') ? String(payload.notes || '') : current.notes,
+        Object.prototype.hasOwnProperty.call(payload, 'notes')
+          ? String(payload.notes || '')
+          : current.notes,
         sortOrder,
         id,
-      ]
+      ],
     );
 
     return await this.findById(id);
   }
 
   async softDelete(id) {
-    await this.pool.execute('UPDATE storyboards SET deleted_at = NOW() WHERE id = ?', [ id ]);
+    await this.pool.execute('UPDATE storyboards SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
   async attachCharacters(items) {
     if (!items.length) {
       return;
     }
-    const ids = items.map(item => item.id);
+    const ids = items.map((item) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url,
               c.design_sheet_url, c.voice_reference_url, c.voice_reference_duration,
               c.voice_reference_text, c.voice_name, c.voice_prompt, c.created_at, c.updated_at
@@ -217,9 +254,9 @@ class StoryboardService extends Service {
        JOIN characters c ON c.id = sc.character_id
        WHERE sc.storyboard_id IN (${placeholders}) AND c.deleted_at IS NULL
        ORDER BY sc.storyboard_id ASC, c.id ASC`,
-      ids
+      ids,
     );
-    const byStoryboard = new Map(items.map(item => [ item.id, item ]));
+    const byStoryboard = new Map(items.map((item) => [item.id, item]));
     for (const row of rows) {
       const target = byStoryboard.get(Number(row.storyboard_id));
       if (!target) {
@@ -235,7 +272,7 @@ class StoryboardService extends Service {
     if (!items.length) {
       return;
     }
-    const ids = items.map(item => item.id);
+    const ids = items.map((item) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
       `SELECT sau.storyboard_id, a.id, a.project_id, a.character_id, a.name, a.type, a.file_url, a.cover_url, a.thumbnail_url, a.meta, a.created_at, a.updated_at
@@ -243,9 +280,9 @@ class StoryboardService extends Service {
        JOIN assets a ON a.id = sau.asset_id
        WHERE sau.storyboard_id IN (${placeholders}) AND sau.usage_type = ? AND a.deleted_at IS NULL
        ORDER BY sau.storyboard_id ASC, a.id ASC`,
-      [ ...ids, StoryboardService.SCENE_BACKGROUND_USAGE ]
+      [...ids, StoryboardService.SCENE_BACKGROUND_USAGE],
     );
-    const byStoryboard = new Map(items.map(item => [ item.id, item ]));
+    const byStoryboard = new Map(items.map((item) => [item.id, item]));
     for (const row of rows) {
       const target = byStoryboard.get(Number(row.storyboard_id));
       if (!target) {
@@ -258,11 +295,11 @@ class StoryboardService extends Service {
   }
 
   supportedCoverModels() {
-    return new Set([ '', 'auto', 'wan2.7-image-pro', 'seedream-4.5' ]);
+    return new Set(['', 'auto', 'wan2.7-image-pro', 'seedream-4.5']);
   }
 
   supportedVideoModels() {
-    return new Set([ 'wan2.7-i2v', StoryboardService.SEEDANCE_VIDEO_MODEL ]);
+    return new Set(['wan2.7-i2v', StoryboardService.SEEDANCE_VIDEO_MODEL]);
   }
 
   isSeedanceVideoModel(model) {
@@ -282,18 +319,24 @@ class StoryboardService extends Service {
   }
 
   buildVideoPrompt(storyboard, scene, duration) {
-    return buildStoryboardVideoPrompt({
-      ...storyboard,
-      style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
-      style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
-    }, scene, duration).prompt;
+    return buildStoryboardVideoPrompt(
+      {
+        ...storyboard,
+        style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
+        style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
+      },
+      scene,
+      duration,
+    ).prompt;
   }
 
   parseUseFirstFrame(value) {
     if (typeof value === 'boolean') {
       return value;
     }
-    const normalized = String(value == null ? 'true' : value).trim().toLowerCase();
+    const normalized = String(value == null ? 'true' : value)
+      .trim()
+      .toLowerCase();
     return normalized !== 'false' && normalized !== '0' && normalized !== 'off';
   }
 
@@ -301,7 +344,11 @@ class StoryboardService extends Service {
     const references = [];
     const missing = [];
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
-      const url = resolveUrl(this.app, asset.cover_url || asset.file_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      const url = resolveUrl(
+        this.app,
+        asset.cover_url || asset.file_url,
+        this.app.config.storyboard.publicAppBaseUrl || '',
+      );
       if (url) {
         references.push({
           asset_id: Number(asset.id),
@@ -321,12 +368,22 @@ class StoryboardService extends Service {
   async selectReferenceImages(storyboard, scene) {
     const { references, missing } = await this.selectSceneReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveUrl(this.app, character.design_sheet_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      const url = resolveUrl(
+        this.app,
+        character.design_sheet_url,
+        this.app.config.storyboard.publicAppBaseUrl || '',
+      );
       if (!url) {
         missing.push(`character:${character.name}`);
         continue;
       }
-      references.push({ asset_id: Number(character.id), type: 'character', name: character.name, url, source: 'character.design_sheet_url' });
+      references.push({
+        asset_id: Number(character.id),
+        type: 'character',
+        name: character.name,
+        url,
+        source: 'character.design_sheet_url',
+      });
     }
     return { references, missing };
   }
@@ -335,7 +392,11 @@ class StoryboardService extends Service {
     const references = [];
     const missing = [];
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveUrl(this.app, character.design_sheet_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      const url = resolveUrl(
+        this.app,
+        character.design_sheet_url,
+        this.app.config.storyboard.publicAppBaseUrl || '',
+      );
       if (!url) {
         missing.push(`character:${character.name}`);
         continue;
@@ -352,11 +413,13 @@ class StoryboardService extends Service {
   }
 
   async selectVideoReferenceImages(storyboard, scene) {
-    const { references: sceneReferences, missing: sceneMissing } = await this.selectSceneReferenceImages(storyboard, scene);
-    const { references: characterReferences, missing: characterMissing } = this.selectVideoCharacterReferenceImages(storyboard);
+    const { references: sceneReferences, missing: sceneMissing } =
+      await this.selectSceneReferenceImages(storyboard, scene);
+    const { references: characterReferences, missing: characterMissing } =
+      this.selectVideoCharacterReferenceImages(storyboard);
     return {
-      references: [ ...sceneReferences, ...characterReferences ],
-      missing: [ ...sceneMissing, ...characterMissing ],
+      references: [...sceneReferences, ...characterReferences],
+      missing: [...sceneMissing, ...characterMissing],
     };
   }
 
@@ -370,14 +433,18 @@ class StoryboardService extends Service {
       materialized = await materializeSourceToLocalFile(this.app, url, '.audio');
       const duration = await probeDuration(materialized.localPath);
       if (duration > 0) {
-        await this.pool.execute(
-          'UPDATE characters SET voice_reference_duration = ? WHERE id = ?',
-          [ duration, Number(character.id) ]
-        );
+        await this.pool.execute('UPDATE characters SET voice_reference_duration = ? WHERE id = ?', [
+          duration,
+          Number(character.id),
+        ]);
       }
       return duration;
     } catch (error) {
-      this.ctx.logger.warn('[seedance] failed to probe voice reference duration character=%s: %s', character.id, error.message);
+      this.ctx.logger.warn(
+        '[seedance] failed to probe voice reference duration character=%s: %s',
+        character.id,
+        error.message,
+      );
       return 0;
     } finally {
       if (materialized) {
@@ -391,7 +458,11 @@ class StoryboardService extends Service {
     const missing = [];
     const blockingReasons = [];
     for (const character of Array.isArray(storyboard.characters) ? storyboard.characters : []) {
-      const url = resolveUrl(this.app, character.voice_reference_url, this.app.config.storyboard.publicAppBaseUrl || '');
+      const url = resolveUrl(
+        this.app,
+        character.voice_reference_url,
+        this.app.config.storyboard.publicAppBaseUrl || '',
+      );
       if (!url) {
         missing.push(character.name);
         continue;
@@ -410,18 +481,25 @@ class StoryboardService extends Service {
       blockingReasons.push(`以下角色缺少主语音参考：${missing.join('、')}`);
     }
     if (references.length > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT) {
-      blockingReasons.push(`Seedance 2.0 最多支持 ${StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT} 段参考音频，当前为 ${references.length} 段`);
+      blockingReasons.push(
+        `Seedance 2.0 最多支持 ${StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT} 段参考音频，当前为 ${references.length} 段`,
+      );
     }
-    const invalidDurationReferences = references.filter(item =>
-      item.duration < StoryboardService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS ||
-      item.duration > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS
+    const invalidDurationReferences = references.filter(
+      (item) =>
+        item.duration < StoryboardService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS ||
+        item.duration > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
     );
     if (invalidDurationReferences.length) {
-      blockingReasons.push(`以下角色主语音时长不在 2-15 秒范围内：${invalidDurationReferences.map(item => `${item.name}${item.duration ? `(${item.duration.toFixed(1)}s)` : '(未知时长)'}`).join('、')}`);
+      blockingReasons.push(
+        `以下角色主语音时长不在 2-15 秒范围内：${invalidDurationReferences.map((item) => `${item.name}${item.duration ? `(${item.duration.toFixed(1)}s)` : '(未知时长)'}`).join('、')}`,
+      );
     }
     const totalDuration = references.reduce((sum, item) => sum + item.duration, 0);
     if (totalDuration > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS) {
-      blockingReasons.push(`Seedance 2.0 参考音频总时长不能超过 15 秒，当前为 ${totalDuration.toFixed(1)} 秒`);
+      blockingReasons.push(
+        `Seedance 2.0 参考音频总时长不能超过 15 秒，当前为 ${totalDuration.toFixed(1)} 秒`,
+      );
     }
     if (references.length && !useFirstFrame) {
       blockingReasons.push('Seedance 2.0 传入角色参考音频时必须同时使用首帧图');
@@ -436,7 +514,7 @@ class StoryboardService extends Service {
         min_duration: StoryboardService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS,
         max_duration: StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
         max_total_duration: StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS,
-        formats: [ 'wav', 'mp3' ],
+        formats: ['wav', 'mp3'],
       },
     };
   }
@@ -457,7 +535,7 @@ class StoryboardService extends Service {
       `INSERT INTO storyboard_characters (storyboard_id, character_id, line)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE line = VALUES(line)`,
-      [ storyboardId, characterId, String(storyboard.dialogue || storyboard.content || '').trim() ]
+      [storyboardId, characterId, String(storyboard.dialogue || storyboard.content || '').trim()],
     );
     return await this.findById(storyboardId);
   }
@@ -469,7 +547,7 @@ class StoryboardService extends Service {
     }
     await this.pool.execute(
       'DELETE FROM storyboard_characters WHERE storyboard_id = ? AND character_id = ?',
-      [ storyboardId, characterId ]
+      [storyboardId, characterId],
     );
     return await this.findById(storyboardId);
   }
@@ -486,15 +564,24 @@ class StoryboardService extends Service {
     if (Number(asset.project_id) !== Number(storyboard.project_id)) {
       throw new Error('asset does not belong to the same project');
     }
-    const type = String(asset.type || '').trim().toLowerCase();
-    if (!(type.includes('scene') || type.includes('background') || type.includes('场景') || type.includes('背景'))) {
+    const type = String(asset.type || '')
+      .trim()
+      .toLowerCase();
+    if (
+      !(
+        type.includes('scene') ||
+        type.includes('background') ||
+        type.includes('场景') ||
+        type.includes('背景')
+      )
+    ) {
       throw new Error('当前资产不是场景背景资产');
     }
     await this.pool.execute(
       `INSERT INTO storyboard_asset_usages (storyboard_id, asset_id, usage_type)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE usage_type = VALUES(usage_type)`,
-      [ storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE ]
+      [storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE],
     );
     return await this.findById(storyboardId);
   }
@@ -506,7 +593,7 @@ class StoryboardService extends Service {
     }
     await this.pool.execute(
       'DELETE FROM storyboard_asset_usages WHERE storyboard_id = ? AND asset_id = ? AND usage_type = ?',
-      [ storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE ]
+      [storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE],
     );
     return await this.findById(storyboardId);
   }
@@ -524,7 +611,11 @@ class StoryboardService extends Service {
       throw new Error('scene not found');
     }
     const { references, missing } = await this.selectReferenceImages(storyboard, scene);
-    const model = String(selectedModel || '').trim() || (references.length ? (this.app.config.storyboard.wanxReferenceModel || 'wan2.7-image-pro') : (this.app.config.storyboard.wanxModel || 'wan2.7-image-pro'));
+    const model =
+      String(selectedModel || '').trim() ||
+      (references.length
+        ? this.app.config.storyboard.wanxReferenceModel || 'wan2.7-image-pro'
+        : this.app.config.storyboard.wanxModel || 'wan2.7-image-pro');
     const mode = references.length ? 'reference' : 'text-only';
     const fields = {
       scene_title: String(scene.title || '').trim(),
@@ -545,7 +636,12 @@ class StoryboardService extends Service {
     return {
       mode,
       model,
-      reference_images: references.map(item => ({ type: item.type, name: item.name, url: item.url, source: item.source })),
+      reference_images: references.map((item) => ({
+        type: item.type,
+        name: item.name,
+        url: item.url,
+        source: item.source,
+      })),
       missing_references: missing,
       fields,
       template: coverPrompt.template,
@@ -569,24 +665,43 @@ class StoryboardService extends Service {
         preview_format: 'webp',
         preview_width: 480,
         reference_count: preview.reference_images.length,
-        reference_types: preview.reference_images.map(item => item.type),
+        reference_types: preview.reference_images.map((item) => item.type),
         generation_mode: useTextOnly ? 'text-only' : preview.mode,
       }),
     });
 
     try {
       let imageUrl;
-      if (preview.model === 'seedream-4.5' || preview.model === (this.app.config.storyboard.seedreamImageModel || 'doubao-seedream-4-5-251128')) {
-        imageUrl = await generateSeedreamImage(this.app, preview.final_prompt, useTextOnly ? [] : preview.reference_images.map(item => item.url));
+      if (
+        preview.model === 'seedream-4.5' ||
+        preview.model ===
+          (this.app.config.storyboard.seedreamImageModel || 'doubao-seedream-4-5-251128')
+      ) {
+        imageUrl = await generateSeedreamImage(
+          this.app,
+          preview.final_prompt,
+          useTextOnly ? [] : preview.reference_images.map((item) => item.url),
+        );
       } else if (!useTextOnly && preview.reference_images.length) {
-        imageUrl = await generateWanxImageWithReferences(this.app, preview.final_prompt, preview.reference_images.map(item => item.url), preview.model);
+        imageUrl = await generateWanxImageWithReferences(
+          this.app,
+          preview.final_prompt,
+          preview.reference_images.map((item) => item.url),
+          preview.model,
+        );
       } else {
         imageUrl = await generateWanxImage(this.app, preview.final_prompt, preview.model);
       }
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.png`;
       const stored = await downloadAndStore(this.app, imageUrl, 'covers', filename, 'image/png');
       const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
-      const previewPath = await createPreviewFromLocalPath(this.app, stored.localPath, 'covers', previewFilename, storyboardPreviewSpec());
+      const previewPath = await createPreviewFromLocalPath(
+        this.app,
+        stored.localPath,
+        'covers',
+        previewFilename,
+        storyboardPreviewSpec(),
+      );
 
       await this.update(id, {
         thumbnail_url: stored.publicPath,
@@ -622,7 +737,10 @@ class StoryboardService extends Service {
     if (!storyboard) {
       throw new Error('storyboard not found');
     }
-    const normalizedThumbnailUrl = normalizeGeneratedAssetReference(this.app, String(thumbnailUrl || '').trim());
+    const normalizedThumbnailUrl = normalizeGeneratedAssetReference(
+      this.app,
+      String(thumbnailUrl || '').trim(),
+    );
     if (!normalizedThumbnailUrl) {
       throw new Error('thumbnail_url is required');
     }
@@ -655,7 +773,10 @@ class StoryboardService extends Service {
     if (!scene) {
       throw new Error('scene not found');
     }
-    const model = String(selectedModel || '').trim() || (this.app.config.storyboard.wanxVideoModel || 'wan2.7-i2v');
+    const model =
+      String(selectedModel || '').trim() ||
+      this.app.config.storyboard.wanxVideoModel ||
+      'wan2.7-i2v';
     if (!this.supportedVideoModels().has(model)) {
       throw new Error('unsupported video model');
     }
@@ -668,16 +789,24 @@ class StoryboardService extends Service {
     if (!isSeedance && selectedDuration !== 5) {
       throw new Error('当前视频模型仅支持 5 秒输出');
     }
-    const sourceImageUrl = useFirstFrame && storyboard.thumbnail_url ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
-    const { references: referenceImages, missing: missingReferences } = await this.selectVideoReferenceImages(storyboard, scene);
+    const sourceImageUrl =
+      useFirstFrame && storyboard.thumbnail_url
+        ? resolveMediaUrl(this.app, storyboard.thumbnail_url)
+        : '';
+    const { references: referenceImages, missing: missingReferences } =
+      await this.selectVideoReferenceImages(storyboard, scene);
     const audioReferenceSummary = isSeedance
       ? await this.selectVideoAudioReferences(storyboard, useFirstFrame)
       : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
-    const videoPrompt = buildStoryboardVideoPrompt({
-      ...storyboard,
-      style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
-      style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
-    }, scene, selectedDuration);
+    const videoPrompt = buildStoryboardVideoPrompt(
+      {
+        ...storyboard,
+        style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
+        style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
+      },
+      scene,
+      selectedDuration,
+    );
     return {
       model,
       duration: selectedDuration,
@@ -685,11 +814,20 @@ class StoryboardService extends Service {
       audio: true,
       use_first_frame: useFirstFrame,
       source_image_url: sourceImageUrl,
-      source_image_status: !useFirstFrame ? 'not-required' : (sourceImageUrl ? 'existing-cover' : 'will-generate-cover'),
+      source_image_status: !useFirstFrame
+        ? 'not-required'
+        : sourceImageUrl
+          ? 'existing-cover'
+          : 'will-generate-cover',
       will_generate_cover: useFirstFrame && !sourceImageUrl,
-      reference_images: referenceImages.map(item => ({ type: item.type, name: item.name, url: item.url, source: item.source })),
+      reference_images: referenceImages.map((item) => ({
+        type: item.type,
+        name: item.name,
+        url: item.url,
+        source: item.source,
+      })),
       missing_references: missingReferences,
-      audio_reference_assets: audioReferenceSummary.references.map(item => ({
+      audio_reference_assets: audioReferenceSummary.references.map((item) => ({
         character_id: item.character_id,
         type: item.type,
         name: item.name,
@@ -740,7 +878,12 @@ class StoryboardService extends Service {
   }
 
   async generateVideo(id, selectedModel, duration, useFirstFrameRaw) {
-    const preview = await this.previewVideoGeneration(id, selectedModel, duration, useFirstFrameRaw);
+    const preview = await this.previewVideoGeneration(
+      id,
+      selectedModel,
+      duration,
+      useFirstFrameRaw,
+    );
     if (Array.isArray(preview.blocking_reasons) && preview.blocking_reasons.length) {
       throw new Error(preview.blocking_reasons.join('；'));
     }
@@ -758,14 +901,14 @@ class StoryboardService extends Service {
       media_type: 'video',
       model: preview.model,
       status: 'generating',
-      source_url: preview.use_first_frame ? (current.thumbnail_url || null) : null,
+      source_url: preview.use_first_frame ? current.thumbnail_url || null : null,
       meta_json: JSON.stringify({
         resolution: preview.resolution,
         duration: preview.duration,
         audio: true,
         use_first_frame: preview.use_first_frame,
         audio_reference_count: preview.audio_reference_assets?.length || 0,
-        audio_reference_characters: (preview.audio_reference_assets || []).map(item => item.name),
+        audio_reference_characters: (preview.audio_reference_assets || []).map((item) => item.name),
         audio_reference_total_duration: preview.audio_reference_total_duration || 0,
       }),
     });
@@ -775,7 +918,9 @@ class StoryboardService extends Service {
       video_error: '',
     });
 
-    void this.generateVideoAsync(id, preview, generation.id).catch(err => this.ctx.logger.error(err));
+    void this.generateVideoAsync(id, preview, generation.id).catch((err) =>
+      this.ctx.logger.error(err),
+    );
     const refreshed = await this.findById(id);
     return {
       storyboard_id: refreshed.id,
@@ -793,17 +938,40 @@ class StoryboardService extends Service {
         await this.generateCover(id, '', false);
         storyboard = await this.findById(id);
       }
-      const imageInput = preview.use_first_frame ? resolveMediaUrl(this.app, storyboard.thumbnail_url) : '';
+      const imageInput = preview.use_first_frame
+        ? resolveMediaUrl(this.app, storyboard.thumbnail_url)
+        : '';
       if (preview.use_first_frame && !imageInput) {
         throw new Error('镜头封面图不可用，无法生成视频');
       }
       const scene = await this.ctx.service.scene.findById(storyboard.scene_id);
       const prompt = this.buildVideoPrompt(storyboard, scene, preview.duration);
       const result = this.isSeedanceVideoModel(preview.model)
-        ? await generateSeedanceVideo(this.app, prompt, imageInput, preview.duration, preview.use_first_frame, [], (preview.audio_reference_assets || []).map(item => item.url))
-        : await generateWanxVideo(this.app, prompt, imageInput, preview.model, preview.duration, preview.use_first_frame);
+        ? await generateSeedanceVideo(
+            this.app,
+            prompt,
+            imageInput,
+            preview.duration,
+            preview.use_first_frame,
+            [],
+            (preview.audio_reference_assets || []).map((item) => item.url),
+          )
+        : await generateWanxVideo(
+            this.app,
+            prompt,
+            imageInput,
+            preview.model,
+            preview.duration,
+            preview.use_first_frame,
+          );
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.mp4`;
-      const stored = await downloadAndStore(this.app, result.videoUrl, 'videos', filename, 'video/mp4');
+      const stored = await downloadAndStore(
+        this.app,
+        result.videoUrl,
+        'videos',
+        filename,
+        'video/mp4',
+      );
       await this.update(id, {
         video_url: stored.publicPath,
         video_preview_url: stored.publicPath,
@@ -824,7 +992,9 @@ class StoryboardService extends Service {
           audio: true,
           use_first_frame: preview.use_first_frame,
           audio_reference_count: preview.audio_reference_assets?.length || 0,
-          audio_reference_characters: (preview.audio_reference_assets || []).map(item => item.name),
+          audio_reference_characters: (preview.audio_reference_assets || []).map(
+            (item) => item.name,
+          ),
           audio_reference_total_duration: preview.audio_reference_total_duration || 0,
         }),
       });
@@ -883,9 +1053,12 @@ class StoryboardService extends Service {
   async listSceneVideoInputs(sceneId) {
     const items = await this.findBySceneId(sceneId);
     return items
-      .filter(item => item.video_status === 'succeeded' && item.video_url)
-      .sort((a, b) => (a.sort_order - b.sort_order) || (a.shot_number - b.shot_number))
-      .map(item => ({ source: item.video_url, duration: item.video_duration || item.duration || 5 }));
+      .filter((item) => item.video_status === 'succeeded' && item.video_url)
+      .sort((a, b) => a.sort_order - b.sort_order || a.shot_number - b.shot_number)
+      .map((item) => ({
+        source: item.video_url,
+        duration: item.video_duration || item.duration || 5,
+      }));
   }
 }
 

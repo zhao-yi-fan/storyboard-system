@@ -142,17 +142,32 @@ export default function Login() {
       <div className="absolute inset-0" style={{ background: "rgba(4,3,8,0.42)" }} />
       <div
         className="absolute inset-0"
-        style={{ background: "radial-gradient(ellipse 110% 100% at 50% 50%, transparent 30%, rgba(4,3,8,0.55) 70%, rgba(4,3,8,0.82) 100%)" }}
+        style={{
+          background:
+            "radial-gradient(ellipse 110% 100% at 50% 50%, transparent 30%, rgba(4,3,8,0.55) 70%, rgba(4,3,8,0.82) 100%)",
+        }}
       />
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(to right, transparent 40%, rgba(4,3,8,0.22) 65%, rgba(4,3,8,0.38) 100%)" }}
+        style={{
+          background:
+            "linear-gradient(to right, transparent 40%, rgba(4,3,8,0.22) 65%, rgba(4,3,8,0.38) 100%)",
+        }}
       />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(4,3,8,0.55) 0%, transparent 28%)" }} />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(4,3,8,0.45) 0%, transparent 16%)" }} />
       <div
         className="absolute inset-0"
-        style={{ background: "radial-gradient(ellipse 60% 70% at 28% 50%, rgba(109,40,217,0.11) 0%, transparent 65%)" }}
+        style={{ background: "linear-gradient(to top, rgba(4,3,8,0.55) 0%, transparent 28%)" }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(to bottom, rgba(4,3,8,0.45) 0%, transparent 16%)" }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 70% at 28% 50%, rgba(109,40,217,0.11) 0%, transparent 65%)",
+        }}
       />
 
       <div className="absolute left-9 top-7 z-20 hidden select-none items-center gap-2.5 lg:flex">
@@ -435,7 +450,8 @@ export default function Login() {
                     onMouseEnter={(event) => {
                       if (isLoading) return;
                       const element = event.currentTarget;
-                      element.style.background = "linear-gradient(135deg, #a78bfa 0%, #8b5cf6 45%, #7c3aed 100%)";
+                      element.style.background =
+                        "linear-gradient(135deg, #a78bfa 0%, #8b5cf6 45%, #7c3aed 100%)";
                       element.style.boxShadow = [
                         "0 1px 0 rgba(255,255,255,0.14) inset",
                         "0 6px 24px rgba(109,40,217,0.5)",
@@ -445,7 +461,8 @@ export default function Login() {
                     }}
                     onMouseLeave={(event) => {
                       const element = event.currentTarget;
-                      element.style.background = "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 45%, #6d28d9 100%)";
+                      element.style.background =
+                        "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 45%, #6d28d9 100%)";
                       element.style.boxShadow = [
                         "0 1px 0 rgba(255,255,255,0.1) inset",
                         "0 4px 16px rgba(109,40,217,0.35)",

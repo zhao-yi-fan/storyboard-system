@@ -44,7 +44,7 @@ function cleanStringList(values: unknown): string[] {
     return values.map(cleanString).filter(Boolean);
   }
   const single = cleanString(values);
-  return single ? [ single ] : [];
+  return single ? [single] : [];
 }
 
 function extractJSONObject(content: string): string {
@@ -91,7 +91,10 @@ function normalizeStoryboardForPrompt(storyboard: Record<string, unknown>) {
   };
 }
 
-function buildUserPrompt(scene: Record<string, unknown>, storyboards: Array<Record<string, unknown>>): string {
+function buildUserPrompt(
+  scene: Record<string, unknown>,
+  storyboards: Array<Record<string, unknown>>,
+): string {
   const payload = {
     scene: {
       id: Number(scene.id),
@@ -143,23 +146,36 @@ export function parseShotDirectionResponse(content: string) {
   }
 }
 
-export function buildFallbackAnalysis(storyboard: Record<string, unknown>, index: number, total: number) {
+export function buildFallbackAnalysis(
+  storyboard: Record<string, unknown>,
+  index: number,
+  total: number,
+) {
   return {
     storyboard_id: Number(storyboard.id),
     ...DEFAULT_ANALYSIS,
     emotional_shift: cleanString(storyboard.mood) || DEFAULT_ANALYSIS.emotional_shift,
-    continuity_from_previous: index === 0 ? '开启当前场景' : DEFAULT_ANALYSIS.continuity_from_previous,
-    continuity_to_next: index === total - 1 ? '收束当前场景段落' : DEFAULT_ANALYSIS.continuity_to_next,
-    camera_motion_suggestion: cleanString(storyboard.camera_motion) || DEFAULT_ANALYSIS.camera_motion_suggestion,
-    shot_type_suggestion: cleanString(storyboard.shot_type) || DEFAULT_ANALYSIS.shot_type_suggestion,
+    continuity_from_previous:
+      index === 0 ? '开启当前场景' : DEFAULT_ANALYSIS.continuity_from_previous,
+    continuity_to_next:
+      index === total - 1 ? '收束当前场景段落' : DEFAULT_ANALYSIS.continuity_to_next,
+    camera_motion_suggestion:
+      cleanString(storyboard.camera_motion) || DEFAULT_ANALYSIS.camera_motion_suggestion,
+    shot_type_suggestion:
+      cleanString(storyboard.shot_type) || DEFAULT_ANALYSIS.shot_type_suggestion,
     risk_flags: [],
   };
 }
 
-export function normalizeShotDirectionAnalyses(raw: unknown, storyboards: Array<Record<string, unknown>>) {
+export function normalizeShotDirectionAnalyses(
+  raw: unknown,
+  storyboards: Array<Record<string, unknown>>,
+) {
   const rawItems = Array.isArray((raw as any)?.analyses)
     ? (raw as any).analyses
-    : (Array.isArray(raw) ? raw : []);
+    : Array.isArray(raw)
+      ? raw
+      : [];
   const byStoryboardId = new Map<number, Record<string, unknown>>();
   for (const item of rawItems) {
     const storyboardId = Number((item as any)?.storyboard_id || (item as any)?.id || 0);
@@ -175,37 +191,48 @@ export function normalizeShotDirectionAnalyses(raw: unknown, storyboards: Array<
       storyboard_id: fallback.storyboard_id,
       narrative_role: cleanString(item.narrative_role) || fallback.narrative_role,
       emotional_shift: cleanString(item.emotional_shift) || fallback.emotional_shift,
-      continuity_from_previous: cleanString(item.continuity_from_previous) || fallback.continuity_from_previous,
+      continuity_from_previous:
+        cleanString(item.continuity_from_previous) || fallback.continuity_from_previous,
       continuity_to_next: cleanString(item.continuity_to_next) || fallback.continuity_to_next,
-      camera_motion_suggestion: cleanString(item.camera_motion_suggestion) || fallback.camera_motion_suggestion,
+      camera_motion_suggestion:
+        cleanString(item.camera_motion_suggestion) || fallback.camera_motion_suggestion,
       shot_type_suggestion: cleanString(item.shot_type_suggestion) || fallback.shot_type_suggestion,
       risk_flags: cleanStringList(item.risk_flags),
     };
   });
 }
 
-async function requestShotDirectionAnalysis(config: Record<string, unknown>, scene: Record<string, unknown>, storyboards: Array<Record<string, unknown>>) {
+async function requestShotDirectionAnalysis(
+  config: Record<string, unknown>,
+  scene: Record<string, unknown>,
+  storyboards: Array<Record<string, unknown>>,
+) {
   ensureConfigured(config);
-  const response = await fetch(`${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`, {
-    method: POST_METHOD,
-    headers: {
-      Authorization: `Bearer ${config.deepSeekApiKey}`,
-      'Content-Type': JSON_CONTENT_TYPE,
+  const response = await fetch(
+    `${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`,
+    {
+      method: POST_METHOD,
+      headers: {
+        Authorization: `Bearer ${config.deepSeekApiKey}`,
+        'Content-Type': JSON_CONTENT_TYPE,
+      },
+      body: JSON.stringify({
+        model: config.deepSeekModel,
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: buildUserPrompt(scene, storyboards) },
+        ],
+      }),
+      signal: AbortSignal.timeout((Number(config.deepSeekRequestTimeoutSeconds) || 180) * 1000),
     },
-    body: JSON.stringify({
-      model: config.deepSeekModel,
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: buildUserPrompt(scene, storyboards) },
-      ],
-    }),
-    signal: AbortSignal.timeout((Number(config.deepSeekRequestTimeoutSeconds) || 180) * 1000),
-  });
+  );
 
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(`DeepSeek 镜头走向分析失败: ${body?.error?.message || `HTTP ${response.status}`}`);
+    throw new Error(
+      `DeepSeek 镜头走向分析失败: ${body?.error?.message || `HTTP ${response.status}`}`,
+    );
   }
 
   const content = cleanString(body?.choices?.[0]?.message?.content);
@@ -220,23 +247,28 @@ export function buildShotDirectionGraph(options: {
   persistResults: (analyses: Array<Record<string, unknown>>) => Promise<void>;
 }) {
   return new StateGraph(ShotDirectionState)
-    .addNode('load_context', async state => ({
+    .addNode('load_context', async (state) => ({
       scene: state.scene,
-      storyboards: [ ...state.storyboards ].sort((a, b) =>
-        Number(a.sort_order || a.shot_number || 0) - Number(b.sort_order || b.shot_number || 0)
+      storyboards: [...state.storyboards].sort(
+        (a, b) =>
+          Number(a.sort_order || a.shot_number || 0) - Number(b.sort_order || b.shot_number || 0),
       ),
     }))
-    .addNode('analyze_shots', async state => {
+    .addNode('analyze_shots', async (state) => {
       if (!state.storyboards.length) {
         return { analyses: [], raw_output: '' };
       }
-      const result = await requestShotDirectionAnalysis(options.config, state.scene, state.storyboards);
+      const result = await requestShotDirectionAnalysis(
+        options.config,
+        state.scene,
+        state.storyboards,
+      );
       return { analyses: result.parsed, raw_output: result.raw };
     })
-    .addNode('validate_results', async state => ({
+    .addNode('validate_results', async (state) => ({
       analyses: normalizeShotDirectionAnalyses(state.analyses, state.storyboards),
     }))
-    .addNode('persist_results', async state => {
+    .addNode('persist_results', async (state) => {
       await options.persistResults(state.analyses);
       return {};
     })

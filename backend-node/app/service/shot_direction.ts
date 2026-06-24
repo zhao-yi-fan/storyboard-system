@@ -43,7 +43,7 @@ function mergeAnalysisNotes(currentNotes, result) {
   const existing = cleanString(currentNotes);
   const markerIndex = existing.indexOf(ANALYSIS_NOTE_MARKER);
   const base = markerIndex >= 0 ? existing.slice(0, markerIndex).trim() : existing;
-  return [ base, buildAnalysisNotes(result) ].filter(Boolean).join('\n\n');
+  return [base, buildAnalysisNotes(result)].filter(Boolean).join('\n\n');
 }
 
 class ShotDirectionService extends Service {
@@ -66,7 +66,7 @@ class ShotDirectionService extends Service {
   }
 
   async listBySceneId(sceneId) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT sda.id, sda.project_id, sda.scene_id, sda.storyboard_id, sda.status, sda.result_json,
               sda.error_message, sda.created_at, sda.updated_at
        FROM storyboard_direction_analyses sda
@@ -79,19 +79,19 @@ class ShotDirectionService extends Service {
        JOIN storyboards sb ON sb.id = sda.storyboard_id
        WHERE sda.scene_id = ? AND sda.deleted_at IS NULL AND sb.deleted_at IS NULL
        ORDER BY sb.sort_order ASC, sb.id ASC, sda.id ASC`,
-      [ sceneId, sceneId ]
+      [sceneId, sceneId],
     );
-    return rows.map(row => this.map(row));
+    return rows.map((row) => this.map(row));
   }
 
   async findLatestByStoryboardId(storyboardId) {
-    const [ rows ] = await this.pool.query(
+    const [rows] = await this.pool.query(
       `SELECT id, project_id, scene_id, storyboard_id, status, result_json, error_message, created_at, updated_at
        FROM storyboard_direction_analyses
        WHERE storyboard_id = ? AND deleted_at IS NULL
        ORDER BY id DESC
        LIMIT 1`,
-      [ storyboardId ]
+      [storyboardId],
     );
     return rows.length ? this.map(rows[0]) : null;
   }
@@ -102,14 +102,14 @@ class ShotDirectionService extends Service {
       await conn.beginTransaction();
       await conn.execute(
         'UPDATE storyboard_direction_analyses SET deleted_at = NOW() WHERE scene_id = ? AND deleted_at IS NULL',
-        [ Number(scene.id) ]
+        [Number(scene.id)],
       );
       for (const storyboard of storyboards) {
         await conn.execute(
           `INSERT INTO storyboard_direction_analyses
             (project_id, scene_id, storyboard_id, status, result_json, error_message)
            VALUES (?, ?, ?, 'analyzing', NULL, NULL)`,
-          [ Number(scene.project_id), Number(scene.id), Number(storyboard.id) ]
+          [Number(scene.project_id), Number(scene.id), Number(storyboard.id)],
         );
       }
       await conn.commit();
@@ -130,7 +130,7 @@ class ShotDirectionService extends Service {
           `UPDATE storyboard_direction_analyses
            SET status = 'succeeded', result_json = ?, error_message = NULL
            WHERE scene_id = ? AND storyboard_id = ? AND deleted_at IS NULL`,
-          [ JSON.stringify(analysis), Number(sceneId), Number(analysis.storyboard_id) ]
+          [JSON.stringify(analysis), Number(sceneId), Number(analysis.storyboard_id)],
         );
       }
       await conn.commit();
@@ -147,14 +147,14 @@ class ShotDirectionService extends Service {
       `UPDATE storyboard_direction_analyses
        SET status = 'failed', error_message = ?
        WHERE scene_id = ? AND deleted_at IS NULL AND status IN ('pending', 'analyzing')`,
-      [ cleanString(message) || '镜头走向分析失败', Number(sceneId) ]
+      [cleanString(message) || '镜头走向分析失败', Number(sceneId)],
     );
   }
 
   async clearScene(sceneId) {
     await this.pool.execute(
       'UPDATE storyboard_direction_analyses SET deleted_at = NOW() WHERE scene_id = ? AND deleted_at IS NULL',
-      [ Number(sceneId) ]
+      [Number(sceneId)],
     );
   }
 
@@ -173,7 +173,7 @@ class ShotDirectionService extends Service {
     await this.replaceWithAnalyzingRows(scene, storyboards);
     const graph = buildShotDirectionGraph({
       config: this.app.config.storyboard || {},
-      persistResults: async analyses => {
+      persistResults: async (analyses) => {
         await this.persistSucceeded(scene.id, analyses);
       },
     });
