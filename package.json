@@ -1,0 +1,8 @@
+{
+  "name": "storyboard-system",
+  "private": true,
+  "scripts": {
+    "check:spec": "node scripts/check-spec-guard.mjs",
+    "check:spec:working": "node scripts/check-spec-guard.mjs --working-tree"
+  }
+}
