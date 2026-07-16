@@ -1,0 +1,58 @@
+import { apiClient } from "./client";
+import type { AssetRequirement, AssetVersion, PersonalAsset } from "./types";
+
+export function getRequirements(projectId: number, chapterId?: number) {
+  return apiClient.get<AssetRequirement[]>(`/projects/${projectId}/asset-requirements`, {
+    chapter_id: chapterId,
+  });
+}
+
+export function generateRequirements(
+  projectId: number,
+  data: { chapter_id?: number; requirement_id?: number },
+) {
+  return apiClient.post<Array<{ id: number; status: string; error?: string }>>(
+    `/projects/${projectId}/asset-requirements/generate`,
+    data,
+  );
+}
+
+export function confirmRequirement(id: number) {
+  return apiClient.post<AssetRequirement>(`/asset-requirements/${id}/confirm`, {});
+}
+
+export function getPersonalAssets(kind?: string) {
+  return apiClient.get<PersonalAsset[]>("/personal-assets", { kind });
+}
+
+export function importPersonalAsset(
+  id: number,
+  data: { project_id: number; requirement_id?: number },
+) {
+  return apiClient.post(`/personal-assets/${id}/import-to-project`, data);
+}
+
+export function saveCharacterToPersonal(id: number) {
+  return apiClient.post<PersonalAsset>(`/characters/${id}/save-to-personal`, {});
+}
+
+export function saveAssetToPersonal(id: number) {
+  return apiClient.post<PersonalAsset>(`/assets/${id}/save-to-personal`, {});
+}
+
+export function getVersions(entityType: "character" | "asset", id: number) {
+  return apiClient.get<AssetVersion[]>(
+    `/${entityType === "character" ? "characters" : "assets"}/${id}/versions`,
+  );
+}
+
+export function setCurrentVersion(
+  entityType: "character" | "asset",
+  id: number,
+  versionId: number,
+) {
+  return apiClient.post<AssetVersion[]>(
+    `/${entityType === "character" ? "characters" : "assets"}/${id}/versions/${versionId}/set-current`,
+    {},
+  );
+}

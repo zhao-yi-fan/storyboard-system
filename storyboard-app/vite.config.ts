@@ -11,14 +11,35 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
+    dedupe: ["react", "react-dom", "react-router"],
     alias: {
       // Alias @ to the src directory
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: ["react", "react-dom", "react-dom/client", "react-router", "@radix-ui/react-popover"],
+  },
   server: {
     proxy: {
       "/api": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:8083",
+        changeOrigin: true,
+        configure(proxy) {
+          proxy.on("error", (_error, _request, response) => {
+            if (!response || response.headersSent) return;
+            response.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+            response.end(
+              JSON.stringify({
+                code: 0,
+                data: null,
+                message: "后端服务不可用，请确认 backend-node 已启动并且 MySQL 连接正常",
+              }),
+            );
+          });
+        },
+      },
+      "/generated": {
         target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:8083",
         changeOrigin: true,
       },

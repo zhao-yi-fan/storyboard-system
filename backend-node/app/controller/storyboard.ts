@@ -283,6 +283,8 @@ class StoryboardController extends Controller {
           this.ctx.query.model,
           this.ctx.query.duration,
           this.ctx.query.use_first_frame,
+          this.ctx.query.resolution,
+          this.ctx.query.generate_audio,
         ),
       );
     } catch (err) {
@@ -355,6 +357,8 @@ class StoryboardController extends Controller {
           (this.ctx.request.body || {}).model,
           (this.ctx.request.body || {}).duration,
           (this.ctx.request.body || {}).use_first_frame,
+          (this.ctx.request.body || {}).resolution,
+          (this.ctx.request.body || {}).generate_audio,
         ),
       );
     } catch (err) {

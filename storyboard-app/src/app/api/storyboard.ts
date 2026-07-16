@@ -7,9 +7,8 @@ import type {
   Storyboard,
   StoryboardMediaGeneration,
   StoryboardMediaMutationResult,
+  StoryboardVideoGenerationOptions,
 } from "../api/types";
-import type { Asset } from "./types";
-
 export function getStoryboardsByScene(sceneId: number) {
   return apiClient.get<Storyboard[]>(`/scenes/${sceneId}/storyboards`);
 }
@@ -120,7 +119,7 @@ export function generateStoryboardCover(
 
 export function getStoryboardVideoGenerationPreview(
   id: number,
-  data?: { model?: string; duration?: number; use_first_frame?: boolean },
+  data?: StoryboardVideoGenerationOptions,
 ) {
   const params = new URLSearchParams();
   if (data?.model) {
@@ -128,6 +127,12 @@ export function getStoryboardVideoGenerationPreview(
   }
   if (data?.duration) {
     params.set("duration", String(data.duration));
+  }
+  if (data?.resolution) {
+    params.set("resolution", data.resolution);
+  }
+  if (typeof data?.generate_audio === "boolean") {
+    params.set("generate_audio", String(data.generate_audio));
   }
   if (typeof data?.use_first_frame === "boolean") {
     params.set("use_first_frame", String(data.use_first_frame));
@@ -138,10 +143,7 @@ export function getStoryboardVideoGenerationPreview(
   );
 }
 
-export function generateStoryboardVideo(
-  id: number,
-  data?: { model?: string; duration?: number; use_first_frame?: boolean },
-) {
+export function generateStoryboardVideo(id: number, data?: StoryboardVideoGenerationOptions) {
   return apiClient.post<GenerateStoryboardVideoResult>(`/storyboards/${id}/generate-video`, data);
 }
 

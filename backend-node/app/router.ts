@@ -17,6 +17,11 @@ module.exports = (app: any) => {
   router.delete('/api/projects/:id/pin', controller.project.unpin);
   router.post('/api/projects/:id/import-script', controller.project.importScript);
   router.post('/api/projects/:id/compose-video', controller.project.composeVideo);
+  router.get('/api/projects/:id/asset-requirements', controller.assetWorkspace.requirements);
+  router.post(
+    '/api/projects/:id/asset-requirements/generate',
+    controller.assetWorkspace.generateRequirements,
+  );
 
   router.get('/api/projects/:id/chapters', controller.chapter.indexByProject);
   router.post('/api/projects/:id/chapters', controller.chapter.create);
@@ -36,50 +41,29 @@ module.exports = (app: any) => {
   router.delete('/api/scenes/:id', controller.scene.destroy);
   router.get('/api/scenes/:id/cover-generation-preview', controller.scene.previewCoverGeneration);
   router.post('/api/scenes/:id/generate-cover', controller.scene.generateCover);
-  router.post(
-    '/api/scenes/:id/generate-storyboard-covers',
-    controller.scene.generateStoryboardCovers,
-  );
   router.post('/api/scenes/:id/analyze-shot-directions', controller.scene.analyzeShotDirections);
   router.get('/api/scenes/:id/shot-direction-analyses', controller.scene.shotDirectionAnalyses);
   router.post('/api/scenes/:id/compose-video', controller.scene.composeVideo);
+  router.get('/api/scenes/:id/media-generations', controller.scene.mediaGenerations);
+  router.post(
+    '/api/scenes/:id/media-generations/:generationId/set-current',
+    controller.scene.setMediaGenerationCurrent,
+  );
+  router.delete(
+    '/api/scenes/:id/media-generations/:generationId',
+    controller.scene.deleteMediaGeneration,
+  );
+  router.get('/api/scenes/:id/video-generation-preview', controller.scene.previewVideoGeneration);
+  router.post('/api/scenes/:id/generate-video', controller.scene.generateVideo);
+  router.post('/api/scenes/:id/upload-cover', controller.scene.uploadCover);
+  router.post('/api/scenes/:id/characters', controller.scene.addCharacter);
+  router.delete('/api/scenes/:id/characters/:characterId', controller.scene.removeCharacter);
+  router.post('/api/scenes/:id/assets', controller.scene.addAsset);
+  router.delete('/api/scenes/:id/assets/:assetId', controller.scene.removeAsset);
   router.get('/api/scenes/:id/storyboards', controller.storyboard.indexByScene);
-  router.post('/api/scenes/:id/storyboards', controller.storyboard.create);
 
   router.get('/api/storyboards/:id', controller.storyboard.show);
-  router.put('/api/storyboards/:id', controller.storyboard.update);
-  router.delete('/api/storyboards/:id', controller.storyboard.destroy);
   router.get('/api/storyboards/:id/media-generations', controller.storyboard.mediaGenerations);
-  router.post(
-    '/api/storyboards/:id/media-generations/:generationId/set-current',
-    controller.storyboard.setMediaGenerationCurrent,
-  );
-  router.delete(
-    '/api/storyboards/:id/media-generations/:generationId',
-    controller.storyboard.deleteMediaGeneration,
-  );
-  router.get(
-    '/api/storyboards/:id/cover-generation-preview',
-    controller.storyboard.previewCoverGeneration,
-  );
-  router.get(
-    '/api/storyboards/:id/video-generation-preview',
-    controller.storyboard.previewVideoGeneration,
-  );
-  router.post('/api/storyboards/:id/generate-cover', controller.storyboard.generateCover);
-  router.post('/api/storyboards/:id/upload-cover', controller.storyboard.uploadCover);
-  router.post('/api/storyboards/:id/generate-video', controller.storyboard.generateVideo);
-  router.post(
-    '/api/storyboards/:id/apply-shot-direction-suggestion',
-    controller.storyboard.applyShotDirectionSuggestion,
-  );
-  router.post('/api/storyboards/:id/characters', controller.storyboard.addCharacter);
-  router.delete(
-    '/api/storyboards/:id/characters/:characterId',
-    controller.storyboard.removeCharacter,
-  );
-  router.post('/api/storyboards/:id/assets', controller.storyboard.addAsset);
-  router.delete('/api/storyboards/:id/assets/:assetId', controller.storyboard.removeAsset);
 
   router.get('/api/characters/:id', controller.character.show);
   router.put('/api/characters/:id', controller.character.update);
@@ -105,11 +89,30 @@ module.exports = (app: any) => {
     controller.character.uploadVoiceReference,
   );
   router.get('/api/characters/:id/assets', controller.asset.indexByCharacter);
+  router.post('/api/characters/:id/save-to-personal', controller.assetWorkspace.saveCharacter);
+  router.get('/api/characters/:id/versions', controller.assetWorkspace.characterVersions);
+  router.post(
+    '/api/characters/:id/versions/:versionId/set-current',
+    controller.assetWorkspace.setCharacterVersion,
+  );
 
   router.put('/api/assets/:id', controller.asset.update);
   router.delete('/api/assets/:id', controller.asset.destroy);
   router.get('/api/assets/:id/cover-generation-preview', controller.asset.previewCoverGeneration);
   router.post('/api/assets/:id/generate-cover', controller.asset.generateCover);
+  router.post('/api/assets/:id/save-to-personal', controller.assetWorkspace.saveAsset);
+  router.get('/api/assets/:id/versions', controller.assetWorkspace.assetVersions);
+  router.post(
+    '/api/assets/:id/versions/:versionId/set-current',
+    controller.assetWorkspace.setAssetVersion,
+  );
+
+  router.post('/api/asset-requirements/:id/confirm', controller.assetWorkspace.confirmRequirement);
+  router.get('/api/personal-assets', controller.assetWorkspace.personalIndex);
+  router.post(
+    '/api/personal-assets/:id/import-to-project',
+    controller.assetWorkspace.importPersonal,
+  );
 
   router.get('/api/oss/sign', controller.oss.sign);
   router.post('/api/oss/upload', controller.oss.upload);

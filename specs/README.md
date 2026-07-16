@@ -47,6 +47,7 @@
    - 资源访问边界
 
 边界默认值：
+
 - 只要改动会影响“用户如何操作”或“系统如何记录状态”，就补 spec。
 - 拿不准时默认补一个短 spec。
 
@@ -86,6 +87,7 @@
   - `auth-session-refresh.md`
 
 不建议：
+
 - `new-feature.md`
 - `update1.md`
 - `temp.md`

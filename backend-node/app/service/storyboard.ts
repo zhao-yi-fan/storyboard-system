@@ -8,7 +8,6 @@ const {
   sanitizeFileName,
   storyboardPreviewSpec,
   downloadAndStore,
-  composeVideos,
   createPreviewFromLocalPath,
   materializeSourceToLocalFile,
   probeDuration,
@@ -16,27 +15,34 @@ const {
 } = require('../lib/media');
 const { resolveUrl } = require('../lib/generated_asset');
 const {
-  generateWanxImage,
-  generateWanxImageWithReferences,
   generateSeedreamImage,
   generateWanxVideo,
   generateSeedanceVideo,
 } = require('../lib/ai_clients');
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 const {
   buildStoryboardCoverPrompt,
   buildStoryboardVideoPrompt,
   buildPromptDisplayBlocks,
   buildPromptDisplayTokens,
 } = require('../lib/prompt_library');
+const {
+  assertCompositePromptLength,
+  buildCompositeVideoPrompt,
+  extractFirstShotCoverPrompt,
+  isCompositeStoryboardPrompt,
+} = require('../lib/composite_prompt');
 
 class StoryboardService extends Service {
-  static SCENE_BACKGROUND_USAGE = 'scene_background';
+  static REFERENCE_ASSET_USAGE = 'reference_asset';
   static SEEDANCE_VIDEO_MODEL = 'seedance-2.0';
   static SEEDANCE_MAX_REFERENCE_AUDIO_COUNT = 3;
   static SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS = 2;
   static SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS = 15;
   static SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS = 15;
+  static SEEDANCE_MAX_VISUAL_INPUT_COUNT = 9;
+  static SEEDANCE_RESOLUTIONS = new Set(['480p', '720p', '1080p']);
 
   get pool() {
     return this.app.mysqlPool;
@@ -105,7 +111,7 @@ class StoryboardService extends Service {
       throw new Error('scene not found');
     }
 
-    const content = String(payload.content || '').trim();
+    const content = assertCompositePromptLength(payload.content);
     if (!content) {
       throw new Error('content is required');
     }
@@ -151,7 +157,7 @@ class StoryboardService extends Service {
     }
 
     const content = Object.prototype.hasOwnProperty.call(payload, 'content')
-      ? String(payload.content || '').trim()
+      ? assertCompositePromptLength(payload.content)
       : current.content;
     if (!content) {
       throw new Error('content is required');
@@ -275,12 +281,12 @@ class StoryboardService extends Service {
     const ids = items.map((item) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
-      `SELECT sau.storyboard_id, a.id, a.project_id, a.character_id, a.name, a.type, a.file_url, a.cover_url, a.thumbnail_url, a.meta, a.created_at, a.updated_at
+      `SELECT DISTINCT sau.storyboard_id, a.id, a.project_id, a.character_id, a.name, a.type, a.file_url, a.cover_url, a.thumbnail_url, a.meta, a.created_at, a.updated_at
        FROM storyboard_asset_usages sau
        JOIN assets a ON a.id = sau.asset_id
-       WHERE sau.storyboard_id IN (${placeholders}) AND sau.usage_type = ? AND a.deleted_at IS NULL
+       WHERE sau.storyboard_id IN (${placeholders}) AND a.deleted_at IS NULL
        ORDER BY sau.storyboard_id ASC, a.id ASC`,
-      [...ids, StoryboardService.SCENE_BACKGROUND_USAGE],
+      ids,
     );
     const byStoryboard = new Map(items.map((item) => [item.id, item]));
     for (const row of rows) {
@@ -295,7 +301,9 @@ class StoryboardService extends Service {
   }
 
   supportedCoverModels() {
-    return new Set(['', 'auto', 'wan2.7-image-pro', 'seedream-4.5']);
+    return new Set(
+      ['', 'auto', 'seedream-4.5', this.app.config.storyboard.seedreamImageModel].filter(Boolean),
+    );
   }
 
   supportedVideoModels() {
@@ -314,36 +322,83 @@ class StoryboardService extends Service {
     return String(storyboard.style_notes || scene.style_notes || '').trim();
   }
 
-  buildCoverPrompt(fields, references) {
-    return buildStoryboardCoverPrompt(fields, references).prompt;
-  }
-
-  buildVideoPrompt(storyboard, scene, duration) {
-    return buildStoryboardVideoPrompt(
-      {
-        ...storyboard,
-        style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
-        style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
-      },
-      scene,
-      duration,
-    ).prompt;
-  }
-
-  parseUseFirstFrame(value) {
+  parseBooleanFlag(value, defaultValue = true) {
     if (typeof value === 'boolean') {
       return value;
     }
-    const normalized = String(value == null ? 'true' : value)
+    const normalized = String(value == null ? defaultValue : value)
       .trim()
       .toLowerCase();
     return normalized !== 'false' && normalized !== '0' && normalized !== 'off';
   }
 
-  async selectSceneReferenceImages(storyboard, scene) {
+  parseUseFirstFrame(value) {
+    return this.parseBooleanFlag(value, true);
+  }
+
+  parseGenerateAudio(value) {
+    return this.parseBooleanFlag(value, true);
+  }
+
+  normalizeVideoResolution(model, value) {
+    const isSeedance = this.isSeedanceVideoModel(model);
+    const resolution = String(value || (isSeedance ? '480p' : '720p'))
+      .trim()
+      .toLowerCase();
+    if (isSeedance && !StoryboardService.SEEDANCE_RESOLUTIONS.has(resolution)) {
+      throw new Error('Seedance 2.0 分辨率仅支持 480p、720p 或 1080p');
+    }
+    if (!isSeedance && resolution !== '720p') {
+      throw new Error('当前 Wan 视频模型仅支持 720p 输出');
+    }
+    return resolution;
+  }
+
+  normalizeVideoDuration(model, value) {
+    const duration = Number(value == null || value === '' ? 5 : value);
+    if (!Number.isInteger(duration)) {
+      throw new Error('视频时长必须为整数秒');
+    }
+    if (this.isSeedanceVideoModel(model)) {
+      if (duration < 4 || duration > 15) {
+        throw new Error('Seedance 2.0 视频时长仅支持 4-15 秒');
+      }
+      return duration;
+    }
+    if (duration !== 5) {
+      throw new Error('当前 Wan 视频模型仅支持 5 秒输出');
+    }
+    return duration;
+  }
+
+  getAssetFileExtension(asset) {
+    const source = String(asset?.file_url || '').split(/[?#]/)[0];
+    return source.includes('.') ? source.slice(source.lastIndexOf('.') + 1).toLowerCase() : '';
+  }
+
+  isAudioAsset(asset) {
+    const type = String(asset?.type || '').trim();
+    const extension = this.getAssetFileExtension(asset);
+    return (
+      /(audio|voice|sound|music|sfx|配音|语音|音频|音乐|音效)/i.test(type) ||
+      ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(extension)
+    );
+  }
+
+  getAssetReferenceType(asset) {
+    const type = String(asset?.type || '').trim();
+    if (/(scene|background|location|场景|背景|地点)/i.test(type)) return 'scene';
+    if (this.isAudioAsset(asset)) return 'audio';
+    if (/(prop|道具)/i.test(type)) return 'prop';
+    if (/(costume|服装)/i.test(type)) return 'costume';
+    return 'asset';
+  }
+
+  async selectAssetReferenceImages(storyboard) {
     const references = [];
     const missing = [];
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
+      if (this.isAudioAsset(asset)) continue;
       const url = resolveUrl(
         this.app,
         asset.cover_url || asset.file_url,
@@ -352,7 +407,7 @@ class StoryboardService extends Service {
       if (url) {
         references.push({
           asset_id: Number(asset.id),
-          type: 'scene',
+          type: this.getAssetReferenceType(asset),
           name: String(asset.name || '').trim(),
           url,
           source: asset.cover_url ? 'asset.cover_url' : 'asset.file_url',
@@ -366,7 +421,7 @@ class StoryboardService extends Service {
   }
 
   async selectReferenceImages(storyboard, scene) {
-    const { references, missing } = await this.selectSceneReferenceImages(storyboard, scene);
+    const { references, missing } = await this.selectAssetReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
       const url = resolveUrl(
         this.app,
@@ -414,7 +469,7 @@ class StoryboardService extends Service {
 
   async selectVideoReferenceImages(storyboard, scene) {
     const { references: sceneReferences, missing: sceneMissing } =
-      await this.selectSceneReferenceImages(storyboard, scene);
+      await this.selectAssetReferenceImages(storyboard, scene);
     const { references: characterReferences, missing: characterMissing } =
       this.selectVideoCharacterReferenceImages(storyboard);
     return {
@@ -453,7 +508,41 @@ class StoryboardService extends Service {
     }
   }
 
-  async selectVideoAudioReferences(storyboard, useFirstFrame) {
+  getAssetMetaDuration(asset) {
+    const meta = asset?.meta;
+    if (!meta) return 0;
+    if (typeof meta === 'object') {
+      return Number(meta.duration || meta.duration_seconds || 0) || 0;
+    }
+    try {
+      const parsed = JSON.parse(String(meta));
+      return Number(parsed.duration || parsed.duration_seconds || 0) || 0;
+    } catch {
+      const match = String(meta).match(/(?:duration|时长)\s*[=:：]\s*(\d+(?:\.\d+)?)/i);
+      return Number(match?.[1] || 0) || 0;
+    }
+  }
+
+  async resolveAssetAudioDuration(asset, url) {
+    const metaDuration = this.getAssetMetaDuration(asset);
+    if (metaDuration > 0) return metaDuration;
+    let materialized;
+    try {
+      materialized = await materializeSourceToLocalFile(this.app, url, '.audio');
+      return await probeDuration(materialized.localPath);
+    } catch (error) {
+      this.ctx.logger.warn(
+        '[seedance] failed to probe audio asset duration asset=%s: %s',
+        asset.id,
+        error.message,
+      );
+      return 0;
+    } finally {
+      if (materialized) await materialized.cleanup();
+    }
+  }
+
+  async selectVideoAudioReferences(storyboard, hasVisualInput) {
     const references = [];
     const missing = [];
     const blockingReasons = [];
@@ -468,6 +557,7 @@ class StoryboardService extends Service {
         continue;
       }
       references.push({
+        reference_id: `character:${character.id}`,
         character_id: Number(character.id),
         type: 'character',
         name: character.name,
@@ -475,6 +565,28 @@ class StoryboardService extends Service {
         source: 'character.voice_reference_url',
         duration: await this.resolveVoiceReferenceDuration(character, url),
         voice_name: String(character.voice_name || '').trim(),
+      });
+    }
+    for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
+      if (!this.isAudioAsset(asset)) continue;
+      const url = resolveUrl(
+        this.app,
+        asset.file_url,
+        this.app.config.storyboard.publicAppBaseUrl || '',
+      );
+      if (!url) {
+        missing.push(asset.name);
+        continue;
+      }
+      references.push({
+        reference_id: `asset:${asset.id}`,
+        asset_id: Number(asset.id),
+        type: 'asset',
+        name: String(asset.name || '').trim(),
+        url,
+        source: 'asset.file_url',
+        duration: await this.resolveAssetAudioDuration(asset, url),
+        voice_name: String(asset.type || '音频资产').trim(),
       });
     }
     if (missing.length) {
@@ -501,8 +613,8 @@ class StoryboardService extends Service {
         `Seedance 2.0 参考音频总时长不能超过 15 秒，当前为 ${totalDuration.toFixed(1)} 秒`,
       );
     }
-    if (references.length && !useFirstFrame) {
-      blockingReasons.push('Seedance 2.0 传入角色参考音频时必须同时使用首帧图');
+    if (references.length && !hasVisualInput) {
+      blockingReasons.push('Seedance 2.0 传入角色参考音频时必须同时传入首帧或参考图');
     }
     return {
       references,
@@ -537,6 +649,10 @@ class StoryboardService extends Service {
        ON DUPLICATE KEY UPDATE line = VALUES(line)`,
       [storyboardId, characterId, String(storyboard.dialogue || storyboard.content || '').trim()],
     );
+    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+      storyboard.project_id,
+      storyboard.chapter_id,
+    );
     return await this.findById(storyboardId);
   }
 
@@ -548,6 +664,10 @@ class StoryboardService extends Service {
     await this.pool.execute(
       'DELETE FROM storyboard_characters WHERE storyboard_id = ? AND character_id = ?',
       [storyboardId, characterId],
+    );
+    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+      storyboard.project_id,
+      storyboard.chapter_id,
     );
     return await this.findById(storyboardId);
   }
@@ -564,24 +684,18 @@ class StoryboardService extends Service {
     if (Number(asset.project_id) !== Number(storyboard.project_id)) {
       throw new Error('asset does not belong to the same project');
     }
-    const type = String(asset.type || '')
-      .trim()
-      .toLowerCase();
-    if (
-      !(
-        type.includes('scene') ||
-        type.includes('background') ||
-        type.includes('场景') ||
-        type.includes('背景')
-      )
-    ) {
-      throw new Error('当前资产不是场景背景资产');
-    }
+    await this.pool.execute(
+      'DELETE FROM storyboard_asset_usages WHERE storyboard_id = ? AND asset_id = ?',
+      [storyboardId, assetId],
+    );
     await this.pool.execute(
       `INSERT INTO storyboard_asset_usages (storyboard_id, asset_id, usage_type)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE usage_type = VALUES(usage_type)`,
-      [storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE],
+       VALUES (?, ?, ?)`,
+      [storyboardId, assetId, StoryboardService.REFERENCE_ASSET_USAGE],
+    );
+    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+      storyboard.project_id,
+      storyboard.chapter_id,
     );
     return await this.findById(storyboardId);
   }
@@ -592,8 +706,12 @@ class StoryboardService extends Service {
       throw new Error('storyboard not found');
     }
     await this.pool.execute(
-      'DELETE FROM storyboard_asset_usages WHERE storyboard_id = ? AND asset_id = ? AND usage_type = ?',
-      [storyboardId, assetId, StoryboardService.SCENE_BACKGROUND_USAGE],
+      'DELETE FROM storyboard_asset_usages WHERE storyboard_id = ? AND asset_id = ?',
+      [storyboardId, assetId],
+    );
+    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+      storyboard.project_id,
+      storyboard.chapter_id,
     );
     return await this.findById(storyboardId);
   }
@@ -611,11 +729,7 @@ class StoryboardService extends Service {
       throw new Error('scene not found');
     }
     const { references, missing } = await this.selectReferenceImages(storyboard, scene);
-    const model =
-      String(selectedModel || '').trim() ||
-      (references.length
-        ? this.app.config.storyboard.wanxReferenceModel || 'wan2.7-image-pro'
-        : this.app.config.storyboard.wanxModel || 'wan2.7-image-pro');
+    const model = this.app.config.storyboard.seedreamImageModel || 'seedream-4.5';
     const mode = references.length ? 'reference' : 'text-only';
     const fields = {
       scene_title: String(scene.title || '').trim(),
@@ -632,8 +746,16 @@ class StoryboardService extends Service {
       dialogue: String(storyboard.dialogue || '').trim(),
       notes: String(storyboard.notes || '').trim(),
     };
-    const coverPrompt = buildStoryboardCoverPrompt(fields, references);
+    const composite = isCompositeStoryboardPrompt(fields.content);
+    const coverPrompt = composite
+      ? {
+          template: 'composite-first-shot',
+          blueprint: null,
+          prompt: extractFirstShotCoverPrompt(fields.content),
+        }
+      : buildStoryboardCoverPrompt(fields, references);
     return {
+      prompt_mode: composite ? 'composite' : 'legacy',
       mode,
       model,
       reference_images: references.map((item) => ({
@@ -653,7 +775,6 @@ class StoryboardService extends Service {
 
   async generateCover(id, selectedModel, useTextOnly) {
     const preview = await this.previewCoverGeneration(id, selectedModel);
-    const storyboard = await this.findById(id);
     const generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,
       media_type: 'cover',
@@ -671,27 +792,11 @@ class StoryboardService extends Service {
     });
 
     try {
-      let imageUrl;
-      if (
-        preview.model === 'seedream-4.5' ||
-        preview.model ===
-          (this.app.config.storyboard.seedreamImageModel || 'doubao-seedream-4-5-251128')
-      ) {
-        imageUrl = await generateSeedreamImage(
-          this.app,
-          preview.final_prompt,
-          useTextOnly ? [] : preview.reference_images.map((item) => item.url),
-        );
-      } else if (!useTextOnly && preview.reference_images.length) {
-        imageUrl = await generateWanxImageWithReferences(
-          this.app,
-          preview.final_prompt,
-          preview.reference_images.map((item) => item.url),
-          preview.model,
-        );
-      } else {
-        imageUrl = await generateWanxImage(this.app, preview.final_prompt, preview.model);
-      }
+      const imageUrl = await generateSeedreamImage(
+        this.app,
+        preview.final_prompt,
+        useTextOnly ? [] : preview.reference_images.map((item) => item.url),
+      );
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.png`;
       const stored = await downloadAndStore(this.app, imageUrl, 'covers', filename, 'image/png');
       const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
@@ -764,7 +869,14 @@ class StoryboardService extends Service {
     };
   }
 
-  async previewVideoGeneration(id, selectedModel, duration, useFirstFrameRaw) {
+  async previewVideoGeneration(
+    id,
+    selectedModel,
+    duration,
+    useFirstFrameRaw,
+    resolutionRaw,
+    generateAudioRaw,
+  ) {
     const storyboard = await this.findById(id);
     if (!storyboard) {
       throw new Error('storyboard not found');
@@ -773,21 +885,22 @@ class StoryboardService extends Service {
     if (!scene) {
       throw new Error('scene not found');
     }
+    const composite = isCompositeStoryboardPrompt(storyboard.content);
     const model =
       String(selectedModel || '').trim() ||
-      this.app.config.storyboard.wanxVideoModel ||
-      'wan2.7-i2v';
+      (composite
+        ? StoryboardService.SEEDANCE_VIDEO_MODEL
+        : this.app.config.storyboard.wanxVideoModel || 'wan2.7-i2v');
     if (!this.supportedVideoModels().has(model)) {
       throw new Error('unsupported video model');
     }
-    const selectedDuration = Number(duration || 5) || 5;
+    const selectedDuration = this.normalizeVideoDuration(model, duration);
     const useFirstFrame = this.parseUseFirstFrame(useFirstFrameRaw);
     const isSeedance = this.isSeedanceVideoModel(model);
-    if (isSeedance && selectedDuration !== 5) {
-      throw new Error('当前 Seedance 2.0 视频生成仅支持 5 秒输出');
-    }
-    if (!isSeedance && selectedDuration !== 5) {
-      throw new Error('当前视频模型仅支持 5 秒输出');
+    const resolution = this.normalizeVideoResolution(model, resolutionRaw);
+    const generateAudio = this.parseGenerateAudio(generateAudioRaw);
+    if (!isSeedance && !generateAudio) {
+      throw new Error('当前 Wan 视频模型仅支持有声输出');
     }
     const sourceImageUrl =
       useFirstFrame && storyboard.thumbnail_url
@@ -795,23 +908,42 @@ class StoryboardService extends Service {
         : '';
     const { references: referenceImages, missing: missingReferences } =
       await this.selectVideoReferenceImages(storyboard, scene);
-    const audioReferenceSummary = isSeedance
-      ? await this.selectVideoAudioReferences(storyboard, useFirstFrame)
-      : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
-    const videoPrompt = buildStoryboardVideoPrompt(
-      {
-        ...storyboard,
-        style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
-        style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
-      },
-      scene,
-      selectedDuration,
-    );
+    const visualInputCount = (useFirstFrame ? 1 : 0) + referenceImages.length;
+    const audioReferenceSummary =
+      isSeedance && generateAudio
+        ? await this.selectVideoAudioReferences(storyboard, visualInputCount > 0)
+        : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
+    const blockingReasons = [...audioReferenceSummary.blockingReasons];
+    if (isSeedance && visualInputCount > StoryboardService.SEEDANCE_MAX_VISUAL_INPUT_COUNT) {
+      blockingReasons.push(
+        `Seedance 2.0 首帧与参考图合计最多支持 ${StoryboardService.SEEDANCE_MAX_VISUAL_INPUT_COUNT} 张，当前为 ${visualInputCount} 张`,
+      );
+    }
+    const videoPrompt = composite
+      ? {
+          template: 'composite-raw',
+          blueprint: null,
+          prompt: buildCompositeVideoPrompt(storyboard.content, {
+            audio: generateAudio,
+            useFirstFrame,
+          }),
+        }
+      : buildStoryboardVideoPrompt(
+          {
+            ...storyboard,
+            style_preset: this.resolveStoryboardStylePreset(scene, storyboard),
+            style_notes: this.resolveStoryboardStyleNotes(scene, storyboard),
+          },
+          scene,
+          selectedDuration,
+          { audio: generateAudio, useFirstFrame },
+        );
     return {
+      prompt_mode: composite ? 'composite' : 'legacy',
       model,
       duration: selectedDuration,
-      resolution: isSeedance ? '480p' : '720P',
-      audio: true,
+      resolution,
+      audio: generateAudio,
       use_first_frame: useFirstFrame,
       source_image_url: sourceImageUrl,
       source_image_status: !useFirstFrame
@@ -828,7 +960,9 @@ class StoryboardService extends Service {
       })),
       missing_references: missingReferences,
       audio_reference_assets: audioReferenceSummary.references.map((item) => ({
+        reference_id: item.reference_id,
         character_id: item.character_id,
+        asset_id: item.asset_id,
         type: item.type,
         name: item.name,
         url: item.url,
@@ -839,7 +973,7 @@ class StoryboardService extends Service {
       missing_audio_references: audioReferenceSummary.missing,
       audio_reference_total_duration: audioReferenceSummary.totalDuration,
       audio_reference_limits: audioReferenceSummary.limits,
-      blocking_reasons: audioReferenceSummary.blockingReasons,
+      blocking_reasons: blockingReasons,
       fields: {
         scene_title: String(scene.title || '').trim(),
         background: String(storyboard.background || '').trim(),
@@ -859,30 +993,42 @@ class StoryboardService extends Service {
       },
       template: videoPrompt.template,
       prompt_blueprint: videoPrompt.blueprint,
-      prompt_display_blocks: buildPromptDisplayBlocks(videoPrompt.blueprint),
-      prompt_display_tokens: buildPromptDisplayTokens({
-        finalPrompt: videoPrompt.prompt,
-        sceneTitle: scene.title,
-        characters: storyboard.character_names,
-        stylePreset: this.resolveStoryboardStylePreset(scene, storyboard),
-        cameraDirection: storyboard.camera_direction,
-        cameraMotion: storyboard.camera_motion,
-        audio: true,
-        useFirstFrame,
-        hasSourceImage: !!sourceImageUrl,
-        timeline: videoPrompt.blueprint.timeline,
-        characters: storyboard.character_names,
-      }),
+      prompt_display_blocks: videoPrompt.blueprint
+        ? buildPromptDisplayBlocks(videoPrompt.blueprint)
+        : [],
+      prompt_display_tokens: videoPrompt.blueprint
+        ? buildPromptDisplayTokens({
+            finalPrompt: videoPrompt.prompt,
+            sceneTitle: scene.title,
+            characters: storyboard.character_names,
+            stylePreset: this.resolveStoryboardStylePreset(scene, storyboard),
+            cameraDirection: storyboard.camera_direction,
+            cameraMotion: storyboard.camera_motion,
+            audio: generateAudio,
+            useFirstFrame,
+            hasSourceImage: !!sourceImageUrl,
+            timeline: videoPrompt.blueprint.timeline,
+          })
+        : [{ type: 'text', text: videoPrompt.prompt }],
       final_prompt: videoPrompt.prompt,
     };
   }
 
-  async generateVideo(id, selectedModel, duration, useFirstFrameRaw) {
+  async generateVideo(
+    id,
+    selectedModel,
+    duration,
+    useFirstFrameRaw,
+    resolutionRaw,
+    generateAudioRaw,
+  ) {
     const preview = await this.previewVideoGeneration(
       id,
       selectedModel,
       duration,
       useFirstFrameRaw,
+      resolutionRaw,
+      generateAudioRaw,
     );
     if (Array.isArray(preview.blocking_reasons) && preview.blocking_reasons.length) {
       throw new Error(preview.blocking_reasons.join('；'));
@@ -903,10 +1049,13 @@ class StoryboardService extends Service {
       status: 'generating',
       source_url: preview.use_first_frame ? current.thumbnail_url || null : null,
       meta_json: JSON.stringify({
+        prompt_mode: preview.prompt_mode,
         resolution: preview.resolution,
         duration: preview.duration,
-        audio: true,
+        audio: preview.audio,
         use_first_frame: preview.use_first_frame,
+        first_frame_status: preview.source_image_status,
+        reference_image_count: preview.reference_images?.length || 0,
         audio_reference_count: preview.audio_reference_assets?.length || 0,
         audio_reference_characters: (preview.audio_reference_assets || []).map((item) => item.name),
         audio_reference_total_duration: preview.audio_reference_total_duration || 0,
@@ -944,8 +1093,7 @@ class StoryboardService extends Service {
       if (preview.use_first_frame && !imageInput) {
         throw new Error('镜头封面图不可用，无法生成视频');
       }
-      const scene = await this.ctx.service.scene.findById(storyboard.scene_id);
-      const prompt = this.buildVideoPrompt(storyboard, scene, preview.duration);
+      const prompt = preview.final_prompt;
       const result = this.isSeedanceVideoModel(preview.model)
         ? await generateSeedanceVideo(
             this.app,
@@ -953,8 +1101,10 @@ class StoryboardService extends Service {
             imageInput,
             preview.duration,
             preview.use_first_frame,
-            [],
+            (preview.reference_images || []).map((item) => item.url),
             (preview.audio_reference_assets || []).map((item) => item.url),
+            preview.resolution,
+            preview.audio,
           )
         : await generateWanxVideo(
             this.app,
@@ -987,10 +1137,13 @@ class StoryboardService extends Service {
         source_url: preview.use_first_frame ? storyboard.thumbnail_url : '',
         error_message: null,
         meta_json: JSON.stringify({
+          prompt_mode: preview.prompt_mode,
           resolution: preview.resolution,
           duration: result.duration,
-          audio: true,
+          audio: preview.audio,
           use_first_frame: preview.use_first_frame,
+          first_frame_status: preview.source_image_status,
+          reference_image_count: preview.reference_images?.length || 0,
           audio_reference_count: preview.audio_reference_assets?.length || 0,
           audio_reference_characters: (preview.audio_reference_assets || []).map(
             (item) => item.name,
@@ -1023,7 +1176,7 @@ class StoryboardService extends Service {
         thumbnail_preview_url: generation.preview_url || '',
       });
     } else if (generation.media_type === 'video') {
-      const meta = generation.meta_json ? JSON.parse(generation.meta_json) : {};
+      const meta = parseMediaGenerationMeta(generation.meta_json);
       await this.update(storyboardId, {
         video_url: generation.result_url || '',
         video_preview_url: generation.preview_url || '',

@@ -131,7 +131,10 @@ class SceneController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      response.success(this.ctx, await this.ctx.service.scene.previewCoverGeneration(id));
+      response.success(
+        this.ctx,
+        await this.ctx.service.scene.previewCoverGeneration(id, this.ctx.query.model),
+      );
     } catch (err) {
       response.error(this.ctx, err.message);
     }
@@ -148,7 +151,11 @@ class SceneController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     try {
-      const scene = await this.ctx.service.scene.generateCover(id);
+      const scene = await this.ctx.service.scene.generateCover(
+        id,
+        (this.ctx.request.body || {}).model,
+        Boolean((this.ctx.request.body || {}).use_text_only),
+      );
       response.success(this.ctx, {
         scene_id: scene.id,
         cover_url: scene.cover_url,
@@ -235,6 +242,154 @@ class SceneController extends Controller {
         video_duration: scene.video_duration,
         scene,
       });
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async mediaGenerations() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try {
+      response.success(this.ctx, await this.ctx.service.scene.listMediaGenerations(id));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async setMediaGenerationCurrent() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.scene.setMediaGenerationCurrent(id, generationId),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async deleteMediaGeneration() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.scene.deleteMediaGeneration(id, generationId),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async previewVideoGeneration() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.scene.previewVideoGeneration(
+          id,
+          this.ctx.query.model,
+          this.ctx.query.duration,
+          this.ctx.query.use_first_frame,
+          this.ctx.query.resolution,
+          this.ctx.query.generate_audio,
+        ),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async generateVideo() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    const body = this.ctx.request.body || {};
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.scene.generateVideo(
+          id,
+          body.model,
+          body.duration,
+          body.use_first_frame,
+          body.resolution,
+          body.generate_audio,
+        ),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async uploadCover() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.scene.uploadCover(id, (this.ctx.request.body || {}).cover_url),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async addCharacter() {
+    const id = this.parseId();
+    const characterId = Number((this.ctx.request.body || {}).character_id);
+    if (!id || !Number.isInteger(characterId) || characterId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.scene.addCharacter(id, characterId));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async removeCharacter() {
+    const id = this.parseId();
+    const characterId = Number(this.ctx.params.characterId);
+    if (!id || !Number.isInteger(characterId) || characterId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.scene.removeCharacter(id, characterId));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async addAsset() {
+    const id = this.parseId();
+    const assetId = Number((this.ctx.request.body || {}).asset_id);
+    if (!id || !Number.isInteger(assetId) || assetId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.scene.addAsset(id, assetId));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async removeAsset() {
+    const id = this.parseId();
+    const assetId = Number(this.ctx.params.assetId);
+    if (!id || !Number.isInteger(assetId) || assetId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(this.ctx, await this.ctx.service.scene.removeAsset(id, assetId));
     } catch (err) {
       response.error(this.ctx, err.message);
     }

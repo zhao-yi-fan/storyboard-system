@@ -42,6 +42,10 @@ class ScriptImportService extends Service {
         'UPDATE projects SET script_text = ? WHERE id = ? AND deleted_at IS NULL',
         [cleaned, projectId],
       );
+      await conn.execute(
+        'UPDATE asset_requirements SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL',
+        [projectId],
+      );
 
       await conn.query(
         `
@@ -49,6 +53,18 @@ class ScriptImportService extends Service {
         JOIN storyboards sb ON sc.storyboard_id = sb.id
         WHERE sb.project_id = ?
       `,
+        [projectId],
+      );
+      await conn.query(
+        `DELETE sc FROM scene_characters sc
+         JOIN scenes s ON sc.scene_id = s.id
+         WHERE s.project_id = ?`,
+        [projectId],
+      );
+      await conn.query(
+        `DELETE sau FROM scene_asset_usages sau
+         JOIN scenes s ON sau.scene_id = s.id
+         WHERE s.project_id = ?`,
         [projectId],
       );
       await conn.execute(
@@ -82,6 +98,28 @@ class ScriptImportService extends Service {
 
       const parsedCharacters = new Set();
 
+      const upsertAsset = async (name, type, meta) => {
+        const serializedMeta = meta ? JSON.stringify({ description: String(meta) }) : null;
+        const [rows] = await conn.query(
+          `SELECT id FROM assets
+           WHERE project_id = ? AND name = ? AND type = ? AND deleted_at IS NULL LIMIT 1`,
+          [projectId, name, type],
+        );
+        if (rows.length) {
+          await conn.execute('UPDATE assets SET meta = ? WHERE id = ?', [
+            serializedMeta,
+            rows[0].id,
+          ]);
+          return Number(rows[0].id);
+        }
+        const [insert] = await conn.execute(
+          `INSERT INTO assets (project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta)
+           VALUES (?, NULL, ?, ?, '', '', '', ?)`,
+          [projectId, name, type, serializedMeta],
+        );
+        return Number(insert.insertId);
+      };
+
       const upsertCharacter = async (name) => {
         const detail = normalizedCharacters.get(name) || {
           description: '',
@@ -105,6 +143,19 @@ class ScriptImportService extends Service {
 
       for (let chapterIndex = 0; chapterIndex < parsed.chapters.length; chapterIndex++) {
         const chapter = parsed.chapters[chapterIndex];
+        const chapterCharacters = new Set();
+        const chapterAssetRequirements = new Map();
+        const collectAssetRequirement = (kind, name, description, entityId) => {
+          const key = `${kind}:${name}`;
+          const current = chapterAssetRequirements.get(key);
+          chapterAssetRequirements.set(key, {
+            kind,
+            name,
+            description: current?.description || description,
+            entityId,
+            sourceCount: (current?.sourceCount || 0) + 1,
+          });
+        };
         const [chapterInsert] = await conn.execute(
           'INSERT INTO chapters (project_id, title, summary, sort_order) VALUES (?, ?, ?, ?)',
           [projectId, chapter.title, chapter.summary, chapterIndex + 1],
@@ -113,14 +164,28 @@ class ScriptImportService extends Service {
 
         for (let sceneIndex = 0; sceneIndex < chapter.scenes.length; sceneIndex++) {
           const scene = chapter.scenes[sceneIndex];
+          const prompt = (scene.storyboards || [])
+            .map((storyboard, shotIndex) => {
+              const fields = [
+                `镜号：${shotIndex + 1}`,
+                storyboard.duration ? `[0-${storyboard.duration}s]` : '',
+                [storyboard.shotType, storyboard.cameraDirection].filter(Boolean).join('，'),
+                storyboard.cameraMotion,
+                storyboard.content,
+                storyboard.dialogue ? `台词 & 音效：${storyboard.dialogue}` : '',
+              ].filter(Boolean);
+              return fields.join(' | ');
+            })
+            .join('\n\n');
           const [sceneInsert] = await conn.execute(
-            `INSERT INTO scenes (chapter_id, project_id, title, description, location, time_of_day, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO scenes (chapter_id, project_id, title, description, prompt, location, time_of_day, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               chapterInsert.insertId,
               projectId,
               scene.title,
               scene.description,
+              prompt,
               scene.location,
               scene.timeOfDay,
               sceneIndex + 1,
@@ -128,42 +193,81 @@ class ScriptImportService extends Service {
           );
           result.scene_count++;
 
+          const sceneAssetName = String(scene.location || scene.title || '').trim();
+          if (sceneAssetName) {
+            const sceneAssetId = await upsertAsset(
+              sceneAssetName,
+              'scene',
+              [scene.description, scene.timeOfDay].filter(Boolean).join('\n'),
+            );
+            collectAssetRequirement('scene', sceneAssetName, scene.description, sceneAssetId);
+            await conn.execute(
+              `INSERT IGNORE INTO scene_asset_usages (scene_id, asset_id, usage_type)
+               VALUES (?, ?, 'reference_asset')`,
+              [sceneInsert.insertId, sceneAssetId],
+            );
+          }
+
+          for (const prop of scene.props || []) {
+            const propAssetId = await upsertAsset(prop.name, 'prop', prop.description);
+            collectAssetRequirement('prop', prop.name, prop.description, propAssetId);
+            await conn.execute(
+              `INSERT IGNORE INTO scene_asset_usages (scene_id, asset_id, usage_type)
+               VALUES (?, ?, 'reference_asset')`,
+              [sceneInsert.insertId, propAssetId],
+            );
+          }
+
           for (let shotIndex = 0; shotIndex < scene.storyboards.length; shotIndex++) {
             const storyboard = scene.storyboards[shotIndex];
-            const [storyboardInsert] = await conn.execute(
-              `INSERT INTO storyboards (
-                scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, camera_direction, camera_motion, duration, background, thumbnail_url, notes, sort_order
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)`,
-              [
-                sceneInsert.insertId,
-                chapterInsert.insertId,
-                projectId,
-                shotIndex + 1,
-                storyboard.content,
-                storyboard.dialogue,
-                storyboard.shotType,
-                storyboard.mood,
-                storyboard.cameraDirection,
-                storyboard.cameraMotion,
-                storyboard.duration,
-                storyboard.background,
-                storyboard.notes,
-                shotIndex + 1,
-              ],
-            );
             result.storyboard_count++;
 
             for (const name of uniqueNonEmpty(storyboard.characterNames)) {
               parsedCharacters.add(name);
+              chapterCharacters.add(name);
               const characterId = await upsertCharacter(name);
               await conn.execute(
-                `INSERT INTO storyboard_characters (storyboard_id, character_id, line)
+                `INSERT INTO scene_characters (scene_id, character_id, line)
                  VALUES (?, ?, ?)
                  ON DUPLICATE KEY UPDATE line = VALUES(line)`,
-                [storyboardInsert.insertId, characterId, storyboard.dialogue || storyboard.content],
+                [sceneInsert.insertId, characterId, storyboard.dialogue || storyboard.content],
               );
             }
           }
+        }
+
+        for (const name of chapterCharacters) {
+          const characterId = await upsertCharacter(name);
+          const detail = normalizedCharacters.get(name) || {};
+          await conn.execute(
+            `INSERT INTO asset_requirements
+             (project_id, chapter_id, kind, name, description, status, linked_entity_type, linked_entity_id, source_count)
+             VALUES (?, ?, 'character', ?, ?, 'pending', 'character', ?, 1)`,
+            [
+              projectId,
+              chapterInsert.insertId,
+              name,
+              buildCharacterDescription(detail),
+              characterId,
+            ],
+          );
+        }
+
+        for (const requirement of chapterAssetRequirements.values()) {
+          await conn.execute(
+            `INSERT INTO asset_requirements
+             (project_id, chapter_id, kind, name, description, status, linked_entity_type, linked_entity_id, source_count)
+             VALUES (?, ?, ?, ?, ?, 'pending', 'asset', ?, ?)`,
+            [
+              projectId,
+              chapterInsert.insertId,
+              requirement.kind,
+              requirement.name,
+              requirement.description,
+              requirement.entityId,
+              requirement.sourceCount,
+            ],
+          );
         }
       }
 

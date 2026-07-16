@@ -14,7 +14,7 @@ class ProjectController extends Controller {
 
   async index() {
     try {
-      const projects = await this.ctx.service.project.findAll();
+      const projects = await this.ctx.service.project.findAll(this.ctx.state.currentUser.id);
       response.success(this.ctx, projects);
     } catch (err: any) {
       response.error(this.ctx, err.message);
@@ -63,10 +63,10 @@ class ProjectController extends Controller {
     }
 
     try {
-      const project = await this.ctx.service.project.create({
-        name: trimmedName,
-        description: String(description || ''),
-      });
+      const project = await this.ctx.service.project.create(
+        { name: trimmedName, description: String(description || '') },
+        this.ctx.state.currentUser.id,
+      );
       response.success(this.ctx, project);
     } catch (err: any) {
       response.error(this.ctx, err.message);

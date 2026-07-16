@@ -35,10 +35,15 @@ for (const envPath of ENV_PATHS) {
 module.exports = (appInfo: { name: string }) => {
   const config: Record<string, unknown> = {};
   const authConfig = buildAuthConfig();
+  const storyboardBaseConfig = buildStoryboardBaseConfig();
+  const generatedAssetDir = path.isAbsolute(storyboardBaseConfig.generatedAssetDir)
+    ? storyboardBaseConfig.generatedAssetDir
+    : path.resolve(backendNodeRootDir, storyboardBaseConfig.generatedAssetDir);
+  const generatedAssetPrefix = `/${storyboardBaseConfig.generatedAssetBasePath.replace(/^\/+|\/+$/g, '')}/`;
 
   config.keys = `${appInfo.name}-migration-key`;
 
-  config.middleware = ['apiCors', 'authSession'];
+  config.middleware = ['apiCors', 'authSession', 'projectAccess'];
   config.authSession = {
     publicPaths: authConfig.publicPaths,
     sessionCookieName: authConfig.sessionCookieName,
@@ -53,6 +58,9 @@ module.exports = (appInfo: { name: string }) => {
     mode: 'stream',
     fileSize: '20mb',
   };
+  config.static = {
+    dirs: [{ prefix: generatedAssetPrefix, dir: generatedAssetDir }],
+  };
 
   config.security = {
     csrf: {
@@ -63,7 +71,7 @@ module.exports = (appInfo: { name: string }) => {
   config.mysql = buildMysqlConfig();
   config.auth = authConfig;
   config.storyboard = {
-    ...buildStoryboardBaseConfig(),
+    ...storyboardBaseConfig,
     ...buildDeepSeekConfig(),
     ...buildDashScopeConfig(),
     ...buildWanxConfig(),

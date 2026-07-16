@@ -51,6 +51,7 @@ export type Scene = {
   project_id: number;
   title: string;
   description: string;
+  prompt: string;
   location: string;
   time_of_day: string;
   style_preset?: string;
@@ -62,9 +63,36 @@ export type Scene = {
   video_status?: string;
   video_error?: string;
   video_duration?: number;
+  generation_duration: number;
+  characters?: Character[];
+  character_names?: string[];
+  assets?: Asset[];
+  asset_names?: string[];
   sort_order: number;
   created_at?: string;
   updated_at?: string;
+};
+
+export type SceneMediaGeneration = {
+  id: number;
+  scene_id: number;
+  legacy_storyboard_id?: number | null;
+  media_type: "cover" | "video" | string;
+  model: string;
+  status: "pending" | "generating" | "succeeded" | "failed" | string;
+  result_url?: string;
+  preview_url?: string;
+  source_url?: string;
+  error_message?: string;
+  is_current: boolean;
+  meta_json?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SceneMediaMutationResult = {
+  scene: Scene;
+  media_generations: SceneMediaGeneration[];
 };
 
 export type Character = {
@@ -95,6 +123,50 @@ export type Asset = {
   meta?: string;
   created_at?: string;
   updated_at?: string;
+};
+
+export type AssetRequirement = {
+  id: number;
+  project_id: number;
+  chapter_id: number;
+  chapter_title: string;
+  kind: "character" | "scene" | "prop";
+  name: string;
+  description: string;
+  status: "pending" | "generating" | "generated" | "confirmed" | "failed";
+  linked_entity_type?: "character" | "asset";
+  linked_entity_id?: number;
+  file_url?: string;
+  preview_url?: string;
+  error_message?: string;
+};
+
+export type PersonalAsset = {
+  id: number;
+  user_id: number;
+  kind: "character" | "scene" | "prop" | "voice";
+  name: string;
+  description?: string;
+  file_url?: string;
+  preview_url?: string;
+  source_project_id?: number | null;
+  source_entity_type?: string | null;
+  source_entity_id?: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AssetVersion = {
+  id: number;
+  entity_type: "character" | "asset";
+  entity_id: number;
+  file_url: string;
+  preview_url?: string;
+  model: string;
+  prompt?: string;
+  status: string;
+  is_current: boolean;
+  created_at?: string;
 };
 
 export type Storyboard = {
@@ -204,6 +276,7 @@ export type StoryboardCoverGenerationFields = {
 };
 
 export type StoryboardCoverGenerationPreview = {
+  prompt_mode?: "composite" | "legacy";
   mode: "reference" | "text-only" | string;
   model: string;
   reference_images: StoryboardCoverGenerationReferenceImage[];
@@ -265,6 +338,7 @@ export type PromptDisplayToken = {
 };
 
 export type StoryboardVideoGenerationPreview = {
+  prompt_mode: "composite" | "legacy";
   model: string;
   duration: number;
   resolution: string;
@@ -276,7 +350,9 @@ export type StoryboardVideoGenerationPreview = {
   reference_images?: StoryboardCoverGenerationReferenceImage[];
   missing_references?: string[];
   audio_reference_assets?: Array<{
-    character_id: number;
+    reference_id: string;
+    character_id?: number;
+    asset_id?: number;
     type: string;
     name: string;
     url: string;
@@ -301,6 +377,16 @@ export type StoryboardVideoGenerationPreview = {
   prompt_display_blocks?: PromptDisplayBlock[];
   prompt_display_tokens?: PromptDisplayToken[];
   final_prompt: string;
+};
+
+export type VideoResolution = "480p" | "720p" | "1080p";
+
+export type StoryboardVideoGenerationOptions = {
+  model?: string;
+  duration?: number;
+  resolution?: VideoResolution;
+  generate_audio?: boolean;
+  use_first_frame?: boolean;
 };
 
 export type GenerateStoryboardVideoResult = {

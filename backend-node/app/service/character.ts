@@ -247,7 +247,10 @@ class CharacterService extends Service {
     );
     const layoutUrl = resolveUrl(
       this.app,
-      this.app.config.storyboard.characterDesignLayoutReferenceUrl || '',
+      normalizeGeneratedAssetReference(
+        this.app,
+        this.app.config.storyboard.characterDesignLayoutReferenceUrl || '',
+      ),
       this.app.config.storyboard.publicAppBaseUrl || '',
     );
 
@@ -376,7 +379,7 @@ class CharacterService extends Service {
     const imageUrl = await generateSeedreamImage(
       this.app,
       prompt,
-      layoutUrl ? [avatarUrl, layoutUrl] : [avatarUrl],
+      [avatarUrl, layoutUrl].filter(Boolean),
       { size: SEEDREAM_DESIGN_SHEET_SIZE },
     );
     const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
@@ -385,7 +388,16 @@ class CharacterService extends Service {
       stored.publicPath,
       id,
     ]);
-    return await this.findById(id);
+    const updated = await this.findById(id);
+    await this.ctx.service.assetWorkspace.recordVersion(
+      'character',
+      id,
+      updated.project_id,
+      updated.design_sheet_url,
+      updated.avatar_url,
+      prompt,
+    );
+    return updated;
   }
 
   async generateVoiceReferenceAudio(character, voicePrompt, previewText) {

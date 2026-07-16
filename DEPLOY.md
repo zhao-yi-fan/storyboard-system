@@ -3,7 +3,8 @@
 ## Standard flow
 
 ### Local
-1. Develop locally in `/Users/zhaoyifan/Desktop/myProject/storyboard-system`
+
+1. Develop locally in `<repo-root>`
 2. Push to GitHub:
 
 ```bash
@@ -11,23 +12,24 @@ git push origin main
 ```
 
 ### ECS
+
 1. SSH into the server as `admin`
 
 ```bash
-ssh admin@8.152.208.234
+ssh <deploy-user>@<ecs-host>
 ```
 
 2. Run the single deploy script
 
 ```bash
-cd /home/admin/projects/storyboard-system
+cd <deploy-directory>
 ./scripts/deploy.sh
 ```
 
 ## Important rules
 
-- Do not run `git pull` as `root` inside `/home/admin/projects/storyboard-system`
-- Git operations on ECS must run as `admin`
+- Do not run `git pull` as `root` inside the deployment directory.
+- Git operations on ECS must run as the configured deployment user.
 - The deploy script handles:
   - `git fetch` + `git pull --ff-only origin main`
   - frontend build

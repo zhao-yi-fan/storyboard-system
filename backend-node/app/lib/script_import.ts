@@ -167,6 +167,12 @@ export function normalizeLLMStoryboardDocument(document: Record<string, any>) {
         description: sceneSummary,
         location: String(scene.location || '').trim(),
         timeOfDay: String(scene.time_of_day || '').trim(),
+        props: (Array.isArray(scene.props) ? scene.props : [])
+          .map((prop) => ({
+            name: String(prop?.name || '').trim(),
+            description: String(prop?.description || '').trim(),
+          }))
+          .filter((prop) => prop.name),
         sortOrder: normalizedPositiveOrder(scene.order, sceneIndex + 1),
         storyboards: [] as any[],
       };

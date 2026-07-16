@@ -9,6 +9,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       richColors
       closeButton
+      expand
       toastOptions={{
         style: {
           background: "#121212",
@@ -18,8 +19,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
         },
         classNames: {
           toast: "!z-[9999] !rounded-xl !px-4 !py-3",
-          title: "!text-gray-100 !font-medium !leading-6",
-          description: "!text-gray-300 !leading-5",
+          content: "!visible !opacity-100",
+          title: "!visible !text-gray-100 !opacity-100 !font-medium !leading-6",
+          description: "!visible !text-gray-300 !opacity-100 !leading-5",
           error: "!border-red-800/70 !bg-[#1a1111] !text-red-50",
           success: "!border-emerald-800/70 !bg-[#0f1914] !text-emerald-50",
           warning: "!border-amber-800/70 !bg-[#1a1610] !text-amber-50",

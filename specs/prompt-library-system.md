@@ -1,5 +1,7 @@
 # Prompt Library System
 
+> 完整多镜号 Prompt 以 `specs/composite-storyboard-prompt.md` 为准。Prompt Library 的结构化字段扩写只用于尚未转换的 legacy 内容。
+
 ## User goal
 
 让分镜封面、分镜视频、场景封面、角色封面、角色设定图、场景资产封面的提示词不再是平铺直叙的字段拼接，而是生成具备导演语言、镜头节奏和视觉层次的高质量提示词。

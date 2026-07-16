@@ -4,7 +4,7 @@ set -euo pipefail
 
 if [[ "${USER:-}" != "admin" ]]; then
   echo "[deploy] this script must be run as admin" >&2
-  echo "[deploy] usage: ssh admin@<ecs> && cd /home/admin/projects/storyboard-system && ./scripts/deploy.sh" >&2
+  echo "[deploy] usage: ssh <deploy-user>@<ecs-host> && cd <deploy-directory> && ./scripts/deploy.sh" >&2
   exit 1
 fi
 

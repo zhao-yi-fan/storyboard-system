@@ -49,6 +49,7 @@ function buildSchema() {
                   'time_of_day',
                   'order',
                   'characters',
+                  'props',
                   'storyboards',
                 ],
                 properties: {
@@ -58,6 +59,18 @@ function buildSchema() {
                   time_of_day: { type: 'string' },
                   order: { type: 'integer' },
                   characters: { type: 'array', items: { type: 'string' } },
+                  props: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      additionalProperties: false,
+                      required: ['name', 'description'],
+                      properties: {
+                        name: { type: 'string' },
+                        description: { type: 'string' },
+                      },
+                    },
+                  },
                   storyboards: {
                     type: 'array',
                     minItems: 1,
@@ -115,7 +128,7 @@ function buildSchema() {
 }
 
 function buildUserPrompt(scriptText: string): string {
-  return `请将下面的文本整理为章节、场景、分镜和角色结构，并且只返回一个 JSON 对象。JSON 必须严格满足下面这个 schema 的字段结构与必填要求。\n\n额外要求：\n1. characters 数组里只能出现角色名称，例如“李明”“林婉”“神秘男人”。\n2. 不允许把“旧城区雨夜小巷”“夜晚，十二点前”“废弃照相馆门口”这类地点、时间、场景描述写进 characters。\n3. 如果某个场景没有明确人物，可以返回空数组，不要编造地点词充当角色名。\n4. 每个 storyboard 的 visual_description 都必须有值，不能为空，必须写成可以直接拿去生成画面的中文描述。\n5. 如果原文主要是心理、回忆或对话，也要把它转换成可拍摄的画面描述，不要遗漏 visual_description。\n6. shot_type、camera_angle、mood、notes 允许简洁，但 visual_description 绝不能空。\n\nSchema:\n${JSON.stringify(buildSchema(), null, 2)}\n\n文本内容：\n${scriptText}`;
+  return `请将下面的文本整理为章节、场景、分镜、角色和道具结构，并且只返回一个 JSON 对象。JSON 必须严格满足下面这个 schema 的字段结构与必填要求。\n\n额外要求：\n1. characters 数组里只能出现角色名称，例如“李明”“林婉”“神秘男人”。\n2. 不允许把“旧城区雨夜小巷”“夜晚，十二点前”“废弃照相馆门口”这类地点、时间、场景描述写进 characters。\n3. 如果某个场景没有明确人物，可以返回空数组，不要编造地点词充当角色名。\n4. props 只填写剧情中需要保持外观一致或会被人物使用的关键道具，不要填写普通环境陈设；没有则返回空数组。\n5. 每个 storyboard 的 visual_description 都必须有值，不能为空，必须写成可以直接拿去生成画面的中文描述。\n6. 如果原文主要是心理、回忆或对话，也要把它转换成可拍摄的画面描述，不要遗漏 visual_description。\n7. shot_type、camera_angle、mood、notes 允许简洁，但 visual_description 绝不能空。\n\nSchema:\n${JSON.stringify(buildSchema(), null, 2)}\n\n文本内容：\n${scriptText}`;
 }
 
 function extractJSONObject(content: string): string {

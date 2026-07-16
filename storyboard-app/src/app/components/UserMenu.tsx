@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { LogOut, ChevronDown, Settings } from "lucide-react";
+import { LogOut, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { authApi } from "../api";
 import { clearAuthSession, getAuthSession } from "../lib/auth";
@@ -9,7 +9,11 @@ function getInitials(displayName: string) {
   return displayName.trim().slice(0, 1).toUpperCase() || "创";
 }
 
-export function UserMenu() {
+type UserMenuProps = {
+  placement?: "header" | "sidebar";
+};
+
+export function UserMenu({ placement = "header" }: UserMenuProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -36,11 +40,6 @@ export function UserMenu() {
       document.removeEventListener("mousedown", handler);
     };
   }, []);
-
-  const handleAccountSettings = () => {
-    setOpen(false);
-    toast.info("账号设置将在接入真实鉴权后开放");
-  };
 
   const handleLogout = async () => {
     setOpen(false);
@@ -80,7 +79,10 @@ export function UserMenu() {
 
       {open ? (
         <div
-          className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-lg border border-gray-800 bg-[#141414]"
+          className={[
+            "absolute z-50 w-52 overflow-hidden rounded-lg border border-gray-800 bg-[#141414]",
+            placement === "sidebar" ? "bottom-0 left-full ml-2" : "right-0 top-full mt-1.5",
+          ].join(" ")}
           style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)" }}
         >
           <div className="border-b border-gray-800/80 px-3 py-2.5">
@@ -100,16 +102,6 @@ export function UserMenu() {
               </div>
             </div>
           </div>
-
-          <div className="p-1">
-            <MenuItem
-              icon={<Settings size={13} />}
-              label="账号设置"
-              onClick={handleAccountSettings}
-            />
-          </div>
-
-          <div className="mx-1 border-t border-gray-800/80" />
 
           <div className="p-1">
             <MenuItem icon={<LogOut size={13} />} label="退出登录" onClick={handleLogout} subtle />

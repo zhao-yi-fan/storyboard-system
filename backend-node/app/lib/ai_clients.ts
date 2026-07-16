@@ -12,7 +12,6 @@ const FAILED_VIDEO_STATUSES = ['failed', 'error', 'canceled', 'cancelled'];
 
 const DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
 const ARK_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
-const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 
 const DEFAULT_IMAGE_TIMEOUT_MS = 300 * 1000;
 const DEFAULT_VIDEO_TIMEOUT_MS = 300 * 1000;
@@ -21,19 +20,15 @@ const DEFAULT_IMAGE_DURATION_SECONDS = 5;
 const DEFAULT_POLL_INTERVAL_MS = 15000;
 const DEFAULT_SEEDANCE_POLL_INTERVAL_MS = 10000;
 
-const WANX_IMAGE_SIZE = '1024*576';
 const SEEDREAM_IMAGE_SIZE = '2560x1440';
 const SEEDREAM_DESIGN_SHEET_SIZE = '1600x2304';
-const OPENAI_IMAGE_SIZE = '1536x1024';
 const VIDEO_RESOLUTION_720P = '720P';
 const VIDEO_RESOLUTION_480P = '480p';
 const VOICE_RESPONSE_FORMAT_WAV = 'wav';
 const VOICE_LANGUAGE_ZH = 'zh';
 const { buildCharacterVoicePromptText } = require('./prompt_library');
 
-const NEGATIVE_PROMPT = '低分辨率，低画质，构图混乱，文字模糊，水印，过度AI感，肢体畸形';
 const DEFAULT_SEEDREAM_MODEL = 'doubao-seedream-4-5-251128';
-const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
 const DEFAULT_WANX_VIDEO_MODEL = 'wan2.7-i2v';
 const DEFAULT_WANX_TEXT_VIDEO_MODEL = 'wan2.7-t2v-2026-04-25';
 const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-2-0-260128';
@@ -108,104 +103,6 @@ async function wait(ms) {
 }
 
 /**
- * 调用万相文生图模型生成单张图片。
- * @param {any} app Egg app 实例。
- * @param {string} prompt 最终提示词，例如 `"便利店门口夜景，冷光，电影感"`。
- * @param {string} model 模型名，例如 `"wan2.7-image-pro"`。
- * @returns {Promise<string>} 远端返回的图片 URL。
- * @example
- * await generateWanxImage(app, "便利店门口夜景，冷光，电影感", "wan2.7-image-pro")
- * // => "https://..."
- */
-async function generateWanxImage(app, prompt, model) {
-  const cfg = getConfig(app);
-  requireValue(cfg.dashScopeApiKey, '场景封面生成未配置：缺少 DASHSCOPE_API_KEY');
-  const selectedModel = String(model || cfg.wanxModel || 'wan2.7-image-pro').trim();
-  const timeoutMs = resolveTimeoutMs(cfg.wanxRequestTimeoutSeconds, 300, DEFAULT_IMAGE_TIMEOUT_MS);
-  const baseUrl = normalizeBaseUrl(cfg.wanxBaseUrl, DASHSCOPE_BASE_URL);
-
-  const payload = {
-    model: selectedModel,
-    input: {
-      messages: [
-        {
-          role: 'user',
-          content: [{ type: 'text', text: prompt }],
-        },
-      ],
-    },
-    parameters: {
-      negative_prompt: NEGATIVE_PROMPT,
-      prompt_extend: false,
-      watermark: false,
-      size: WANX_IMAGE_SIZE,
-    },
-  };
-
-  const data = await postJson(
-    `${baseUrl}/services/aigc/multimodal-generation/generation`,
-    cfg.dashScopeApiKey,
-    payload,
-    timeoutMs,
-  );
-  const image = data?.output?.choices?.[0]?.message?.content?.find((item) => item.image)?.image;
-  if (!image) {
-    throw new Error('万相生图成功但未返回图片 URL');
-  }
-  return image;
-}
-
-/**
- * 调用万相参考图生图模型。
- * @param {any} app Egg app 实例。
- * @param {string} prompt 最终提示词，例如 `"基于角色设定图生成镜头首帧"`。
- * @param {string[]} imageUrls 参考图 URL 数组，例如 `["https://a.png", "https://b.png"]`。
- * @param {string} model 模型名，例如 `"wan2.7-image-pro"`。
- * @returns {Promise<string>} 远端返回的图片 URL。
- * @example
- * await generateWanxImageWithReferences(app, "基于角色设定图生成镜头首帧", ["https://a.png"], "wan2.7-image-pro")
- * // => "https://..."
- */
-async function generateWanxImageWithReferences(app, prompt, imageUrls, model) {
-  const cfg = getConfig(app);
-  requireValue(cfg.dashScopeApiKey, '场景封面生成未配置：缺少 DASHSCOPE_API_KEY');
-  const selectedModel = String(model || cfg.wanxReferenceModel || 'wan2.7-image-pro').trim();
-  const timeoutMs = resolveTimeoutMs(cfg.wanxRequestTimeoutSeconds, 300, DEFAULT_IMAGE_TIMEOUT_MS);
-  const baseUrl = normalizeBaseUrl(cfg.wanxBaseUrl, DASHSCOPE_BASE_URL);
-  const payload = {
-    model: selectedModel,
-    input: {
-      messages: [
-        {
-          role: 'user',
-          content: [
-            ...imageUrls.filter(Boolean).map((url) => ({ type: 'image', image: url })),
-            { type: 'text', text: prompt },
-          ],
-        },
-      ],
-    },
-    parameters: {
-      negative_prompt: NEGATIVE_PROMPT,
-      prompt_extend: false,
-      watermark: false,
-      size: WANX_IMAGE_SIZE,
-    },
-  };
-  const data = await postJson(
-    `${baseUrl}/services/aigc/multimodal-generation/generation`,
-    cfg.dashScopeApiKey,
-    payload,
-    timeoutMs,
-  );
-  const image = data?.output?.choices?.[0]?.message?.content?.find((item) => item.image)?.image;
-  if (!image) {
-    throw new Error('参考图生图成功但未返回图片 URL');
-  }
-  return image;
-}
-
-/**
  * 调用 Seedream 图像生成接口，支持文生图和图生图。
  * @param {any} app Egg app 实例。
  * @param {string} prompt 最终提示词，例如 `"生成高细节角色主设定板"`。
@@ -249,43 +146,6 @@ async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
     throw new Error('Seedream 4.5 生图成功但未返回图片 URL');
   }
   return image;
-}
-
-/**
- * 调用 OpenAI 图像模型生成单张图片。
- * @param {any} app Egg app 实例。
- * @param {string} prompt 最终提示词，例如 `"古风女性半身像"`。
- * @param {string} model 模型名，例如 `"gpt-image-2"`。
- * @returns {Promise<Buffer>} PNG 图片内容。
- * @example
- * await generateOpenAIImage(app, "古风女性半身像", "gpt-image-2")
- * // => <Buffer ...>
- */
-async function generateOpenAIImage(app, prompt, model) {
-  const cfg = getConfig(app);
-  requireValue(cfg.openAiApiKey, 'GPT Image 2 未配置：缺少 OPENAI_API_KEY');
-  const baseUrl = normalizeBaseUrl(cfg.openAiImageBaseUrl, OPENAI_BASE_URL);
-  const timeoutMs = resolveTimeoutMs(cfg.openAiImageTimeoutSeconds, 180, DEFAULT_IMAGE_TIMEOUT_MS);
-  const payload = {
-    model: String(model || cfg.openAiImageModel || DEFAULT_OPENAI_IMAGE_MODEL).trim(),
-    prompt,
-    size: OPENAI_IMAGE_SIZE,
-    quality: 'medium',
-    output_format: 'png',
-    background: 'opaque',
-    n: 1,
-  };
-  const data = await postJson(
-    `${baseUrl}/images/generations`,
-    cfg.openAiApiKey,
-    payload,
-    timeoutMs,
-  );
-  const b64 = data?.data?.[0]?.b64_json;
-  if (!b64) {
-    throw new Error('GPT Image 2 成功响应但未返回图片内容');
-  }
-  return Buffer.from(b64, 'base64');
 }
 
 /**
@@ -391,6 +251,38 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
  * await generateSeedanceVideo(app, "金色粒子汇聚，神女结印", "https://cover.png", 5, true, [], ["https://voice.wav"])
  * // => "https://..."
  */
+function buildSeedanceVideoPayload({
+  model,
+  prompt,
+  imageUrl,
+  duration,
+  useFirstFrame = true,
+  referenceImageUrls = [],
+  referenceAudioUrls = [],
+  resolution = VIDEO_RESOLUTION_480P,
+  generateAudio = true,
+}) {
+  const content = [{ type: 'text', text: prompt }];
+  if (useFirstFrame && String(imageUrl || '').trim()) {
+    content.push({ type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } });
+  }
+  for (const url of referenceImageUrls.filter(Boolean)) {
+    content.push({ type: 'image_url', role: 'reference_image', image_url: { url } });
+  }
+  if (generateAudio) {
+    for (const url of referenceAudioUrls.filter(Boolean)) {
+      content.push({ type: 'audio_url', role: 'reference_audio', audio_url: { url } });
+    }
+  }
+  return {
+    model,
+    content,
+    duration: duration || DEFAULT_IMAGE_DURATION_SECONDS,
+    resolution,
+    generate_audio: Boolean(generateAudio),
+  };
+}
+
 async function generateSeedanceVideo(
   app,
   prompt,
@@ -399,6 +291,8 @@ async function generateSeedanceVideo(
   useFirstFrame = true,
   referenceImageUrls = [],
   referenceAudioUrls = [],
+  resolution = VIDEO_RESOLUTION_480P,
+  generateAudio = true,
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
@@ -408,23 +302,17 @@ async function generateSeedanceVideo(
     300,
     DEFAULT_VIDEO_TIMEOUT_MS,
   );
-  const content = [{ type: 'text', text: prompt }];
-  if (useFirstFrame && String(imageUrl || '').trim()) {
-    content.push({ type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } });
-  }
-  for (const url of referenceImageUrls.filter(Boolean)) {
-    content.push({ type: 'image_url', role: 'reference_image', image_url: { url } });
-  }
-  for (const url of referenceAudioUrls.filter(Boolean)) {
-    content.push({ type: 'audio_url', role: 'reference_audio', audio_url: { url } });
-  }
-  const payload = {
+  const payload = buildSeedanceVideoPayload({
     model: String(cfg.seedanceModel || DEFAULT_SEEDANCE_MODEL).trim(),
-    content,
-    duration: duration || DEFAULT_IMAGE_DURATION_SECONDS,
-    resolution: VIDEO_RESOLUTION_480P,
-    generate_audio: true,
-  };
+    prompt,
+    imageUrl,
+    duration,
+    useFirstFrame,
+    referenceImageUrls,
+    referenceAudioUrls,
+    resolution,
+    generateAudio,
+  });
   if (payload.model.includes('1-5') || payload.model.includes('1.5')) {
     throw new Error(
       'Seedance 2.0 生成未配置正确模型 ID，请将 SEEDANCE_MODEL 设置为 doubao-seedance-2-0-260128',
@@ -531,7 +419,7 @@ function findFirstVideoUrl(value) {
  * await createCharacterVoicePreview(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
  * // => { voicePrompt: "...", previewText: "今晚你先走。", targetModel: "qwen3-tts-vd-2026-01-26" }
  */
-async function createCharacterVoicePreview(app, character, customPrompt, customText) {
+async function createCharacterVoicePreview(app, character, customPrompt, _customText) {
   const cfg = getConfig(app);
   const voicePrompt = withVoiceDurationInstruction(
     String(customPrompt || '').trim() || buildCharacterVoicePrompt(character),
@@ -631,18 +519,16 @@ function withVoiceDurationInstruction(prompt) {
   return `${text}\n${VOICE_REFERENCE_DURATION_INSTRUCTION}`;
 }
 
-function buildCharacterVoiceReferenceText(character) {
+function buildCharacterVoiceReferenceText(_character) {
   return FIXED_VOICE_REFERENCE_TEXT;
 }
 
 module.exports = {
-  generateWanxImage,
-  generateWanxImageWithReferences,
   generateSeedreamImage,
   SEEDREAM_DESIGN_SHEET_SIZE,
-  generateOpenAIImage,
   generateWanxVideo,
   generateSeedanceVideo,
+  buildSeedanceVideoPayload,
   createCharacterVoicePreview,
   generateCharacterVoiceReference,
 };

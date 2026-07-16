@@ -21,7 +21,7 @@ class ProjectService extends Service {
    * await service.findAll()
    * // => [{ id: 19, name: "便利店门口", chapter_count: 2, scene_count: 8, storyboard_count: 24 }]
    */
-  async findAll() {
+  async findAll(userId) {
     const [rows] = await this.pool.query(
       `SELECT
         p.id,
@@ -52,8 +52,9 @@ class ProjectService extends Service {
           WHERE sb.project_id = p.id AND sb.deleted_at IS NULL
         ) AS storyboard_count
       FROM projects p
-      WHERE p.deleted_at IS NULL
+      WHERE p.deleted_at IS NULL AND p.user_id = ?
       ORDER BY CASE WHEN p.pinned_at IS NULL THEN 1 ELSE 0 END, p.pinned_at DESC, p.created_at DESC`,
+      [userId],
     );
 
     return rows.map((row: Record<string, unknown>) => mapProjectWithStats(this.app, row));
@@ -102,10 +103,11 @@ class ProjectService extends Service {
    * await service.findByName("便利店门口")
    * // => { id: 19 }
    */
-  async findByName(name: string) {
+  async findByName(name: string, userId?: number) {
     const [rows] = await this.pool.query(
-      'SELECT id FROM projects WHERE name = ? AND deleted_at IS NULL LIMIT 1',
-      [name],
+      `SELECT id FROM projects
+       WHERE name = ? AND deleted_at IS NULL AND (? IS NULL OR user_id = ?) LIMIT 1`,
+      [name, userId ?? null, userId ?? null],
     );
     return rows[0] || null;
   }
@@ -121,8 +123,11 @@ class ProjectService extends Service {
    */
   async findByNameExceptId(name: string, id: number) {
     const [rows] = await this.pool.query(
-      'SELECT id FROM projects WHERE name = ? AND id <> ? AND deleted_at IS NULL LIMIT 1',
-      [name, id],
+      `SELECT id FROM projects
+       WHERE name = ? AND id <> ? AND deleted_at IS NULL
+         AND user_id = (SELECT owner.user_id FROM projects owner WHERE owner.id = ?)
+       LIMIT 1`,
+      [name, id, id],
     );
     return rows[0] || null;
   }
@@ -135,21 +140,29 @@ class ProjectService extends Service {
    * await service.create({ name: "新项目", description: "古风漫剧" })
    * // => { id: 30, name: "新项目", description: "古风漫剧" }
    */
-  async create(payload: Record<string, unknown>) {
+  async create(payload: Record<string, unknown>, userId: number) {
     const name = String(payload.name || '').trim();
     if (!name) {
       throw new Error('项目名称不能为空');
     }
 
-    const existing = await this.findByName(name);
+    const existing = await this.findByName(name, userId);
     if (existing) {
       throw new Error('项目名称已存在，请更换名称');
     }
 
-    const [result] = await this.pool.execute(
-      'INSERT INTO projects (name, description, script_text) VALUES (?, ?, ?)',
-      [name, String(payload.description || ''), ''],
-    );
+    let result;
+    try {
+      [result] = await this.pool.execute(
+        'INSERT INTO projects (user_id, name, description, script_text) VALUES (?, ?, ?, ?)',
+        [userId, name, String(payload.description || ''), ''],
+      );
+    } catch (error) {
+      if (error?.code === 'ER_DUP_ENTRY') {
+        throw new Error('当前账号下已存在同名项目，请更换名称');
+      }
+      throw error;
+    }
 
     return await this.findById(result.insertId);
   }

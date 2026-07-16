@@ -22,8 +22,11 @@ export default function Login() {
 
   const redirectTarget = useMemo(() => {
     const state = location.state as { from?: string } | null;
-    return state?.from || "/projects";
-  }, [location.state]);
+    const queryTarget = new URLSearchParams(location.search).get("from") || "";
+    const safeQueryTarget =
+      queryTarget.startsWith("/") && !queryTarget.startsWith("//") ? queryTarget : "";
+    return state?.from || safeQueryTarget || "/projects";
+  }, [location.search, location.state]);
 
   useEffect(() => {
     const fadePx = 220;

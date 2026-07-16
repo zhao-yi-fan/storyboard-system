@@ -18,6 +18,42 @@ class AssetService extends Service {
     return this.app.mysqlPool;
   }
 
+  isAudioAsset(asset) {
+    const type = String(asset?.type || '').trim();
+    const source = String(asset?.file_url || '').split(/[?#]/)[0];
+    const extension = source.includes('.')
+      ? source.slice(source.lastIndexOf('.') + 1).toLowerCase()
+      : '';
+    return (
+      /(audio|voice|sound|music|sfx|配音|语音|音频|音乐|音效)/i.test(type) ||
+      ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(extension)
+    );
+  }
+
+  normalizeMetaForApi(meta) {
+    if (meta == null || meta === '') return '';
+    if (typeof meta === 'object') {
+      return String(meta.description || meta.text || meta.prompt || '').trim();
+    }
+    const text = String(meta).trim();
+    if (!text) return '';
+    try {
+      const parsed = JSON.parse(text);
+      if (typeof parsed === 'string') return parsed;
+      if (parsed && typeof parsed === 'object') {
+        return String(parsed.description || parsed.text || parsed.prompt || '').trim();
+      }
+    } catch {
+      return text;
+    }
+    return text;
+  }
+
+  serializeMeta(meta) {
+    const description = this.normalizeMetaForApi(meta);
+    return description ? JSON.stringify({ description }) : null;
+  }
+
   /**
    * 把资产数据库行映射成接口对象，并补全可访问 URL。
    * @param {Record<string, unknown>} row 数据库原始行，例如 `{ id: 5, type: "scene" }`。
@@ -48,7 +84,7 @@ class AssetService extends Service {
         row.thumbnail_url || '',
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
-      meta: row.meta || '',
+      meta: this.normalizeMetaForApi(row.meta),
       created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
       updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
     };
@@ -178,7 +214,7 @@ class AssetService extends Service {
         name,
         type,
         normalizeGeneratedAssetReference(this.app, String(payload.file_url || '').trim()),
-        String(payload.meta || '').trim() || null,
+        this.serializeMeta(payload.meta),
       ],
     );
     return await this.findById(result.insertId);
@@ -223,8 +259,8 @@ class AssetService extends Service {
           ? ''
           : normalizeGeneratedAssetReference(this.app, current.thumbnail_url),
         Object.prototype.hasOwnProperty.call(payload, 'meta')
-          ? String(payload.meta || '').trim() || null
-          : current.meta || null,
+          ? this.serializeMeta(payload.meta)
+          : this.serializeMeta(current.meta),
         id,
       ],
     );
@@ -266,7 +302,7 @@ class AssetService extends Service {
    * // => void
    */
   async ensurePreview(asset) {
-    if (!asset || asset.thumbnail_url) {
+    if (!asset || asset.thumbnail_url || this.isAudioAsset(asset)) {
       return;
     }
     const source = asset.cover_url || asset.file_url;
@@ -329,18 +365,18 @@ class AssetService extends Service {
    * @returns {Promise<object>} 预览信息。
    * @example
    * await service.previewCoverGeneration(5)
-   * // => { action: "asset-cover", model: "wan2.7-image-pro", final_prompt: "..." }
+   * // => { action: "asset-cover", model: "seedream-4.5", final_prompt: "..." }
    */
   async previewCoverGeneration(id) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
-    if (!this.canGenerateSceneAssetCover(asset.type)) {
+    if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== 'prop') {
       throw new Error('当前资产类型不支持生成封面');
     }
     const coverPrompt = buildAssetCoverPrompt(asset);
     return {
       action: 'asset-cover',
-      model: this.app.config.storyboard.wanxModel || 'wan2.7-image-pro',
+      model: 'seedream-4.5',
       fields: {
         资产名称: asset.name,
         资产类型: asset.type,
@@ -365,15 +401,12 @@ class AssetService extends Service {
   async generateCover(id) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
-    if (!this.canGenerateSceneAssetCover(asset.type)) {
+    if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== 'prop') {
       throw new Error('当前资产类型不支持生成封面');
     }
-    const { generateWanxImage } = require('../lib/ai_clients');
-    const imageUrl = await generateWanxImage(
-      this.app,
-      this.buildCoverPrompt(asset),
-      this.app.config.storyboard.wanxModel || 'wan2.7-image-pro',
-    );
+    const prompt = this.buildCoverPrompt(asset);
+    const { generateSeedreamImage } = require('../lib/ai_clients');
+    const imageUrl = await generateSeedreamImage(this.app, prompt, []);
     const filename = `${sanitizeFileName(`asset-cover-${id}`)}-${Date.now()}.png`;
     const stored = await downloadAndStore(this.app, imageUrl, 'assets', filename, 'image/png');
     const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
@@ -389,7 +422,16 @@ class AssetService extends Service {
       previewPath,
       id,
     ]);
-    return await this.findById(id);
+    const updated = await this.findById(id);
+    await this.ctx.service.assetWorkspace.recordVersion(
+      'asset',
+      id,
+      updated.project_id,
+      updated.cover_url,
+      updated.thumbnail_url,
+      prompt,
+    );
+    return updated;
   }
 }
 

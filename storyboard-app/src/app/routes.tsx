@@ -49,6 +49,20 @@ export const router = createBrowserRouter([
           return { Component: module.default };
         },
       },
+      {
+        path: "/asset-confirmation",
+        async lazy() {
+          const module = await import("./pages/AssetConfirmation");
+          return { Component: module.default };
+        },
+      },
+      {
+        path: "/personal-assets",
+        async lazy() {
+          const module = await import("./pages/PersonalAssets");
+          return { Component: module.default };
+        },
+      },
     ],
   },
 ]);

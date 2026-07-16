@@ -3,6 +3,7 @@
 
 const Service = require('egg').Service;
 const { resolveUrl } = require('../lib/generated_asset');
+const { serializeMediaGenerationMeta } = require('../lib/media_generation_meta');
 
 class MediaGenerationService extends Service {
   get pool() {
@@ -41,7 +42,7 @@ class MediaGenerationService extends Service {
       ),
       error_message: row.error_message || '',
       is_current: Boolean(row.is_current),
-      meta_json: row.meta_json || '',
+      meta_json: serializeMediaGenerationMeta(row.meta_json),
       created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
       updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
     };
@@ -153,7 +154,7 @@ class MediaGenerationService extends Service {
         payload.source_url ? String(payload.source_url) : null,
         payload.error_message ? String(payload.error_message) : null,
         payload.is_current ? 1 : 0,
-        payload.meta_json ? String(payload.meta_json) : null,
+        serializeMediaGenerationMeta(payload.meta_json) || null,
       ],
     );
     return await this.findById(result.insertId);
@@ -212,9 +213,7 @@ class MediaGenerationService extends Service {
             ? 1
             : 0,
         Object.prototype.hasOwnProperty.call(payload, 'meta_json')
-          ? payload.meta_json
-            ? String(payload.meta_json)
-            : null
+          ? serializeMediaGenerationMeta(payload.meta_json) || null
           : current.meta_json || null,
         id,
       ],

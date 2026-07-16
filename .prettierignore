@@ -1,4 +1,6 @@
 backend/
+.codex/
+.codex-skill-tmp/
 backend-node/.autod.conf.js
 backend-node/dist/
 backend-node/logs/

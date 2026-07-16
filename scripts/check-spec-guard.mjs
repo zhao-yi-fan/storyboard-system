@@ -39,35 +39,36 @@ const IGNORE_EXACT = new Set([
   "scripts/check-spec-guard.mjs",
 ]);
 
-const IGNORE_BASENAMES = [
-  "README",
-  "eslint.config.",
-];
+const IGNORE_BASENAMES = ["README", "eslint.config."];
 
 function runGitDiff() {
   const trackedDiffArgs = useWorkingTree
-    ? [ "diff", "--name-only" ]
-    : [ "diff", "--name-only", "--cached" ];
+    ? ["diff", "--name-only"]
+    : ["diff", "--name-only", "--cached"];
 
   const trackedOutput = execFileSync("git", trackedDiffArgs, { encoding: "utf8" }).trim();
   const trackedFiles = trackedOutput
-    ? trackedOutput.split("\n").map((line) => line.trim()).filter(Boolean)
+    ? trackedOutput
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
     : [];
 
   if (!useWorkingTree) {
     return trackedFiles;
   }
 
-  const untrackedOutput = execFileSync(
-    "git",
-    [ "ls-files", "--others", "--exclude-standard" ],
-    { encoding: "utf8" }
-  ).trim();
+  const untrackedOutput = execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
+    encoding: "utf8",
+  }).trim();
   const untrackedFiles = untrackedOutput
-    ? untrackedOutput.split("\n").map((line) => line.trim()).filter(Boolean)
+    ? untrackedOutput
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
     : [];
 
-  return Array.from(new Set([ ...trackedFiles, ...untrackedFiles ]));
+  return Array.from(new Set([...trackedFiles, ...untrackedFiles]));
 }
 
 function isIgnored(file) {
@@ -143,7 +144,9 @@ if (changedFiles.length === 0) {
 
 const hasSpecChange = changedFiles.some(isSpecFile);
 const candidateFiles = changedFiles.filter((file) => !isIgnored(file));
-const triggeredFiles = candidateFiles.filter((file) => isHighImpact(file) || hasHighRiskKeyword(file));
+const triggeredFiles = candidateFiles.filter(
+  (file) => isHighImpact(file) || hasHighRiskKeyword(file),
+);
 
 if (triggeredFiles.length === 0) {
   print("spec-guard: no high-impact changes detected.");
@@ -164,7 +167,9 @@ triggeredFiles.forEach((file) => print(`- ${file}`));
 
 print("");
 print("why this requires a spec:");
-print("- these paths usually change user workflows, API contracts, async task states, or generation behavior");
+print(
+  "- these paths usually change user workflows, API contracts, async task states, or generation behavior",
+);
 print("- single-developer mode still treats those changes as spec-worthy to prevent drift");
 
 print("");

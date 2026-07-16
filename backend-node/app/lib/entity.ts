@@ -31,6 +31,7 @@ export function mapScene(app: any, row: Record<string, any>) {
     project_id: Number(row.project_id),
     title: row.title,
     description: toNullableString(row.description),
+    prompt: toNullableString(row.prompt),
     location: toNullableString(row.location),
     time_of_day: toNullableString(row.time_of_day),
     style_preset: toNullableString(row.style_preset),
@@ -42,9 +43,14 @@ export function mapScene(app: any, row: Record<string, any>) {
     video_status: toNullableString(row.video_status),
     video_error: toNullableString(row.video_error),
     video_duration: toNullableNumber(row.video_duration),
+    generation_duration: Number(row.generation_duration || 5),
     sort_order: Number(row.sort_order || 0),
     created_at: toNullableDate(row.created_at),
     updated_at: toNullableDate(row.updated_at),
+    characters: [],
+    character_names: [],
+    assets: [],
+    asset_names: [],
   };
 }
 

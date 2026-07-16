@@ -598,7 +598,10 @@ export function buildStoryboardVideoPrompt(
   storyboard: Record<string, unknown>,
   scene: Record<string, unknown>,
   duration: number,
+  options: { audio?: boolean; useFirstFrame?: boolean } = {},
 ) {
+  const audioEnabled = options.audio !== false;
+  const useFirstFrame = options.useFirstFrame !== false;
   const characters =
     Array.isArray(storyboard.character_names) && storyboard.character_names.length
       ? storyboard.character_names
@@ -620,7 +623,9 @@ export function buildStoryboardVideoPrompt(
   const summarizedContent = summarizeVideoContent(String(storyboard.content || ''));
   const blueprint = buildPromptBlueprint({
     template,
-    intro: `基于输入首帧图像生成一个${duration}秒的单镜头电影分镜视频`,
+    intro: useFirstFrame
+      ? `基于输入首帧图像生成一个${duration}秒的单镜头电影分镜视频`
+      : `基于文本和参考素材生成一个${duration}秒的单镜头电影分镜视频`,
     subject: normalizeTextList([
       scene.title ? `场景为${scene.title}` : '',
       storyboard.background ? `背景环境为${storyboard.background}` : '',
@@ -636,7 +641,9 @@ export function buildStoryboardVideoPrompt(
       ...expandShotType(String(storyboard.shot_type || '')),
       ...expandCameraDirection(String(storyboard.camera_direction || '')),
       ...expandCameraMotion(String(storyboard.camera_motion || '')),
-      '保持首帧主体和构图一致，所有变化都在同一镜头内完成',
+      useFirstFrame
+        ? '保持首帧主体和构图一致，所有变化都在同一镜头内完成'
+        : '保持主体、场景和构图连续，所有变化都在同一镜头内完成',
     ]),
     style: normalizeTextList([
       storyboard.style_preset || scene.style_preset
@@ -646,7 +653,7 @@ export function buildStoryboardVideoPrompt(
         ? `风格补充强调${storyboard.style_notes || scene.style_notes}`
         : '',
     ]),
-    audio: ['自动生成环境音和氛围声', '不要旁白'],
+    audio: audioEnabled ? ['自动生成环境音和氛围声', '不要旁白'] : [],
     consistency: ['动作连续', '光影稳定', '人物结构和服装一致', '不要突然改脸或改服装'],
     negative: VIDEO_NEGATIVE,
     output: ['单镜头连续动作', '画面收束稳定', '镜头语言清楚'],

@@ -2,11 +2,12 @@
 
 ## Summary
 
-This pass adds local lint and format tooling for the active frontend in `storyboard-app/` and the active Node backend in `backend-node/`.
+This pass adds repository-wide lint and format tooling for root scripts, the active frontend in `storyboard-app/`, and the active Node backend in `backend-node/`.
 
 - `backend/` remains untouched because it is deprecated and frozen.
-- ESLint is configured per subproject because the repository has no root `package.json`.
+- ESLint keeps framework-specific rules in each subproject and uses the root config for repository scripts.
 - Prettier is configured once at the repository root and shared by both subprojects.
+- Warnings fail lint commands so `npm run lint` can be used as a quality gate.
 - This rollout intentionally stops at local scripts and documentation. It does not add CI, husky, or lint-staged enforcement.
 
 ## Coverage
@@ -20,8 +21,17 @@ This pass adds local lint and format tooling for the active frontend in `storybo
   - `config/**/*.ts`
   - `scripts/**/*.mjs`
   - `test/**/*.ts`
+- repository root
+  - `scripts/**/*.mjs`
+  - supported source, config, JSON, CSS, and Markdown files through Prettier
 
 ## Commands
+
+- Whole repository
+  - `npm run lint`
+  - `npm run lint:fix`
+  - `npm run format`
+  - `npm run format:check`
 
 - Frontend
   - `cd storyboard-app && npm run lint`

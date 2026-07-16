@@ -27,6 +27,7 @@ type AuthSession = {
 ```
 
 存储位置：
+
 - `localStorage.storyboard_auth_session`
 
 ## UI 规则

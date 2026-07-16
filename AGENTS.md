@@ -56,6 +56,7 @@ npm run build
 > **Go 后端项目（`backend/`）已完全弃用并冷冻，目前所有的业务开发、API 变更均只能在 Node 后端（`backend-node/`）中进行。不要修改 `backend/` 下的任何代码。**
 
 ### Node 后端开发规范 (`backend-node/`)
+
 - 使用 Egg.js 框架进行开发，代码结构遵循 MVC 规范（`controller`, `service`, `middleware`, `lib` 等）。
 - 保持数据响应格式的统一：
   - 成功：`{ code: 200, data, message: "" }`

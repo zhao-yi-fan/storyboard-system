@@ -5,9 +5,10 @@
   "description": "Egg.js migration backend for storyboard-system",
   "scripts": {
     "build": "node ./scripts/build.mjs",
+    "predev": "node ./scripts/check-dev-dependencies.mjs",
     "dev": "npm run build && egg-bin dev --baseDir dist",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix --max-warnings=0",
     "format": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write .",
     "format:check": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check .",
     "start": "egg-scripts start dist --daemon --title=storyboard-backend-node",
@@ -42,6 +43,6 @@
     "typescript-eslint": "^8.62.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20 <23"
   }
 }

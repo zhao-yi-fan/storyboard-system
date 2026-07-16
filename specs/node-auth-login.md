@@ -38,6 +38,7 @@
 - `updated_at`
 
 约束：
+
 - `account` 唯一
 
 ### 会话表 `auth_sessions`
@@ -54,6 +55,7 @@
 - `updated_at`
 
 约束：
+
 - `session_token_hash` 唯一
 
 ## 环境变量
@@ -66,6 +68,7 @@
 - `AUTH_SESSION_TTL_DAYS`
 
 规则：
+
 - 启动时如果 `AUTH_BOOTSTRAP_ACCOUNT` 和 `AUTH_BOOTSTRAP_PASSWORD` 存在，则自动创建或更新该管理员账号
 - 生产环境默认通过 `.env` 手动配置
 
@@ -98,6 +101,7 @@
 ```
 
 行为：
+
 - 校验账号密码
 - 生成随机 session token
 - 数据库存一份 token hash
@@ -106,12 +110,14 @@
 ### `POST /api/auth/logout`
 
 行为：
+
 - 清理当前 session
 - 删除 Cookie
 
 ### `GET /api/auth/me`
 
 行为：
+
 - 从 Cookie 解析 session
 - 返回当前登录用户
 
@@ -138,12 +144,15 @@
 3. 刷新页面时通过 `GET /api/auth/me` 恢复登录态
 4. 退出登录调用 `POST /api/auth/logout`
 5. 未登录访问业务页时跳回 `/login`
+6. 业务页任一 API 返回 HTTP 401 或 `message: "请先登录"` 时，清除本地用户缓存并立即跳转 `/login`
+7. 会话过期跳转使用 `from` 参数记录当前内部路径，重新登录后返回原页面
 
 ## 验收标准
 
 1. Node 服务启动后可自动建表
 2. 配置了 bootstrap 账号后可直接登录
 3. 登录成功后关闭刷新页面仍保持登录
-4. 登出后无法继续访问业务接口
-5. `backend-node` 构建通过
-6. `storyboard-app` 构建通过
+4. 会话失效后继续操作不会停留在业务页重复弹出“请先登录”，而是跳转登录页
+5. 登出后无法继续访问业务接口
+6. `backend-node` 构建通过
+7. `storyboard-app` 构建通过

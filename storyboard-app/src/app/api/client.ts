@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import type { ApiResponse } from "./types";
+import { clearAuthSession } from "../lib/auth";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -19,6 +20,41 @@ type ToastHandledError = Error & {
   __toastHandled?: boolean;
 };
 
+let isRedirectingToLogin = false;
+
+function isUnauthorizedResponse(response: Response, result: ApiResponse<unknown>) {
+  return response.status === 401 || result.message === "请先登录";
+}
+
+function redirectToLogin() {
+  if (!isBrowser() || window.location.pathname === "/login" || isRedirectingToLogin) {
+    return;
+  }
+
+  isRedirectingToLogin = true;
+  clearAuthSession();
+  toast.dismiss();
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  window.location.replace(`/login?from=${encodeURIComponent(currentPath)}`);
+}
+
+async function parseApiResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  const rawBody = await response.text();
+  if (rawBody.trim()) {
+    try {
+      return JSON.parse(rawBody) as ApiResponse<T>;
+    } catch {
+      // Continue below with a stable connection error instead of exposing JSON parser internals.
+    }
+  }
+
+  const message =
+    response.status === 502 || response.status === 503 || response.status === 504
+      ? "后端服务不可用，请确认 backend-node 已启动并且 MySQL 连接正常"
+      : `接口返回异常响应（HTTP ${response.status}）`;
+  throw new Error(message);
+}
+
 // 统一请求封装
 async function request<T = any>(url: string, options: RequestOptions = {}): Promise<T> {
   const { suppressToast = false, ...requestOptions } = options;
@@ -37,7 +73,14 @@ async function request<T = any>(url: string, options: RequestOptions = {}): Prom
 
   try {
     const response = await fetch(`${getApiBaseUrl()}${url}`, config);
-    const result: ApiResponse<T> = await response.json();
+    const result = await parseApiResponse<T>(response);
+
+    if (isUnauthorizedResponse(response, result)) {
+      redirectToLogin();
+      const error = new Error(result.message || "请先登录") as ToastHandledError;
+      error.__toastHandled = true;
+      throw error;
+    }
 
     // 统一处理响应格式
     if (result.code === 200) {

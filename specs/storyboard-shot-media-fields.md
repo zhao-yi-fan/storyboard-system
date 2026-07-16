@@ -1,5 +1,7 @@
 # Storyboard Shot Media Fields
 
+> 本文保留旧版结构化字段兼容说明。新版 Workspace 的编辑与生成行为以 `specs/composite-storyboard-prompt.md` 为准：景别、机位、运镜、情绪和台词统一写入完整 Prompt，不再显示独立镜头控件。
+
 ## User goal
 
 让镜头编辑和生成流程区分清楚：
@@ -127,3 +129,4 @@
 - 生成视频时用户可以显式关闭“使用当前首帧”
 - 关闭首帧后，后端不再强制依赖当前首帧图
 - 首帧弹窗和视频弹窗展示字段分组清楚
+- 视频历史版本的 `meta_json` 无论由 MySQL 返回为对象或 JSON 字符串，切换当前版本都不得解析报错

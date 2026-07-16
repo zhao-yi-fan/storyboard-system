@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   MoreHorizontal,
   X,
-  Check,
   Grid3x3,
   List,
   Trash2,
@@ -255,38 +254,35 @@ export default function AssetLibrary() {
     }
   };
 
-  const loadLibraryData = async () => {
-    setLoading(true);
-    try {
-      if (!currentProjectId) {
-        setCharacters([]);
-        setAssets([]);
-        return;
-      }
-      const [characterData, assetData] = await Promise.all([
-        characterApi.getCharactersByProject(currentProjectId),
-        assetApi.getAssetsByProject(currentProjectId),
-      ]);
-      setCharacters(characterData ?? []);
-      setAssets(assetData ?? []);
-    } catch (error) {
-      console.error("Failed to load asset library data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let cancelled = false;
+    const loadLibraryData = async () => {
+      setLoading(true);
+      try {
+        if (!currentProjectId) {
+          setCharacters([]);
+          setAssets([]);
+          return;
+        }
+        const [characterData, assetData] = await Promise.all([
+          characterApi.getCharactersByProject(currentProjectId),
+          assetApi.getAssetsByProject(currentProjectId),
+        ]);
+        if (!cancelled) {
+          setCharacters(characterData ?? []);
+          setAssets(assetData ?? []);
+        }
+      } catch (error) {
+        console.error("Failed to load asset library data:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
     void loadLibraryData();
+    return () => {
+      cancelled = true;
+    };
   }, [currentProjectId]);
-
-  const refreshCurrentTab = async () => {
-    if (activeTab === "characters") {
-      await loadCharacters();
-    } else {
-      await loadAssets();
-    }
-  };
 
   const resetCreateState = () => {
     setNewCharacter({ name: "", description: "", avatar_url: "" });
@@ -610,11 +606,8 @@ export default function AssetLibrary() {
 
   const deriveAssetSecondaryTag = (asset: Asset) => asset.type?.trim() || "资源";
   const deriveAssetDescription = (asset: Asset) => asset.meta?.trim() || `${asset.name} 资源文件`;
-  const deriveAssetTags = (asset: Asset) =>
-    Array.from(new Set([deriveAssetPrimaryTag(asset), asset.type].filter(Boolean))).slice(0, 3);
-
   return (
-    <div className="dark h-screen flex flex-col bg-[#0a0a0a] text-gray-100">
+    <div className="storyboard-product-shell dark h-screen flex flex-col bg-[var(--storyboard-bg)] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1367,21 +1360,7 @@ export default function AssetLibrary() {
                       </div>
                       <div className="pt-4 border-t border-gray-800">
                         <Button
-                          variant="outline"
-                          className="w-full border-gray-700 text-gray-300 hover:bg-gray-900"
-                          onClick={() =>
-                            navigate(
-                              currentProjectId
-                                ? `/workspace?project=${currentProjectId}`
-                                : "/workspace",
-                            )
-                          }
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          插入到当前镜头
-                        </Button>
-                        <Button
-                          className="w-full mt-2 bg-purple-600 hover:bg-purple-700"
+                          className="w-full bg-purple-600 hover:bg-purple-700"
                           disabled={isSavingAsset}
                           onClick={saveSelectedAsset}
                         >

@@ -2,24 +2,7 @@
 'use strict';
 
 import { normalizeGeneratedAssetReference, resolveUrl } from './generated_asset';
-import { toNullableDate, toNullableNumber, toNullableString, toTrimmedString } from './common';
-
-function resolvePublicUrl(app: any, raw: unknown): string {
-  const value = toTrimmedString(raw);
-  if (!value) {
-    return '';
-  }
-  if (value.startsWith('http://') || value.startsWith('https://')) {
-    return value;
-  }
-  if (value.startsWith('/')) {
-    const base = toTrimmedString(app.config.storyboard.publicAppBaseUrl);
-    if (base) {
-      return `${base.replace(/\/$/, '')}${value}`;
-    }
-  }
-  return value;
-}
+import { toNullableDate, toNullableNumber, toNullableString } from './common';
 
 function mapProject(app: any, row: Record<string, any>) {
   const publicAppBaseUrl = app.config.storyboard.publicAppBaseUrl || '';
