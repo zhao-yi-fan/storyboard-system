@@ -389,10 +389,12 @@ export type StoryboardVideoGenerationPreview = {
   resolution: string;
   audio: boolean;
   use_first_frame: boolean;
+  media_input_mode?: "first_frame" | "reference_media" | "text";
   source_image_url: string;
   source_image_status: "existing-cover" | "will-generate-cover" | "not-required" | string;
   will_generate_cover: boolean;
   reference_images?: StoryboardCoverGenerationReferenceImage[];
+  omitted_reference_images?: StoryboardCoverGenerationReferenceImage[];
   missing_references?: string[];
   audio_reference_assets?: Array<{
     reference_id: string;

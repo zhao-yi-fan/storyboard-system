@@ -315,7 +315,7 @@ export default function Workspace() {
   const [selectedVideoResolution, setSelectedVideoResolution] = useState<VideoResolution>("720p");
   const [selectedVideoDuration, setSelectedVideoDuration] = useState(5);
   const [generateVideoAudio, setGenerateVideoAudio] = useState(true);
-  const [useFirstFrameForVideo, setUseFirstFrameForVideo] = useState(true);
+  const [useFirstFrameForVideo, setUseFirstFrameForVideo] = useState(false);
   const [isLoadingCoverPreview, setIsLoadingCoverPreview] = useState(false);
   const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
   const [coverGenerationPreview, setCoverGenerationPreview] =
@@ -1917,9 +1917,9 @@ export default function Workspace() {
                 <section className="p-3">
                   <div className="flex items-center justify-between rounded-xl border border-white/[0.055] bg-[var(--storyboard-surface)] px-3 py-2.5">
                     <div>
-                      <div className="text-[10px] text-gray-400">视频使用当前首帧</div>
+                      <div className="text-[10px] text-gray-400">指定首帧控制开场</div>
                       <div className="mt-0.5 text-[9px] text-gray-700">
-                        镜号与镜头描述来自片段 Prompt，时长由生成规格控制
+                        关闭时使用角色和场景参考素材生成视频
                       </div>
                     </div>
                     <Switch
@@ -2783,9 +2783,9 @@ export default function Workspace() {
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm text-gray-200">使用当前首帧</p>
+                  <p className="text-sm text-gray-200">指定首帧控制开场</p>
                   <p className="mt-1 text-xs leading-5 text-gray-500">
-                    关闭后将直接按文本生成视频，不依赖当前片段首帧图。
+                    Seedance 的首帧模式与参考素材模式互斥。开启后只发送首帧，关闭后发送角色、场景和语音参考素材。
                   </p>
                 </div>
                 <Switch
@@ -2837,6 +2837,12 @@ export default function Workspace() {
                 )}
               </div>
             ) : null}
+
+            {!!videoGenerationPreview?.omitted_reference_images?.length && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm leading-6 text-amber-200">
+                当前为首帧模式，已绑定的 {videoGenerationPreview.omitted_reference_images.length} 张角色或场景参考图不会发送给 Seedance。关闭“指定首帧控制开场”即可改用参考素材模式。
+              </div>
+            )}
 
             {!!videoGenerationPreview?.reference_images?.length && (
               <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-3">

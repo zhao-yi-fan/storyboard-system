@@ -906,11 +906,13 @@ class StoryboardService extends Service {
       useFirstFrame && storyboard.thumbnail_url
         ? resolveMediaUrl(this.app, storyboard.thumbnail_url)
         : '';
-    const { references: referenceImages, missing: missingReferences } =
+    const { references: boundReferenceImages, missing: missingReferences } =
       await this.selectVideoReferenceImages(storyboard, scene);
-    const visualInputCount = (useFirstFrame ? 1 : 0) + referenceImages.length;
+    const referenceImages = useFirstFrame ? [] : boundReferenceImages;
+    const omittedReferenceImages = useFirstFrame ? boundReferenceImages : [];
+    const visualInputCount = useFirstFrame ? 1 : referenceImages.length;
     const audioReferenceSummary =
-      isSeedance && generateAudio
+      isSeedance && generateAudio && !useFirstFrame
         ? await this.selectVideoAudioReferences(storyboard, visualInputCount > 0)
         : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
     const blockingReasons = [...audioReferenceSummary.blockingReasons];
@@ -945,6 +947,11 @@ class StoryboardService extends Service {
       resolution,
       audio: generateAudio,
       use_first_frame: useFirstFrame,
+      media_input_mode: useFirstFrame
+        ? 'first_frame'
+        : referenceImages.length
+          ? 'reference_media'
+          : 'text',
       source_image_url: sourceImageUrl,
       source_image_status: !useFirstFrame
         ? 'not-required'
@@ -953,6 +960,12 @@ class StoryboardService extends Service {
           : 'will-generate-cover',
       will_generate_cover: useFirstFrame && !sourceImageUrl,
       reference_images: referenceImages.map((item) => ({
+        type: item.type,
+        name: item.name,
+        url: item.url,
+        source: item.source,
+      })),
+      omitted_reference_images: omittedReferenceImages.map((item) => ({
         type: item.type,
         name: item.name,
         url: item.url,

@@ -12,15 +12,13 @@ const normalizationContext = {
 };
 
 describe('test/seedance_video_generation.test.ts', () => {
-  it('builds a Seedance payload with the selected specs and all reference inputs', () => {
+  it('builds a Seedance first-frame payload without reference media', () => {
     const payload = buildSeedanceVideoPayload({
       model: 'doubao-seedance-2-0-260128',
       prompt: '人物从门口走入室内',
       imageUrl: 'https://example.com/first-frame.png',
       duration: 12,
       useFirstFrame: true,
-      referenceImageUrls: ['https://example.com/character.png', 'https://example.com/scene.png'],
-      referenceAudioUrls: ['https://example.com/voice.wav'],
       resolution: '1080p',
       generateAudio: true,
     });
@@ -33,6 +31,38 @@ describe('test/seedance_video_generation.test.ts', () => {
       [
         ['text', undefined],
         ['image_url', 'first_frame'],
+      ],
+    );
+  });
+
+  it('rejects mixing first-frame and reference media before calling Seedance', () => {
+    assert.throws(
+      () =>
+        buildSeedanceVideoPayload({
+          model: 'doubao-seedance-2-0-260128',
+          prompt: '人物从门口走入室内',
+          imageUrl: 'https://example.com/first-frame.png',
+          useFirstFrame: true,
+          referenceImageUrls: ['https://example.com/character.png'],
+          referenceAudioUrls: ['https://example.com/voice.wav'],
+        }),
+      /首帧模式不能与角色、场景或音频参考素材混用/,
+    );
+  });
+
+  it('builds a reference-media payload without a first frame', () => {
+    const payload = buildSeedanceVideoPayload({
+      model: 'doubao-seedance-2-0-260128',
+      prompt: '人物从门口走入室内',
+      useFirstFrame: false,
+      referenceImageUrls: ['https://example.com/character.png', 'https://example.com/scene.png'],
+      referenceAudioUrls: ['https://example.com/voice.wav'],
+      generateAudio: true,
+    });
+    assert.deepStrictEqual(
+      payload.content.map((item: { type: string; role?: string }) => [item.type, item.role]),
+      [
+        ['text', undefined],
         ['image_url', 'reference_image'],
         ['image_url', 'reference_image'],
         ['audio_url', 'reference_audio'],
@@ -45,6 +75,7 @@ describe('test/seedance_video_generation.test.ts', () => {
       model: 'doubao-seedance-2-0-260128',
       prompt: '无声镜头',
       duration: 5,
+      useFirstFrame: false,
       referenceImageUrls: ['https://example.com/scene.png'],
       referenceAudioUrls: ['https://example.com/voice.wav'],
       resolution: '720p',

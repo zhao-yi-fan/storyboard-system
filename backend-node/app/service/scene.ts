@@ -742,10 +742,13 @@ class SceneService extends Service {
     }
     const sourceImageUrl =
       useFirstFrame && scene.cover_url ? resolveMediaUrl(this.app, scene.cover_url) : '';
-    const { references, missing } = await helper.selectVideoReferenceImages(scene, scene);
-    const visualInputCount = (sourceImageUrl ? 1 : 0) + references.length;
+    const { references: boundReferences, missing } =
+      await helper.selectVideoReferenceImages(scene, scene);
+    const references = useFirstFrame ? [] : boundReferences;
+    const omittedReferences = useFirstFrame ? boundReferences : [];
+    const visualInputCount = useFirstFrame ? 1 : references.length;
     const audioSummary =
-      helper.isSeedanceVideoModel(model) && audio
+      helper.isSeedanceVideoModel(model) && audio && !useFirstFrame
         ? await helper.selectVideoAudioReferences(scene, visualInputCount > 0)
         : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
     const blockingReasons = [...audioSummary.blockingReasons];
@@ -762,6 +765,7 @@ class SceneService extends Service {
       resolution,
       audio,
       use_first_frame: useFirstFrame,
+      media_input_mode: useFirstFrame ? 'first_frame' : references.length ? 'reference_media' : 'text',
       source_image_url: sourceImageUrl,
       source_image_status: !useFirstFrame
         ? 'not-required'
@@ -770,6 +774,7 @@ class SceneService extends Service {
           : 'will-generate-cover',
       will_generate_cover: useFirstFrame && !sourceImageUrl,
       reference_images: references,
+      omitted_reference_images: omittedReferences,
       missing_references: missing,
       audio_reference_assets: audioSummary.references,
       missing_audio_references: audioSummary.missing,

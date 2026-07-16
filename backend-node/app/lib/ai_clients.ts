@@ -262,15 +262,20 @@ function buildSeedanceVideoPayload({
   resolution = VIDEO_RESOLUTION_480P,
   generateAudio = true,
 }) {
+  const normalizedReferenceImages = referenceImageUrls.filter(Boolean);
+  const normalizedReferenceAudio = generateAudio ? referenceAudioUrls.filter(Boolean) : [];
+  if (useFirstFrame && (normalizedReferenceImages.length || normalizedReferenceAudio.length)) {
+    throw new Error('Seedance 2.0 首帧模式不能与角色、场景或音频参考素材混用');
+  }
   const content = [{ type: 'text', text: prompt }];
   if (useFirstFrame && String(imageUrl || '').trim()) {
     content.push({ type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } });
   }
-  for (const url of referenceImageUrls.filter(Boolean)) {
+  for (const url of normalizedReferenceImages) {
     content.push({ type: 'image_url', role: 'reference_image', image_url: { url } });
   }
   if (generateAudio) {
-    for (const url of referenceAudioUrls.filter(Boolean)) {
+    for (const url of normalizedReferenceAudio) {
       content.push({ type: 'audio_url', role: 'reference_audio', audio_url: { url } });
     }
   }
