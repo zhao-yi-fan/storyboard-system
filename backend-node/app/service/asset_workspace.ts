@@ -44,6 +44,21 @@ class AssetWorkspaceService extends Service {
     };
   }
 
+  mapVoiceVersion(row) {
+    return {
+      ...row,
+      id: Number(row.id),
+      character_id: Number(row.character_id),
+      duration: Number(row.duration || 0),
+      is_current: Boolean(row.is_current),
+      file_url: resolveUrl(
+        this.app,
+        row.file_url || '',
+        this.app.config.storyboard.publicAppBaseUrl || '',
+      ),
+    };
+  }
+
   deriveRequirementStatus(currentStatus, hasMedia) {
     if (currentStatus === 'generating' || currentStatus === 'failed') {
       return currentStatus;
@@ -63,6 +78,7 @@ class AssetWorkspaceService extends Service {
     }
     const [rows] = await this.pool.query(
       `SELECT ar.*, c.title AS chapter_title,
+        ch.avatar_url AS character_avatar_url,
         CASE WHEN ar.linked_entity_type = 'character'
           THEN COALESCE(NULLIF(ch.design_sheet_url, ''), ch.avatar_url)
           ELSE COALESCE(NULLIF(a.cover_url, ''), a.file_url)
@@ -413,15 +429,21 @@ class AssetWorkspaceService extends Service {
     await this.syncAssetRequirements(projectId, chapterId);
     const rows = await this.queryRequirements(projectId, chapterId);
     const base = this.app.config.storyboard.publicAppBaseUrl || '';
-    return rows.map((row) => ({
-      ...row,
-      id: Number(row.id),
-      project_id: Number(row.project_id),
-      chapter_id: Number(row.chapter_id),
-      linked_entity_id: row.linked_entity_id == null ? null : Number(row.linked_entity_id),
-      file_url: resolveUrl(this.app, row.file_url || '', base),
-      preview_url: resolveUrl(this.app, row.preview_url || '', base),
-    }));
+    return rows.map((row) => {
+      const isCharacter = row.linked_entity_type === 'character';
+      const canGenerate = !isCharacter || Boolean(row.character_avatar_url);
+      return {
+        ...row,
+        id: Number(row.id),
+        project_id: Number(row.project_id),
+        chapter_id: Number(row.chapter_id),
+        linked_entity_id: row.linked_entity_id == null ? null : Number(row.linked_entity_id),
+        file_url: resolveUrl(this.app, row.file_url || '', base),
+        preview_url: resolveUrl(this.app, row.preview_url || '', base),
+        can_generate: canGenerate,
+        blocking_reason: canGenerate ? '' : '缺少角色参考图，请先到项目资产库补充',
+      };
+    });
   }
 
   async listPersonal(userId, kind) {
@@ -441,6 +463,32 @@ class AssetWorkspaceService extends Service {
     const name = String(payload.name || '').trim();
     if (!VALID_KINDS.has(kind)) throw new Error('不支持的个人资产类型');
     if (!name) throw new Error('资产名称不能为空');
+    const sourceType = payload.source_entity_type || null;
+    const sourceId = payload.source_entity_id || null;
+    const [existing] = sourceType && sourceId
+      ? await this.pool.query(
+          `SELECT id FROM personal_assets
+           WHERE user_id = ? AND source_entity_type = ? AND source_entity_id = ?
+             AND deleted_at IS NULL LIMIT 1`,
+          [userId, sourceType, sourceId],
+        )
+      : [[]];
+    if (existing.length) {
+      await this.pool.execute(
+        `UPDATE personal_assets SET kind = ?, name = ?, description = ?, file_url = ?,
+         preview_url = ?, metadata_json = ?, source_project_id = ?, updated_at = NOW()
+         WHERE id = ?`,
+        [kind, name, String(payload.description || ''),
+          normalizeGeneratedAssetReference(this.app, String(payload.file_url || '')),
+          normalizeGeneratedAssetReference(this.app, String(payload.preview_url || '')),
+          payload.metadata_json ? JSON.stringify(payload.metadata_json) : null,
+          payload.source_project_id || null, existing[0].id],
+      );
+      const [updatedRows] = await this.pool.query('SELECT * FROM personal_assets WHERE id = ?', [
+        existing[0].id,
+      ]);
+      return this.mapPersonal(updatedRows[0]);
+    }
     const [result] = await this.pool.execute(
       `INSERT INTO personal_assets
        (user_id, kind, name, description, file_url, preview_url, metadata_json,
@@ -455,8 +503,8 @@ class AssetWorkspaceService extends Service {
         normalizeGeneratedAssetReference(this.app, String(payload.preview_url || '')),
         payload.metadata_json ? JSON.stringify(payload.metadata_json) : null,
         payload.source_project_id || null,
-        payload.source_entity_type || null,
-        payload.source_entity_id || null,
+        sourceType,
+        sourceId,
       ],
     );
     const [rows] = await this.pool.query('SELECT * FROM personal_assets WHERE id = ?', [
@@ -505,13 +553,27 @@ class AssetWorkspaceService extends Service {
     );
     if (!rows.length) throw new Error('个人资产不存在');
     const item = rows[0];
+    let requirement = null;
+    if (requirementId) {
+      const [requirements] = await this.pool.query(
+        `SELECT * FROM asset_requirements
+         WHERE id = ? AND project_id = ? AND deleted_at IS NULL`,
+        [requirementId, projectId],
+      );
+      if (!requirements.length) throw new Error('资产需求不存在');
+      requirement = requirements[0];
+    }
     if (item.kind === 'character') {
-      const character = await this.ctx.service.character.create(projectId, {
-        name: item.name,
-        description: item.description,
-        avatar_url: item.preview_url || item.file_url,
-        design_sheet_url: item.file_url,
-      });
+      if (requirement && requirement.kind !== 'character') throw new Error('个人资产类型与需求不匹配');
+      const character = requirement?.linked_entity_type === 'character' && requirement.linked_entity_id
+        ? await this.ctx.service.character.update(requirement.linked_entity_id, {
+            name: item.name, description: item.description,
+            avatar_url: item.preview_url || item.file_url, design_sheet_url: item.file_url,
+          })
+        : await this.ctx.service.character.create(projectId, {
+            name: item.name, description: item.description,
+            avatar_url: item.preview_url || item.file_url, design_sheet_url: item.file_url,
+          });
       await this.pool.execute('UPDATE characters SET source_personal_asset_id = ? WHERE id = ?', [
         item.id,
         character.id,
@@ -527,12 +589,16 @@ class AssetWorkspaceService extends Service {
         entity: await this.ctx.service.character.findById(character.id),
       };
     }
-    const asset = await this.ctx.service.asset.create(projectId, {
-      name: item.name,
-      type: item.kind === 'prop' ? 'prop' : 'scene',
-      file_url: item.file_url,
-      meta: item.description,
-    });
+    if (requirement && requirement.kind !== item.kind) throw new Error('个人资产类型与需求不匹配');
+    const asset = requirement?.linked_entity_type === 'asset' && requirement.linked_entity_id
+      ? await this.ctx.service.asset.update(requirement.linked_entity_id, {
+          name: item.name, type: item.kind === 'prop' ? 'prop' : 'scene',
+          file_url: item.file_url, meta: item.description,
+        })
+      : await this.ctx.service.asset.create(projectId, {
+          name: item.name, type: item.kind === 'prop' ? 'prop' : 'scene',
+          file_url: item.file_url, meta: item.description,
+        });
     await this.pool.execute(
       'UPDATE assets SET source_personal_asset_id = ?, cover_url = ?, thumbnail_url = ? WHERE id = ?',
       [item.id, item.file_url || '', item.preview_url || '', asset.id],
@@ -560,11 +626,14 @@ class AssetWorkspaceService extends Service {
     ]);
     const userId = Number(projects[0]?.user_id || 0);
     if (!userId || !fileUrl) return null;
-    await this.pool.execute(
-      'UPDATE asset_versions SET is_current = 0 WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL',
-      [entityType, entityId],
-    );
-    const [result] = await this.pool.execute(
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute(
+        'UPDATE asset_versions SET is_current = 0 WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL',
+        [entityType, entityId],
+      );
+      const [result] = await conn.execute(
       `INSERT INTO asset_versions
        (owner_user_id, scope_type, entity_type, entity_id, file_url, preview_url, model, prompt, status, is_current, source_type)
        VALUES (?, 'project', ?, ?, ?, ?, 'seedream-4.5', ?, 'succeeded', 1, ?)`,
@@ -578,12 +647,19 @@ class AssetWorkspaceService extends Service {
         sourceType,
       ],
     );
-    await this.pool.execute(
+      await conn.execute(
       `UPDATE asset_requirements SET status = 'generated', error_message = NULL
        WHERE linked_entity_type = ? AND linked_entity_id = ? AND deleted_at IS NULL`,
       [entityType, entityId],
     );
-    return result.insertId;
+      await conn.commit();
+      return result.insertId;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
   }
 
   async listVersions(entityType, entityId) {
@@ -593,6 +669,88 @@ class AssetWorkspaceService extends Service {
       [entityType, entityId],
     );
     return rows.map((row) => this.mapVersion(row));
+  }
+
+  async recordVoiceVersion(character, details) {
+    const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
+      character.project_id,
+    ]);
+    const userId = Number(projects[0]?.user_id || 0);
+    if (!userId || !character.voice_reference_url) return null;
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute(
+        'UPDATE character_voice_versions SET is_current = 0 WHERE character_id = ? AND deleted_at IS NULL',
+        [character.id],
+      );
+      const [result] = await conn.execute(
+        `INSERT INTO character_voice_versions
+         (owner_user_id, character_id, file_url, duration, voice_name, user_prompt,
+          effective_prompt, reference_text, source_type, status, is_current)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'succeeded', 1)`,
+        [userId, character.id,
+          normalizeGeneratedAssetReference(this.app, character.voice_reference_url),
+          character.voice_reference_duration || null, character.voice_name || '',
+          details.userPrompt || '', details.effectivePrompt || '',
+          character.voice_reference_text || '', details.sourceType || 'generated'],
+      );
+      await conn.commit();
+      return result.insertId;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async listVoiceVersions(characterId) {
+    const [rows] = await this.pool.query(
+      `SELECT * FROM character_voice_versions
+       WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
+      [characterId],
+    );
+    return rows.map((row) => this.mapVoiceVersion(row));
+  }
+
+  async setCurrentVoiceVersion(characterId, versionId, userId) {
+    const [rows] = await this.pool.query(
+      `SELECT cv.*, p.user_id FROM character_voice_versions cv
+       JOIN characters c ON c.id = cv.character_id
+       JOIN projects p ON p.id = c.project_id
+       WHERE cv.id = ? AND cv.character_id = ? AND cv.deleted_at IS NULL`,
+      [versionId, characterId],
+    );
+    if (!rows.length || Number(rows[0].user_id) !== Number(userId)) {
+      throw new Error('语音版本不存在');
+    }
+    const version = rows[0];
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute(
+        'UPDATE character_voice_versions SET is_current = 0 WHERE character_id = ?',
+        [characterId],
+      );
+      await conn.execute('UPDATE character_voice_versions SET is_current = 1 WHERE id = ?', [
+        versionId,
+      ]);
+      await conn.execute(
+        `UPDATE characters SET voice_reference_url = ?, voice_reference_duration = ?,
+         voice_reference_text = ?, voice_name = ?, voice_prompt = ?,
+         voice_reference_status = 'succeeded', voice_reference_error = NULL WHERE id = ?`,
+        [version.file_url, version.duration, version.reference_text || '', version.voice_name || '',
+          version.user_prompt || '', characterId],
+      );
+      await conn.commit();
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
+    return await this.listVoiceVersions(characterId);
   }
 
   async setCurrentVersion(entityType, entityId, versionId, userId) {
@@ -606,22 +764,31 @@ class AssetWorkspaceService extends Service {
     if (!versions.length || Number(versions[0].user_id) !== Number(userId))
       throw new Error('版本不存在');
     const version = versions[0];
-    await this.pool.execute(
-      'UPDATE asset_versions SET is_current = 0 WHERE entity_type = ? AND entity_id = ?',
-      [entityType, entityId],
-    );
-    await this.pool.execute('UPDATE asset_versions SET is_current = 1 WHERE id = ?', [versionId]);
-    if (entityType === 'character') {
-      await this.pool.execute('UPDATE characters SET design_sheet_url = ? WHERE id = ?', [
-        version.file_url,
-        entityId,
-      ]);
-    } else {
-      await this.pool.execute('UPDATE assets SET cover_url = ?, thumbnail_url = ? WHERE id = ?', [
-        version.file_url,
-        version.preview_url || '',
-        entityId,
-      ]);
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute(
+        'UPDATE asset_versions SET is_current = 0 WHERE entity_type = ? AND entity_id = ?',
+        [entityType, entityId],
+      );
+      await conn.execute('UPDATE asset_versions SET is_current = 1 WHERE id = ?', [versionId]);
+      if (entityType === 'character') {
+        await conn.execute(
+          "UPDATE characters SET design_sheet_url = ?, design_sheet_status = 'succeeded', design_sheet_error = NULL WHERE id = ?",
+          [version.file_url, entityId],
+        );
+      } else {
+        await conn.execute(
+          "UPDATE assets SET cover_url = ?, thumbnail_url = ?, cover_status = 'succeeded', cover_error = NULL WHERE id = ?",
+          [version.file_url, version.preview_url || '', entityId],
+        );
+      }
+      await conn.commit();
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
     }
     return await this.listVersions(entityType, entityId);
   }
@@ -651,6 +818,14 @@ class AssetWorkspaceService extends Service {
     const results = [];
     const generatedEntities = new Set();
     for (const item of requirements) {
+      if (!item.can_generate) {
+        results.push({
+          id: item.id,
+          status: 'blocked',
+          error: item.blocking_reason || '资产尚未满足生成条件',
+        });
+        continue;
+      }
       try {
         const entityKey = `${item.linked_entity_type}:${item.linked_entity_id}`;
         if (generatedEntities.has(entityKey)) {

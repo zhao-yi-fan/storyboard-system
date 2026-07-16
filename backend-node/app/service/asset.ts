@@ -79,6 +79,8 @@ class AssetService extends Service {
         row.cover_url || '',
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
+      cover_status: row.cover_status || (row.cover_url ? 'succeeded' : 'idle'),
+      cover_error: row.cover_error || '',
       thumbnail_url: resolveUrl(
         this.app,
         row.thumbnail_url || '',
@@ -134,15 +136,11 @@ class AssetService extends Service {
   async findByProjectId(projectId) {
     await this.ensureProjectExists(projectId);
     const [rows] = await this.pool.query(
-      `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
+      `SELECT id, project_id, character_id, name, type, file_url, cover_url, cover_status, cover_error, thumbnail_url, meta, created_at, updated_at
        FROM assets WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [projectId],
     );
-    const items = rows.map((row) => this.map(row));
-    for (const item of items) {
-      await this.ensurePreview(item);
-    }
-    return items;
+    return rows.map((row) => this.map(row));
   }
 
   /**
@@ -155,15 +153,11 @@ class AssetService extends Service {
    */
   async findByCharacterId(characterId) {
     const [rows] = await this.pool.query(
-      `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
+      `SELECT id, project_id, character_id, name, type, file_url, cover_url, cover_status, cover_error, thumbnail_url, meta, created_at, updated_at
        FROM assets WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [characterId],
     );
-    const items = rows.map((row) => this.map(row));
-    for (const item of items) {
-      await this.ensurePreview(item);
-    }
-    return items;
+    return rows.map((row) => this.map(row));
   }
 
   /**
@@ -176,16 +170,14 @@ class AssetService extends Service {
    */
   async findById(id) {
     const [rows] = await this.pool.query(
-      `SELECT id, project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta, created_at, updated_at
+      `SELECT id, project_id, character_id, name, type, file_url, cover_url, cover_status, cover_error, thumbnail_url, meta, created_at, updated_at
        FROM assets WHERE id = ? AND deleted_at IS NULL`,
       [id],
     );
     if (!rows.length) {
       return null;
     }
-    const item = this.map(rows[0]);
-    await this.ensurePreview(item);
-    return item;
+    return this.map(rows[0]);
   }
 
   /**
@@ -278,12 +270,13 @@ class AssetService extends Service {
   async softDelete(id) {
     const [rows] = await this.pool.query(
       `
-      SELECT COUNT(*) AS count
-      FROM storyboard_asset_usages sau
-      JOIN storyboards s ON s.id = sau.storyboard_id
-      WHERE sau.asset_id = ? AND s.deleted_at IS NULL
+      SELECT
+        (SELECT COUNT(*) FROM storyboard_asset_usages sau JOIN storyboards s ON s.id = sau.storyboard_id
+         WHERE sau.asset_id = ? AND s.deleted_at IS NULL) +
+        (SELECT COUNT(*) FROM scene_asset_usages sau JOIN scenes s ON s.id = sau.scene_id
+         WHERE sau.asset_id = ? AND s.deleted_at IS NULL) AS count
     `,
-      [id],
+      [id, id],
     );
     if (Number(rows[0]?.count || 0) > 0) {
       throw new Error(
@@ -404,34 +397,35 @@ class AssetService extends Service {
     if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== 'prop') {
       throw new Error('当前资产类型不支持生成封面');
     }
-    const prompt = this.buildCoverPrompt(asset);
-    const { generateSeedreamImage } = require('../lib/ai_clients');
-    const imageUrl = await generateSeedreamImage(this.app, prompt, []);
-    const filename = `${sanitizeFileName(`asset-cover-${id}`)}-${Date.now()}.png`;
-    const stored = await downloadAndStore(this.app, imageUrl, 'assets', filename, 'image/png');
-    const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
-    const previewPath = await createPreviewFromLocalPath(
-      this.app,
-      stored.localPath,
-      'assets',
-      previewFilename,
-      assetPreviewSpec(),
+    await this.pool.execute(
+      "UPDATE assets SET cover_status = 'generating', cover_error = NULL WHERE id = ?", [id],
     );
-    await this.pool.execute('UPDATE assets SET cover_url = ?, thumbnail_url = ? WHERE id = ?', [
-      stored.publicPath,
-      previewPath,
-      id,
-    ]);
-    const updated = await this.findById(id);
-    await this.ctx.service.assetWorkspace.recordVersion(
-      'asset',
-      id,
-      updated.project_id,
-      updated.cover_url,
-      updated.thumbnail_url,
-      prompt,
-    );
-    return updated;
+    try {
+      const prompt = this.buildCoverPrompt(asset);
+      const { generateSeedreamImage } = require('../lib/ai_clients');
+      const imageUrl = await generateSeedreamImage(this.app, prompt, []);
+      const filename = `${sanitizeFileName(`asset-cover-${id}`)}-${Date.now()}.png`;
+      const stored = await downloadAndStore(this.app, imageUrl, 'assets', filename, 'image/png');
+      const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
+      const previewPath = await createPreviewFromLocalPath(
+        this.app, stored.localPath, 'assets', previewFilename, assetPreviewSpec(),
+      );
+      await this.pool.execute(
+        "UPDATE assets SET cover_url = ?, thumbnail_url = ?, cover_status = 'succeeded', cover_error = NULL WHERE id = ?",
+        [stored.publicPath, previewPath, id],
+      );
+      const updated = await this.findById(id);
+      await this.ctx.service.assetWorkspace.recordVersion(
+        'asset', id, updated.project_id, updated.cover_url, updated.thumbnail_url, prompt,
+      );
+      return updated;
+    } catch (error) {
+      await this.pool.execute(
+        "UPDATE assets SET cover_status = 'failed', cover_error = ? WHERE id = ?",
+        [error.message || '资产封面生成失败', id],
+      );
+      throw error;
+    }
   }
 }
 

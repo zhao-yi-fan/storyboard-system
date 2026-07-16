@@ -1,5 +1,10 @@
 import { apiClient } from "./client";
-import type { AssetRequirement, AssetVersion, PersonalAsset } from "./types";
+import type {
+  AssetRequirement,
+  AssetVersion,
+  CharacterVoiceVersion,
+  PersonalAsset,
+} from "./types";
 
 export function getRequirements(projectId: number, chapterId?: number) {
   return apiClient.get<AssetRequirement[]>(`/projects/${projectId}/asset-requirements`, {
@@ -53,6 +58,17 @@ export function setCurrentVersion(
 ) {
   return apiClient.post<AssetVersion[]>(
     `/${entityType === "character" ? "characters" : "assets"}/${id}/versions/${versionId}/set-current`,
+    {},
+  );
+}
+
+export function getCharacterVoiceVersions(id: number) {
+  return apiClient.get<CharacterVoiceVersion[]>(`/characters/${id}/voice-versions`);
+}
+
+export function setCurrentCharacterVoiceVersion(id: number, versionId: number) {
+  return apiClient.post<CharacterVoiceVersion[]>(
+    `/characters/${id}/voice-versions/${versionId}/set-current`,
     {},
   );
 }

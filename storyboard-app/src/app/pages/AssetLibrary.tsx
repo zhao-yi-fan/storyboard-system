@@ -43,14 +43,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import { UserMenu } from "../components/UserMenu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import {
   characterApi,
   assetApi,
+  assetWorkspaceApi,
+  projectApi,
   ossApi,
   type Character,
   type Asset,
   type AIGenerationPreview,
+  type AssetVersion,
+  type CharacterVoiceVersion,
+  type Project,
 } from "../api";
 
 type SelectedAsset = { type: "character"; data: Character } | { type: "asset"; data: Asset } | null;
@@ -89,7 +100,7 @@ const hasCharacterVoiceReference = (character: Character | null | undefined) =>
 
 const CHARACTER_DESIGN_SHEET_MODEL_LABEL = "Seedream 4.5 图生图";
 const FIXED_CHARACTER_VOICE_REFERENCE_TEXT =
-  "这一次，我不会再退让，也不会再逃避，我要亲手改写命运。";
+  "今天风很轻，我们慢慢把事情说清楚。";
 const CHARACTER_VOICE_REFERENCE_DURATION_HINT =
   "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。";
 const CHARACTER_VOICE_REFERENCE_TEXT_HINT =
@@ -99,7 +110,7 @@ const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
 
 const getAssetOriginalSrc = (asset: Asset | null | undefined) =>
-  asset?.cover_url || asset?.file_url || "";
+  asset?.file_url || "";
 
 const PROMPT_SECTION_BREAKS = [
   "主体与画面核心：",
@@ -134,9 +145,9 @@ const formatPromptForDisplay = (prompt: string | null | undefined) => {
 export default function AssetLibrary() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const currentProjectId = Number(
-    searchParams.get("project") || window.localStorage.getItem("currentProjectId") || "0",
-  );
+  const currentProjectId = Number(searchParams.get("project") || "0");
+  const [project, setProject] = useState<Project | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [activeTab, setActiveTab] = useState("characters");
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -149,6 +160,12 @@ export default function AssetLibrary() {
   const [createMode, setCreateMode] = useState<CreateMode>("character");
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [aiPreviewDialog, setAiPreviewDialog] = useState<AIPreviewDialogState | null>(null);
+  const [versions, setVersions] = useState<AssetVersion[]>([]);
+  const [showVersions, setShowVersions] = useState(false);
+  const [voiceVersions, setVoiceVersions] = useState<CharacterVoiceVersion[]>([]);
+  const [showVoiceVersions, setShowVoiceVersions] = useState(false);
+  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const [isLoadingAIPreview, setIsLoadingAIPreview] = useState(false);
 
   const [newCharacter, setNewCharacter] = useState({ name: "", description: "", avatar_url: "" });
@@ -180,6 +197,7 @@ export default function AssetLibrary() {
   const [isResizingDetailSidebar, setIsResizingDetailSidebar] = useState(false);
   const selectedCharacterReferenceInputRef = useRef<HTMLInputElement | null>(null);
   const selectedCharacterVoiceReferenceInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedAssetFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const MIN_DETAIL_SIDEBAR_WIDTH = 320;
   const MAX_DETAIL_SIDEBAR_WIDTH = 560;
@@ -258,22 +276,33 @@ export default function AssetLibrary() {
     let cancelled = false;
     const loadLibraryData = async () => {
       setLoading(true);
+      setLoadError("");
       try {
         if (!currentProjectId) {
-          setCharacters([]);
-          setAssets([]);
+          navigate("/projects", { replace: true });
           return;
         }
-        const [characterData, assetData] = await Promise.all([
+        const [projectData, characterData, assetData] = await Promise.all([
+          projectApi.getProject(currentProjectId),
           characterApi.getCharactersByProject(currentProjectId),
           assetApi.getAssetsByProject(currentProjectId),
         ]);
         if (!cancelled) {
+          setProject(projectData);
           setCharacters(characterData ?? []);
           setAssets(assetData ?? []);
+          const requestedCharacterId = Number(searchParams.get("character") || 0);
+          const requestedCharacter = characterData?.find((item) => item.id === requestedCharacterId);
+          if (requestedCharacter) {
+            setActiveTab("characters");
+            setSelectedAsset({ type: "character", data: requestedCharacter });
+          }
         }
       } catch (error) {
         console.error("Failed to load asset library data:", error);
+        if (!cancelled) {
+          setLoadError(error instanceof Error ? error.message : "资产库加载失败");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -282,7 +311,7 @@ export default function AssetLibrary() {
     return () => {
       cancelled = true;
     };
-  }, [currentProjectId]);
+  }, [currentProjectId, navigate, searchParams]);
 
   const resetCreateState = () => {
     setNewCharacter({ name: "", description: "", avatar_url: "" });
@@ -301,7 +330,7 @@ export default function AssetLibrary() {
           return;
         }
         let avatarURL = newCharacter.avatar_url.trim();
-        if (!avatarURL && createCharacterFile) {
+        if (createCharacterFile) {
           avatarURL = await ossApi.uploadFileToOss(createCharacterFile);
         }
         const created = await characterApi.createCharacter(currentProjectId, {
@@ -318,7 +347,7 @@ export default function AssetLibrary() {
           return;
         }
         let fileURL = newAsset.file_url.trim();
-        if (!fileURL && createAssetFile) {
+        if (createAssetFile) {
           fileURL = await ossApi.uploadFileToOss(createAssetFile);
         }
         const created = await assetApi.createAsset(currentProjectId, {
@@ -352,8 +381,11 @@ export default function AssetLibrary() {
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
+      toast.success("角色修改已保存");
+      return updated;
     } catch (error) {
       console.error("Failed to save character:", error);
+      throw error;
     } finally {
       setIsSavingCharacter(false);
     }
@@ -371,8 +403,11 @@ export default function AssetLibrary() {
       });
       setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "asset", data: updated });
+      toast.success("资产修改已保存");
+      return updated;
     } catch (error) {
       console.error("Failed to save asset:", error);
+      throw error;
     } finally {
       setIsSavingAsset(false);
     }
@@ -436,9 +471,8 @@ export default function AssetLibrary() {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setIsLoadingAIPreview(true);
     try {
-      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(
-        selectedAsset.data.id,
-      );
+      const saved = await saveSelectedCharacter();
+      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(saved!.id);
       openAIPreviewDialog({
         action: "character-design-sheet",
         title: "确认生成主设定图",
@@ -501,14 +535,30 @@ export default function AssetLibrary() {
     }
   };
 
+  const handleUploadSelectedAssetFile = async (file: File | null) => {
+    if (!file || !selectedAsset || selectedAsset.type !== "asset") return;
+    setIsSavingAsset(true);
+    try {
+      const fileURL = await ossApi.uploadFileToOss(file);
+      const updated = await assetApi.updateAsset(selectedAsset.data.id, { file_url: fileURL });
+      setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setSelectedAsset({ type: "asset", data: updated });
+      toast.success("原始素材已替换");
+    } finally {
+      setIsSavingAsset(false);
+      if (selectedAssetFileInputRef.current) selectedAssetFileInputRef.current.value = "";
+    }
+  };
+
   const handleGenerateCharacterVoiceReference = async () => {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setIsLoadingAIPreview(true);
     try {
+      const saved = await saveSelectedCharacter();
       const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(
-        selectedAsset.data.id,
+        saved!.id,
         {
-          voice_prompt: selectedAsset.data.voice_prompt || "",
+          voice_prompt: saved!.voice_prompt || "",
         },
       );
       openAIPreviewDialog({
@@ -530,7 +580,8 @@ export default function AssetLibrary() {
     if (!selectedAsset || selectedAsset.type !== "asset") return;
     setIsLoadingAIPreview(true);
     try {
-      const preview = await assetApi.getAssetCoverGenerationPreview(selectedAsset.data.id);
+      const saved = await saveSelectedAsset();
+      const preview = await assetApi.getAssetCoverGenerationPreview(saved!.id);
       openAIPreviewDialog({
         action: "asset-cover",
         title: "确认生成资产封面",
@@ -588,6 +639,71 @@ export default function AssetLibrary() {
     }
   };
 
+  const openSelectedVersions = async () => {
+    if (!selectedAsset) return;
+    setShowVersions(true);
+    setVersions([]);
+    try {
+      setVersions(
+        await assetWorkspaceApi.getVersions(selectedAsset.type, selectedAsset.data.id),
+      );
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "版本加载失败");
+    }
+  };
+
+  const chooseSelectedVersion = async (version: AssetVersion) => {
+    if (!selectedAsset) return;
+    const type = selectedAsset.type;
+    const id = selectedAsset.data.id;
+    setVersions(await assetWorkspaceApi.setCurrentVersion(type, id, version.id));
+    if (type === "character") await loadCharacters();
+    else await loadAssets();
+    const refreshed = type === "character"
+      ? await characterApi.getCharacter(id)
+      : await assetApi.getAsset(id);
+    if (refreshed) setSelectedAsset({ type, data: refreshed } as SelectedAsset);
+  };
+
+  const saveSelectedToPersonal = async () => {
+    if (!selectedAsset) return;
+    setIsSavingPersonal(true);
+    try {
+      if (selectedAsset.type === "character") {
+        await assetWorkspaceApi.saveCharacterToPersonal(selectedAsset.data.id);
+      } else {
+        await assetWorkspaceApi.saveAssetToPersonal(selectedAsset.data.id);
+      }
+      toast.success("已同步到个人空间");
+    } finally {
+      setIsSavingPersonal(false);
+    }
+  };
+
+  const openVoiceVersions = async () => {
+    if (!selectedAsset || selectedAsset.type !== "character") return;
+    setShowVoiceVersions(true);
+    setVoiceVersions([]);
+    try {
+      setVoiceVersions(
+        await assetWorkspaceApi.getCharacterVoiceVersions(selectedAsset.data.id),
+      );
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "语音版本加载失败");
+    }
+  };
+
+  const chooseVoiceVersion = async (version: CharacterVoiceVersion) => {
+    if (!selectedAsset || selectedAsset.type !== "character") return;
+    const id = selectedAsset.data.id;
+    setVoiceVersions(
+      await assetWorkspaceApi.setCurrentCharacterVoiceVersion(id, version.id),
+    );
+    const refreshed = await characterApi.getCharacter(id);
+    setCharacters((prev) => prev.map((item) => (item.id === id ? refreshed : item)));
+    setSelectedAsset({ type: "character", data: refreshed });
+  };
+
   const deriveAssetPrimaryTag = (asset: Asset) => {
     const type = asset.type?.toLowerCase?.() || "";
     if (
@@ -637,11 +753,10 @@ export default function AssetLibrary() {
               <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-pink-600 rounded flex items-center justify-center">
                 <Film className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm">资产库</span>
+              <span className="text-sm">{project?.name || "项目"} · 资产库</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <UserMenu />
             <Button
               size="sm"
               className="h-8 bg-purple-600 hover:bg-purple-700"
@@ -656,9 +771,18 @@ export default function AssetLibrary() {
 
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 flex flex-col overflow-hidden">
+          {loadError ? (
+            <div className="m-4 rounded-lg bg-red-950/40 px-4 py-3 text-sm text-red-200">
+              {loadError}
+            </div>
+          ) : null}
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              setActiveTab(value);
+              setSelectedAsset(null);
+              setShowActionMenu(false);
+            }}
             className="flex-1 flex flex-col min-h-0"
           >
             <div className="border-b border-gray-800 bg-[#0f0f0f] px-4">
@@ -745,7 +869,7 @@ export default function AssetLibrary() {
                               alt={character.name}
                               loading="lazy"
                               decoding="async"
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-cover"
                             />
                           ) : (
                             <Users className="w-16 h-16 text-gray-700" />
@@ -792,7 +916,7 @@ export default function AssetLibrary() {
                               alt={character.name}
                               loading="lazy"
                               decoding="async"
-                              className="w-full h-full object-contain rounded"
+                              className="w-full h-full object-cover rounded"
                             />
                           ) : (
                             <Users className="w-8 h-8 text-gray-700" />
@@ -847,7 +971,7 @@ export default function AssetLibrary() {
                               alt={asset.name}
                               loading="lazy"
                               decoding="async"
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-cover"
                             />
                           ) : (
                             <MapPin className="w-16 h-16 text-gray-700" />
@@ -887,7 +1011,7 @@ export default function AssetLibrary() {
                               alt={asset.name}
                               loading="lazy"
                               decoding="async"
-                              className="w-full h-full object-contain rounded"
+                              className="w-full h-full object-cover rounded"
                             />
                           ) : (
                             <MapPin className="w-8 h-8 text-gray-700" />
@@ -930,9 +1054,60 @@ export default function AssetLibrary() {
                     {selectedAsset.type === "character" ? "角色详情" : "场景详情"}
                   </h3>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
+                    <div className="relative">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label="资产操作"
+                        aria-expanded={showActionMenu}
+                        className="h-7 w-7 p-0"
+                        onClick={() => setShowActionMenu((open) => !open)}
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                      {showActionMenu ? (
+                        <div className="absolute right-0 top-9 z-50 min-w-40 rounded-md bg-[#171717] p-1 shadow-2xl ring-1 ring-white/10">
+                          <button
+                            type="button"
+                            className="w-full rounded px-3 py-2 text-left text-sm hover:bg-white/10"
+                            onClick={() => { setShowActionMenu(false); void openSelectedVersions(); }}
+                          >
+                            查看生成版本
+                          </button>
+                          {selectedAsset.type === "character" ? (
+                            <button
+                              type="button"
+                              className="w-full rounded px-3 py-2 text-left text-sm hover:bg-white/10"
+                              onClick={() => { setShowActionMenu(false); void openVoiceVersions(); }}
+                            >
+                              查看语音版本
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            disabled={isSavingPersonal}
+                            className="w-full rounded px-3 py-2 text-left text-sm hover:bg-white/10 disabled:opacity-50"
+                            onClick={() => { setShowActionMenu(false); void saveSelectedToPersonal(); }}
+                          >
+                            保存到个人空间
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full rounded px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10"
+                            onClick={() => {
+                              setShowActionMenu(false);
+                              setDeleteTarget({
+                                type: selectedAsset.type,
+                                id: selectedAsset.data.id,
+                                name: selectedAsset.data.name,
+                              });
+                            }}
+                          >
+                            删除资产
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -973,7 +1148,7 @@ export default function AssetLibrary() {
                                 alt={`${selectedAsset.data.name} 角色参考图`}
                                 loading="lazy"
                                 decoding="async"
-                                className="w-full h-full object-contain rounded"
+                                className="w-full h-full object-cover rounded"
                               />
                             </button>
                           ) : (
@@ -1051,13 +1226,18 @@ export default function AssetLibrary() {
                                 alt={`${selectedAsset.data.name} 设定图`}
                                 loading="lazy"
                                 decoding="async"
-                                className="w-full h-full object-contain rounded"
+                                className="w-full h-full object-cover rounded"
                               />
                             </button>
                           ) : (
                             <Users className="w-24 h-24 text-gray-700" />
                           )}
                         </div>
+                        {selectedAsset.data.design_sheet_error ? (
+                          <div className="rounded bg-red-950/40 px-3 py-2 text-xs text-red-200">
+                            {selectedAsset.data.design_sheet_error}
+                          </div>
+                        ) : null}
                         <div className="space-y-2">
                           <div className="rounded border border-gray-700 bg-[#1a1a1a] px-3 py-2 text-sm text-gray-200">
                             {CHARACTER_DESIGN_SHEET_MODEL_LABEL}
@@ -1066,10 +1246,14 @@ export default function AssetLibrary() {
                             type="button"
                             variant="outline"
                             className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
-                            disabled={generatingCharacterDesignSheetId === selectedAsset.data.id}
+                            disabled={
+                              generatingCharacterDesignSheetId === selectedAsset.data.id ||
+                              selectedAsset.data.design_sheet_status === "generating"
+                            }
                             onClick={() => void handleGenerateCharacterDesignSheet()}
                           >
-                            {generatingCharacterDesignSheetId === selectedAsset.data.id ? (
+                            {generatingCharacterDesignSheetId === selectedAsset.data.id ||
+                            selectedAsset.data.design_sheet_status === "generating" ? (
                               <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                 正在生成主设定图
@@ -1122,6 +1306,11 @@ export default function AssetLibrary() {
                         {characterVoiceReferenceError?.id === selectedAsset.data.id ? (
                           <div className="rounded border border-red-900/60 bg-red-950/30 px-3 py-2 text-xs text-red-200">
                             {characterVoiceReferenceError.message}
+                          </div>
+                        ) : null}
+                        {selectedAsset.data.voice_reference_error ? (
+                          <div className="rounded bg-red-950/40 px-3 py-2 text-xs text-red-200">
+                            {selectedAsset.data.voice_reference_error}
                           </div>
                         ) : null}
                         {getCharacterVoiceReferenceSrc(selectedAsset.data) ? (
@@ -1186,10 +1375,14 @@ export default function AssetLibrary() {
                           type="button"
                           variant="outline"
                           className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
-                          disabled={generatingCharacterVoiceReferenceId === selectedAsset.data.id}
+                          disabled={
+                            generatingCharacterVoiceReferenceId === selectedAsset.data.id ||
+                            selectedAsset.data.voice_reference_status === "generating"
+                          }
                           onClick={() => void handleGenerateCharacterVoiceReference()}
                         >
-                          {generatingCharacterVoiceReferenceId === selectedAsset.data.id ? (
+                          {generatingCharacterVoiceReferenceId === selectedAsset.data.id ||
+                          selectedAsset.data.voice_reference_status === "generating" ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                               生成中
@@ -1268,38 +1461,60 @@ export default function AssetLibrary() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded border border-gray-700 flex items-center justify-center overflow-hidden">
-                        {getAssetPreviewSrc(selectedAsset.data) ? (
-                          <button
-                            type="button"
-                            className="w-full h-full"
-                            onClick={() =>
-                              setPreviewImage({
-                                src: getAssetOriginalSrc(selectedAsset.data),
-                                alt: selectedAsset.data.name,
-                              })
-                            }
-                          >
-                            <img
-                              src={getAssetPreviewSrc(selectedAsset.data)}
-                              alt={selectedAsset.data.name}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-contain rounded"
-                            />
-                          </button>
-                        ) : (
-                          <MapPin className="w-24 h-24 text-gray-700" />
-                        )}
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: "原始素材", src: getAssetOriginalSrc(selectedAsset.data) },
+                          { label: "AI 封面", src: selectedAsset.data.cover_url || "" },
+                        ].map((media) => (
+                          <div key={media.label} className="space-y-1.5">
+                            <div className="text-xs text-gray-400">{media.label}</div>
+                            <button
+                              type="button"
+                              disabled={!media.src}
+                              className="aspect-video w-full overflow-hidden rounded bg-[#171717] disabled:cursor-default"
+                              onClick={() => media.src && setPreviewImage({ src: media.src, alt: media.label })}
+                            >
+                              {media.src ? (
+                                <img src={media.src} alt={media.label} className="h-full w-full object-cover" />
+                              ) : (
+                                <MapPin className="mx-auto h-full w-8 text-gray-700" />
+                              )}
+                            </button>
+                          </div>
+                        ))}
                       </div>
+                      <input
+                        ref={selectedAssetFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => void handleUploadSelectedAssetFile(event.target.files?.[0] || null)}
+                      />
                       <Button
                         type="button"
                         variant="outline"
                         className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
-                        disabled={generatingAssetCoverId === selectedAsset.data.id}
+                        onClick={() => selectedAssetFileInputRef.current?.click()}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />替换原始素材
+                      </Button>
+                      {selectedAsset.data.cover_error ? (
+                        <div className="rounded bg-red-950/40 px-3 py-2 text-xs text-red-200">
+                          {selectedAsset.data.cover_error}
+                        </div>
+                      ) : null}
+                      {selectedAsset.data.type === "scene" || selectedAsset.data.type === "prop" ? <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full border-gray-700 text-gray-200 hover:bg-gray-900"
+                        disabled={
+                          generatingAssetCoverId === selectedAsset.data.id ||
+                          selectedAsset.data.cover_status === "generating"
+                        }
                         onClick={() => void handleGenerateAssetCover()}
                       >
-                        {generatingAssetCoverId === selectedAsset.data.id ? (
+                        {generatingAssetCoverId === selectedAsset.data.id ||
+                        selectedAsset.data.cover_status === "generating" ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             正在生成
@@ -1310,7 +1525,11 @@ export default function AssetLibrary() {
                             生成封面
                           </>
                         )}
-                      </Button>
+                      </Button> : (
+                        <div className="rounded bg-amber-950/30 px-3 py-2 text-xs text-amber-200">
+                          当前类型不支持 AI 生成封面。
+                        </div>
+                      )}
                       <div>
                         <Label className="text-xs text-gray-400">场景名称</Label>
                         <Input
@@ -1326,16 +1545,23 @@ export default function AssetLibrary() {
                       </div>
                       <div>
                         <Label className="text-xs text-gray-400">资源类型</Label>
-                        <Input
-                          value={selectedAsset.data.type}
-                          onChange={(e) =>
+                        <Select
+                          value={selectedAsset.data.type === "prop" ? "prop" : "scene"}
+                          onValueChange={(value) =>
                             setSelectedAsset({
                               type: "asset",
-                              data: { ...selectedAsset.data, type: e.target.value },
+                              data: { ...selectedAsset.data, type: value },
                             })
                           }
-                          className="mt-1.5 bg-[#1a1a1a] border-gray-700"
-                        />
+                        >
+                          <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="scene">场景</SelectItem>
+                            <SelectItem value="prop">道具</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label className="text-xs text-gray-400">场景描述</Label>
@@ -1491,6 +1717,60 @@ export default function AssetLibrary() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showVersions} onOpenChange={setShowVersions}>
+        <DialogContent className="bg-[#121212] text-gray-100 sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>生成版本</DialogTitle>
+            <DialogDescription>切换后会立即成为工作区使用的当前版本。</DialogDescription>
+          </DialogHeader>
+          {versions.length ? (
+            <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
+              {versions.map((version) => (
+                <button
+                  key={version.id}
+                  type="button"
+                  onClick={() => void chooseSelectedVersion(version)}
+                  className={`overflow-hidden rounded-lg bg-[#191919] text-left ${version.is_current ? "ring-2 ring-purple-500" : ""}`}
+                >
+                  <img src={version.preview_url || version.file_url} alt="资产版本" className="aspect-video w-full object-cover" />
+                  <div className="p-2 text-xs text-gray-400">
+                    {version.is_current ? "当前版本" : "设为当前版本"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-sm text-gray-500">尚无生成版本</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showVoiceVersions} onOpenChange={setShowVoiceVersions}>
+        <DialogContent className="bg-[#121212] text-gray-100 sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>主语音版本</DialogTitle>
+            <DialogDescription>试听并恢复以前生成或上传的角色主语音。</DialogDescription>
+          </DialogHeader>
+          {voiceVersions.length ? (
+            <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+              {voiceVersions.map((version) => (
+                <div key={version.id} className={`rounded-lg bg-[#191919] p-3 ${version.is_current ? "ring-2 ring-emerald-500" : ""}`}>
+                  <audio controls className="w-full"><source src={version.file_url} /></audio>
+                  <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+                    <span>{version.source_type === "manual-upload" ? "手动上传" : "AI 生成"} · {version.duration.toFixed(1)}s</span>
+                    <Button size="sm" variant="ghost" disabled={version.is_current} onClick={() => void chooseVoiceVersion(version)}>
+                      {version.is_current ? "当前版本" : "设为当前"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-sm text-gray-500">尚无语音版本</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={showCreateDialog}
         onOpenChange={(open) => {
@@ -1567,6 +1847,7 @@ export default function AssetLibrary() {
                       setNewCharacter((prev) => ({ ...prev, avatar_url: e.target.value }))
                     }
                     placeholder="https://..."
+                    disabled={Boolean(createCharacterFile)}
                     className="mt-1.5 bg-[#1a1a1a] border-gray-700"
                   />
                 </div>
@@ -1592,11 +1873,13 @@ export default function AssetLibrary() {
                 </div>
                 <div>
                   <Label className="text-xs text-gray-400">类型</Label>
-                  <Input
+                  <Select
                     value={newAsset.type}
-                    onChange={(e) => setNewAsset((prev) => ({ ...prev, type: e.target.value }))}
-                    className="mt-1.5 bg-[#1a1a1a] border-gray-700"
-                  />
+                    onValueChange={(value) => setNewAsset((prev) => ({ ...prev, type: value }))}
+                  >
+                    <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="scene">场景</SelectItem><SelectItem value="prop">道具</SelectItem></SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-400">说明</Label>
@@ -1612,6 +1895,7 @@ export default function AssetLibrary() {
                     value={newAsset.file_url}
                     onChange={(e) => setNewAsset((prev) => ({ ...prev, file_url: e.target.value }))}
                     placeholder="https://..."
+                    disabled={Boolean(createAssetFile)}
                     className="mt-1.5 bg-[#1a1a1a] border-gray-700"
                   />
                 </div>

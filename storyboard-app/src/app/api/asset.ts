@@ -9,6 +9,10 @@ export function getAssetsByCharacter(characterId: number) {
   return apiClient.get<Asset[]>(`/characters/${characterId}/assets`);
 }
 
+export function getAsset(id: number) {
+  return apiClient.get<Asset>(`/assets/${id}`);
+}
+
 export function createAsset(
   projectId: number,
   data: { character_id?: number; name: string; type: string; file_url?: string; meta?: string },

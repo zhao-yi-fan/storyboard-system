@@ -2,12 +2,13 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
+const fs = require('node:fs/promises');
+const path = require('node:path');
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const {
   downloadAndStore,
   materializeSourceToLocalFile,
   normalizeAudioDuration,
-  probeDuration,
   sanitizeFileName,
   storeBuffer,
 } = require('../lib/media');
@@ -62,6 +63,11 @@ class CharacterService extends Service {
       ),
       voice_reference_duration:
         row.voice_reference_duration == null ? 0 : Number(row.voice_reference_duration),
+      design_sheet_status: row.design_sheet_status || (row.design_sheet_url ? 'succeeded' : 'idle'),
+      design_sheet_error: row.design_sheet_error || '',
+      voice_reference_status:
+        row.voice_reference_status || (row.voice_reference_url ? 'succeeded' : 'idle'),
+      voice_reference_error: row.voice_reference_error || '',
       voice_reference_text: row.voice_reference_text || '',
       voice_name: row.voice_name || '',
       voice_prompt: row.voice_prompt || '',
@@ -98,7 +104,8 @@ class CharacterService extends Service {
     await this.ensureProjectExists(projectId);
     const [rows] = await this.pool.query(
       `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
-              voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
+              design_sheet_status, design_sheet_error, voice_reference_url, voice_reference_duration,
+              voice_reference_status, voice_reference_error, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
        FROM characters WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
       [projectId],
     );
@@ -116,7 +123,8 @@ class CharacterService extends Service {
   async findById(id) {
     const [rows] = await this.pool.query(
       `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
-              voice_reference_url, voice_reference_duration, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
+              design_sheet_status, design_sheet_error, voice_reference_url, voice_reference_duration,
+              voice_reference_status, voice_reference_error, voice_reference_text, voice_name, voice_prompt, created_at, updated_at
        FROM characters WHERE id = ? AND deleted_at IS NULL`,
       [id],
     );
@@ -214,6 +222,18 @@ class CharacterService extends Service {
    * // => void
    */
   async softDelete(id) {
+    const [rows] = await this.pool.query(
+      `SELECT
+        (SELECT COUNT(*) FROM scene_characters sc JOIN scenes s ON s.id = sc.scene_id
+         WHERE sc.character_id = ? AND s.deleted_at IS NULL) +
+        (SELECT COUNT(*) FROM storyboard_characters bc JOIN storyboards b ON b.id = bc.storyboard_id
+         WHERE bc.character_id = ? AND b.deleted_at IS NULL) AS count`,
+      [id, id],
+    );
+    const count = Number(rows[0]?.count || 0);
+    if (count > 0) {
+      throw new Error(`该角色已被 ${count} 个片段或镜头引用，请先解除引用后再删除。`);
+    }
     await this.pool.execute('UPDATE characters SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
@@ -232,7 +252,7 @@ class CharacterService extends Service {
   /**
    * 收集角色主设定图生成所需的参考图。
    * @param {object} character 角色对象，例如 `{ name: "林婉", avatar_url: "https://..." }`。
-   * @returns {{references: Array, missing: Array, avatarUrl: string, layoutUrl: string}} 参考图和缺失项摘要。
+   * @returns {{references: Array, missing: Array, avatarUrl: string}} 参考图和缺失项摘要。
    * @example
    * service.collectDesignReferenceImages({ name: "林婉", avatar_url: "https://example.com/ref.png" })
    * // => { references: [{ type: "character-reference", url: "https://example.com/ref.png" }], missing: [] }
@@ -245,15 +265,6 @@ class CharacterService extends Service {
       character.avatar_url,
       this.app.config.storyboard.publicAppBaseUrl || '',
     );
-    const layoutUrl = resolveUrl(
-      this.app,
-      normalizeGeneratedAssetReference(
-        this.app,
-        this.app.config.storyboard.characterDesignLayoutReferenceUrl || '',
-      ),
-      this.app.config.storyboard.publicAppBaseUrl || '',
-    );
-
     if (avatarUrl) {
       references.push({
         type: 'character-reference',
@@ -265,16 +276,7 @@ class CharacterService extends Service {
       missing.push('character-reference');
     }
 
-    if (layoutUrl) {
-      references.push({
-        type: 'layout-reference',
-        name: '设定板版式参考图',
-        url: layoutUrl,
-        source: 'storyboard.characterDesignLayoutReferenceUrl',
-      });
-    }
-
-    return { references, missing, avatarUrl, layoutUrl };
+    return { references, missing, avatarUrl };
   }
 
   /**
@@ -288,8 +290,7 @@ class CharacterService extends Service {
   async previewDesignSheetGeneration(id) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const { references, missing, avatarUrl, layoutUrl } =
-      this.collectDesignReferenceImages(character);
+    const { references, missing, avatarUrl } = this.collectDesignReferenceImages(character);
     if (!avatarUrl) {
       throw new Error('生成主设定图前请先上传角色参考图');
     }
@@ -304,7 +305,7 @@ class CharacterService extends Service {
         生成模型: 'Seedream 4.5',
         生成方式: '图生图',
         角色参考图: '已提供',
-        版式参考图: layoutUrl ? '已配置' : '未配置',
+        设定板版式: '固定 Prompt',
         输出: '角色主设定图',
       },
       template: designPrompt.template,
@@ -313,9 +314,7 @@ class CharacterService extends Service {
       notes: [
         '这次固定走 Seedream 图生图。',
         '角色参考图只用于生成主设定图，不参与其他展示和分镜参考链路。',
-        layoutUrl
-          ? '系统已附带设定板版式参考图。'
-          : '当前未配置系统版式参考图，本次只会基于角色参考图和提示词生成。',
+        '设定板版式由固定 Prompt 描述，不会传入其他角色的版式示例图。',
         ...missing.map((item) => `缺少参考项：${item}`),
       ],
     };
@@ -371,46 +370,51 @@ class CharacterService extends Service {
   async generateDesignSheet(id) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const { avatarUrl, layoutUrl } = this.collectDesignReferenceImages(character);
+    const { avatarUrl } = this.collectDesignReferenceImages(character);
     if (!avatarUrl) {
       throw new Error('生成主设定图前请先上传角色参考图');
     }
-    const prompt = this.buildDesignPrompt(character);
-    const imageUrl = await generateSeedreamImage(
-      this.app,
-      prompt,
-      [avatarUrl, layoutUrl].filter(Boolean),
-      { size: SEEDREAM_DESIGN_SHEET_SIZE },
+    await this.pool.execute(
+      "UPDATE characters SET design_sheet_status = 'generating', design_sheet_error = NULL WHERE id = ?",
+      [id],
     );
-    const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
-    const stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
-    await this.pool.execute('UPDATE characters SET design_sheet_url = ? WHERE id = ?', [
-      stored.publicPath,
-      id,
-    ]);
-    const updated = await this.findById(id);
-    await this.ctx.service.assetWorkspace.recordVersion(
-      'character',
-      id,
-      updated.project_id,
-      updated.design_sheet_url,
-      updated.avatar_url,
-      prompt,
-    );
-    return updated;
+    try {
+      const prompt = this.buildDesignPrompt(character);
+      const imageUrl = await generateSeedreamImage(this.app, prompt, [avatarUrl], {
+        size: SEEDREAM_DESIGN_SHEET_SIZE,
+      });
+      const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
+      const stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
+      await this.pool.execute(
+        "UPDATE characters SET design_sheet_url = ?, design_sheet_status = 'succeeded', design_sheet_error = NULL WHERE id = ?",
+        [stored.publicPath, id],
+      );
+      const updated = await this.findById(id);
+      await this.ctx.service.assetWorkspace.recordVersion(
+        'character', id, updated.project_id, updated.design_sheet_url, updated.avatar_url, prompt,
+      );
+      return updated;
+    } catch (error) {
+      await this.pool.execute(
+        "UPDATE characters SET design_sheet_status = 'failed', design_sheet_error = ? WHERE id = ?",
+        [error.message || '主设定图生成失败', id],
+      );
+      throw error;
+    }
   }
 
   async generateVoiceReferenceAudio(character, voicePrompt, previewText) {
     return await generateCharacterVoiceReference(this.app, character, voicePrompt, previewText);
   }
 
-  async normalizeGeneratedVoiceReferenceAudio(audioBuffer, extension) {
+  async normalizeGeneratedVoiceReferenceAudio(audioBuffer, extension, outputExtension = extension) {
     return await normalizeAudioDuration(audioBuffer, {
       minSeconds: VOICE_REFERENCE_MIN_SECONDS,
       maxSeconds: VOICE_REFERENCE_MAX_SECONDS,
       sampleRate: VOICE_REFERENCE_SAMPLE_RATE,
       channels: VOICE_REFERENCE_CHANNELS,
       extension,
+      outputExtension,
       label: '生成的主语音参考',
     });
   }
@@ -439,31 +443,36 @@ class CharacterService extends Service {
   async generateVoiceReference(id, voicePrompt, previewText) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    const result = await this.generateVoiceReferenceAudio(character, voicePrompt, previewText);
-    const extension = String(result.extension || 'wav').replace(/^\./, '') || 'wav';
-    const normalized = await this.normalizeGeneratedVoiceReferenceAudio(
-      result.audioBuffer,
-      extension,
-    );
-    const stored = await this.storeGeneratedVoiceReferenceAudio(
-      id,
-      normalized.audioBuffer,
-      extension,
-    );
     await this.pool.execute(
-      `UPDATE characters
-       SET voice_reference_url = ?, voice_reference_duration = ?, voice_reference_text = ?, voice_name = ?, voice_prompt = ?
-       WHERE id = ?`,
-      [
-        stored.publicPath,
-        normalized.duration,
-        result.voiceReferenceText,
-        result.voiceName,
-        result.voicePrompt,
-        id,
-      ],
+      "UPDATE characters SET voice_reference_status = 'generating', voice_reference_error = NULL WHERE id = ?",
+      [id],
     );
-    return await this.findById(id);
+    try {
+      const result = await this.generateVoiceReferenceAudio(character, voicePrompt, previewText);
+      const extension = String(result.extension || 'wav').replace(/^\./, '') || 'wav';
+      const normalized = await this.normalizeGeneratedVoiceReferenceAudio(result.audioBuffer, extension);
+      const stored = await this.storeGeneratedVoiceReferenceAudio(id, normalized.audioBuffer, extension);
+      await this.pool.execute(
+        `UPDATE characters SET voice_reference_url = ?, voice_reference_duration = ?,
+         voice_reference_text = ?, voice_name = ?, voice_prompt = ?,
+         voice_reference_status = 'succeeded', voice_reference_error = NULL WHERE id = ?`,
+        [stored.publicPath, normalized.duration, result.voiceReferenceText, result.voiceName,
+          String(voicePrompt || '').trim(), id],
+      );
+      const updated = await this.findById(id);
+      await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
+        userPrompt: String(voicePrompt || '').trim(),
+        effectivePrompt: result.voicePrompt,
+        sourceType: 'generated',
+      });
+      return updated;
+    } catch (error) {
+      await this.pool.execute(
+        "UPDATE characters SET voice_reference_status = 'failed', voice_reference_error = ? WHERE id = ?",
+        [error.message || '主语音参考生成失败', id],
+      );
+      throw error;
+    }
   }
 
   async uploadVoiceReference(id, voiceReferenceUrl) {
@@ -476,16 +485,47 @@ class CharacterService extends Service {
     if (!normalizedUrl) {
       throw new Error('voice_reference_url is required');
     }
+    await this.pool.execute(
+      "UPDATE characters SET voice_reference_status = 'generating', voice_reference_error = NULL WHERE id = ?",
+      [id],
+    );
     let materialized;
     try {
-      materialized = await materializeSourceToLocalFile(this.app, normalizedUrl, '.audio');
-      const duration = await probeDuration(materialized.localPath);
+      const sourceExtension = path.extname(String(normalizedUrl).split(/[?#]/)[0]).replace(/^\./, '');
+      const extension = ['wav', 'mp3', 'm4a', 'aac', 'ogg', 'flac'].includes(sourceExtension)
+        ? sourceExtension
+        : 'wav';
+      materialized = await materializeSourceToLocalFile(this.app, normalizedUrl, `.${extension}`);
+      const sourceBuffer = await fs.readFile(materialized.localPath);
+      const normalized = await this.normalizeGeneratedVoiceReferenceAudio(
+        sourceBuffer,
+        extension,
+        'wav',
+      );
+      const stored = await this.storeGeneratedVoiceReferenceAudio(
+        id,
+        normalized.audioBuffer,
+        'wav',
+      );
       await this.pool.execute(
         `UPDATE characters
-         SET voice_reference_url = ?, voice_reference_duration = ?, voice_name = ?
+         SET voice_reference_url = ?, voice_reference_duration = ?, voice_name = ?,
+             voice_reference_status = 'succeeded', voice_reference_error = NULL
          WHERE id = ?`,
-        [normalizedUrl, duration, 'manual-upload', id],
+        [stored.publicPath, normalized.duration, 'manual-upload', id],
       );
+      const updated = await this.findById(id);
+      await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
+        userPrompt: updated.voice_prompt || '',
+        effectivePrompt: '',
+        sourceType: 'manual-upload',
+      });
+    } catch (error) {
+      await this.pool.execute(
+        "UPDATE characters SET voice_reference_status = 'failed', voice_reference_error = ? WHERE id = ?",
+        [error.message || '上传主语音参考失败', id],
+      );
+      throw error;
     } finally {
       if (materialized) {
         await materialized.cleanup();

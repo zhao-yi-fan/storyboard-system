@@ -8,13 +8,9 @@ import {
   Trash2,
   Play,
   Save,
-  Users,
-  Package,
   Camera,
   Image as ImageIcon,
-  Upload,
   X,
-  Sparkles,
   Loader2,
   ArrowLeft,
   Maximize2,
@@ -65,6 +61,10 @@ import {
   type PromptMentionOption,
 } from "../components/workspace/RichPromptEditor";
 import {
+  CoverReferencePanel,
+  PromptReferenceStatus,
+} from "../components/workspace/CoverReferencePanel";
+import {
   VideoGenerationSettings,
   getVideoGenerationSpecLabel,
 } from "../components/workspace/VideoGenerationSettings";
@@ -80,6 +80,7 @@ import {
   type Scene,
   type Storyboard,
   type StoryboardCoverGenerationPreview,
+  type SceneGenerationReferences,
   type StoryboardVideoGenerationPreview,
   type StoryboardMediaGeneration,
   type SceneMediaGeneration,
@@ -90,8 +91,6 @@ import {
   type VideoResolution,
 } from "../api";
 import { COMPOSITE_PROMPT_MAX_LENGTH, buildLegacyCompositePrompt } from "../lib/compositePrompt";
-
-const COVER_MODEL_OPTIONS = [{ value: "seedream-4.5", label: "Seedream 4.5" }] as const;
 
 const VIDEO_MODEL_OPTIONS = [
   { value: "seedance-2.0", label: "Seedance 2.0" },
@@ -310,8 +309,6 @@ export default function Workspace() {
     items?: { src: string; alt: string }[];
     currentIndex?: number;
   } | null>(null);
-  const [selectedCoverModel, setSelectedCoverModel] =
-    useState<(typeof COVER_MODEL_OPTIONS)[number]["value"]>("seedream-4.5");
   const [selectedVideoModel, setSelectedVideoModel] = useState<
     (typeof VIDEO_MODEL_OPTIONS)[number]["value"]
   >(VIDEO_MODEL_OPTIONS[0].value);
@@ -323,6 +320,11 @@ export default function Workspace() {
   const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
   const [coverGenerationPreview, setCoverGenerationPreview] =
     useState<StoryboardCoverGenerationPreview | null>(null);
+  const [generationReferences, setGenerationReferences] =
+    useState<SceneGenerationReferences | null>(null);
+  const [isLoadingGenerationReferences, setIsLoadingGenerationReferences] = useState(false);
+  const [generationReferenceError, setGenerationReferenceError] = useState("");
+  const [coverGenerationError, setCoverGenerationError] = useState("");
   const [videoGenerationPreview, setVideoGenerationPreview] =
     useState<StoryboardVideoGenerationPreview | null>(null);
   const [videoGenerationRequest, setVideoGenerationRequest] =
@@ -432,6 +434,32 @@ export default function Workspace() {
       setMediaGenerations([]);
     }
   };
+
+  const loadGenerationReferences = async (sceneId: number) => {
+    setIsLoadingGenerationReferences(true);
+    setGenerationReferenceError("");
+    try {
+      const data = await sceneApi.getSceneGenerationReferences(sceneId);
+      setGenerationReferences(data);
+    } catch (error) {
+      console.error("Failed to load generation references:", error);
+      setGenerationReferences(null);
+      setGenerationReferenceError(
+        error instanceof Error ? error.message : "真实生成参考读取失败，请重试",
+      );
+    } finally {
+      setIsLoadingGenerationReferences(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedShot?.id) {
+      void loadGenerationReferences(selectedShot.id);
+    } else {
+      setGenerationReferences(null);
+      setGenerationReferenceError("");
+    }
+  }, [selectedShot?.id]);
 
   const _applyStoryboardUpdate = (nextShot: Storyboard) => {
     setStoryboards((prev) => prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)));
@@ -664,12 +692,12 @@ export default function Workspace() {
       id: character.id,
       kind: "character" as const,
       name: character.name,
-      imageUrl: character.avatar_url || character.design_sheet_url,
+      imageUrl: character.design_sheet_url || character.avatar_url,
       isBound: !!selectedShot?.characters?.some((item) => item.id === character.id),
       category: "character" as const,
       description: character.description || "人物资产",
       media: [
-        ...(character.avatar_url || character.design_sheet_url ? (["image"] as const) : []),
+        ...(character.design_sheet_url ? (["image"] as const) : []),
         ...(character.voice_reference_url ? (["audio"] as const) : []),
       ],
       searchText: `${character.voice_name || ""} 人物 角色`,
@@ -683,7 +711,7 @@ export default function Workspace() {
         imageUrl:
           presentation.category === "audio"
             ? asset.thumbnail_url || asset.cover_url
-            : asset.thumbnail_url || asset.cover_url || asset.file_url,
+            : asset.cover_url || asset.file_url || asset.thumbnail_url,
         isBound: !!selectedShot?.assets?.some((item) => item.id === asset.id),
         category: presentation.category,
         description: asset.meta || asset.type || "项目资产",
@@ -785,19 +813,21 @@ export default function Workspace() {
 
     setGeneratingCoverId(selectedShot.id);
     setPendingGeneratedShotId(selectedShot.id);
+    setCoverGenerationError("");
     try {
       const result = await sceneApi.generateSceneClipCover(selectedShot.id, {
         ...(coverGenerationPreview?.model
           ? { model: coverGenerationPreview.model }
-          : selectedCoverModel !== "auto"
-            ? { model: selectedCoverModel }
-            : {}),
+          : { model: "seedream-4.5" }),
         ...(useTextOnly ? { use_text_only: true } : {}),
       });
       applyClipSceneUpdate(result.scene);
       await loadMediaGenerations(result.scene.id);
     } catch (error) {
       console.error("Failed to generate storyboard cover:", error);
+      const message = error instanceof Error ? error.message : "首帧生成失败，请重试";
+      setCoverGenerationError(message);
+      toast.error(message);
     } finally {
       setGeneratingCoverId(null);
       setPendingGeneratedShotId(null);
@@ -813,6 +843,22 @@ export default function Workspace() {
       alt: `首帧历史 ${generation.id}`,
       items,
       currentIndex: currentIndex >= 0 ? currentIndex : 0,
+    });
+  };
+
+  const openGenerationReferencePreview = (referenceIndex: number) => {
+    const references = generationReferences?.reference_images || [];
+    const reference = references[referenceIndex];
+    if (!reference) return;
+    const items = references.map((item) => ({
+      src: item.url,
+      alt: `${item.name || item.type} · ${item.source}`,
+    }));
+    setPreviewImage({
+      src: reference.url,
+      alt: `${reference.name || reference.type} · ${reference.source}`,
+      items,
+      currentIndex: referenceIndex,
     });
   };
 
@@ -853,6 +899,7 @@ export default function Workspace() {
       return;
     }
 
+    setCoverGenerationError("");
     if (!(await saveShotDraftBeforeGeneration())) {
       return;
     }
@@ -861,12 +908,25 @@ export default function Workspace() {
     try {
       const preview = await sceneApi.getSceneClipCoverGenerationPreview(
         selectedShot.id,
-        selectedCoverModel,
+        "seedream-4.5",
       );
       setCoverGenerationPreview(preview);
+      setGenerationReferences({
+        reference_images: preview.reference_images,
+        missing_references: preview.missing_references,
+        mappings: preview.mappings || [],
+        bound_without_mentions: preview.bound_without_mentions || [],
+        unbound_mentions: preview.unbound_mentions || [],
+        recognized_bound_mentions: (preview.mappings || [])
+          .filter((mapping) => mapping.is_mentioned)
+          .map((mapping) => mapping.name),
+      });
       setIsCoverConfirmOpen(true);
     } catch (error) {
       console.error("Failed to preview storyboard cover generation:", error);
+      const message = error instanceof Error ? error.message : "首帧生成预览失败，请重试";
+      setCoverGenerationError(message);
+      toast.error(message);
     } finally {
       setIsLoadingCoverPreview(false);
     }
@@ -970,6 +1030,7 @@ export default function Workspace() {
     try {
       const updated = await sceneApi.addSceneAsset(selectedShot.id, assetId);
       applyClipSceneUpdate(updated);
+      await loadGenerationReferences(updated.id);
     } catch (error) {
       console.error("Failed to add storyboard asset:", error);
       toast.error(error instanceof Error ? error.message : "添加参考资产失败");
@@ -987,6 +1048,7 @@ export default function Workspace() {
     try {
       const updated = await sceneApi.removeSceneAsset(selectedShot.id, assetId);
       applyClipSceneUpdate(updated);
+      await loadGenerationReferences(updated.id);
     } catch (error) {
       console.error("Failed to remove storyboard asset:", error);
       toast.error(error instanceof Error ? error.message : "移除参考资产失败");
@@ -1172,6 +1234,7 @@ export default function Workspace() {
     try {
       const nextScene = await sceneApi.removeSceneCharacter(selectedShot.id, characterId);
       applyClipSceneUpdate(nextScene);
+      await loadGenerationReferences(nextScene.id);
       toast.success("已移除片段角色");
     } catch (error) {
       console.error("Failed to remove storyboard character:", error);
@@ -1198,6 +1261,7 @@ export default function Workspace() {
     try {
       const nextScene = await sceneApi.addSceneCharacter(selectedShot.id, characterId);
       applyClipSceneUpdate(nextScene);
+      await loadGenerationReferences(nextScene.id);
       toast.success("已添加片段角色");
     } catch (error) {
       console.error("Failed to add storyboard character:", error);
@@ -1240,6 +1304,7 @@ export default function Workspace() {
       toast.error(`提示词已删除，但以下参考移除失败：${failedNames.join("、")}`);
       return;
     }
+    await loadGenerationReferences(sceneId);
     toast.success("已同步移除对应参考");
   };
 
@@ -1354,6 +1419,24 @@ export default function Workspace() {
 
   const coverGenerations = mediaGenerations.filter((item) => item.media_type === "cover");
   const videoGenerations = mediaGenerations.filter((item) => item.media_type === "video");
+  const liveGenerationReferences = generationReferences
+    ? {
+        ...generationReferences,
+        mappings: generationReferences.mappings.map((mapping) => ({
+          ...mapping,
+          is_mentioned: !!mapping.mention && shotForm.content.includes(mapping.mention),
+        })),
+        bound_without_mentions: generationReferences.mappings
+          .filter((mapping) => !mapping.mention || !shotForm.content.includes(mapping.mention))
+          .map((mapping) => mapping.name),
+        unbound_mentions: promptMentionOptions
+          .filter((option) => !option.isBound && shotForm.content.includes(`@${option.name}`))
+          .map((option) => option.name),
+        recognized_bound_mentions: promptMentionOptions
+          .filter((option) => option.isBound && shotForm.content.includes(`@${option.name}`))
+          .map((option) => option.name),
+      }
+    : null;
 
   useEffect(() => {
     if (selectedShot?.video_status === "generating") {
@@ -1765,157 +1848,41 @@ export default function Workspace() {
           {selectedShot ? (
             <>
               <div className="min-h-0 flex-1 overflow-y-auto">
-                <section className="border-b border-white/[0.06] p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-gray-500">参考</span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-[10px] text-teal-300 hover:text-teal-200"
-                        onClick={handleGenerateCover}
-                        disabled={
-                          generatingCoverId === selectedShot.id ||
-                          isLoadingCoverPreview ||
-                          isSavingShot
-                        }
-                      >
-                        {generatingCoverId === selectedShot.id || isLoadingCoverPreview ? (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                        ) : (
-                          <Sparkles className="mr-1 h-3 w-3" />
-                        )}
-                        点击生成画面
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-white/5 hover:text-white">
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="border-white/10 bg-[#1b2525]/95 text-gray-100 backdrop-blur-xl"
-                        >
-                          <DropdownMenuItem onClick={handleRequestUploadShotCover}>
-                            <Upload className="h-4 w-4" />
-                            上传首帧
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => void handleOpenManageCharacters()}>
-                            <Users className="h-4 w-4" />
-                            管理角色参考
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => void handleOpenManageAssets()}>
-                            <Package className="h-4 w-4" />
-                            管理场景参考
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-
-                  <div className="mt-2 grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      className="aspect-square overflow-hidden rounded-lg border border-white/[0.08] bg-[var(--storyboard-surface)]"
-                      onClick={() => {
-                        if (getStoryboardPreviewSrc(selectedShot)) {
-                          setPreviewImage({
-                            src: getStoryboardPreviewSrc(selectedShot),
-                            alt: "当前首帧",
-                          });
-                        }
-                      }}
-                    >
-                      {getStoryboardPreviewSrc(selectedShot) ? (
-                        <img
-                          src={getStoryboardPreviewSrc(selectedShot)}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <ImageIcon className="m-auto h-full w-4 text-gray-700" />
-                      )}
-                    </button>
-                    {[...(selectedShot.characters || []), ...(selectedShot.assets || [])]
-                      .slice(0, 2)
-                      .map((reference) => {
-                        const source =
-                          "avatar_url" in reference
-                            ? reference.avatar_url || reference.design_sheet_url
-                            : reference.thumbnail_url || reference.cover_url || reference.file_url;
-                        return (
-                          <div
-                            key={"reference-" + reference.id}
-                            className="aspect-square overflow-hidden rounded-lg border border-white/[0.08] bg-[var(--storyboard-surface)]"
-                            title={reference.name}
-                          >
-                            {source ? (
-                              <img src={source} alt="" className="h-full w-full object-cover" />
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                  </div>
-
-                  <div className="mt-3">
-                    <Label className="text-[10px] text-gray-600">画面模型</Label>
-                    <Select
-                      value={selectedCoverModel}
-                      onValueChange={(value) =>
-                        setSelectedCoverModel(
-                          value as (typeof COVER_MODEL_OPTIONS)[number]["value"],
-                        )
-                      }
-                    >
-                      <SelectTrigger className="mt-1 h-8 border-white/10 bg-[var(--storyboard-surface)] text-[10px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="border-white/10 bg-[#1b2525]/95 backdrop-blur-xl">
-                        {COVER_MODEL_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {coverGenerations.length ? (
-                    <div className="mt-3">
-                      <div className="mb-1.5 text-[9px] uppercase tracking-[0.14em] text-gray-700">
-                        画面历史
-                      </div>
-                      <div className="flex gap-1.5 overflow-x-auto pb-1">
-                        {coverGenerations.map((generation, index) => (
-                          <button
-                            key={generation.id}
-                            type="button"
-                            className={
-                              generation.is_current
-                                ? "relative h-12 w-12 flex-none overflow-hidden rounded-md border border-teal-300/45 bg-[var(--storyboard-surface)]"
-                                : "relative h-12 w-12 flex-none overflow-hidden rounded-md border border-white/[0.07] bg-[var(--storyboard-surface)]"
-                            }
-                            onClick={() => openCoverHistoryPreview(generation)}
-                            disabled={!getGenerationPreviewSrc(generation)}
-                            title={`查看画面版本 v${coverGenerations.length - index}`}
-                          >
-                            {getGenerationPreviewSrc(generation) ? (
-                              <img
-                                src={getGenerationPreviewSrc(generation)}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-[8px] text-gray-700">{generation.status}</span>
-                            )}
-                            <span className="absolute inset-x-0 bottom-0 bg-black/70 py-0.5 text-[8px] text-gray-400">
-                              v{coverGenerations.length - index}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </section>
+                <CoverReferencePanel
+                  key={selectedShot.id}
+                  currentCoverUrl={getStoryboardPreviewSrc(selectedShot)}
+                  references={liveGenerationReferences}
+                  isLoadingReferences={isLoadingGenerationReferences}
+                  referenceError={generationReferenceError}
+                  generationError={coverGenerationError}
+                  isGenerating={
+                    generatingCoverId === selectedShot.id || isLoadingCoverPreview || isSavingShot
+                  }
+                  history={coverGenerations.map((generation, index) => ({
+                    id: generation.id,
+                    src: getGenerationPreviewSrc(generation),
+                    label: `v${coverGenerations.length - index}`,
+                    isCurrent: !!generation.is_current,
+                    status: generation.status,
+                  }))}
+                  onGenerate={() => void handleGenerateCover()}
+                  onUpload={handleRequestUploadShotCover}
+                  onManageCharacters={() => void handleOpenManageCharacters()}
+                  onManageAssets={() => void handleOpenManageAssets()}
+                  onPreviewCurrent={() => {
+                    const src = selectedShot.thumbnail_url || getStoryboardPreviewSrc(selectedShot);
+                    if (src) setPreviewImage({ src, alt: "当前首帧" });
+                  }}
+                  onPreviewReference={openGenerationReferencePreview}
+                  onPreviewHistory={(generationId) => {
+                    const generation = coverGenerations.find((item) => item.id === generationId);
+                    if (generation) openCoverHistoryPreview(generation);
+                  }}
+                  onDismissError={() => {
+                    setCoverGenerationError("");
+                    setGenerationReferenceError("");
+                  }}
+                />
 
                 <section className="flex min-h-[420px] flex-1 flex-col border-b border-white/[0.06] p-3">
                   <div className="mb-2 flex items-center justify-between">
@@ -1935,6 +1902,7 @@ export default function Workspace() {
                       <Maximize2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
+                  <PromptReferenceStatus references={liveGenerationReferences} />
                   <RichPromptEditor
                     key={"inline-prompt-" + selectedShot.id}
                     value={shotForm.content}
@@ -2467,7 +2435,12 @@ export default function Workspace() {
                       className="rounded border border-gray-800 bg-[#111111] p-2 text-xs space-y-2"
                     >
                       <div className="grid gap-2 md:grid-cols-[96px_minmax(0,1fr)]">
-                        <div className="h-24 w-24 overflow-hidden rounded border border-gray-800 bg-black">
+                        <button
+                          type="button"
+                          className="h-24 w-24 overflow-hidden rounded bg-black"
+                          onClick={() => openGenerationReferencePreview(index)}
+                          aria-label={`预览参考图 ${reference.name || index + 1}`}
+                        >
                           <img
                             src={reference.url}
                             alt={reference.name || `${reference.type} 参考图`}
@@ -2475,7 +2448,7 @@ export default function Workspace() {
                             decoding="async"
                             className="h-full w-full object-cover"
                           />
-                        </div>
+                        </button>
                         <div className="space-y-1 break-all">
                           <div className="flex justify-between gap-4">
                             <span className="text-gray-500">类型</span>
@@ -2488,6 +2461,14 @@ export default function Workspace() {
                           <div className="flex justify-between gap-4">
                             <span className="text-gray-500">来源字段</span>
                             <span>{reference.source}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-gray-500">Prompt 映射</span>
+                            <span>
+                              {coverGenerationPreview?.mappings?.[index]?.is_mentioned
+                                ? `已对应 ${coverGenerationPreview.mappings[index].mention}`
+                                : "已绑定但正文未引用"}
+                            </span>
                           </div>
                           <div>
                             <div className="text-gray-500 mb-1">URL</div>
@@ -2673,10 +2654,7 @@ export default function Workspace() {
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-gray-500">当前模型</span>
-              <span>
-                {COVER_MODEL_OPTIONS.find((option) => option.value === selectedCoverModel)?.label ||
-                  selectedCoverModel}
-              </span>
+              <span>Seedream 4.5</span>
             </div>
           </div>
           <AlertDialogFooter>

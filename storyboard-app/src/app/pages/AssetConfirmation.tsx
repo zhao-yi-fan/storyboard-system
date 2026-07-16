@@ -37,6 +37,7 @@ function RequirementCard({
   onImport,
   onSave,
   onVersions,
+  onComplete,
 }: {
   item: AssetRequirement;
   busy: boolean;
@@ -44,6 +45,7 @@ function RequirementCard({
   onImport: () => void;
   onSave: () => void;
   onVersions: () => void;
+  onComplete: () => void;
 }) {
   const imageUrl = item.file_url || item.preview_url;
   return (
@@ -76,11 +78,16 @@ function RequirementCard({
         {item.error_message ? (
           <p className="mt-2 text-xs text-red-300">{item.error_message}</p>
         ) : null}
+        {item.blocking_reason ? (
+          <p className="mt-2 rounded-lg bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+            {item.blocking_reason}
+          </p>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Button
             size="sm"
             disabled={busy}
-            onClick={onGenerate}
+            onClick={item.can_generate === false ? onComplete : onGenerate}
             className="bg-teal-400 text-[#07110f] hover:bg-teal-300"
           >
             {busy ? (
@@ -88,7 +95,7 @@ function RequirementCard({
             ) : (
               <Sparkles className="h-3.5 w-3.5" />
             )}
-            {imageUrl ? "再生成" : "Seedream 生成"}
+            {item.can_generate === false ? "完善参考素材" : imageUrl ? "再生成" : "Seedream 生成"}
           </Button>
           <Button size="sm" variant="outline" onClick={onImport}>
             <Library className="h-3.5 w-3.5" />
@@ -127,8 +134,11 @@ export default function AssetConfirmation() {
   const [versionTarget, setVersionTarget] = useState<AssetRequirement | null>(null);
   const [versions, setVersions] = useState<AssetVersion[]>([]);
   const filteredRequirements = requirements.filter((item) => item.kind === activeKind);
-  const missingCount = requirements.filter(
-    (item) => item.status === "pending" || item.status === "failed",
+  const readyCount = requirements.filter(
+    (item) => (item.status === "pending" || item.status === "failed") && item.can_generate !== false,
+  ).length;
+  const blockedCount = requirements.filter(
+    (item) => (item.status === "pending" || item.status === "failed") && item.can_generate === false,
   ).length;
 
   const loadRequirements = async (selectedChapterId = chapterId) => {
@@ -169,12 +179,15 @@ export default function AssetConfirmation() {
         requirement_id: requirementId,
       });
       const failedItems = result.filter((item) => item.status === "failed");
+      const blockedItems = result.filter((item) => item.status === "blocked");
       if (failedItems.length) {
         const firstError = failedItems.find((item) => item.error)?.error;
         toast.error(
           requirementId && firstError ? firstError : `${failedItems.length} 项生成失败，可单独重试`,
           firstError && !requirementId ? { description: firstError } : undefined,
         );
+      } else if (blockedItems.length) {
+        toast.info(`${blockedItems.length} 项需要先补充参考素材`);
       } else {
         toast.success("Seedream 生成完成");
       }
@@ -248,7 +261,7 @@ export default function AssetConfirmation() {
             进入分镜工作台
           </Button>
           <Button
-            disabled={busyId !== null || missingCount === 0}
+            disabled={busyId !== null || readyCount === 0}
             onClick={() => generate()}
             className="bg-teal-400 text-[#07110f] hover:bg-teal-300"
           >
@@ -257,7 +270,7 @@ export default function AssetConfirmation() {
             ) : (
               <Sparkles className="h-4 w-4" />
             )}
-            {missingCount ? `补齐本集缺失资产 (${missingCount})` : "本集资产已齐"}
+            {readyCount ? `生成可用资产 (${readyCount})` : blockedCount ? `${blockedCount} 项待补素材` : "本集资产已齐"}
           </Button>
         </div>
       </header>
@@ -326,6 +339,7 @@ export default function AssetConfirmation() {
                   onImport={() => openPersonal(item)}
                   onSave={() => saveToPersonal(item)}
                   onVersions={() => openVersions(item)}
+                  onComplete={() => navigate(`/assets?project=${projectId}&character=${item.linked_entity_id || ""}`)}
                 />
               ))}
             </div>

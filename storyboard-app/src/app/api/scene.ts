@@ -5,6 +5,7 @@ import type {
   GenerateSceneCoverResult,
   GenerateSceneStoryboardCoversResult,
   Scene,
+  SceneGenerationReferences,
   SceneMediaGeneration,
   SceneMediaMutationResult,
   StoryboardCoverGenerationPreview,
@@ -97,6 +98,10 @@ export function getSceneClipCoverGenerationPreview(id: number, model = "seedream
   return apiClient.get<StoryboardCoverGenerationPreview>(
     `/scenes/${id}/cover-generation-preview?${query.toString()}`,
   );
+}
+
+export function getSceneGenerationReferences(id: number) {
+  return apiClient.get<SceneGenerationReferences>(`/scenes/${id}/generation-references`);
 }
 
 export function generateSceneClipCover(

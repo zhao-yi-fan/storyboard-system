@@ -8,7 +8,7 @@ const {
   generateCharacterVoiceReference,
 } = require('../app/lib/ai_clients');
 
-const FIXED_REFERENCE_TEXT = '这一次，我不会再退让，也不会再逃避，我要亲手改写命运。';
+const FIXED_REFERENCE_TEXT = '今天风很轻，我们慢慢把事情说清楚。';
 
 function mockApp() {
   return {
@@ -67,5 +67,18 @@ describe('test/voice_reference_text.test.ts', () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it('should merge creator direction with character identity instead of replacing it', async () => {
+    const preview = await createCharacterVoicePreview(
+      mockApp(),
+      { id: 8, name: '林婉', description: '温婉端庄，处事克制' },
+      '声音略低，语速偏慢',
+      '',
+    );
+    assert.match(preview.voicePrompt, /林婉/);
+    assert.match(preview.voicePrompt, /温婉端庄/);
+    assert.match(preview.voicePrompt, /声音略低/);
+    assert.match(preview.voicePrompt, /3-5 秒/);
   });
 });

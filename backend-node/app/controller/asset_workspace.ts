@@ -119,6 +119,32 @@ class AssetWorkspaceController extends Controller {
     await this.setVersion('asset');
   }
 
+  async characterVoiceVersions() {
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.assetWorkspace.listVoiceVersions(Number(this.ctx.params.id)),
+      );
+    } catch (error) {
+      response.error(this.ctx, error.message);
+    }
+  }
+
+  async setCharacterVoiceVersion() {
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.assetWorkspace.setCurrentVoiceVersion(
+          Number(this.ctx.params.id),
+          Number(this.ctx.params.versionId),
+          this.userId(),
+        ),
+      );
+    } catch (error) {
+      response.error(this.ctx, error.message);
+    }
+  }
+
   async versions(entityType) {
     try {
       response.success(

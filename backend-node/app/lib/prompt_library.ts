@@ -774,7 +774,8 @@ export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
     subject: normalizeTextList([
       character.name ? `角色名称为${character.name}` : '',
       character.description ? `角色描述为${character.description}` : '',
-      '以输入的人物参考图为唯一角色外观基线，严格保持脸型、五官、发型、发饰和服装识别点一致',
+      '唯一上传的人物参考图是角色外观的唯一事实来源，严格保持脸型、五官、发型、发色、年龄、体型、服装款式、服装颜色、材质和配饰一致',
+      '版式描述只规定信息排布，不得据此重新设计角色，不得增加参考图中不存在的服装、首饰或人物特征',
     ]),
     action: [
       '输出最终定稿级角色主设定板，作为后续镜头封面和角色一致性的核心参考图',
@@ -782,14 +783,17 @@ export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
       '确保人物气质、年龄感、身形比例和服装细节在所有视角下稳定一致',
     ],
     camera: [
-      '单张角色设定板内包含正面全身、侧面全身、背面全身和高质量半身头像特写',
-      '额外包含线稿辅助视图和身高比例参考区',
-      '保证不同视角下的比例、服装结构、花纹走向和配饰位置一致',
+      '横向画布，画面中央从左到右排列正面全身、标准侧面全身和背面全身三视图',
+      '三个全身视图保持相同身高、相同比例、相同服装和自然站立姿势，采用接近正交投影的视角，避免广角和透视畸变',
+      '左上区域展示同一角色的高质量头肩特写，左侧展示从角色服装提取的主要配色板',
+      '左下区域展示服装材质、饰品和关键配件的局部细节',
+      '右侧展示简洁的人体比例辅助线和身高标尺，右下区域展示缩小的完整角色比例图',
     ],
     style: [
       '页面像专业角色设定板，不是剧情插画，不是海报',
-      '背景保持纯净浅色或白底，不要剧情场景，不要复杂道具',
-      '版式整洁清晰，保留设定页的信息分区感',
+      '背景保持纯白或浅灰，不要剧情场景、环境背景或复杂道具',
+      '版式整洁清晰，各区域间距规整，具有专业动画、游戏和影视制作角色模型设定板的信息层级',
+      '不要电影光效、粒子、景深、逆光或复杂阴影，不要生成海报或单张剧情插画',
     ],
     quality: [
       '面料质感清晰，刺绣、提花、金属和珠玉细节明确',
@@ -799,11 +803,12 @@ export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
     consistency: [
       '脸型、五官、发型、发色、服装结构、配饰位置和身材比例完全一致',
       '不要换脸，不要改发饰，不要丢失首饰和衣纹细节',
+      '所有区域都是同一个角色的技术视图，不得混入其他角色或不同脸型、不同服装版本',
     ],
     output: [
-      '单张完整竖版角色主设定板',
-      '允许少量清晰中文栏目标题和标注说明',
-      '包含三视图、头像、线稿辅助区、材质与配饰信息感',
+      '单张完整横版角色主设定板，不裁切头部、手、脚或服装',
+      '不要输出大段文字，避免乱码，只保留简洁分区线、配色色块、标尺和视觉标记',
+      '包含三视图、头像、配色、人体比例、材质与配饰信息区',
     ],
   });
   return {
@@ -851,7 +856,10 @@ export function buildAssetCoverPrompt(asset: Record<string, unknown>) {
  * buildCharacterVoicePromptText({ name: "林婉", description: "温婉端庄" })
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
-export function buildCharacterVoicePromptText(character: Record<string, unknown>) {
+export function buildCharacterVoicePromptText(
+  character: Record<string, unknown>,
+  userDirection = '',
+) {
   const template = selectPromptTemplate([character.description]);
   const blueprint = buildPromptBlueprint({
     template,
@@ -861,6 +869,9 @@ export function buildCharacterVoicePromptText(character: Record<string, unknown>
       character.description ? `人设描述为${character.description}` : '',
     ]),
     style: ['自然真人感', '适合剧情对白', '声音气质贴合角色而不过度表演'],
+    action: normalizeTextList([
+      userDirection ? `创作者补充要求：${userDirection}` : '',
+    ]),
     audio: ['吐字清晰', '口语节奏自然', '一句 3-5 秒短句', '不要主持腔', '不要广告腔'],
     output: ['生成 3-5 秒短句参考音频', '适合作为主语音参考'],
   });

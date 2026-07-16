@@ -40,6 +40,7 @@ module.exports = (app: any) => {
   router.put('/api/scenes/:id', controller.scene.update);
   router.delete('/api/scenes/:id', controller.scene.destroy);
   router.get('/api/scenes/:id/cover-generation-preview', controller.scene.previewCoverGeneration);
+  router.get('/api/scenes/:id/generation-references', controller.scene.generationReferences);
   router.post('/api/scenes/:id/generate-cover', controller.scene.generateCover);
   router.post('/api/scenes/:id/analyze-shot-directions', controller.scene.analyzeShotDirections);
   router.get('/api/scenes/:id/shot-direction-analyses', controller.scene.shotDirectionAnalyses);
@@ -91,12 +92,21 @@ module.exports = (app: any) => {
   router.get('/api/characters/:id/assets', controller.asset.indexByCharacter);
   router.post('/api/characters/:id/save-to-personal', controller.assetWorkspace.saveCharacter);
   router.get('/api/characters/:id/versions', controller.assetWorkspace.characterVersions);
+  router.get(
+    '/api/characters/:id/voice-versions',
+    controller.assetWorkspace.characterVoiceVersions,
+  );
+  router.post(
+    '/api/characters/:id/voice-versions/:versionId/set-current',
+    controller.assetWorkspace.setCharacterVoiceVersion,
+  );
   router.post(
     '/api/characters/:id/versions/:versionId/set-current',
     controller.assetWorkspace.setCharacterVersion,
   );
 
   router.put('/api/assets/:id', controller.asset.update);
+  router.get('/api/assets/:id', controller.asset.show);
   router.delete('/api/assets/:id', controller.asset.destroy);
   router.get('/api/assets/:id/cover-generation-preview', controller.asset.previewCoverGeneration);
   router.post('/api/assets/:id/generate-cover', controller.asset.generateCover);

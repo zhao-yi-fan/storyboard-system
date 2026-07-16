@@ -102,11 +102,15 @@ export type Character = {
   description: string;
   avatar_url: string;
   design_sheet_url?: string;
+  design_sheet_status?: "idle" | "generating" | "succeeded" | "failed" | string;
+  design_sheet_error?: string;
   voice_reference_url?: string;
   voice_reference_duration?: number;
   voice_reference_text?: string;
   voice_name?: string;
   voice_prompt?: string;
+  voice_reference_status?: "idle" | "generating" | "succeeded" | "failed" | string;
+  voice_reference_error?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -119,6 +123,8 @@ export type Asset = {
   type: string;
   file_url: string;
   cover_url?: string;
+  cover_status?: "idle" | "generating" | "succeeded" | "failed" | string;
+  cover_error?: string;
   thumbnail_url?: string;
   meta?: string;
   created_at?: string;
@@ -139,6 +145,8 @@ export type AssetRequirement = {
   file_url?: string;
   preview_url?: string;
   error_message?: string;
+  can_generate?: boolean;
+  blocking_reason?: string;
 };
 
 export type PersonalAsset = {
@@ -164,6 +172,21 @@ export type AssetVersion = {
   preview_url?: string;
   model: string;
   prompt?: string;
+  status: string;
+  is_current: boolean;
+  created_at?: string;
+};
+
+export type CharacterVoiceVersion = {
+  id: number;
+  character_id: number;
+  file_url: string;
+  duration: number;
+  voice_name?: string;
+  user_prompt?: string;
+  effective_prompt?: string;
+  reference_text?: string;
+  source_type: "generated" | "manual-upload" | string;
   status: string;
   is_current: boolean;
   created_at?: string;
@@ -284,6 +307,28 @@ export type StoryboardCoverGenerationPreview = {
   fields: StoryboardCoverGenerationFields;
   final_prompt: string;
   can_generate_without_references: boolean;
+  mappings?: SceneGenerationReferenceMapping[];
+  bound_without_mentions?: string[];
+  unbound_mentions?: string[];
+};
+
+export type SceneGenerationReferenceMapping = {
+  index: number;
+  name: string;
+  type: string;
+  source: string;
+  mention: string;
+  is_mentioned: boolean;
+  prompt_text: string;
+};
+
+export type SceneGenerationReferences = {
+  reference_images: StoryboardCoverGenerationReferenceImage[];
+  missing_references: string[];
+  mappings: SceneGenerationReferenceMapping[];
+  bound_without_mentions: string[];
+  unbound_mentions: string[];
+  recognized_bound_mentions: string[];
 };
 
 export type StoryboardVideoGenerationFields = {

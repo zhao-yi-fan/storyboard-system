@@ -2,7 +2,6 @@
 
 import {
   DEFAULT_ARK_BASE_URL,
-  DEFAULT_CHARACTER_DESIGN_LAYOUT_REFERENCE_URL,
   DEFAULT_SEEDREAM_IMAGE_MODEL,
   DEFAULT_SEEDREAM_TIMEOUT_SECONDS,
 } from '../shared/constants';
@@ -16,10 +15,6 @@ export function buildSeedreamConfig() {
     seedreamImageTimeoutSeconds: getNumberEnv(
       'SEEDREAM_IMAGE_TIMEOUT_SECONDS',
       DEFAULT_SEEDREAM_TIMEOUT_SECONDS,
-    ),
-    characterDesignLayoutReferenceUrl: getStringEnv(
-      'CHARACTER_DESIGN_LAYOUT_REFERENCE_URL',
-      DEFAULT_CHARACTER_DESIGN_LAYOUT_REFERENCE_URL,
     ),
   };
 }

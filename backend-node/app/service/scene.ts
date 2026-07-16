@@ -405,6 +405,87 @@ class SceneService extends Service {
     return extractFirstShotCoverPrompt(prompt);
   }
 
+  buildGenerationReferenceState(scene, references, missing, projectReferenceNames = []) {
+    const prompt = String(scene.prompt || scene.description || '');
+    const boundNames = new Set(
+      [
+        ...(Array.isArray(scene.characters) ? scene.characters : []),
+        ...(Array.isArray(scene.assets) ? scene.assets : []),
+      ]
+        .map((item) => String(item.name || '').trim())
+        .filter(Boolean),
+    );
+    const typeLabels = {
+      character: '角色主设定图',
+      scene: '场景参考图',
+      prop: '道具参考图',
+      costume: '服装参考图',
+      asset: '图片参考',
+    };
+    const mappings = references.map((reference, index) => {
+      const name = String(reference.name || '').trim();
+      const mention = name ? `@${name}` : '';
+      const isMentioned = !!mention && prompt.includes(mention);
+      const subject = `${typeLabels[reference.type] || '图片参考'}「${name}」`;
+      return {
+        index: index + 1,
+        name,
+        type: reference.type,
+        source: reference.source,
+        mention,
+        is_mentioned: isMentioned,
+        prompt_text: isMentioned
+          ? `参考图${index + 1}：${subject}，对应 Prompt 中的 ${mention}。`
+          : `参考图${index + 1}：${subject}，作为当前片段已绑定的视觉参考。`,
+      };
+    });
+    const boundWithoutMentions = mappings
+      .filter((mapping) => !mapping.is_mentioned)
+      .map((mapping) => mapping.name);
+    const knownNames = Array.from(
+      new Set(projectReferenceNames.map((name) => String(name || '').trim()).filter(Boolean)),
+    );
+    const unboundMentions = knownNames.filter(
+      (name) => prompt.includes(`@${name}`) && !boundNames.has(name),
+    );
+
+    return {
+      reference_images: references,
+      missing_references: missing,
+      mappings,
+      bound_without_mentions: boundWithoutMentions,
+      unbound_mentions: unboundMentions,
+      recognized_bound_mentions: Array.from(boundNames).filter((name) =>
+        prompt.includes(`@${name}`),
+      ),
+    };
+  }
+
+  async generationReferencesForScene(scene) {
+    const [{ references, missing }, characters, assets] = await Promise.all([
+      this.ctx.service.storyboard.selectReferenceImages(scene, scene),
+      this.ctx.service.character.findByProjectId(scene.project_id),
+      this.ctx.service.asset.findByProjectId(scene.project_id),
+    ]);
+    return this.buildGenerationReferenceState(
+      scene,
+      references,
+      missing,
+      [...characters, ...assets].map((item) => item.name),
+    );
+  }
+
+  async generationReferences(id) {
+    const scene = await this.findById(id);
+    if (!scene) throw new Error('scene not found');
+    return await this.generationReferencesForScene(scene);
+  }
+
+  buildReferenceMappedPrompt(prompt, mappings) {
+    if (!mappings.length) return prompt;
+    return `【参考图对应关系】\n${mappings.map((mapping) => mapping.prompt_text).join('\n')}\n\n${prompt}`;
+  }
+
   /**
    * 预览场景封面生成参数和 prompt。
    * @param {number} id 场景 id，例如 `21`。
@@ -419,16 +500,13 @@ class SceneService extends Service {
       throw new Error('scene not found');
     }
     const prompt = this.buildCoverPrompt(scene);
-    const { references, missing } = await this.ctx.service.storyboard.selectReferenceImages(
-      scene,
-      scene,
-    );
+    const referenceState = await this.generationReferencesForScene(scene);
+    const finalPrompt = this.buildReferenceMappedPrompt(prompt, referenceState.mappings);
     return {
       prompt_mode: 'composite',
-      mode: references.length ? 'reference' : 'text-only',
+      mode: referenceState.reference_images.length ? 'reference' : 'text-only',
       model: this.app.config.storyboard.seedreamImageModel || 'seedream-4.5',
-      reference_images: references,
-      missing_references: missing,
+      ...referenceState,
       fields: {
         scene_title: String(scene.title || '').trim(),
         location: String(scene.location || '').trim(),
@@ -438,7 +516,7 @@ class SceneService extends Service {
       },
       template: 'composite-first-shot',
       prompt_blueprint: null,
-      final_prompt: prompt,
+      final_prompt: finalPrompt,
       can_generate_without_references: true,
     };
   }

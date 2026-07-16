@@ -66,6 +66,42 @@ export async function ensureAssetWorkspaceSchema(pool) {
       'source_personal_asset_id',
       'BIGINT UNSIGNED NULL AFTER project_id',
     );
+    await addColumnIfMissing(
+      connection,
+      'characters',
+      'design_sheet_status',
+      "VARCHAR(32) NOT NULL DEFAULT 'idle' AFTER design_sheet_url",
+    );
+    await addColumnIfMissing(
+      connection,
+      'characters',
+      'design_sheet_error',
+      'TEXT NULL AFTER design_sheet_status',
+    );
+    await addColumnIfMissing(
+      connection,
+      'characters',
+      'voice_reference_status',
+      "VARCHAR(32) NOT NULL DEFAULT 'idle' AFTER voice_reference_duration",
+    );
+    await addColumnIfMissing(
+      connection,
+      'characters',
+      'voice_reference_error',
+      'TEXT NULL AFTER voice_reference_status',
+    );
+    await addColumnIfMissing(
+      connection,
+      'assets',
+      'cover_status',
+      "VARCHAR(32) NOT NULL DEFAULT 'idle' AFTER cover_url",
+    );
+    await addColumnIfMissing(
+      connection,
+      'assets',
+      'cover_error',
+      'TEXT NULL AFTER cover_status',
+    );
 
     await connection.query(`
     CREATE TABLE IF NOT EXISTS personal_assets (
@@ -134,6 +170,29 @@ export async function ensureAssetWorkspaceSchema(pool) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+    await connection.query(`
+    CREATE TABLE IF NOT EXISTS character_voice_versions (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      owner_user_id BIGINT UNSIGNED NOT NULL,
+      character_id BIGINT UNSIGNED NOT NULL,
+      file_url TEXT NOT NULL,
+      duration DECIMAL(8,3) NULL,
+      voice_name VARCHAR(191) NULL,
+      user_prompt TEXT NULL,
+      effective_prompt LONGTEXT NULL,
+      reference_text TEXT NULL,
+      source_type VARCHAR(32) NOT NULL DEFAULT 'generated',
+      status VARCHAR(32) NOT NULL DEFAULT 'succeeded',
+      is_current TINYINT(1) NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      deleted_at DATETIME NULL,
+      PRIMARY KEY (id),
+      KEY idx_character_voice_versions_character (character_id, created_at),
+      KEY idx_character_voice_versions_owner (owner_user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
     const [users] = await connection.query(
       'SELECT id FROM auth_users WHERE is_active = 1 ORDER BY id LIMIT 1',
     );
@@ -142,6 +201,29 @@ export async function ensureAssetWorkspaceSchema(pool) {
         users[0].id,
       ]);
     }
+    await connection.execute(
+      "UPDATE characters SET design_sheet_status = 'succeeded' WHERE design_sheet_url <> '' AND design_sheet_status = 'idle'",
+    );
+    await connection.execute(
+      "UPDATE characters SET voice_reference_status = 'succeeded' WHERE voice_reference_url <> '' AND voice_reference_status = 'idle'",
+    );
+    await connection.execute(
+      "UPDATE assets SET cover_status = 'succeeded' WHERE cover_url <> '' AND cover_status = 'idle'",
+    );
+    await connection.execute(`
+      INSERT INTO character_voice_versions
+      (owner_user_id, character_id, file_url, duration, voice_name, user_prompt,
+       effective_prompt, reference_text, source_type, status, is_current)
+      SELECT p.user_id, c.id, c.voice_reference_url, c.voice_reference_duration, c.voice_name,
+             c.voice_prompt, '', c.voice_reference_text, 'legacy-import', 'succeeded', 1
+      FROM characters c
+      JOIN projects p ON p.id = c.project_id
+      WHERE c.deleted_at IS NULL AND c.voice_reference_url <> '' AND p.user_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM character_voice_versions cv
+          WHERE cv.character_id = c.id AND cv.deleted_at IS NULL
+        )
+    `);
     await ensureProjectNameConstraint(connection);
   } finally {
     await connection

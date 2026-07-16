@@ -249,12 +249,14 @@ async function normalizeAudioDuration(buffer: Buffer, options: any = {}) {
   const minSeconds = Number(options.minSeconds || 0);
   const maxSeconds = Number(options.maxSeconds || 0);
   const extension = String(options.extension || 'wav').replace(/^\./, '') || 'wav';
+  const outputExtension =
+    String(options.outputExtension || extension).replace(/^\./, '') || extension;
   const sampleRate = Number(options.sampleRate || 24000);
   const channels = Number(options.channels || 1);
   const label = String(options.label || '音频');
   const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-audio-'));
   const inputPath = path.join(workDir, `input.${extension}`);
-  const outputPath = path.join(workDir, `output.${extension}`);
+  const outputPath = path.join(workDir, `output.${outputExtension}`);
 
   try {
     await fsp.writeFile(inputPath, buffer);
@@ -267,27 +269,29 @@ async function normalizeAudioDuration(buffer: Buffer, options: any = {}) {
         `${label}只有 ${formatDurationSeconds(originalDuration)}，低于目标下限 ${formatDurationSeconds(minSeconds)}。系统已保留原语音，请稍后重试。`,
       );
     }
-    if (maxSeconds > 0 && originalDuration > maxSeconds) {
+    if ((maxSeconds > 0 && originalDuration > maxSeconds) || outputExtension !== extension) {
       await ensureFfmpeg();
-      await run('ffmpeg', [
+      const args = [
         '-y',
         '-i',
         inputPath,
-        '-t',
-        String(maxSeconds),
         '-vn',
         '-ar',
         String(sampleRate),
         '-ac',
         String(channels),
-        outputPath,
-      ]);
+      ];
+      if (maxSeconds > 0 && originalDuration > maxSeconds) {
+        args.push('-t', String(maxSeconds));
+      }
+      args.push(outputPath);
+      await run('ffmpeg', args);
       const duration = await probeDuration(outputPath);
       return {
         audioBuffer: await fsp.readFile(outputPath),
         duration,
         originalDuration,
-        wasTrimmed: true,
+        wasTrimmed: maxSeconds > 0 && originalDuration > maxSeconds,
       };
     }
 

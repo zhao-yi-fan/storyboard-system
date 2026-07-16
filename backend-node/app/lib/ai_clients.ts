@@ -21,7 +21,7 @@ const DEFAULT_POLL_INTERVAL_MS = 15000;
 const DEFAULT_SEEDANCE_POLL_INTERVAL_MS = 10000;
 
 const SEEDREAM_IMAGE_SIZE = '2560x1440';
-const SEEDREAM_DESIGN_SHEET_SIZE = '1600x2304';
+const SEEDREAM_DESIGN_SHEET_SIZE = '2304x1600';
 const VIDEO_RESOLUTION_720P = '720P';
 const VIDEO_RESOLUTION_480P = '480p';
 const VOICE_RESPONSE_FORMAT_WAV = 'wav';
@@ -36,7 +36,7 @@ const DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL = 'qwen-voice-design';
 const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
 const VOICE_REFERENCE_DURATION_INSTRUCTION =
   '试听参考音频必须控制在3-5秒内，使用一句中文短句，语速自然，不要拉长停顿。';
-const FIXED_VOICE_REFERENCE_TEXT = '这一次，我不会再退让，也不会再逃避，我要亲手改写命运。';
+const FIXED_VOICE_REFERENCE_TEXT = '今天风很轻，我们慢慢把事情说清楚。';
 
 function getConfig(app) {
   return app.config.storyboard || {};
@@ -422,7 +422,7 @@ function findFirstVideoUrl(value) {
 async function createCharacterVoicePreview(app, character, customPrompt, _customText) {
   const cfg = getConfig(app);
   const voicePrompt = withVoiceDurationInstruction(
-    String(customPrompt || '').trim() || buildCharacterVoicePrompt(character),
+    buildCharacterVoicePromptText(character, String(customPrompt || '').trim()).prompt,
   );
   const previewText = buildCharacterVoiceReferenceText(character);
   return {

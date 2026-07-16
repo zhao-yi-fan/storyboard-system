@@ -102,7 +102,7 @@ describe('test/voice_reference_duration.test.ts', () => {
     );
   });
 
-  it('should not store or update a character when generated voice normalization fails', async () => {
+  it('should persist a retryable failure without storing rejected audio', async () => {
     const executedQueries: unknown[] = [];
     const fakeService = {
       app: {},
@@ -131,6 +131,8 @@ describe('test/voice_reference_duration.test.ts', () => {
       () => CharacterService.prototype.generateVoiceReference.call(fakeService, 8, '', ''),
       /低于目标下限 3\.0秒/,
     );
-    assert.deepStrictEqual(executedQueries, []);
+    assert.equal(executedQueries.length, 2);
+    assert.match(String(executedQueries[0]?.[0]), /voice_reference_status = 'generating'/);
+    assert.match(String(executedQueries[1]?.[0]), /voice_reference_status = 'failed'/);
   });
 });

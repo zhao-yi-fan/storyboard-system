@@ -140,6 +140,16 @@ class SceneController extends Controller {
     }
   }
 
+  async generationReferences() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try {
+      response.success(this.ctx, await this.ctx.service.scene.generationReferences(id));
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
   /**
    * 预览场景封面生成参数。
    * @returns {Promise<void>} 通过统一响应格式返回字段摘要和 prompt。

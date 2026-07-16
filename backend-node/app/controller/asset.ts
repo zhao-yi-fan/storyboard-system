@@ -37,6 +37,18 @@ class AssetController extends Controller {
     }
   }
 
+  async show() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    try {
+      const item = await this.ctx.service.asset.findById(id);
+      if (!item) return response.error(this.ctx, 'asset not found');
+      response.success(this.ctx, item);
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
   /**
    * 获取角色关联的资产列表。
    * @returns {Promise<void>} 通过统一响应格式返回资产数组。
