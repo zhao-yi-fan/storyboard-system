@@ -1118,6 +1118,19 @@ class StoryboardService extends Service {
             (preview.audio_reference_assets || []).map((item) => item.url),
             preview.resolution,
             preview.audio,
+            {
+              onTaskCreated: async (taskId) => {
+                const currentGeneration = await this.ctx.service.mediaGeneration.findById(
+                  generationId,
+                );
+                await this.ctx.service.mediaGeneration.update(generationId, {
+                  meta_json: {
+                    ...parseMediaGenerationMeta(currentGeneration?.meta_json),
+                    provider_task_id: taskId,
+                  },
+                });
+              },
+            },
           )
         : await generateWanxVideo(
             this.app,
@@ -1162,6 +1175,7 @@ class StoryboardService extends Service {
             (item) => item.name,
           ),
           audio_reference_total_duration: preview.audio_reference_total_duration || 0,
+          provider_task_id: result.taskId || undefined,
         }),
       });
       await this.ctx.service.mediaGeneration.markCurrent(id, 'video', generation.id);

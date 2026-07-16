@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
-const { buildSeedanceVideoPayload } = cjsRequire('../app/lib/ai_clients');
+const { buildSeedanceVideoPayload, generateSeedanceVideo } = cjsRequire('../app/lib/ai_clients');
 const StoryboardService = cjsRequire('../app/service/storyboard');
 const AssetService = cjsRequire('../app/service/asset');
 
@@ -68,6 +68,60 @@ describe('test/seedance_video_generation.test.ts', () => {
         ['audio_url', 'reference_audio'],
       ],
     );
+  });
+
+  it('persists the provider task id and waits until Seedance reaches a terminal status', async () => {
+    const responses = [
+      { id: 'cgt-test-1' },
+      new Error('temporary network failure'),
+      { id: 'cgt-test-1', status: 'running' },
+      {
+        id: 'cgt-test-1',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/result.mp4' },
+      },
+    ];
+    const originalFetch = global.fetch;
+    const observedTaskIds: string[] = [];
+    global.fetch = async () => {
+      const next = responses.shift();
+      if (next instanceof Error) throw next;
+      return new Response(JSON.stringify(next), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    };
+    try {
+      const result = await generateSeedanceVideo(
+        {
+          config: {
+            storyboard: {
+              seedanceApiKey: 'test-key',
+              seedanceModel: 'doubao-seedance-2-0-260128',
+              seedanceRequestTimeoutSeconds: 1,
+            },
+          },
+          logger: { warn() {}, error() {} },
+        },
+        '人物走入房间',
+        '',
+        10,
+        false,
+        [],
+        [],
+        '720p',
+        false,
+        {
+          pollIntervalMs: 0,
+          onTaskCreated: async (taskId: string) => observedTaskIds.push(taskId),
+        },
+      );
+      assert.deepStrictEqual(observedTaskIds, ['cgt-test-1']);
+      assert.equal(result.taskId, 'cgt-test-1');
+      assert.equal(result.videoUrl, 'https://example.com/result.mp4');
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   it('omits reference audio when audio is disabled', () => {

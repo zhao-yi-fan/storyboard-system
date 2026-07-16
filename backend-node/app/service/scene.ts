@@ -18,6 +18,7 @@ const {
   generateSeedanceVideo,
 } = require('../lib/ai_clients');
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 const {
   assertCompositePromptLength,
   buildCompositeVideoPrompt,
@@ -856,6 +857,19 @@ class SceneService extends Service {
             preview.audio_reference_assets.map((item) => item.url),
             preview.resolution,
             preview.audio,
+            {
+              onTaskCreated: async (taskId) => {
+                const currentGeneration = await this.ctx.service.sceneMediaGeneration.findById(
+                  generationId,
+                );
+                await this.ctx.service.sceneMediaGeneration.update(generationId, {
+                  meta_json: {
+                    ...parseMediaGenerationMeta(currentGeneration?.meta_json),
+                    provider_task_id: taskId,
+                  },
+                });
+              },
+            },
           )
         : await generateWanxVideo(
             this.app,
@@ -887,6 +901,12 @@ class SceneService extends Service {
         preview_url: stored.publicPath,
         source_url: preview.use_first_frame ? scene.cover_url : '',
         error_message: null,
+        meta_json: {
+          ...parseMediaGenerationMeta(
+            (await this.ctx.service.sceneMediaGeneration.findById(generationId))?.meta_json,
+          ),
+          provider_task_id: result.taskId || undefined,
+        },
       });
       await this.ctx.service.sceneMediaGeneration.markCurrent(id, 'video', generationId);
     } catch (error) {

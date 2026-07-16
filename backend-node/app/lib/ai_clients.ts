@@ -63,7 +63,9 @@ async function postJson(url, apiKey, payload, timeoutMs) {
   }
   if (!response.ok) {
     const message = data?.error?.message || data?.message || `${response.status}`;
-    throw new Error(String(message));
+    const error = new Error(String(message));
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -79,7 +81,9 @@ async function getJson(url, apiKey, timeoutMs) {
     data = JSON.parse(text);
   }
   if (!response.ok) {
-    throw new Error(String(data?.error?.message || data?.message || response.status));
+    const error = new Error(String(data?.error?.message || data?.message || response.status));
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -298,6 +302,7 @@ async function generateSeedanceVideo(
   referenceAudioUrls = [],
   resolution = VIDEO_RESOLUTION_480P,
   generateAudio = true,
+  options = {},
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
@@ -333,28 +338,47 @@ async function generateSeedanceVideo(
   if (!taskId) {
     throw new Error('提交 Seedance 视频任务失败: 未返回任务 ID');
   }
+  if (typeof options.onTaskCreated === 'function') {
+    try {
+      await options.onTaskCreated(taskId);
+    } catch (error) {
+      app.logger?.error?.(`[Seedance] persist task id failed: ${error.message}`);
+    }
+  }
+  const pollIntervalMs = Number.isFinite(Number(options.pollIntervalMs))
+    ? Math.max(0, Number(options.pollIntervalMs))
+    : DEFAULT_SEEDANCE_POLL_INTERVAL_MS;
 
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    await wait(DEFAULT_SEEDANCE_POLL_INTERVAL_MS);
-    const taskData = await getJson(
-      `${baseUrl}/contents/generations/tasks/${taskId}`,
-      cfg.seedanceApiKey,
-      timeoutMs,
-    );
+  while (true) {
+    await wait(pollIntervalMs);
+    let taskData;
+    try {
+      taskData = await getJson(
+        `${baseUrl}/contents/generations/tasks/${taskId}`,
+        cfg.seedanceApiKey,
+        timeoutMs,
+      );
+    } catch (error) {
+      if (Number(error.status) >= 400 && Number(error.status) < 500) throw error;
+      app.logger?.warn?.(`[Seedance] task ${taskId} poll failed, retrying: ${error.message}`);
+      continue;
+    }
     const status = String(taskData?.status || '').toLowerCase();
     if (SUCCESS_VIDEO_STATUSES.includes(status)) {
       const videoUrl = findFirstVideoUrl(taskData);
       if (!videoUrl) {
         throw new Error('Seedance 视频任务成功但未返回视频地址');
       }
-      return { videoUrl, duration: Number(duration || DEFAULT_IMAGE_DURATION_SECONDS) };
+      return {
+        taskId,
+        videoUrl,
+        duration: Number(duration || DEFAULT_IMAGE_DURATION_SECONDS),
+      };
     }
     if (FAILED_VIDEO_STATUSES.includes(status)) {
       throw new Error(String(findFirstMessage(taskData) || 'Seedance 视频任务失败'));
     }
   }
-  throw new Error('Seedance 视频任务超时');
 }
 
 function findFirstMessage(value) {

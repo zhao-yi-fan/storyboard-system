@@ -64,6 +64,15 @@ Seedance 2.0 音频限制：
 
 有声开启时，如果当前镜头任一角色缺少主语音，或音频数量/时长超过 Seedance 2.0 限制，后端阻止生成，不自动截断、不丢弃第 4 个角色音频。无声模式不收集参考音频，也不执行主语音阻断。
 
+### 4. 异步任务追踪
+
+- 创建 Seedance 任务后，立即把返回的任务 ID 写入媒体生成记录 `meta_json.provider_task_id`。
+- 不设置任务级总轮询时限；只要方舟状态仍为 `queued` 或 `running`，本地记录就保持 `generating`。
+- 每次创建和查询请求仍保留独立网络超时，避免单个失联连接永久占用 worker。
+- 查询发生网络超时或服务端 `5xx` 时继续轮询；明确的鉴权或参数类 `4xx` 仍作为失败处理。
+- 只有方舟明确返回 `succeeded`、`failed` 或 `cancelled` 时，才把本地生成记录更新为对应终态。
+- 已获得 `provider_task_id` 的记录可以通过方舟查询接口继续核对和恢复，不应因本地等待时间较长而创建重复任务。
+
 ## Acceptance criteria
 
 - 视频确认弹窗可看到当前镜头的角色参考图、背景资产图和所有角色主语音。
@@ -74,3 +83,5 @@ Seedance 2.0 音频限制：
 - Seedance 2.0 请求体正确包含预览中展示的 `reference_image` 图像项。
 - Seedance 2.0 请求体不会同时包含 `first_frame` 和任何 `reference_*` 媒体项。
 - 无声模式请求使用 `generate_audio: false`，且生成 prompt 不包含音频要求。
+- Seedance 任务超过 5 分钟仍处于排队或生成状态时，本地继续轮询，不标记为超时失败。
+- 媒体生成记录在远端任务创建后包含 `provider_task_id`。
