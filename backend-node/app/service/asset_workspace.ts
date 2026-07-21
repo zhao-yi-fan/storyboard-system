@@ -662,6 +662,70 @@ class AssetWorkspaceService extends Service {
     }
   }
 
+  async recordCharacterDesignSheetVersion(character, fileUrl, prompt) {
+    const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
+      character.project_id,
+    ]);
+    const userId = Number(projects[0]?.user_id || 0);
+    const nextFileUrl = normalizeGeneratedAssetReference(this.app, fileUrl);
+    const previousFileUrl = normalizeGeneratedAssetReference(
+      this.app,
+      character.design_sheet_url || '',
+    );
+    const previewUrl = normalizeGeneratedAssetReference(this.app, character.avatar_url || '');
+    if (!userId) throw new Error('角色所属项目缺少用户信息，无法保存主设定图版本');
+    if (!nextFileUrl) throw new Error('主设定图文件地址为空');
+
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [existingVersions] = await conn.query(
+        `SELECT id FROM asset_versions
+         WHERE entity_type = 'character' AND entity_id = ? AND deleted_at IS NULL LIMIT 1`,
+        [character.id],
+      );
+      if (!existingVersions.length && previousFileUrl && previousFileUrl !== nextFileUrl) {
+        await conn.execute(
+          `INSERT INTO asset_versions
+           (owner_user_id, scope_type, entity_type, entity_id, file_url, preview_url,
+            model, prompt, status, is_current, source_type)
+           VALUES (?, 'project', 'character', ?, ?, ?, 'legacy', '', 'succeeded', 0, 'legacy-import')`,
+          [userId, character.id, previousFileUrl, previewUrl],
+        );
+      }
+      await conn.execute(
+        `UPDATE asset_versions SET is_current = 0
+         WHERE entity_type = 'character' AND entity_id = ? AND deleted_at IS NULL`,
+        [character.id],
+      );
+      const [result] = await conn.execute(
+        `INSERT INTO asset_versions
+         (owner_user_id, scope_type, entity_type, entity_id, file_url, preview_url,
+          model, prompt, status, is_current, source_type)
+         VALUES (?, 'project', 'character', ?, ?, ?, 'seedream-4.5', ?, 'succeeded', 1, 'generated')`,
+        [userId, character.id, nextFileUrl, previewUrl, prompt || ''],
+      );
+      await conn.execute(
+        `UPDATE characters
+         SET design_sheet_url = ?, design_sheet_status = 'succeeded', design_sheet_error = NULL
+         WHERE id = ? AND deleted_at IS NULL`,
+        [nextFileUrl, character.id],
+      );
+      await conn.execute(
+        `UPDATE asset_requirements SET status = 'generated', error_message = NULL
+         WHERE linked_entity_type = 'character' AND linked_entity_id = ? AND deleted_at IS NULL`,
+        [character.id],
+      );
+      await conn.commit();
+      return result.insertId;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
+  }
+
   async listVersions(entityType, entityId) {
     const [rows] = await this.pool.query(
       `SELECT * FROM asset_versions

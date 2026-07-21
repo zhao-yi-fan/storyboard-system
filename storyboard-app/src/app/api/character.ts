@@ -39,8 +39,10 @@ export function getCharacterDesignSheetGenerationPreview(id: number) {
   return apiClient.get<AIGenerationPreview>(`/characters/${id}/design-sheet-generation-preview`);
 }
 
-export function generateCharacterDesignSheet(id: number) {
-  return apiClient.post<Character>(`/characters/${id}/generate-design-sheet`, {});
+export function generateCharacterDesignSheet(id: number, promptOverride?: string) {
+  return apiClient.post<Character>(`/characters/${id}/generate-design-sheet`, {
+    prompt_override: promptOverride,
+  });
 }
 
 export function getCharacterVoiceReferenceGenerationPreview(

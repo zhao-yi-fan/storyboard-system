@@ -24,6 +24,7 @@ const {
   buildCompositeVideoPrompt,
   extractFirstShotCoverPrompt,
 } = require('../lib/composite_prompt');
+const { optimizeStoryboardPrompt } = require('../lib/prompt_optimizer');
 
 class SceneService extends Service {
   get pool() {
@@ -275,6 +276,18 @@ class SceneService extends Service {
     );
 
     return await this.findById(id);
+  }
+
+  async optimizePrompt(id, payload) {
+    const scene = await this.findById(id);
+    if (!scene) {
+      throw new Error('scene not found');
+    }
+
+    return await optimizeStoryboardPrompt(this.config.storyboard, payload.prompt, {
+      title: scene.title,
+      duration: scene.generation_duration,
+    });
   }
 
   /**

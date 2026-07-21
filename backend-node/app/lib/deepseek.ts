@@ -140,16 +140,61 @@ function extractJSONObject(content: string): string {
   return content.trim();
 }
 
-function ensureConfigured(config: DeepSeekConfig): void {
+function ensureConfigured(config: DeepSeekConfig, errorLabel = 'DeepSeek 解析'): void {
   if (!config.deepSeekApiKey) {
-    throw new Error('DeepSeek 解析未配置：缺少 DEEPSEEK_API_KEY');
+    throw new Error(`${errorLabel}未配置：缺少 DEEPSEEK_API_KEY`);
   }
   if (!config.deepSeekBaseUrl) {
-    throw new Error('DeepSeek 解析未配置：缺少 DEEPSEEK_BASE_URL');
+    throw new Error(`${errorLabel}未配置：缺少 DEEPSEEK_BASE_URL`);
   }
   if (!config.deepSeekModel) {
-    throw new Error('DeepSeek 解析未配置：缺少 DEEPSEEK_MODEL');
+    throw new Error(`${errorLabel}未配置：缺少 DEEPSEEK_MODEL`);
   }
+}
+
+type DeepSeekTextRequest = {
+  systemPrompt: string;
+  userPrompt: string;
+  temperature?: number;
+  errorLabel?: string;
+};
+
+export async function requestDeepSeekText(
+  config: DeepSeekConfig,
+  request: DeepSeekTextRequest,
+): Promise<string> {
+  const errorLabel = request.errorLabel || 'DeepSeek 请求';
+  ensureConfigured(config, errorLabel);
+  const resp = await fetch(
+    `${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`,
+    {
+      method: POST_METHOD,
+      headers: {
+        Authorization: `Bearer ${config.deepSeekApiKey}`,
+        'Content-Type': JSON_CONTENT_TYPE,
+      },
+      body: JSON.stringify({
+        model: config.deepSeekModel,
+        temperature: request.temperature ?? 0.2,
+        messages: [
+          { role: 'system', content: request.systemPrompt },
+          { role: 'user', content: request.userPrompt },
+        ],
+      }),
+      signal: AbortSignal.timeout((config.deepSeekRequestTimeoutSeconds || 180) * 1000),
+    },
+  );
+
+  const body = await resp.json().catch(() => null);
+  if (!resp.ok) {
+    throw new Error(`${errorLabel}失败: ${body?.error?.message || `HTTP ${resp.status}`}`);
+  }
+
+  const content = String(body?.choices?.[0]?.message?.content || '').trim();
+  if (!content) {
+    throw new Error(`${errorLabel}失败：返回内容为空`);
+  }
+  return content;
 }
 
 export async function parseScriptWithDeepSeek(config: DeepSeekConfig, scriptText: string) {
@@ -161,37 +206,12 @@ export async function parseScriptWithDeepSeek(config: DeepSeekConfig, scriptText
     throw new Error('文本过长，请分段导入或缩短内容');
   }
 
-  ensureConfigured(config);
-
-  const resp = await fetch(
-    `${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`,
-    {
-      method: POST_METHOD,
-      headers: {
-        Authorization: `Bearer ${config.deepSeekApiKey}`,
-        'Content-Type': JSON_CONTENT_TYPE,
-      },
-      body: JSON.stringify({
-        model: config.deepSeekModel,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(cleaned) },
-        ],
-      }),
-      signal: AbortSignal.timeout((config.deepSeekRequestTimeoutSeconds || 180) * 1000),
-    },
-  );
-
-  const body = await resp.json().catch(() => null);
-  if (!resp.ok) {
-    throw new Error(`DeepSeek 解析失败: ${body?.error?.message || `HTTP ${resp.status}`}`);
-  }
-
-  const content = String(body?.choices?.[0]?.message?.content || '').trim();
-  if (!content) {
-    throw new Error('DeepSeek 解析失败：返回内容为空');
-  }
+  const content = await requestDeepSeekText(config, {
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: buildUserPrompt(cleaned),
+    temperature: 0.2,
+    errorLabel: 'DeepSeek 解析',
+  });
 
   const normalized = extractJSONObject(
     content

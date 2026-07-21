@@ -157,7 +157,7 @@ class CharacterController extends Controller {
     try {
       response.success(
         this.ctx,
-        await this.ctx.service.character.generateDesignSheet(id, body.model, body.mode),
+        await this.ctx.service.character.generateDesignSheet(id, body.prompt_override),
       );
     } catch (err) {
       response.error(this.ctx, err.message);

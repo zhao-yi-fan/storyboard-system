@@ -61,6 +61,10 @@ import {
   type PromptMentionOption,
 } from "../components/workspace/RichPromptEditor";
 import {
+  PromptOptimizationDialog,
+  PromptOptimizeButton,
+} from "../components/workspace/PromptOptimizationDialog";
+import {
   CoverReferencePanel,
   PromptReferenceStatus,
 } from "../components/workspace/CoverReferencePanel";
@@ -361,6 +365,12 @@ export default function Workspace() {
   } | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [isPromptFullscreenOpen, setIsPromptFullscreenOpen] = useState(false);
+  const [isPromptOptimizationOpen, setIsPromptOptimizationOpen] = useState(false);
+  const [isOptimizingPrompt, setIsOptimizingPrompt] = useState(false);
+  const [promptOptimizationOriginal, setPromptOptimizationOriginal] = useState("");
+  const [promptOptimizationCandidate, setPromptOptimizationCandidate] = useState("");
+  const [promptOptimizationModel, setPromptOptimizationModel] = useState("");
+  const [promptOptimizationError, setPromptOptimizationError] = useState("");
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
   const [projectCharacters, setProjectCharacters] = useState<Character[]>([]);
   const [projectAssets, setProjectAssets] = useState<Asset[]>([]);
@@ -1359,6 +1369,46 @@ export default function Workspace() {
     setShotForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const requestPromptOptimization = async () => {
+    if (!selectedShot || isOptimizingPrompt) return;
+    if (!shotForm.content.trim()) {
+      toast.error("请先输入需要优化的提示词");
+      return;
+    }
+    if (shotForm.content.length > COMPOSITE_PROMPT_MAX_LENGTH) {
+      toast.error(`提示词最多支持 ${COMPOSITE_PROMPT_MAX_LENGTH} 个字符`);
+      return;
+    }
+
+    const originalPrompt = shotForm.content;
+    setPromptOptimizationOriginal(originalPrompt);
+    setPromptOptimizationCandidate("");
+    setPromptOptimizationModel("");
+    setPromptOptimizationError("");
+    setIsPromptOptimizationOpen(true);
+    setIsOptimizingPrompt(true);
+    try {
+      const result = await sceneApi.optimizeScenePrompt(selectedShot.id, originalPrompt);
+      setPromptOptimizationOriginal(result.original_prompt);
+      setPromptOptimizationCandidate(result.optimized_prompt);
+      setPromptOptimizationModel(result.model);
+    } catch (error) {
+      console.error("Failed to optimize prompt:", error);
+      setPromptOptimizationError(
+        error instanceof Error ? error.message : "提示词优化失败，请稍后重试",
+      );
+    } finally {
+      setIsOptimizingPrompt(false);
+    }
+  };
+
+  const confirmPromptOptimization = () => {
+    if (!promptOptimizationCandidate) return;
+    updateShotForm("content", promptOptimizationCandidate);
+    setIsPromptOptimizationOpen(false);
+    toast.success("已替换为 AI 候选稿，保存或生成时将写入片段");
+  };
+
   const updateNewSceneForm = <K extends keyof typeof emptySceneForm>(
     key: K,
     value: (typeof emptySceneForm)[K],
@@ -1892,15 +1942,23 @@ export default function Workspace() {
                         #{formatShotNumber(selectedShot.shot_number)}
                       </span>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-gray-600 hover:text-white"
-                      onClick={() => setIsPromptFullscreenOpen(true)}
-                      aria-label="全屏编辑提示词"
-                    >
-                      <Maximize2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <PromptOptimizeButton
+                        compact
+                        loading={isOptimizingPrompt}
+                        disabled={!shotForm.content.trim()}
+                        onClick={() => void requestPromptOptimization()}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-gray-600 hover:text-white"
+                        onClick={() => setIsPromptFullscreenOpen(true)}
+                        aria-label="全屏编辑提示词"
+                      >
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <PromptReferenceStatus references={liveGenerationReferences} />
                   <RichPromptEditor
@@ -2030,15 +2088,22 @@ export default function Workspace() {
                   当前片段 · {selectedScene?.title || "未命名片段"}
                 </DialogDescription>
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 text-gray-600 hover:text-white"
-                onClick={() => setIsPromptFullscreenOpen(false)}
-                aria-label="退出全屏编辑"
-              >
-                <Minimize2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <PromptOptimizeButton
+                  loading={isOptimizingPrompt}
+                  disabled={!shotForm.content.trim()}
+                  onClick={() => void requestPromptOptimization()}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 text-gray-600 hover:text-white"
+                  onClick={() => setIsPromptFullscreenOpen(false)}
+                  aria-label="退出全屏编辑"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col p-5">
@@ -2062,6 +2127,17 @@ export default function Workspace() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <PromptOptimizationDialog
+        open={isPromptOptimizationOpen}
+        originalPrompt={promptOptimizationOriginal}
+        optimizedPrompt={promptOptimizationCandidate}
+        model={promptOptimizationModel}
+        loading={isOptimizingPrompt}
+        error={promptOptimizationError}
+        onOpenChange={setIsPromptOptimizationOpen}
+        onRetry={() => void requestPromptOptimization()}
+        onConfirm={confirmPromptOptimization}
+      />
       <Dialog open={isManageCharactersOpen} onOpenChange={setIsManageCharactersOpen}>
         <DialogContent className="bg-[#111111] border-gray-800 text-gray-100 sm:max-w-2xl">
           <DialogHeader>

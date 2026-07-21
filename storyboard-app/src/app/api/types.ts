@@ -95,6 +95,12 @@ export type SceneMediaMutationResult = {
   media_generations: SceneMediaGeneration[];
 };
 
+export type PromptOptimizationResult = {
+  original_prompt: string;
+  optimized_prompt: string;
+  model: string;
+};
+
 export type Character = {
   id: number;
   project_id: number;
@@ -174,6 +180,7 @@ export type AssetVersion = {
   prompt?: string;
   status: string;
   is_current: boolean;
+  source_type?: "generated" | "legacy-import" | "manual-upload" | string;
   created_at?: string;
 };
 

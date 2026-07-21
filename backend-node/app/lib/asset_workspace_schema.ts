@@ -211,6 +211,20 @@ export async function ensureAssetWorkspaceSchema(pool) {
       "UPDATE assets SET cover_status = 'succeeded' WHERE cover_url <> '' AND cover_status = 'idle'",
     );
     await connection.execute(`
+      INSERT INTO asset_versions
+      (owner_user_id, scope_type, entity_type, entity_id, file_url, preview_url,
+       model, prompt, status, is_current, source_type)
+      SELECT p.user_id, 'project', 'character', c.id, c.design_sheet_url, c.avatar_url,
+             'legacy', '', 'succeeded', 1, 'legacy-import'
+      FROM characters c
+      JOIN projects p ON p.id = c.project_id
+      WHERE c.deleted_at IS NULL AND c.design_sheet_url <> '' AND p.user_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM asset_versions av
+          WHERE av.entity_type = 'character' AND av.entity_id = c.id AND av.deleted_at IS NULL
+        )
+    `);
+    await connection.execute(`
       INSERT INTO character_voice_versions
       (owner_user_id, character_id, file_url, duration, voice_name, user_prompt,
        effective_prompt, reference_text, source_type, status, is_current)

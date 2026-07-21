@@ -38,6 +38,7 @@ module.exports = (app: any) => {
 
   router.get('/api/scenes/:id', controller.scene.show);
   router.put('/api/scenes/:id', controller.scene.update);
+  router.post('/api/scenes/:id/optimize-prompt', controller.scene.optimizePrompt);
   router.delete('/api/scenes/:id', controller.scene.destroy);
   router.get('/api/scenes/:id/cover-generation-preview', controller.scene.previewCoverGeneration);
   router.get('/api/scenes/:id/generation-references', controller.scene.generationReferences);

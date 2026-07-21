@@ -98,6 +98,23 @@ class SceneController extends Controller {
     }
   }
 
+  async optimizePrompt() {
+    const id = this.parseId();
+    if (!id) {
+      response.error(this.ctx, 'invalid id');
+      return;
+    }
+
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.scene.optimizePrompt(id, this.ctx.request.body || {}),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
   /**
    * 更新场景。
    * @returns {Promise<void>} 通过统一响应格式返回更新后的场景。

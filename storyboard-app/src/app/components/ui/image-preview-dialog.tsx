@@ -1,7 +1,5 @@
-import { useEffect } from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "./dialog";
+import { PhotoSlider } from "react-photo-view";
+import "react-photo-view/dist/react-photo-view.css";
 
 type PreviewItem = {
   src: string;
@@ -22,92 +20,27 @@ export function ImagePreviewDialog({
   open,
   onOpenChange,
   src,
-  alt = "图片预览",
   items,
   currentIndex = 0,
   onNavigate,
 }: ImagePreviewDialogProps) {
-  const canNavigate = !!items && items.length > 1 && typeof onNavigate === "function";
-
-  useEffect(() => {
-    if (!open || !canNavigate || !items || !onNavigate) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        onNavigate((currentIndex - 1 + items.length) % items.length);
-      }
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        onNavigate((currentIndex + 1) % items.length);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, canNavigate, items, currentIndex, onNavigate]);
-
-  if (!src) {
-    return null;
-  }
+  const previewItems = items?.length ? items : src ? [{ src, alt: "" }] : [];
+  const safeIndex = Math.min(Math.max(currentIndex, 0), Math.max(previewItems.length - 1, 0));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal>
-        <DialogOverlay className="bg-black/72 backdrop-blur-[2px]" />
-        <DialogPrimitive.Content
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none sm:p-8"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              onOpenChange(false);
-            }
-          }}
-        >
-          <DialogTitle className="sr-only">{alt}</DialogTitle>
-          {canNavigate ? (
-            <button
-              type="button"
-              className="absolute left-4 top-1/2 z-10 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 sm:left-6"
-              onClick={(event) => {
-                event.stopPropagation();
-                onNavigate?.((currentIndex - 1 + (items?.length || 0)) % (items?.length || 1));
-              }}
-              aria-label="上一张"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-          ) : null}
-
-          <div
-            className="pointer-events-auto flex max-h-full max-w-full items-center justify-center overflow-hidden px-12 sm:px-20"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <img
-              src={src}
-              alt={alt}
-              loading="eager"
-              decoding="async"
-              className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-6rem)] select-none object-contain sm:max-h-[calc(100vh-4rem)] sm:max-w-[calc(100vw-10rem)]"
-            />
-          </div>
-
-          {canNavigate ? (
-            <button
-              type="button"
-              className="absolute right-4 top-1/2 z-10 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 sm:right-6"
-              onClick={(event) => {
-                event.stopPropagation();
-                onNavigate?.((currentIndex + 1) % (items?.length || 1));
-              }}
-              aria-label="下一张"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          ) : null}
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    </Dialog>
+    <PhotoSlider
+      images={previewItems.map((item, index) => ({
+        key: `${item.src}-${index}`,
+        src: item.src,
+      }))}
+      visible={open && previewItems.length > 0}
+      index={safeIndex}
+      onIndexChange={(nextIndex) => onNavigate?.(nextIndex)}
+      onClose={() => onOpenChange(false)}
+      maskClosable
+      maskOpacity={0.72}
+      photoClosable={false}
+      loop={previewItems.length > 1}
+    />
   );
 }

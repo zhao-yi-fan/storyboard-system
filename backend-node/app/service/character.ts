@@ -21,6 +21,7 @@ const {
 const { buildCharacterDesignPrompt } = require('../lib/prompt_library');
 
 const CHARACTER_DESIGN_MODEL = 'seedream-4.5';
+const CHARACTER_DESIGN_PROMPT_MAX_LENGTH = 10000;
 const VOICE_REFERENCE_MIN_SECONDS = 3;
 const VOICE_REFERENCE_MAX_SECONDS = 5;
 const VOICE_REFERENCE_SAMPLE_RATE = 24000;
@@ -249,6 +250,18 @@ class CharacterService extends Service {
     return buildCharacterDesignPrompt(character).prompt;
   }
 
+  resolveDesignPrompt(character, promptOverride) {
+    if (promptOverride === undefined || promptOverride === null) {
+      return this.buildDesignPrompt(character);
+    }
+    const prompt = String(promptOverride).trim();
+    if (!prompt) throw new Error('最终 Prompt 不能为空');
+    if (prompt.length > CHARACTER_DESIGN_PROMPT_MAX_LENGTH) {
+      throw new Error(`最终 Prompt 不能超过 ${CHARACTER_DESIGN_PROMPT_MAX_LENGTH} 个字符`);
+    }
+    return prompt;
+  }
+
   /**
    * 收集角色主设定图生成所需的参考图。
    * @param {object} character 角色对象，例如 `{ name: "林婉", avatar_url: "https://..." }`。
@@ -305,7 +318,7 @@ class CharacterService extends Service {
         生成模型: 'Seedream 4.5',
         生成方式: '图生图',
         角色参考图: '已提供',
-        设定板版式: '固定 Prompt',
+        设定板版式: '默认 Prompt，可在确认前编辑',
         输出: '角色主设定图',
       },
       template: designPrompt.template,
@@ -314,7 +327,7 @@ class CharacterService extends Service {
       notes: [
         '这次固定走 Seedream 图生图。',
         '角色参考图只用于生成主设定图，不参与其他展示和分镜参考链路。',
-        '设定板版式由固定 Prompt 描述，不会传入其他角色的版式示例图。',
+        '设定板版式由默认 Prompt 描述，确认前可编辑最终 Prompt；不会传入其他角色的版式示例图。',
         ...missing.map((item) => `缺少参考项：${item}`),
       ],
     };
@@ -367,7 +380,7 @@ class CharacterService extends Service {
    * await service.generateDesignSheet(8)
    * // => { id: 8, design_sheet_url: "/generated/characters/character-design-sheet-8-....png" }
    */
-  async generateDesignSheet(id) {
+  async generateDesignSheet(id, promptOverride) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
     const { avatarUrl } = this.collectDesignReferenceImages(character);
@@ -379,21 +392,18 @@ class CharacterService extends Service {
       [id],
     );
     try {
-      const prompt = this.buildDesignPrompt(character);
+      const prompt = this.resolveDesignPrompt(character, promptOverride);
       const imageUrl = await generateSeedreamImage(this.app, prompt, [avatarUrl], {
         size: SEEDREAM_DESIGN_SHEET_SIZE,
       });
       const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
       const stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
-      await this.pool.execute(
-        "UPDATE characters SET design_sheet_url = ?, design_sheet_status = 'succeeded', design_sheet_error = NULL WHERE id = ?",
-        [stored.publicPath, id],
+      await this.ctx.service.assetWorkspace.recordCharacterDesignSheetVersion(
+        character,
+        stored.publicPath,
+        prompt,
       );
-      const updated = await this.findById(id);
-      await this.ctx.service.assetWorkspace.recordVersion(
-        'character', id, updated.project_id, updated.design_sheet_url, updated.avatar_url, prompt,
-      );
-      return updated;
+      return await this.findById(id);
     } catch (error) {
       await this.pool.execute(
         "UPDATE characters SET design_sheet_status = 'failed', design_sheet_error = ? WHERE id = ?",

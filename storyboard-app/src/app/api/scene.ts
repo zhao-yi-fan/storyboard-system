@@ -4,6 +4,7 @@ import type {
   ComposeSceneVideoResult,
   GenerateSceneCoverResult,
   GenerateSceneStoryboardCoversResult,
+  PromptOptimizationResult,
   Scene,
   SceneGenerationReferences,
   SceneMediaGeneration,
@@ -53,6 +54,10 @@ export function updateScene(
   },
 ) {
   return apiClient.put<Scene>(`/scenes/${id}`, data);
+}
+
+export function optimizeScenePrompt(id: number, prompt: string) {
+  return apiClient.post<PromptOptimizationResult>(`/scenes/${id}/optimize-prompt`, { prompt });
 }
 
 export function deleteScene(id: number) {

@@ -17,6 +17,7 @@ import {
   Loader2,
   Sparkles,
   Upload,
+  Package,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -66,11 +67,13 @@ import {
 
 type SelectedAsset = { type: "character"; data: Character } | { type: "asset"; data: Asset } | null;
 
-type CreateMode = "character" | "asset";
+type AssetKind = "scene" | "prop";
+type AssetLibraryTab = "characters" | "scenes" | "props";
+type CreateMode = "character" | AssetKind;
 
 type DeleteTarget =
   | { type: "character"; id: number; name: string }
-  | { type: "asset"; id: number; name: string }
+  | { type: "asset"; id: number; name: string; assetKind: AssetKind }
   | null;
 
 type AIPreviewAction = "character-design-sheet" | "character-voice-reference" | "asset-cover";
@@ -81,7 +84,10 @@ type AIPreviewDialogState = {
   description: string;
   confirmLabel: string;
   preview: AIGenerationPreview;
+  promptDraft: string;
 };
+
+type AIPreviewDialogInput = Omit<AIPreviewDialogState, "promptDraft">;
 
 const getCharacterPreviewSrc = (character: Character | null | undefined) =>
   character?.design_sheet_url || "";
@@ -111,6 +117,225 @@ const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
 
 const getAssetOriginalSrc = (asset: Asset | null | undefined) =>
   asset?.file_url || "";
+
+type ContainedAssetImageProps = {
+  src: string;
+  alt: string;
+  className?: string;
+};
+
+function ContainedAssetImage({ src, alt, className = "" }: ContainedAssetImageProps) {
+  return (
+    <div className={`relative overflow-hidden bg-[#101010] ${className}`}>
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-xl"
+      />
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        className="relative h-full w-full object-contain p-1"
+      />
+    </div>
+  );
+}
+
+type VersionImageCardProps = {
+  version: AssetVersion;
+  src: string;
+  alt: string;
+  label: string;
+  aspectClassName: string;
+  switching: boolean;
+  onPreview: () => void;
+  onSetCurrent: () => void;
+};
+
+function VersionImageCard({
+  version,
+  src,
+  alt,
+  label,
+  aspectClassName,
+  switching,
+  onPreview,
+  onSetCurrent,
+}: VersionImageCardProps) {
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-lg bg-[#191919] ${
+        version.is_current ? "ring-2 ring-purple-500" : ""
+      }`}
+    >
+      <button
+        type="button"
+        className="block w-full"
+        onClick={onPreview}
+        aria-label={`预览${label}`}
+      >
+        <ContainedAssetImage src={src} alt={alt} className={`${aspectClassName} w-full`} />
+      </button>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1.5 text-[11px] text-gray-200">
+        {version.is_current ? "当前版本" : label}
+      </div>
+      {!version.is_current ? (
+        <Button
+          type="button"
+          size="sm"
+          disabled={switching}
+          aria-label="设为当前版本"
+          title="设为当前版本"
+          className="absolute right-2 top-2 h-7 px-2.5 text-[11px] bg-purple-600 text-white opacity-0 shadow-lg transition-opacity hover:bg-purple-500 group-hover:opacity-100 group-focus-within:opacity-100"
+          onClick={onSetCurrent}
+        >
+          {switching ? (
+            <>
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              切换中
+            </>
+          ) : (
+            "设为当前"
+          )}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+const isPropAsset = (asset: Asset) => {
+  const type = String(asset.type || "").toLowerCase();
+  return type.includes("prop") || type.includes("道具");
+};
+
+const getAssetKind = (asset: Asset): AssetKind => (isPropAsset(asset) ? "prop" : "scene");
+const getAssetTab = (asset: Asset): AssetLibraryTab => (isPropAsset(asset) ? "props" : "scenes");
+const getAssetKindLabel = (asset: Asset) => (isPropAsset(asset) ? "道具" : "场景");
+
+const deriveAssetPrimaryTag = (asset: Asset) => getAssetKindLabel(asset);
+const deriveAssetSecondaryTag = (asset: Asset) => asset.type?.trim() || "资源";
+const deriveAssetDescription = (asset: Asset) => asset.meta?.trim() || `${asset.name} 资源文件`;
+
+type AssetCollectionProps = {
+  assets: Asset[];
+  emptyLabel: string;
+  loading: boolean;
+  viewMode: "grid" | "list";
+  selectedAsset: SelectedAsset;
+  onSelect: (asset: Asset) => void;
+};
+
+function AssetCollection({
+  assets,
+  emptyLabel,
+  loading,
+  viewMode,
+  selectedAsset,
+  onSelect,
+}: AssetCollectionProps) {
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-500">
+        <Loader2 className="w-12 h-12 animate-spin opacity-30" />
+      </div>
+    );
+  }
+  if (!assets.length) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  if (viewMode === "grid") {
+    return (
+      <div className="grid grid-cols-3 gap-4 pb-4">
+        {assets.map((asset) => {
+          const AssetIcon = isPropAsset(asset) ? Package : MapPin;
+          return (
+            <button
+              key={asset.id}
+              onClick={() => onSelect(asset)}
+              className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}
+            >
+              <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 relative flex items-center justify-center">
+                {getAssetPreviewSrc(asset) ? (
+                  <ContainedAssetImage
+                    src={getAssetPreviewSrc(asset)}
+                    alt={asset.name}
+                    className="h-full w-full"
+                  />
+                ) : (
+                  <AssetIcon className="w-16 h-16 text-gray-700" />
+                )}
+                <div className="absolute top-3 left-3">
+                  <Badge className="bg-green-600 text-white text-xs">
+                    {deriveAssetPrimaryTag(asset)}
+                  </Badge>
+                </div>
+                <div className="absolute top-3 right-3">
+                  <Badge className="bg-blue-600 text-white text-xs">
+                    {deriveAssetSecondaryTag(asset)}
+                  </Badge>
+                </div>
+              </div>
+              <div className="p-3 space-y-2">
+                <h4 className="font-medium">{asset.name}</h4>
+                <p className="text-xs text-gray-400 line-clamp-2">
+                  {deriveAssetDescription(asset)}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 pb-4">
+      {assets.map((asset) => {
+        const AssetIcon = isPropAsset(asset) ? Package : MapPin;
+        return (
+          <button
+            key={asset.id}
+            onClick={() => onSelect(asset)}
+            className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}
+          >
+            <div className="w-20 h-14 bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded flex items-center justify-center flex-shrink-0">
+              {getAssetPreviewSrc(asset) ? (
+                <ContainedAssetImage
+                  src={getAssetPreviewSrc(asset)}
+                  alt={asset.name}
+                  className="h-full w-full rounded"
+                />
+              ) : (
+                <AssetIcon className="w-8 h-8 text-gray-700" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="font-medium">{asset.name}</h4>
+                <Badge className="bg-green-600 text-white text-xs">
+                  {deriveAssetPrimaryTag(asset)}
+                </Badge>
+              </div>
+              <p className="text-sm text-gray-400 line-clamp-1">
+                {deriveAssetDescription(asset)}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 const PROMPT_SECTION_BREAKS = [
   "主体与画面核心：",
@@ -148,7 +373,7 @@ export default function AssetLibrary() {
   const currentProjectId = Number(searchParams.get("project") || "0");
   const [project, setProject] = useState<Project | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [activeTab, setActiveTab] = useState("characters");
+  const [activeTab, setActiveTab] = useState<AssetLibraryTab>("characters");
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,6 +386,8 @@ export default function AssetLibrary() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [aiPreviewDialog, setAiPreviewDialog] = useState<AIPreviewDialogState | null>(null);
   const [versions, setVersions] = useState<AssetVersion[]>([]);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  const [switchingVersionId, setSwitchingVersionId] = useState<number | null>(null);
   const [showVersions, setShowVersions] = useState(false);
   const [voiceVersions, setVoiceVersions] = useState<CharacterVoiceVersion[]>([]);
   const [showVoiceVersions, setShowVoiceVersions] = useState(false);
@@ -243,8 +470,28 @@ export default function AssetLibrary() {
   }, [characters, searchQuery]);
 
   const filteredAssets = useMemo(() => {
-    return assets.filter((asset) => asset.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return assets.filter(
+      (asset) =>
+        asset.name.toLowerCase().includes(normalizedQuery) ||
+        asset.meta?.toLowerCase().includes(normalizedQuery),
+    );
   }, [assets, searchQuery]);
+  const filteredSceneAssets = useMemo(
+    () => filteredAssets.filter((asset) => !isPropAsset(asset)),
+    [filteredAssets],
+  );
+  const filteredPropAssets = useMemo(
+    () => filteredAssets.filter((asset) => isPropAsset(asset)),
+    [filteredAssets],
+  );
+  const sceneAssetCount = useMemo(
+    () => assets.filter((asset) => !isPropAsset(asset)).length,
+    [assets],
+  );
+  const propAssetCount = assets.length - sceneAssetCount;
+  const selectedAssetType = selectedAsset?.type;
+  const selectedAssetId = selectedAsset?.data.id;
 
   const loadCharacters = async () => {
     try {
@@ -313,6 +560,32 @@ export default function AssetLibrary() {
     };
   }, [currentProjectId, navigate, searchParams]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedAssetType || !selectedAssetId) {
+      setVersions([]);
+      return;
+    }
+    setIsLoadingVersions(true);
+    void assetWorkspaceApi
+      .getVersions(selectedAssetType, selectedAssetId)
+      .then((items) => {
+        if (!cancelled) setVersions(items);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setVersions([]);
+          console.error("Failed to load asset versions:", error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingVersions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAssetId, selectedAssetType]);
+
   const resetCreateState = () => {
     setNewCharacter({ name: "", description: "", avatar_url: "" });
     setNewAsset({ name: "", type: "scene", meta: "", file_url: "" });
@@ -343,7 +616,7 @@ export default function AssetLibrary() {
         setSelectedAsset({ type: "character", data: created });
       } else {
         if (!newAsset.name.trim() || !newAsset.type.trim()) {
-          toast.error("请填写完整的场景资产信息");
+          toast.error(`请填写完整的${createMode === "prop" ? "道具" : "场景"}资产信息`);
           return;
         }
         let fileURL = newAsset.file_url.trim();
@@ -357,7 +630,7 @@ export default function AssetLibrary() {
           file_url: fileURL,
         });
         await loadAssets();
-        setActiveTab("assets");
+        setActiveTab(getAssetTab(created));
         setSelectedAsset({ type: "asset", data: created });
       }
       resetCreateState();
@@ -403,6 +676,7 @@ export default function AssetLibrary() {
       });
       setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "asset", data: updated });
+      setActiveTab(getAssetTab(updated));
       toast.success("资产修改已保存");
       return updated;
     } catch (error) {
@@ -413,15 +687,21 @@ export default function AssetLibrary() {
     }
   };
 
-  const runGenerateSelectedCharacterDesignSheet = async () => {
+  const runGenerateSelectedCharacterDesignSheet = async (promptOverride: string) => {
     if (!selectedAsset || selectedAsset.type !== "character") return;
     setGeneratingCharacterDesignSheetId(selectedAsset.data.id);
     try {
-      const updated = await characterApi.generateCharacterDesignSheet(selectedAsset.data.id);
+      const updated = await characterApi.generateCharacterDesignSheet(
+        selectedAsset.data.id,
+        promptOverride,
+      );
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: "character", data: updated });
+      setVersions(await assetWorkspaceApi.getVersions("character", updated.id));
+      toast.success("主设定图已生成并保存为新版本");
     } catch (error) {
       console.error("Failed to generate character design sheet:", error);
+      toast.error(error instanceof Error ? error.message : "生成主设定图失败");
     } finally {
       setGeneratingCharacterDesignSheetId(null);
     }
@@ -463,8 +743,11 @@ export default function AssetLibrary() {
     }
   };
 
-  const openAIPreviewDialog = (state: AIPreviewDialogState) => {
-    setAiPreviewDialog(state);
+  const openAIPreviewDialog = (state: AIPreviewDialogInput) => {
+    setAiPreviewDialog({
+      ...state,
+      promptDraft: state.preview.final_prompt || "",
+    });
   };
 
   const handleGenerateCharacterDesignSheet = async () => {
@@ -584,8 +867,8 @@ export default function AssetLibrary() {
       const preview = await assetApi.getAssetCoverGenerationPreview(saved!.id);
       openAIPreviewDialog({
         action: "asset-cover",
-        title: "确认生成资产封面",
-        description: "会为当前场景/背景资产生成一张封面图，用于资产库预览。",
+        title: `确认生成${getAssetKindLabel(saved!)}封面`,
+        description: `会为当前${getAssetKindLabel(saved!)}资产生成一张封面图，用于资产库预览。`,
         confirmLabel: "确认生成",
         preview,
       });
@@ -600,10 +883,15 @@ export default function AssetLibrary() {
   const confirmAIPreviewGeneration = async () => {
     if (!aiPreviewDialog) return;
     const action = aiPreviewDialog.action;
+    const promptOverride = aiPreviewDialog.promptDraft.trim();
+    if (action === "character-design-sheet" && !promptOverride) {
+      toast.error("最终 Prompt 不能为空");
+      return;
+    }
     setAiPreviewDialog(null);
     switch (action) {
       case "character-design-sheet":
-        await runGenerateSelectedCharacterDesignSheet();
+        await runGenerateSelectedCharacterDesignSheet(promptOverride);
         return;
       case "character-voice-reference":
         await runGenerateSelectedCharacterVoiceReference();
@@ -656,13 +944,22 @@ export default function AssetLibrary() {
     if (!selectedAsset) return;
     const type = selectedAsset.type;
     const id = selectedAsset.data.id;
-    setVersions(await assetWorkspaceApi.setCurrentVersion(type, id, version.id));
-    if (type === "character") await loadCharacters();
-    else await loadAssets();
-    const refreshed = type === "character"
-      ? await characterApi.getCharacter(id)
-      : await assetApi.getAsset(id);
-    if (refreshed) setSelectedAsset({ type, data: refreshed } as SelectedAsset);
+    setSwitchingVersionId(version.id);
+    try {
+      setVersions(await assetWorkspaceApi.setCurrentVersion(type, id, version.id));
+      if (type === "character") await loadCharacters();
+      else await loadAssets();
+      const refreshed =
+        type === "character"
+          ? await characterApi.getCharacter(id)
+          : await assetApi.getAsset(id);
+      if (refreshed) setSelectedAsset({ type, data: refreshed } as SelectedAsset);
+      toast.success(type === "character" ? "已切换主设定图版本" : "已切换资产版本");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "切换版本失败");
+    } finally {
+      setSwitchingVersionId(null);
+    }
   };
 
   const saveSelectedToPersonal = async () => {
@@ -704,24 +1001,22 @@ export default function AssetLibrary() {
     setSelectedAsset({ type: "character", data: refreshed });
   };
 
-  const deriveAssetPrimaryTag = (asset: Asset) => {
-    const type = asset.type?.toLowerCase?.() || "";
-    if (
-      type.includes("scene") ||
-      type.includes("background") ||
-      type.includes("场景") ||
-      type.includes("背景")
-    ) {
-      return "场景";
+  const openCreateDialog = () => {
+    const nextMode: CreateMode =
+      activeTab === "props" ? "prop" : activeTab === "scenes" ? "scene" : "character";
+    setCreateMode(nextMode);
+    if (nextMode !== "character") {
+      setNewAsset((prev) => ({ ...prev, type: nextMode }));
     }
-    if (type.includes("prop") || type.includes("道具")) {
-      return "道具";
-    }
-    return "素材";
+    setShowCreateDialog(true);
   };
 
-  const deriveAssetSecondaryTag = (asset: Asset) => asset.type?.trim() || "资源";
-  const deriveAssetDescription = (asset: Asset) => asset.meta?.trim() || `${asset.name} 资源文件`;
+  const selectCreateMode = (mode: CreateMode) => {
+    setCreateMode(mode);
+    if (mode !== "character") {
+      setNewAsset((prev) => ({ ...prev, type: mode }));
+    }
+  };
   return (
     <div className="storyboard-product-shell dark h-screen flex flex-col bg-[var(--storyboard-bg)] text-gray-100">
       <header className="border-b border-gray-800 bg-[#111111] flex-shrink-0">
@@ -730,18 +1025,8 @@ export default function AssetLibrary() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate("/projects")}
-              className="h-8 text-gray-400 hover:text-gray-200"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
-              项目列表
-            </Button>
-            <div className="h-6 w-px bg-gray-700"></div>
-            <Button
-              size="sm"
-              variant="ghost"
               onClick={() =>
-                navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/workspace")
+                navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/projects")
               }
               className="h-8 text-gray-400 hover:text-gray-200"
             >
@@ -760,7 +1045,7 @@ export default function AssetLibrary() {
             <Button
               size="sm"
               className="h-8 bg-purple-600 hover:bg-purple-700"
-              onClick={() => setShowCreateDialog(true)}
+              onClick={openCreateDialog}
             >
               <Plus className="w-4 h-4 mr-1.5" />
               新建资产
@@ -779,7 +1064,7 @@ export default function AssetLibrary() {
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
-              setActiveTab(value);
+              setActiveTab(value as AssetLibraryTab);
               setSelectedAsset(null);
               setShowActionMenu(false);
             }}
@@ -799,13 +1084,23 @@ export default function AssetLibrary() {
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger
-                    value="assets"
+                    value="scenes"
                     className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none px-4"
                   >
                     <MapPin className="w-4 h-4 mr-2" />
                     场景资产
                     <Badge className="ml-2 bg-gray-800 text-gray-400 text-xs">
-                      {assets.length}
+                      {sceneAssetCount}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="props"
+                    className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none px-4"
+                  >
+                    <Package className="w-4 h-4 mr-2" />
+                    道具资产
+                    <Badge className="ml-2 bg-gray-800 text-gray-400 text-xs">
+                      {propAssetCount}
                     </Badge>
                   </TabsTrigger>
                 </TabsList>
@@ -864,23 +1159,14 @@ export default function AssetLibrary() {
                       >
                         <div className="aspect-square bg-gradient-to-br from-blue-900/20 to-purple-900/20 relative flex items-center justify-center">
                           {getCharacterPreviewSrc(character) ? (
-                            <img
+                            <ContainedAssetImage
                               src={getCharacterPreviewSrc(character)}
                               alt={character.name}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover"
+                              className="h-full w-full"
                             />
                           ) : (
                             <Users className="w-16 h-16 text-gray-700" />
                           )}
-                          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[70%]">
-                            {hasCharacterVoiceReference(character) ? (
-                              <Badge className="bg-emerald-600/90 text-white text-[10px]">
-                                角色语音
-                              </Badge>
-                            ) : null}
-                          </div>
                           <div className="absolute top-3 right-3">
                             <Badge className="bg-purple-600 text-white text-xs">角色</Badge>
                           </div>
@@ -911,12 +1197,10 @@ export default function AssetLibrary() {
                       >
                         <div className="w-16 h-16 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded flex items-center justify-center flex-shrink-0">
                           {getCharacterPreviewSrc(character) ? (
-                            <img
+                            <ContainedAssetImage
                               src={getCharacterPreviewSrc(character)}
                               alt={character.name}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover rounded"
+                              className="h-full w-full rounded"
                             />
                           ) : (
                             <Users className="w-8 h-8 text-gray-700" />
@@ -943,97 +1227,27 @@ export default function AssetLibrary() {
               </div>
             </TabsContent>
 
-            <TabsContent
-              value="assets"
-              className="flex-1 m-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
-            >
-              <div className="flex-1 min-h-0 overflow-y-auto p-4">
-                {loading ? (
-                  <div className="h-full flex items-center justify-center text-gray-500">
-                    <Loader2 className="w-12 h-12 animate-spin opacity-30" />
-                  </div>
-                ) : filteredAssets.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-gray-500 text-sm">
-                    暂无场景资产
-                  </div>
-                ) : viewMode === "grid" ? (
-                  <div className="grid grid-cols-3 gap-4 pb-4">
-                    {filteredAssets.map((asset) => (
-                      <button
-                        key={asset.id}
-                        onClick={() => setSelectedAsset({ type: "asset", data: asset })}
-                        className={`text-left bg-[#141414] border rounded-lg overflow-hidden transition-all ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-gray-800 hover:border-gray-700"}`}
-                      >
-                        <div className="aspect-video bg-gradient-to-br from-green-900/20 to-blue-900/20 relative flex items-center justify-center">
-                          {getAssetPreviewSrc(asset) ? (
-                            <img
-                              src={getAssetPreviewSrc(asset)}
-                              alt={asset.name}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <MapPin className="w-16 h-16 text-gray-700" />
-                          )}
-                          <div className="absolute top-3 left-3">
-                            <Badge className="bg-green-600 text-white text-xs">
-                              {deriveAssetPrimaryTag(asset)}
-                            </Badge>
-                          </div>
-                          <div className="absolute top-3 right-3">
-                            <Badge className="bg-blue-600 text-white text-xs">
-                              {deriveAssetSecondaryTag(asset)}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="p-3 space-y-2">
-                          <h4 className="font-medium">{asset.name}</h4>
-                          <p className="text-xs text-gray-400 line-clamp-2">
-                            {deriveAssetDescription(asset)}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-2 pb-4">
-                    {filteredAssets.map((asset) => (
-                      <button
-                        key={asset.id}
-                        onClick={() => setSelectedAsset({ type: "asset", data: asset })}
-                        className={`w-full text-left bg-[#141414] border rounded-lg p-4 transition-all flex items-center gap-4 ${selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id ? "border-purple-500" : "border-gray-800 hover:border-gray-700"}`}
-                      >
-                        <div className="w-20 h-14 bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded flex items-center justify-center flex-shrink-0">
-                          {getAssetPreviewSrc(asset) ? (
-                            <img
-                              src={getAssetPreviewSrc(asset)}
-                              alt={asset.name}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover rounded"
-                            />
-                          ) : (
-                            <MapPin className="w-8 h-8 text-gray-700" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium">{asset.name}</h4>
-                            <Badge className="bg-green-600 text-white text-xs">
-                              {deriveAssetPrimaryTag(asset)}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-400 line-clamp-1">
-                            {deriveAssetDescription(asset)}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
+            {[
+              { value: "scenes", items: filteredSceneAssets, emptyLabel: "暂无场景资产" },
+              { value: "props", items: filteredPropAssets, emptyLabel: "暂无道具资产" },
+            ].map((collection) => (
+              <TabsContent
+                key={collection.value}
+                value={collection.value}
+                className="flex-1 m-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+              >
+                <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                  <AssetCollection
+                    assets={collection.items}
+                    emptyLabel={collection.emptyLabel}
+                    loading={loading}
+                    viewMode={viewMode}
+                    selectedAsset={selectedAsset}
+                    onSelect={(asset) => setSelectedAsset({ type: "asset", data: asset })}
+                  />
+                </div>
+              </TabsContent>
+            ))}
           </Tabs>
         </main>
 
@@ -1051,7 +1265,9 @@ export default function AssetLibrary() {
               <>
                 <div className="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
                   <h3 className="text-sm">
-                    {selectedAsset.type === "character" ? "角色详情" : "场景详情"}
+                    {selectedAsset.type === "character"
+                      ? "角色详情"
+                      : `${getAssetKindLabel(selectedAsset.data)}详情`}
                   </h3>
                   <div className="flex items-center gap-2">
                     <div className="relative">
@@ -1100,6 +1316,9 @@ export default function AssetLibrary() {
                                 type: selectedAsset.type,
                                 id: selectedAsset.data.id,
                                 name: selectedAsset.data.name,
+                                ...(selectedAsset.type === "asset"
+                                  ? { assetKind: getAssetKind(selectedAsset.data) }
+                                  : {}),
                               });
                             }}
                           >
@@ -1143,12 +1362,10 @@ export default function AssetLibrary() {
                                 })
                               }
                             >
-                              <img
+                              <ContainedAssetImage
                                 src={getCharacterReferenceSrc(selectedAsset.data)}
                                 alt={`${selectedAsset.data.name} 角色参考图`}
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-cover rounded"
+                                className="h-full w-full rounded"
                               />
                             </button>
                           ) : (
@@ -1221,17 +1438,60 @@ export default function AssetLibrary() {
                                 })
                               }
                             >
-                              <img
+                              <ContainedAssetImage
                                 src={getCharacterDesignSheetPreviewSrc(selectedAsset.data)}
                                 alt={`${selectedAsset.data.name} 设定图`}
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-cover rounded"
+                                className="h-full w-full rounded"
                               />
                             </button>
                           ) : (
                             <Users className="w-24 h-24 text-gray-700" />
                           )}
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-gray-400">主设定图版本</div>
+                            <div className="text-[11px] text-gray-600">
+                              {isLoadingVersions ? "加载中" : `${versions.length} 个版本`}
+                            </div>
+                          </div>
+                          {versions.length ? (
+                            <div className="grid grid-cols-3 gap-2">
+                              {versions.slice(0, 6).map((version, index) => (
+                                <VersionImageCard
+                                  key={version.id}
+                                  version={version}
+                                  src={version.file_url}
+                                  alt={`${selectedAsset.data.name} 主设定图版本 ${versions.length - index}`}
+                                  label={`v${versions.length - index}`}
+                                  aspectClassName="aspect-square"
+                                  switching={switchingVersionId === version.id}
+                                  onPreview={() =>
+                                    setPreviewImage({
+                                      src: version.file_url,
+                                      alt: `${selectedAsset.data.name} 主设定图版本 ${versions.length - index}`,
+                                    })
+                                  }
+                                  onSetCurrent={() => void chooseSelectedVersion(version)}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="rounded bg-[#191919] px-3 py-3 text-center text-xs text-gray-600">
+                              {isLoadingVersions ? "正在加载版本" : "生成后会在这里保留历史版本"}
+                            </div>
+                          )}
+                          {versions.length > 6 ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="w-full text-xs text-gray-400"
+                              onClick={() => void openSelectedVersions()}
+                            >
+                              查看全部 {versions.length} 个版本
+                            </Button>
+                          ) : null}
                         </div>
                         {selectedAsset.data.design_sheet_error ? (
                           <div className="rounded bg-red-950/40 px-3 py-2 text-xs text-red-200">
@@ -1475,7 +1735,11 @@ export default function AssetLibrary() {
                               onClick={() => media.src && setPreviewImage({ src: media.src, alt: media.label })}
                             >
                               {media.src ? (
-                                <img src={media.src} alt={media.label} className="h-full w-full object-cover" />
+                                <ContainedAssetImage
+                                  src={media.src}
+                                  alt={media.label}
+                                  className="h-full w-full"
+                                />
                               ) : (
                                 <MapPin className="mx-auto h-full w-8 text-gray-700" />
                               )}
@@ -1531,7 +1795,9 @@ export default function AssetLibrary() {
                         </div>
                       )}
                       <div>
-                        <Label className="text-xs text-gray-400">场景名称</Label>
+                        <Label className="text-xs text-gray-400">
+                          {getAssetKindLabel(selectedAsset.data)}名称
+                        </Label>
                         <Input
                           value={selectedAsset.data.name}
                           onChange={(e) =>
@@ -1564,7 +1830,9 @@ export default function AssetLibrary() {
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs text-gray-400">场景描述</Label>
+                        <Label className="text-xs text-gray-400">
+                          {getAssetKindLabel(selectedAsset.data)}描述
+                        </Label>
                         <Textarea
                           value={selectedAsset.data.meta || ""}
                           onChange={(e) =>
@@ -1695,10 +1963,34 @@ export default function AssetLibrary() {
               </div>
             ) : null}
             <div className="rounded-md border border-gray-800 bg-[#161616] p-3 text-sm space-y-2">
-              <div className="text-gray-300 font-medium">最终 Prompt</div>
-              <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">
-                {formatPromptForDisplay(aiPreviewDialog?.preview.final_prompt)}
-              </pre>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-gray-300 font-medium">
+                  最终 Prompt
+                  {aiPreviewDialog?.action === "character-design-sheet" ? "（可编辑）" : ""}
+                </div>
+                {aiPreviewDialog?.action === "character-design-sheet" ? (
+                  <div className="text-[11px] text-gray-500">
+                    {aiPreviewDialog.promptDraft.length} / 10000
+                  </div>
+                ) : null}
+              </div>
+              {aiPreviewDialog?.action === "character-design-sheet" ? (
+                <Textarea
+                  value={aiPreviewDialog.promptDraft}
+                  maxLength={10000}
+                  onChange={(event) =>
+                    setAiPreviewDialog((current) =>
+                      current ? { ...current, promptDraft: event.target.value } : current,
+                    )
+                  }
+                  className="min-h-72 resize-y border-gray-800 bg-[#111111] font-mono text-xs leading-6 text-gray-300"
+                  aria-label="可编辑的最终 Prompt"
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap break-words rounded border border-gray-800 bg-[#111111] p-3 text-xs text-gray-300 leading-6">
+                  {formatPromptForDisplay(aiPreviewDialog?.preview.final_prompt)}
+                </pre>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
@@ -1709,7 +2001,11 @@ export default function AssetLibrary() {
               type="button"
               className="bg-purple-600 hover:bg-purple-700 text-white"
               onClick={() => void confirmAIPreviewGeneration()}
-              disabled={isLoadingAIPreview}
+              disabled={
+                isLoadingAIPreview ||
+                (aiPreviewDialog?.action === "character-design-sheet" &&
+                  !aiPreviewDialog.promptDraft.trim())
+              }
             >
               {aiPreviewDialog?.confirmLabel || "确认生成"}
             </Button>
@@ -1721,23 +2017,37 @@ export default function AssetLibrary() {
         <DialogContent className="bg-[#121212] text-gray-100 sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>生成版本</DialogTitle>
-            <DialogDescription>切换后会立即成为工作区使用的当前版本。</DialogDescription>
+            <DialogDescription>
+              点击图片仅预览；移入非当前版本后，点击右上角按钮才会切换。
+            </DialogDescription>
           </DialogHeader>
           {versions.length ? (
             <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
-              {versions.map((version) => (
-                <button
-                  key={version.id}
-                  type="button"
-                  onClick={() => void chooseSelectedVersion(version)}
-                  className={`overflow-hidden rounded-lg bg-[#191919] text-left ${version.is_current ? "ring-2 ring-purple-500" : ""}`}
-                >
-                  <img src={version.preview_url || version.file_url} alt="资产版本" className="aspect-video w-full object-cover" />
-                  <div className="p-2 text-xs text-gray-400">
-                    {version.is_current ? "当前版本" : "设为当前版本"}
-                  </div>
-                </button>
-              ))}
+              {versions.map((version, index) => {
+                const src =
+                  selectedAsset?.type === "character"
+                    ? version.file_url
+                    : version.preview_url || version.file_url;
+                const label = `v${versions.length - index}`;
+                return (
+                  <VersionImageCard
+                    key={version.id}
+                    version={version}
+                    src={src}
+                    alt={`资产生成版本 ${versions.length - index}`}
+                    label={label}
+                    aspectClassName="aspect-video"
+                    switching={switchingVersionId === version.id}
+                    onPreview={() =>
+                      setPreviewImage({
+                        src,
+                        alt: `资产生成版本 ${versions.length - index}`,
+                      })
+                    }
+                    onSetCurrent={() => void chooseSelectedVersion(version)}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="py-12 text-center text-sm text-gray-500">尚无生成版本</div>
@@ -1786,37 +2096,32 @@ export default function AssetLibrary() {
           <DialogHeader>
             <DialogTitle>新建资产</DialogTitle>
             <DialogDescription className="text-gray-400">
-              先选择创建角色资产还是场景资产。
+              选择角色、场景或道具资产，创建后会进入对应分类。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-gray-400">资产类型</Label>
-              <div className="mt-1.5 flex gap-2">
-                <Button
-                  type="button"
-                  variant={createMode === "character" ? "default" : "outline"}
-                  className={
-                    createMode === "character"
-                      ? "bg-purple-600 hover:bg-purple-700"
-                      : "border-gray-700 text-gray-300"
-                  }
-                  onClick={() => setCreateMode("character")}
-                >
-                  角色资产
-                </Button>
-                <Button
-                  type="button"
-                  variant={createMode === "asset" ? "default" : "outline"}
-                  className={
-                    createMode === "asset"
-                      ? "bg-purple-600 hover:bg-purple-700"
-                      : "border-gray-700 text-gray-300"
-                  }
-                  onClick={() => setCreateMode("asset")}
-                >
-                  场景资产
-                </Button>
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
+                {[
+                  { value: "character" as const, label: "角色资产" },
+                  { value: "scene" as const, label: "场景资产" },
+                  { value: "prop" as const, label: "道具资产" },
+                ].map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={createMode === option.value ? "default" : "outline"}
+                    className={
+                      createMode === option.value
+                        ? "bg-purple-600 hover:bg-purple-700"
+                        : "border-gray-700 text-gray-300"
+                    }
+                    onClick={() => selectCreateMode(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
               </div>
             </div>
             {createMode === "character" ? (
@@ -1872,17 +2177,9 @@ export default function AssetLibrary() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-400">类型</Label>
-                  <Select
-                    value={newAsset.type}
-                    onValueChange={(value) => setNewAsset((prev) => ({ ...prev, type: value }))}
-                  >
-                    <SelectTrigger className="mt-1.5 bg-[#1a1a1a] border-gray-700"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="scene">场景</SelectItem><SelectItem value="prop">道具</SelectItem></SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-400">说明</Label>
+                  <Label className="text-xs text-gray-400">
+                    {createMode === "prop" ? "道具说明" : "场景说明"}
+                  </Label>
                   <Textarea
                     value={newAsset.meta}
                     onChange={(e) => setNewAsset((prev) => ({ ...prev, meta: e.target.value }))}
@@ -1948,7 +2245,9 @@ export default function AssetLibrary() {
         <AlertDialogContent className="bg-[#121212] border-gray-800 text-gray-100">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {deleteTarget?.type === "character" ? "确认删除角色" : "确认删除场景资产"}
+              {deleteTarget?.type === "character"
+                ? "确认删除角色"
+                : `确认删除${deleteTarget?.assetKind === "prop" ? "道具" : "场景"}资产`}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
               {deleteTarget?.type === "character"
