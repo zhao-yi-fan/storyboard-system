@@ -246,6 +246,18 @@ async function uploadBuffer(app, buffer, generatedPath) {
   await client.put(generatedObjectKey(app, generatedPath), Buffer.from(buffer));
 }
 
+async function deleteGeneratedAsset(app, generatedPath) {
+  if (!isGeneratedAssetPath(app, generatedPath)) return;
+  const objectKey = generatedObjectKey(app, generatedPath);
+  if (!isOssEnabled(app)) {
+    const localPath = await generatedObjectKeyToLocalPath(app, objectKey);
+    await fsp.rm(localPath, { force: true });
+    return;
+  }
+  const client = createOssClient(app, false);
+  await client.delete(objectKey);
+}
+
 async function downloadGeneratedToFile(app, generatedPath, localPath) {
   if (!isGeneratedAssetPath(app, generatedPath)) {
     throw new Error(`not a generated path: ${generatedPath}`);
@@ -287,6 +299,7 @@ module.exports = {
   ensureGeneratedDir,
   uploadLocalFile,
   uploadBuffer,
+  deleteGeneratedAsset,
   downloadGeneratedToFile,
   writeBufferToTempFile,
 };

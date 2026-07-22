@@ -9,6 +9,7 @@ import type {
   SceneGenerationReferences,
   SceneMediaGeneration,
   SceneMediaMutationResult,
+  SceneVideoFrame,
   StoryboardCoverGenerationPreview,
   StoryboardVideoGenerationOptions,
   StoryboardVideoGenerationPreview,
@@ -95,6 +96,44 @@ export function setSceneMediaGenerationCurrent(id: number, generationId: number)
 export function deleteSceneMediaGeneration(id: number, generationId: number) {
   return apiClient.delete<SceneMediaMutationResult>(
     `/scenes/${id}/media-generations/${generationId}`,
+  );
+}
+
+export function getSceneVideoFrames(id: number, generationId: number) {
+  return apiClient.get<SceneVideoFrame[]>(
+    `/scenes/${id}/media-generations/${generationId}/frames`,
+  );
+}
+
+export function createSceneVideoFrame(
+  id: number,
+  generationId: number,
+  data: { file: File; timestampMs: number; targetSceneId: number },
+) {
+  const form = new FormData();
+  form.append("timestamp_ms", String(data.timestampMs));
+  form.append("target_scene_id", String(data.targetSceneId));
+  form.append("file", data.file);
+  return apiClient.post<SceneVideoFrame>(
+    `/scenes/${id}/media-generations/${generationId}/frames`,
+    form,
+  );
+}
+
+export function deleteSceneVideoFrame(id: number, generationId: number, frameId: number) {
+  return apiClient.delete<{ success: boolean }>(
+    `/scenes/${id}/media-generations/${generationId}/frames/${frameId}`,
+  );
+}
+
+export function createSceneVideoClip(
+  id: number,
+  generationId: number,
+  data: { startMs: number; endMs: number },
+) {
+  return apiClient.post<SceneMediaMutationResult>(
+    `/scenes/${id}/media-generations/${generationId}/clips`,
+    { start_ms: data.startMs, end_ms: data.endMs },
   );
 }
 

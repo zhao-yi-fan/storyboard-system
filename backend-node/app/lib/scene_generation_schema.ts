@@ -528,6 +528,33 @@ export async function ensureSceneGenerationSchema(pool) {
       'legacy_generation_id',
       'BIGINT UNSIGNED NULL AFTER legacy_storyboard_id',
     );
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS scene_video_frames (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        project_id BIGINT UNSIGNED NOT NULL,
+        source_scene_id BIGINT UNSIGNED NOT NULL,
+        source_generation_id BIGINT UNSIGNED NOT NULL,
+        timestamp_ms INT UNSIGNED NOT NULL,
+        file_url TEXT NOT NULL,
+        preview_url TEXT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        deleted_at DATETIME NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY uk_scene_video_frame_time (source_generation_id, timestamp_ms),
+        KEY idx_scene_video_frames_scene (source_scene_id, created_at),
+        KEY idx_scene_video_frames_project (project_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS scene_video_frame_usages (
+        frame_id BIGINT UNSIGNED NOT NULL,
+        target_scene_id BIGINT UNSIGNED NOT NULL,
+        usage_type VARCHAR(64) NOT NULL DEFAULT 'reference_image',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (frame_id, target_scene_id),
+        KEY idx_scene_video_frame_usage_target (target_scene_id, usage_type)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
     const splitMigrationComplete = await indexExists(
       connection,
       'scenes',

@@ -20,11 +20,13 @@ describe('test/seedance_video_generation.test.ts', () => {
       duration: 12,
       useFirstFrame: true,
       resolution: '1080p',
+      aspectRatio: '9:16',
       generateAudio: true,
     });
 
     assert.equal(payload.duration, 12);
     assert.equal(payload.resolution, '1080p');
+    assert.equal(payload.aspect_ratio, '9:16');
     assert.equal(payload.generate_audio, true);
     assert.deepStrictEqual(
       payload.content.map((item: { type: string; role?: string }) => [item.type, item.role]),
@@ -140,6 +142,14 @@ describe('test/seedance_video_generation.test.ts', () => {
   });
 
   it('accepts Seedance resolution and duration boundaries', () => {
+    assert.equal(
+      StoryboardService.prototype.normalizeVideoAspectRatio.call(
+        normalizationContext,
+        'seedance-2.0',
+        '9:16',
+      ),
+      '9:16',
+    );
     for (const resolution of ['480p', '720p', '1080p']) {
       assert.equal(
         StoryboardService.prototype.normalizeVideoResolution.call(
@@ -169,6 +179,15 @@ describe('test/seedance_video_generation.test.ts', () => {
   });
 
   it('rejects unsupported Seedance specs instead of falling back', () => {
+    assert.throws(
+      () =>
+        StoryboardService.prototype.normalizeVideoAspectRatio.call(
+          normalizationContext,
+          'seedance-2.0',
+          '16:9',
+        ),
+      /仅支持 9:16/,
+    );
     assert.throws(
       () =>
         StoryboardService.prototype.normalizeVideoResolution.call(

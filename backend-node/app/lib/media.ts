@@ -384,6 +384,54 @@ async function composeVideos(app, sources, subdir, filename) {
   }
 }
 
+async function trimVideo(app, source, startSeconds, endSeconds, subdir, filename) {
+  await ensureFfmpeg();
+  const materialized = await materializeSourceToLocalFile(app, source, '.mp4');
+  const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-trim-'));
+  const outputPath = path.join(workDir, filename);
+  try {
+    await run('ffmpeg', [
+      '-y',
+      '-ss',
+      String(startSeconds),
+      '-i',
+      materialized.localPath,
+      '-t',
+      String(endSeconds - startSeconds),
+      '-map',
+      '0:v:0',
+      '-map',
+      '0:a?',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '20',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '160k',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ]);
+    const duration = await probeDuration(outputPath);
+    const publicPath = generatedPublicPath(app, subdir, filename);
+    if (isOssEnabled(app)) {
+      await uploadLocalFile(app, outputPath, publicPath);
+    } else {
+      const dir = path.join(await resolveGeneratedAssetRoot(app), subdir);
+      await fsp.mkdir(dir, { recursive: true });
+      await fsp.copyFile(outputPath, path.join(dir, filename));
+    }
+    return { publicPath, previewPath: publicPath, duration };
+  } finally {
+    await materialized.cleanup();
+    await fsp.rm(workDir, { recursive: true, force: true });
+  }
+}
+
 function resolveMediaUrl(app, raw) {
   return resolveUrl(app, raw, app.config.storyboard.publicAppBaseUrl || '');
 }
@@ -402,5 +450,6 @@ module.exports = {
   probeDuration,
   normalizeAudioDuration,
   composeVideos,
+  trimVideo,
   resolveMediaUrl,
 };

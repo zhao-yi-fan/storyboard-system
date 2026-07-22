@@ -37,6 +37,7 @@ const {
 class StoryboardService extends Service {
   static REFERENCE_ASSET_USAGE = 'reference_asset';
   static SEEDANCE_VIDEO_MODEL = 'seedance-2.0';
+  static VIDEO_ASPECT_RATIO_9_16 = '9:16';
   static SEEDANCE_MAX_REFERENCE_AUDIO_COUNT = 3;
   static SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS = 2;
   static SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS = 15;
@@ -338,6 +339,14 @@ class StoryboardService extends Service {
 
   parseGenerateAudio(value) {
     return this.parseBooleanFlag(value, true);
+  }
+
+  normalizeVideoAspectRatio(_model, value) {
+    const aspectRatio = String(value || StoryboardService.VIDEO_ASPECT_RATIO_9_16).trim();
+    if (aspectRatio !== StoryboardService.VIDEO_ASPECT_RATIO_9_16) {
+      throw new Error('当前仅支持 9:16 竖屏输出');
+    }
+    return aspectRatio;
   }
 
   normalizeVideoResolution(model, value) {

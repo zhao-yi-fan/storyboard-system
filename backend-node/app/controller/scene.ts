@@ -316,6 +316,93 @@ class SceneController extends Controller {
     }
   }
 
+  async videoFrames() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      await this.ctx.service.sceneVideoFrame.validateSource(id, generationId);
+      response.success(
+        this.ctx,
+        await this.ctx.service.sceneVideoFrame.listByGeneration(id, generationId),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async createVideoFrame() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    let stream;
+    try {
+      stream = await this.ctx.getFileStream();
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of stream) {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        size += buffer.length;
+        if (size > 10 * 1024 * 1024) throw new Error('抽帧图片不能超过 10MB');
+        chunks.push(buffer);
+      }
+      const fields = stream.fields || {};
+      response.success(
+        this.ctx,
+        await this.ctx.service.sceneVideoFrame.create(id, generationId, {
+          buffer: Buffer.concat(chunks),
+          content_type: String(stream.mimeType || stream.mime || ''),
+          timestamp_ms: fields.timestamp_ms,
+          target_scene_id: fields.target_scene_id,
+        }),
+      );
+    } catch (err) {
+      if (stream && !stream.readableEnded) stream.resume();
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async deleteVideoFrame() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    const frameId = Number(this.ctx.params.frameId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0 || !Number.isInteger(frameId) || frameId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.sceneVideoFrame.remove(id, generationId, frameId),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
+  async createVideoClip() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    try {
+      response.success(
+        this.ctx,
+        await this.ctx.service.sceneVideoClip.create(
+          id,
+          generationId,
+          this.ctx.request.body || {},
+        ),
+      );
+    } catch (err) {
+      response.error(this.ctx, err.message);
+    }
+  }
+
   async previewVideoGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
@@ -328,6 +415,7 @@ class SceneController extends Controller {
           this.ctx.query.duration,
           this.ctx.query.use_first_frame,
           this.ctx.query.resolution,
+          this.ctx.query.aspect_ratio,
           this.ctx.query.generate_audio,
         ),
       );
@@ -349,6 +437,7 @@ class SceneController extends Controller {
           body.duration,
           body.use_first_frame,
           body.resolution,
+          body.aspect_ratio,
           body.generate_audio,
         ),
       );

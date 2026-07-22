@@ -74,6 +74,7 @@ class SceneService extends Service {
     const items = rows.map((row) => mapScene(this.app, row));
     await this.attachCharacters(items);
     await this.attachAssets(items);
+    await this.attachVideoFrameReferences(items);
     return items;
   }
 
@@ -99,7 +100,17 @@ class SceneService extends Service {
     const item = mapScene(this.app, rows[0]);
     await this.attachCharacters([item]);
     await this.attachAssets([item]);
+    await this.attachVideoFrameReferences([item]);
     return item;
+  }
+
+  async attachVideoFrameReferences(items) {
+    const grouped = await this.ctx.service.sceneVideoFrame.listByTargetScenes(
+      items.map((item) => item.id),
+    );
+    items.forEach((item) => {
+      item.video_frame_references = grouped.get(Number(item.id)) || [];
+    });
   }
 
   /**
@@ -425,6 +436,7 @@ class SceneService extends Service {
       [
         ...(Array.isArray(scene.characters) ? scene.characters : []),
         ...(Array.isArray(scene.assets) ? scene.assets : []),
+        ...(Array.isArray(scene.video_frame_references) ? scene.video_frame_references : []),
       ]
         .map((item) => String(item.name || '').trim())
         .filter(Boolean),
@@ -435,6 +447,7 @@ class SceneService extends Service {
       prop: '道具参考图',
       costume: '服装参考图',
       asset: '图片参考',
+      video_frame: '视频抽帧',
     };
     const mappings = references.map((reference, index) => {
       const name = String(reference.name || '').trim();
@@ -481,12 +494,27 @@ class SceneService extends Service {
       this.ctx.service.character.findByProjectId(scene.project_id),
       this.ctx.service.asset.findByProjectId(scene.project_id),
     ]);
+    const frameReferences = this.buildVideoFrameReferences(scene.video_frame_references || []);
     return this.buildGenerationReferenceState(
       scene,
-      references,
+      [...references, ...frameReferences],
       missing,
       [...characters, ...assets].map((item) => item.name),
     );
+  }
+
+  buildVideoFrameReferences(frames) {
+    return frames.map((frame) => {
+      const seconds = (Number(frame.timestamp_ms || 0) / 1000).toFixed(1);
+      const sceneTitle = String(frame.source_scene_title || `片段${frame.source_scene_id}`);
+      return {
+        type: 'video_frame',
+        name: `${sceneTitle} ${seconds}s 抽帧`,
+        url: frame.file_url,
+        source: `来源片段「${sceneTitle}」的视频版本 #${frame.source_generation_id}，时间点 ${seconds}s`,
+        frame_id: frame.id,
+      };
+    });
   }
 
   async generationReferences(id) {
@@ -627,7 +655,8 @@ class SceneService extends Service {
 
   async listMediaGenerations(id) {
     if (!(await this.findById(id))) throw new Error('scene not found');
-    return await this.ctx.service.sceneMediaGeneration.listBySceneId(id);
+    const generations = await this.ctx.service.sceneMediaGeneration.listBySceneId(id);
+    return await this.ctx.service.sceneVideoFrame.attachToGenerations(generations);
   }
 
   async applyMediaGeneration(id, generation) {
@@ -735,6 +764,7 @@ class SceneService extends Service {
     duration,
     useFirstFrameRaw,
     resolutionRaw,
+    aspectRatioRaw,
     generateAudioRaw,
   ) {
     const scene = await this.findById(id);
@@ -749,6 +779,7 @@ class SceneService extends Service {
       duration ?? scene.generation_duration,
     );
     const useFirstFrame = helper.parseUseFirstFrame(useFirstFrameRaw);
+    const aspectRatio = helper.normalizeVideoAspectRatio(model, aspectRatioRaw);
     const resolution = helper.normalizeVideoResolution(model, resolutionRaw);
     const audio = helper.parseGenerateAudio(generateAudioRaw);
     if (!helper.isSeedanceVideoModel(model) && !audio) {
@@ -756,8 +787,12 @@ class SceneService extends Service {
     }
     const sourceImageUrl =
       useFirstFrame && scene.cover_url ? resolveMediaUrl(this.app, scene.cover_url) : '';
-    const { references: boundReferences, missing } =
+    const { references: baseReferences, missing } =
       await helper.selectVideoReferenceImages(scene, scene);
+    const boundReferences = [
+      ...baseReferences,
+      ...this.buildVideoFrameReferences(scene.video_frame_references || []),
+    ];
     const references = useFirstFrame ? [] : boundReferences;
     const omittedReferences = useFirstFrame ? boundReferences : [];
     const visualInputCount = useFirstFrame ? 1 : references.length;
@@ -777,6 +812,7 @@ class SceneService extends Service {
       model,
       duration: selectedDuration,
       resolution,
+      aspect_ratio: aspectRatio,
       audio,
       use_first_frame: useFirstFrame,
       media_input_mode: useFirstFrame ? 'first_frame' : references.length ? 'reference_media' : 'text',
@@ -809,13 +845,14 @@ class SceneService extends Service {
     };
   }
 
-  async generateVideo(id, model, duration, useFirstFrame, resolution, generateAudio) {
+  async generateVideo(id, model, duration, useFirstFrame, resolution, aspectRatio, generateAudio) {
     const preview = await this.previewVideoGeneration(
       id,
       model,
       duration,
       useFirstFrame,
       resolution,
+      aspectRatio,
       generateAudio,
     );
     if (preview.blocking_reasons.length) throw new Error(preview.blocking_reasons.join('；'));
@@ -829,6 +866,7 @@ class SceneService extends Service {
       source_url: preview.use_first_frame ? current.cover_url || null : null,
       meta_json: JSON.stringify({
         prompt_mode: 'composite',
+        aspect_ratio: preview.aspect_ratio,
         resolution: preview.resolution,
         duration: preview.duration,
         audio: preview.audio,
@@ -869,6 +907,7 @@ class SceneService extends Service {
             preview.reference_images.map((item) => item.url),
             preview.audio_reference_assets.map((item) => item.url),
             preview.resolution,
+            preview.aspect_ratio,
             preview.audio,
             {
               onTaskCreated: async (taskId) => {

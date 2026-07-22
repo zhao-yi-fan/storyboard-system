@@ -68,9 +68,29 @@ export type Scene = {
   character_names?: string[];
   assets?: Asset[];
   asset_names?: string[];
+  video_frame_references?: SceneVideoFrame[];
   sort_order: number;
   created_at?: string;
   updated_at?: string;
+};
+
+export type SceneVideoFrameTarget = {
+  id: number;
+  title: string;
+  usage_type: "reference_image" | string;
+};
+
+export type SceneVideoFrame = {
+  id: number;
+  project_id: number;
+  source_scene_id: number;
+  source_generation_id: number;
+  source_scene_title: string;
+  timestamp_ms: number;
+  file_url: string;
+  preview_url: string;
+  target_scenes: SceneVideoFrameTarget[];
+  created_at?: string | null;
 };
 
 export type SceneMediaGeneration = {
@@ -88,6 +108,7 @@ export type SceneMediaGeneration = {
   meta_json?: string;
   created_at?: string;
   updated_at?: string;
+  extracted_frames?: SceneVideoFrame[];
 };
 
 export type SceneMediaMutationResult = {
@@ -246,6 +267,7 @@ export type StoryboardMediaGeneration = {
   meta_json?: string;
   created_at?: string;
   updated_at?: string;
+  extracted_frames?: SceneVideoFrame[];
 };
 
 export type StoryboardMediaMutationResult = {
@@ -394,6 +416,7 @@ export type StoryboardVideoGenerationPreview = {
   model: string;
   duration: number;
   resolution: string;
+  aspect_ratio: VideoAspectRatio;
   audio: boolean;
   use_first_frame: boolean;
   media_input_mode?: "first_frame" | "reference_media" | "text";
@@ -434,11 +457,13 @@ export type StoryboardVideoGenerationPreview = {
 };
 
 export type VideoResolution = "480p" | "720p" | "1080p";
+export type VideoAspectRatio = "9:16";
 
 export type StoryboardVideoGenerationOptions = {
   model?: string;
   duration?: number;
   resolution?: VideoResolution;
+  aspect_ratio?: VideoAspectRatio;
   generate_audio?: boolean;
   use_first_frame?: boolean;
 };

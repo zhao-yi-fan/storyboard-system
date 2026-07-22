@@ -55,6 +55,22 @@ module.exports = (app: any) => {
     '/api/scenes/:id/media-generations/:generationId',
     controller.scene.deleteMediaGeneration,
   );
+  router.get(
+    '/api/scenes/:id/media-generations/:generationId/frames',
+    controller.scene.videoFrames,
+  );
+  router.post(
+    '/api/scenes/:id/media-generations/:generationId/frames',
+    controller.scene.createVideoFrame,
+  );
+  router.delete(
+    '/api/scenes/:id/media-generations/:generationId/frames/:frameId',
+    controller.scene.deleteVideoFrame,
+  );
+  router.post(
+    '/api/scenes/:id/media-generations/:generationId/clips',
+    controller.scene.createVideoClip,
+  );
   router.get('/api/scenes/:id/video-generation-preview', controller.scene.previewVideoGeneration);
   router.post('/api/scenes/:id/generate-video', controller.scene.generateVideo);
   router.post('/api/scenes/:id/upload-cover', controller.scene.uploadCover);

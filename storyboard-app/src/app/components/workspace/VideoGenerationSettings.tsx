@@ -1,5 +1,5 @@
 import { Settings2 } from "lucide-react";
-import type { VideoResolution } from "../../api";
+import type { VideoAspectRatio, VideoResolution } from "../../api";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Slider } from "../ui/slider";
@@ -9,6 +9,7 @@ const SEEDANCE_RESOLUTIONS: VideoResolution[] = ["480p", "720p", "1080p"];
 
 type VideoGenerationSettingsProps = {
   model: string;
+  aspectRatio: VideoAspectRatio;
   resolution: VideoResolution;
   duration: number;
   generateAudio: boolean;
@@ -18,15 +19,17 @@ type VideoGenerationSettingsProps = {
 };
 
 export function getVideoGenerationSpecLabel(
+  aspectRatio: VideoAspectRatio,
   resolution: VideoResolution,
   duration: number,
   generateAudio: boolean,
 ) {
-  return `${resolution} / ${duration}秒 / ${generateAudio ? "有声" : "无声"}`;
+  return `${aspectRatio} / ${resolution} / ${duration}秒 / ${generateAudio ? "有声" : "无声"}`;
 }
 
 export function VideoGenerationSettings({
   model,
+  aspectRatio,
   resolution,
   duration,
   generateAudio,
@@ -41,7 +44,7 @@ export function VideoGenerationSettings({
       <PopoverTrigger className="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-md border border-white/10 bg-[var(--storyboard-surface)] px-2 text-[10px] text-gray-400 transition hover:border-teal-300/30 hover:bg-white/[0.07] hover:text-gray-200">
         <Settings2 className="h-3.5 w-3.5 flex-none" />
         <span className="truncate">
-          {getVideoGenerationSpecLabel(resolution, duration, generateAudio)}
+          {getVideoGenerationSpecLabel(aspectRatio, resolution, duration, generateAudio)}
         </span>
       </PopoverTrigger>
       <PopoverContent
@@ -55,6 +58,13 @@ export function VideoGenerationSettings({
             {isSeedance
               ? "Seedance 2.0 支持 480p、720p、1080p 和 4-15 秒输出。"
               : "Wan 2.7 当前固定使用 720p、5 秒和有声输出。"}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-[11px] text-gray-500">画幅</Label>
+          <div className="rounded-md border border-teal-300/20 bg-teal-300/[0.08] px-3 py-2 text-xs text-teal-100">
+            {aspectRatio} 竖屏
           </div>
         </div>
 

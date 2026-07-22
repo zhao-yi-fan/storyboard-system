@@ -58,9 +58,8 @@ async function parseApiResponse<T>(response: Response): Promise<ApiResponse<T>> 
 // 统一请求封装
 async function request<T = any>(url: string, options: RequestOptions = {}): Promise<T> {
   const { suppressToast = false, ...requestOptions } = options;
-  const defaultHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const defaultHeaders: Record<string, string> =
+    requestOptions.body instanceof FormData ? {} : { "Content-Type": "application/json" };
 
   const config: RequestInit = {
     headers: {
@@ -138,7 +137,7 @@ function get<T = any>(
 function post<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
   return request<T>(url, {
     method: "POST",
-    body: data ? JSON.stringify(data) : undefined,
+    body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
     ...options,
   });
 }

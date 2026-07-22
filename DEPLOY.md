@@ -38,6 +38,20 @@ cd <deploy-directory>
   - smoke testing `http://127.0.0.1:8082/api/projects`
   - smoke testing `http://127.0.0.1:8083/api/health`
 
+## OSS CORS for browser frame extraction
+
+Browser-side video frame extraction fetches a signed video and draws it to Canvas. Configure the
+media bucket CORS to allow `GET` and `HEAD` from the production origin and
+`http://localhost:5173`, and expose `Content-Length` and `Accept-Ranges`. Without this rule, the
+frame dialog reports a persistent cross-origin error and does not upload or create a database row.
+
+Apply the rule using the backend environment credentials:
+
+```bash
+cd backend-node
+npm run configure:oss-cors
+```
+
 ## One-time SSH check for admin
 
 If `admin` cannot talk to GitHub yet:

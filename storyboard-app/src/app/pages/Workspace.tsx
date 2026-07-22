@@ -17,6 +17,7 @@ import {
   Minimize2,
   PanelLeftClose,
   PanelLeftOpen,
+  Scissors,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -72,6 +73,7 @@ import {
   VideoGenerationSettings,
   getVideoGenerationSpecLabel,
 } from "../components/workspace/VideoGenerationSettings";
+import { VideoFrameExtractionDialog } from "../components/workspace/VideoFrameExtractionDialog";
 import {
   projectApi,
   chapterApi,
@@ -92,6 +94,7 @@ import {
   type Character,
   type Asset,
   type StoryboardVideoGenerationOptions,
+  type VideoAspectRatio,
   type VideoResolution,
 } from "../api";
 import { COMPOSITE_PROMPT_MAX_LENGTH, buildLegacyCompositePrompt } from "../lib/compositePrompt";
@@ -100,6 +103,7 @@ const VIDEO_MODEL_OPTIONS = [
   { value: "seedance-2.0", label: "Seedance 2.0" },
   { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
 ] as const;
+const FIXED_VIDEO_ASPECT_RATIO: VideoAspectRatio = "9:16";
 
 const AUDIO_ASSET_PATTERN = /(audio|voice|sound|music|sfx|配音|语音|音频|音乐|音效)/i;
 const SCENE_ASSET_PATTERN = /(scene|background|location|场景|背景|地点)/i;
@@ -295,6 +299,8 @@ export default function Workspace() {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [storyboards, setStoryboards] = useState<Storyboard[]>([]);
   const [mediaGenerations, setMediaGenerations] = useState<StoryboardMediaGeneration[]>([]);
+  const [frameExtractionGeneration, setFrameExtractionGeneration] =
+    useState<StoryboardMediaGeneration | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
@@ -747,12 +753,14 @@ export default function Workspace() {
   const activeVideoDuration = isSeedanceVideoModel(selectedVideoModel) ? selectedVideoDuration : 5;
   const activeVideoAudio = isSeedanceVideoModel(selectedVideoModel) ? generateVideoAudio : true;
   const activeVideoSpecLabel = getVideoGenerationSpecLabel(
+    FIXED_VIDEO_ASPECT_RATIO,
     activeVideoResolution,
     activeVideoDuration,
     activeVideoAudio,
   );
   const previewVideoSpecLabel = videoGenerationPreview
     ? getVideoGenerationSpecLabel(
+        videoGenerationPreview.aspect_ratio || FIXED_VIDEO_ASPECT_RATIO,
         videoGenerationPreview.resolution as VideoResolution,
         videoGenerationPreview.duration,
         videoGenerationPreview.audio,
@@ -761,6 +769,7 @@ export default function Workspace() {
 
   const buildVideoGenerationRequest = (): StoryboardVideoGenerationOptions => ({
     model: selectedVideoModel,
+    aspect_ratio: FIXED_VIDEO_ASPECT_RATIO,
     resolution: activeVideoResolution,
     duration: activeVideoDuration,
     generate_audio: activeVideoAudio,
@@ -1235,6 +1244,42 @@ export default function Workspace() {
     setDeleteTargetGeneration(generation);
   };
 
+  const handleInsertVideoFrame = async (
+    file: File,
+    timestampMs: number,
+    targetScene: Scene,
+  ) => {
+    if (!selectedScene || !frameExtractionGeneration) {
+      throw new Error("抽帧来源不可用");
+    }
+    const frame = await sceneApi.createSceneVideoFrame(
+      selectedScene.id,
+      frameExtractionGeneration.id,
+      { file, timestampMs, targetSceneId: targetScene.id },
+    );
+    await loadMediaGenerations(selectedScene.id);
+    if (targetScene.id === selectedScene.id) {
+      const refreshed = await sceneApi.getScene(selectedScene.id);
+      applyClipSceneUpdate(refreshed);
+      await loadGenerationReferences(selectedScene.id);
+    }
+    toast.success(`已将抽帧作为「${targetScene.title}」的参考图`);
+    return frame;
+  };
+
+  const handleCreateVideoClip = async (startMs: number, endMs: number) => {
+    if (!selectedScene || !frameExtractionGeneration) {
+      throw new Error("视频来源不可用");
+    }
+    const result = await sceneApi.createSceneVideoClip(
+      selectedScene.id,
+      frameExtractionGeneration.id,
+      { startMs, endMs },
+    );
+    applyMediaMutation(result);
+    toast.success("截取视频已保存到视频版本");
+  };
+
   const handleRemoveStoryboardCharacter = async (characterId: number) => {
     if (!selectedShot) {
       return;
@@ -1469,6 +1514,17 @@ export default function Workspace() {
 
   const coverGenerations = mediaGenerations.filter((item) => item.media_type === "cover");
   const videoGenerations = mediaGenerations.filter((item) => item.media_type === "video");
+  const currentVideoGeneration =
+    videoGenerations.find(
+      (item) => item.is_current && item.status === "succeeded" && item.result_url,
+    ) || null;
+  const selectedSceneIndex = selectedScene
+    ? scenes.findIndex((scene) => scene.id === selectedScene.id)
+    : -1;
+  const nextSceneInChapter =
+    selectedSceneIndex >= 0 && selectedSceneIndex < scenes.length - 1
+      ? scenes[selectedSceneIndex + 1]
+      : null;
   const liveGenerationReferences = generationReferences
     ? {
         ...generationReferences,
@@ -1779,20 +1835,31 @@ export default function Workspace() {
             {selectedShot ? (
               <div className="relative flex h-full max-h-[680px] w-full max-w-[760px] items-center justify-center">
                 {selectedShot.video_status === "generating" ? (
-                  <div className="storyboard-media-frame flex aspect-[9/16] h-full max-h-[620px] flex-col items-center justify-center rounded-2xl text-gray-500">
+                  <div className="storyboard-media-frame flex aspect-[9/16] w-[min(100%,349px)] flex-col items-center justify-center rounded-2xl bg-black text-gray-500">
                     <Loader2 className="h-8 w-8 animate-spin text-teal-300" />
                     <span className="mt-3 text-xs">视频生成中，状态会自动刷新</span>
                   </div>
                 ) : getStoryboardVideoPreviewSrc(selectedShot) ? (
-                  <video
-                    key={getStoryboardVideoPreviewSrc(selectedShot)}
-                    src={getStoryboardVideoPreviewSrc(selectedShot)}
-                    controls
-                    playsInline
-                    className="storyboard-media-frame h-full max-h-[620px] max-w-full rounded-2xl object-contain"
-                  />
+                  <div className="storyboard-media-frame group relative flex aspect-[9/16] w-[min(100%,349px)] items-center justify-center overflow-hidden rounded-2xl bg-black">
+                    <video
+                      key={getStoryboardVideoPreviewSrc(selectedShot)}
+                      src={getStoryboardVideoPreviewSrc(selectedShot)}
+                      controls
+                      playsInline
+                      className="h-full w-full object-contain"
+                    />
+                    {currentVideoGeneration ? (
+                      <button
+                        type="button"
+                        className="absolute right-3 top-3 z-10 flex items-center gap-2 rounded-lg bg-black/70 px-3 py-2 text-xs text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                        onClick={() => setFrameExtractionGeneration(currentVideoGeneration)}
+                      >
+                        <Scissors className="h-4 w-4" /> 截取
+                      </button>
+                    ) : null}
+                  </div>
                 ) : (
-                  <div className="storyboard-media-frame relative flex aspect-[9/16] h-full max-h-[620px] flex-col items-center justify-center overflow-hidden rounded-2xl">
+                  <div className="storyboard-media-frame relative flex aspect-[9/16] w-[min(100%,349px)] flex-col items-center justify-center overflow-hidden rounded-2xl bg-black">
                     {getStoryboardPreviewSrc(selectedShot) ? (
                       <img
                         src={getStoryboardPreviewSrc(selectedShot)}
@@ -1875,6 +1942,22 @@ export default function Workspace() {
                         ? "失败"
                         : "生成中"}
                   </button>
+                  {generation.status === "succeeded" && generation.result_url ? (
+                    <button
+                      type="button"
+                      className="absolute left-1 top-1 z-10 hidden rounded bg-black/75 p-1 text-gray-300 group-hover:block"
+                      onClick={() => setFrameExtractionGeneration(generation)}
+                      aria-label="从该视频版本截取图片或视频"
+                      title="截取图片或视频"
+                    >
+                      <Scissors className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                  {generation.extracted_frames?.length ? (
+                    <span className="absolute bottom-1 left-1 z-10 rounded bg-teal-950/85 px-1 text-[8px] text-teal-200">
+                      {generation.extracted_frames.length} 帧
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     className="absolute right-1 top-1 hidden rounded bg-black/70 p-1 text-gray-400 group-hover:block"
@@ -2004,6 +2087,7 @@ export default function Workspace() {
                   </Select>
                   <VideoGenerationSettings
                     model={selectedVideoModel}
+                    aspectRatio={FIXED_VIDEO_ASPECT_RATIO}
                     resolution={activeVideoResolution}
                     duration={activeVideoDuration}
                     generateAudio={activeVideoAudio}
@@ -2840,7 +2924,7 @@ export default function Workspace() {
                 <span className="text-gray-500">输出规格</span>
                 <span>
                   {videoGenerationPreview
-                    ? `${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}`
+                    ? `${videoGenerationPreview.aspect_ratio || FIXED_VIDEO_ASPECT_RATIO} / ${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}`
                     : previewVideoSpecLabel}
                 </span>
               </div>
@@ -2916,7 +3000,7 @@ export default function Workspace() {
 
             {!!videoGenerationPreview?.omitted_reference_images?.length && (
               <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm leading-6 text-amber-200">
-                当前为首帧模式，已绑定的 {videoGenerationPreview.omitted_reference_images.length} 张角色或场景参考图不会发送给 Seedance。关闭“指定首帧控制开场”即可改用参考素材模式。
+                当前为首帧模式，已绑定的 {videoGenerationPreview.omitted_reference_images.length} 张视觉参考图不会发送给 Seedance。关闭“指定首帧控制开场”即可改用参考素材模式。
               </div>
             )}
 
@@ -2950,6 +3034,8 @@ export default function Workspace() {
                               ? "角色"
                               : reference.type === "scene"
                                 ? "背景"
+                                : reference.type === "video_frame"
+                                  ? "视频抽帧"
                                 : reference.type}
                           </Badge>
                           <span className="truncate text-gray-200">{reference.name}</span>
@@ -3173,6 +3259,20 @@ export default function Workspace() {
           });
         }}
       />
+
+      {frameExtractionGeneration && selectedScene ? (
+        <VideoFrameExtractionDialog
+          open
+          sourceScene={selectedScene}
+          nextScene={nextSceneInChapter}
+          generation={frameExtractionGeneration}
+          onOpenChange={(open) => {
+            if (!open) setFrameExtractionGeneration(null);
+          }}
+          onInsert={handleInsertVideoFrame}
+          onClip={handleCreateVideoClip}
+        />
+      ) : null}
 
       <Dialog
         open={!!previewSceneVideo}

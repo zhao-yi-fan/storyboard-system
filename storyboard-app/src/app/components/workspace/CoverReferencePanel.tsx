@@ -51,6 +51,7 @@ function referenceTypeLabel(type: string) {
     prop: "道具参考",
     costume: "服装参考",
     asset: "图片参考",
+    video_frame: "视频抽帧",
   };
   return labels[type] || type || "图片参考";
 }

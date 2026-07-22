@@ -264,6 +264,7 @@ function buildSeedanceVideoPayload({
   referenceImageUrls = [],
   referenceAudioUrls = [],
   resolution = VIDEO_RESOLUTION_480P,
+  aspectRatio = '9:16',
   generateAudio = true,
 }) {
   const normalizedReferenceImages = referenceImageUrls.filter(Boolean);
@@ -288,6 +289,7 @@ function buildSeedanceVideoPayload({
     content,
     duration: duration || DEFAULT_IMAGE_DURATION_SECONDS,
     resolution,
+    aspect_ratio: aspectRatio,
     generate_audio: Boolean(generateAudio),
   };
 }
@@ -301,6 +303,7 @@ async function generateSeedanceVideo(
   referenceImageUrls = [],
   referenceAudioUrls = [],
   resolution = VIDEO_RESOLUTION_480P,
+  aspectRatio = '9:16',
   generateAudio = true,
   options = {},
 ) {
@@ -321,6 +324,7 @@ async function generateSeedanceVideo(
     referenceImageUrls,
     referenceAudioUrls,
     resolution,
+    aspectRatio,
     generateAudio,
   });
   if (payload.model.includes('1-5') || payload.model.includes('1.5')) {
