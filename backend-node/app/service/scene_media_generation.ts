@@ -2,7 +2,7 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
-const { resolveUrl } = require('../lib/generated_asset');
+const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const { serializeMediaGenerationMeta } = require('../lib/media_generation_meta');
 
 class SceneMediaGenerationService extends Service {
@@ -21,6 +21,7 @@ class SceneMediaGenerationService extends Service {
       status: row.status,
       result_url: resolveUrl(this.app, row.result_url || '', baseUrl),
       preview_url: resolveUrl(this.app, row.preview_url || '', baseUrl),
+      poster_url: resolveUrl(this.app, row.poster_url || '', baseUrl),
       source_url: resolveUrl(this.app, row.source_url || '', baseUrl),
       error_message: row.error_message || '',
       is_current: Boolean(row.is_current),
@@ -33,7 +34,7 @@ class SceneMediaGenerationService extends Service {
   async listBySceneId(sceneId) {
     const [rows] = await this.pool.query(
       `SELECT id, scene_id, legacy_storyboard_id, media_type, model, status, result_url,
-              preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+              preview_url, poster_url, source_url, error_message, is_current, meta_json, created_at, updated_at
        FROM scene_media_generations
        WHERE scene_id = ? AND deleted_at IS NULL
        ORDER BY created_at DESC, id DESC`,
@@ -45,7 +46,7 @@ class SceneMediaGenerationService extends Service {
   async findById(id) {
     const [rows] = await this.pool.query(
       `SELECT id, scene_id, legacy_storyboard_id, media_type, model, status, result_url,
-              preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+              preview_url, poster_url, source_url, error_message, is_current, meta_json, created_at, updated_at
        FROM scene_media_generations
        WHERE id = ? AND deleted_at IS NULL`,
       [id],
@@ -54,19 +55,22 @@ class SceneMediaGenerationService extends Service {
   }
 
   async create(payload) {
+    const mediaReference = (value) =>
+      value ? normalizeGeneratedAssetReference(this.app, value) : null;
     const [result] = await this.pool.execute(
       `INSERT INTO scene_media_generations
-        (scene_id, media_type, model, status, result_url, preview_url, source_url,
+        (scene_id, media_type, model, status, result_url, preview_url, poster_url, source_url,
          error_message, is_current, meta_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         Number(payload.scene_id),
         String(payload.media_type || ''),
         String(payload.model || ''),
         String(payload.status || ''),
-        payload.result_url || null,
-        payload.preview_url || null,
-        payload.source_url || null,
+        mediaReference(payload.result_url),
+        mediaReference(payload.preview_url),
+        mediaReference(payload.poster_url),
+        mediaReference(payload.source_url),
         payload.error_message || null,
         payload.is_current ? 1 : 0,
         serializeMediaGenerationMeta(payload.meta_json) || null,
@@ -80,17 +84,22 @@ class SceneMediaGenerationService extends Service {
     if (!current) throw new Error('scene media generation not found');
     const value = (key) =>
       Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : current[key];
+    const mediaReference = (key) => {
+      const reference = value(key);
+      return reference ? normalizeGeneratedAssetReference(this.app, reference) : null;
+    };
     await this.pool.execute(
       `UPDATE scene_media_generations
-       SET model = ?, status = ?, result_url = ?, preview_url = ?, source_url = ?,
+       SET model = ?, status = ?, result_url = ?, preview_url = ?, poster_url = ?, source_url = ?,
            error_message = ?, is_current = ?, meta_json = ?
        WHERE id = ?`,
       [
         value('model') || '',
         value('status') || '',
-        value('result_url') || null,
-        value('preview_url') || null,
-        value('source_url') || null,
+        mediaReference('result_url'),
+        mediaReference('preview_url'),
+        mediaReference('poster_url'),
+        mediaReference('source_url'),
         value('error_message') || null,
         value('is_current') ? 1 : 0,
         serializeMediaGenerationMeta(value('meta_json')) || null,

@@ -60,6 +60,7 @@ export type Scene = {
   cover_preview_url?: string;
   video_url?: string;
   video_preview_url?: string;
+  video_poster_url?: string;
   video_status?: string;
   video_error?: string;
   video_duration?: number;
@@ -102,6 +103,7 @@ export type SceneMediaGeneration = {
   status: "pending" | "generating" | "succeeded" | "failed" | string;
   result_url?: string;
   preview_url?: string;
+  poster_url?: string;
   source_url?: string;
   error_message?: string;
   is_current: boolean;
@@ -261,6 +263,7 @@ export type StoryboardMediaGeneration = {
   status: "pending" | "generating" | "succeeded" | "failed" | string;
   result_url?: string;
   preview_url?: string;
+  poster_url?: string;
   source_url?: string;
   error_message?: string;
   is_current: boolean;

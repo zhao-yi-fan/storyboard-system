@@ -21,26 +21,20 @@ export const DEFAULT_AUTH_BOOTSTRAP_ROLE_LABEL = '分镜工作室';
 
 export const DEFAULT_DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
 export const DEFAULT_ARK_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
-export const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
 export const DEFAULT_DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
 
 export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash';
 export const DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL = 'qwen-voice-design';
 export const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
-export const DEFAULT_WANX_MODEL = 'wan2.7-image-pro';
-export const DEFAULT_WANX_REFERENCE_MODEL = 'wan2.7-image-pro';
 export const DEFAULT_WANX_VIDEO_MODEL = 'wan2.7-i2v';
 export const DEFAULT_WANX_TEXT_VIDEO_MODEL = 'wan2.7-t2v-2026-04-25';
 export const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-2-0-260128';
 export const DEFAULT_SEEDREAM_IMAGE_MODEL = 'doubao-seedream-4-5-251128';
-export const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
 
 export const DEFAULT_TIMEOUT_SECONDS = 180;
 export const DEFAULT_LONG_TIMEOUT_SECONDS = 300;
 export const DEFAULT_DASHSCOPE_VOICE_TIMEOUT_SECONDS = 120;
 export const DEFAULT_DEEPSEEK_TIMEOUT_SECONDS = DEFAULT_TIMEOUT_SECONDS;
-export const DEFAULT_WANX_TIMEOUT_SECONDS = DEFAULT_LONG_TIMEOUT_SECONDS;
 export const DEFAULT_WANX_VIDEO_TIMEOUT_SECONDS = DEFAULT_LONG_TIMEOUT_SECONDS;
 export const DEFAULT_SEEDANCE_TIMEOUT_SECONDS = DEFAULT_LONG_TIMEOUT_SECONDS;
 export const DEFAULT_SEEDREAM_TIMEOUT_SECONDS = DEFAULT_TIMEOUT_SECONDS;
-export const DEFAULT_OPENAI_IMAGE_TIMEOUT_SECONDS = DEFAULT_TIMEOUT_SECONDS;

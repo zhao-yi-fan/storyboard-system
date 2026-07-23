@@ -33,6 +33,10 @@ function avatarPreviewSpec() {
   return { width: 256, height: 256, crop: true };
 }
 
+function videoPosterSpec() {
+  return { width: 480, height: 480, crop: false };
+}
+
 function sanitizeFileName(value) {
   const cleaned = String(value || '')
     .trim()
@@ -440,6 +444,7 @@ module.exports = {
   storyboardPreviewSpec,
   assetPreviewSpec,
   avatarPreviewSpec,
+  videoPosterSpec,
   sanitizeFileName,
   downloadToBuffer,
   materializeSourceToLocalFile,

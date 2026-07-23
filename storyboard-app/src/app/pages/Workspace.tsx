@@ -226,8 +226,8 @@ function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
 const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
   shot?.thumbnail_preview_url || shot?.thumbnail_url || "";
 
-const getSceneCoverPreviewSrc = (scene: Scene | null | undefined) =>
-  scene?.cover_preview_url || scene?.cover_url || "";
+const getSceneNavigatorThumbnailSrc = (scene: Scene | null | undefined) =>
+  scene?.video_poster_url || scene?.cover_preview_url || scene?.cover_url || "";
 
 const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
   project?.video_preview_url || project?.video_url || "";
@@ -1771,17 +1771,19 @@ export default function Workspace() {
                                   : "h-8 w-1 flex-none rounded-full bg-white/5"
                               }
                             />
-                            {getSceneCoverPreviewSrc(scene) ? (
-                              <span className="h-11 w-11 flex-none overflow-hidden rounded-lg bg-black/20">
+                            <span className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-lg bg-black/20">
+                              {getSceneNavigatorThumbnailSrc(scene) ? (
                                 <img
-                                  src={getSceneCoverPreviewSrc(scene)}
+                                  src={getSceneNavigatorThumbnailSrc(scene)}
                                   alt={`${scene.title}片段封面`}
                                   loading="lazy"
                                   decoding="async"
                                   className="h-full w-full object-cover"
                                 />
-                              </span>
-                            ) : null}
+                              ) : (
+                                <Film className="h-4 w-4 text-white/20" aria-hidden="true" />
+                              )}
+                            </span>
                             <span className="min-w-0 flex-1">
                               <span
                                 className={

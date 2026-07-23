@@ -11,6 +11,7 @@
     "lint:fix": "eslint . --fix --max-warnings=0",
     "format": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write .",
     "format:check": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check .",
+    "backfill:video-posters": "npm run build && node ./scripts/backfill-video-posters.mjs",
     "configure:oss-cors": "node ./scripts/configure-oss-cors.mjs",
     "start": "egg-scripts start dist --daemon --title=storyboard-backend-node",
     "stop": "egg-scripts stop --title=storyboard-backend-node",

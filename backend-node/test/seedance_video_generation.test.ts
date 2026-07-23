@@ -112,6 +112,7 @@ describe('test/seedance_video_generation.test.ts', () => {
         [],
         [],
         '720p',
+        '9:16',
         false,
         {
           pollIntervalMs: 0,

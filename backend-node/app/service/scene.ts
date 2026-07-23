@@ -63,7 +63,7 @@ class SceneService extends Service {
 
     const [rows] = await this.pool.query(
       `SELECT id, chapter_id, project_id, title, description, prompt, location, time_of_day, style_preset, style_notes,
-              cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration,
+              cover_url, cover_preview_url, video_url, video_preview_url, video_poster_url, video_status, video_error, video_duration,
               generation_duration, sort_order, created_at, updated_at
        FROM scenes
        WHERE chapter_id = ? AND deleted_at IS NULL
@@ -89,7 +89,7 @@ class SceneService extends Service {
   async findById(id) {
     const [rows] = await this.pool.query(
       `SELECT id, chapter_id, project_id, title, description, prompt, location, time_of_day, style_preset, style_notes,
-              cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration,
+              cover_url, cover_preview_url, video_url, video_preview_url, video_poster_url, video_status, video_error, video_duration,
               generation_duration, sort_order, created_at, updated_at
        FROM scenes
        WHERE id = ? AND deleted_at IS NULL`,
@@ -174,7 +174,7 @@ class SceneService extends Service {
       const [result] = await conn.execute(
         `INSERT INTO scenes (
           chapter_id, project_id, title, description, prompt, location, time_of_day, style_preset, style_notes,
-          cover_url, cover_preview_url, video_url, video_preview_url, video_status, video_error, video_duration, sort_order
+          cover_url, cover_preview_url, video_url, video_preview_url, video_poster_url, video_status, video_error, video_duration, sort_order
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '', '', NULL, ?)`,
         [
           chapterId,
@@ -232,7 +232,7 @@ class SceneService extends Service {
     await this.pool.execute(
       `UPDATE scenes
        SET title = ?, description = ?, prompt = ?, location = ?, time_of_day = ?, style_preset = ?, style_notes = ?,
-           cover_url = ?, cover_preview_url = ?, video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ?,
+           cover_url = ?, cover_preview_url = ?, video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ?,
            generation_duration = ?, sort_order = ?
        WHERE id = ?`,
       [
@@ -267,6 +267,9 @@ class SceneService extends Service {
         Object.prototype.hasOwnProperty.call(payload, 'video_preview_url')
           ? normalizeGeneratedAssetReference(this.app, String(payload.video_preview_url || ''))
           : normalizeGeneratedAssetReference(this.app, current.video_preview_url),
+        Object.prototype.hasOwnProperty.call(payload, 'video_poster_url')
+          ? normalizeGeneratedAssetReference(this.app, String(payload.video_poster_url || ''))
+          : normalizeGeneratedAssetReference(this.app, current.video_poster_url),
         Object.prototype.hasOwnProperty.call(payload, 'video_status')
           ? String(payload.video_status || '')
           : current.video_status,
@@ -670,9 +673,11 @@ class SceneService extends Service {
       });
     }
     if (generation.media_type === 'video') {
+      const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(generation);
       return await this.update(id, {
         video_url: generation.result_url || '',
         video_preview_url: generation.preview_url || generation.result_url || '',
+        video_poster_url: posterUrl,
         video_status: generation.status || '',
         video_error: generation.error_message || '',
       });
@@ -724,6 +729,7 @@ class SceneService extends Service {
         await this.update(id, {
           video_url: '',
           video_preview_url: '',
+          video_poster_url: '',
           video_status: '',
           video_error: '',
         });
@@ -787,8 +793,10 @@ class SceneService extends Service {
     }
     const sourceImageUrl =
       useFirstFrame && scene.cover_url ? resolveMediaUrl(this.app, scene.cover_url) : '';
-    const { references: baseReferences, missing } =
-      await helper.selectVideoReferenceImages(scene, scene);
+    const { references: baseReferences, missing } = await helper.selectVideoReferenceImages(
+      scene,
+      scene,
+    );
     const boundReferences = [
       ...baseReferences,
       ...this.buildVideoFrameReferences(scene.video_frame_references || []),
@@ -815,7 +823,11 @@ class SceneService extends Service {
       aspect_ratio: aspectRatio,
       audio,
       use_first_frame: useFirstFrame,
-      media_input_mode: useFirstFrame ? 'first_frame' : references.length ? 'reference_media' : 'text',
+      media_input_mode: useFirstFrame
+        ? 'first_frame'
+        : references.length
+          ? 'reference_media'
+          : 'text',
       source_image_url: sourceImageUrl,
       source_image_status: !useFirstFrame
         ? 'not-required'
@@ -911,9 +923,8 @@ class SceneService extends Service {
             preview.audio,
             {
               onTaskCreated: async (taskId) => {
-                const currentGeneration = await this.ctx.service.sceneMediaGeneration.findById(
-                  generationId,
-                );
+                const currentGeneration =
+                  await this.ctx.service.sceneMediaGeneration.findById(generationId);
                 await this.ctx.service.sceneMediaGeneration.update(generationId, {
                   meta_json: {
                     ...parseMediaGenerationMeta(currentGeneration?.meta_json),
@@ -960,11 +971,19 @@ class SceneService extends Service {
           provider_task_id: result.taskId || undefined,
         },
       });
+      const completedGeneration =
+        await this.ctx.service.sceneMediaGeneration.findById(generationId);
+      const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(
+        completedGeneration,
+        stored.localPath,
+      );
+      await this.update(id, { video_poster_url: posterUrl });
       await this.ctx.service.sceneMediaGeneration.markCurrent(id, 'video', generationId);
     } catch (error) {
       await this.update(id, {
         video_url: '',
         video_preview_url: '',
+        video_poster_url: '',
         video_status: 'failed',
         video_error: error.message,
       });
@@ -1009,6 +1028,7 @@ class SceneService extends Service {
       const nextScene = await this.update(id, {
         video_url: composed.publicPath,
         video_preview_url: composed.previewPath,
+        video_poster_url: '',
         video_status: 'succeeded',
         video_error: '',
         video_duration: composed.duration,
@@ -1025,8 +1045,10 @@ class SceneService extends Service {
           input_count: inputs.length,
         }),
       });
+      const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(generation);
+      const sceneWithPoster = await this.update(id, { video_poster_url: posterUrl });
       await this.ctx.service.sceneMediaGeneration.markCurrent(id, 'video', generation.id);
-      return nextScene;
+      return posterUrl ? sceneWithPoster : nextScene;
     } catch (error) {
       await this.update(id, {
         video_status: 'failed',

@@ -2,7 +2,10 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
-const { deleteGeneratedAsset, normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const {
+  deleteGeneratedAsset,
+  normalizeGeneratedAssetReference,
+} = require('../lib/generated_asset');
 const { trimVideo } = require('../lib/media');
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 
@@ -45,7 +48,7 @@ class SceneVideoClipService extends Service {
       filename,
     );
     try {
-      await this.ctx.service.sceneMediaGeneration.create({
+      const clipGeneration = await this.ctx.service.sceneMediaGeneration.create({
         scene_id: sceneId,
         media_type: 'video',
         model: 'video-clip',
@@ -64,6 +67,7 @@ class SceneVideoClipService extends Service {
           audio: sourceMeta.audio,
         },
       });
+      await this.ctx.service.sceneVideoPoster.ensureBestEffort(clipGeneration);
     } catch (error) {
       await deleteGeneratedAsset(this.app, stored.publicPath).catch(() => null);
       throw error;

@@ -456,6 +456,12 @@ export async function ensureSceneGenerationSchema(pool) {
     await addColumnIfMissing(
       connection,
       'scenes',
+      'video_poster_url',
+      'TEXT NULL AFTER video_preview_url',
+    );
+    await addColumnIfMissing(
+      connection,
+      'scenes',
       'legacy_storyboards_migrated_at',
       'DATETIME NULL AFTER generation_duration',
     );
@@ -509,6 +515,7 @@ export async function ensureSceneGenerationSchema(pool) {
         status VARCHAR(32) NOT NULL,
         result_url TEXT NULL,
         preview_url TEXT NULL,
+        poster_url TEXT NULL,
         source_url TEXT NULL,
         error_message TEXT NULL,
         is_current TINYINT(1) NOT NULL DEFAULT 0,
@@ -527,6 +534,12 @@ export async function ensureSceneGenerationSchema(pool) {
       'scene_media_generations',
       'legacy_generation_id',
       'BIGINT UNSIGNED NULL AFTER legacy_storyboard_id',
+    );
+    await addColumnIfMissing(
+      connection,
+      'scene_media_generations',
+      'poster_url',
+      'TEXT NULL AFTER preview_url',
     );
     await connection.query(`
       CREATE TABLE IF NOT EXISTS scene_video_frames (

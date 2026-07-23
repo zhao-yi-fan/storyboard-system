@@ -11,7 +11,6 @@ import { buildDashScopeConfig } from './providers/dashscope';
 import { buildWanxConfig } from './providers/wanx';
 import { buildSeedanceConfig } from './providers/seedance';
 import { buildSeedreamConfig } from './providers/seedream';
-import { buildOpenAIConfig } from './providers/openai';
 import { buildOssConfig } from './providers/oss';
 import { FALLBACK_GO_ENV_PATH, LOCAL_ENV_PATH } from './shared/constants';
 
@@ -77,7 +76,6 @@ module.exports = (appInfo: { name: string }) => {
     ...buildWanxConfig(),
     ...buildSeedanceConfig(),
     ...buildSeedreamConfig(),
-    ...buildOpenAIConfig(),
     ...buildOssConfig(),
   };
 

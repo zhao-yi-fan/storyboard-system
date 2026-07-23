@@ -40,6 +40,7 @@ export function mapScene(app: any, row: Record<string, any>) {
     cover_preview_url: resolvePublicUrl(app, row.cover_preview_url),
     video_url: resolvePublicUrl(app, row.video_url),
     video_preview_url: resolvePublicUrl(app, row.video_preview_url),
+    video_poster_url: resolvePublicUrl(app, row.video_poster_url),
     video_status: toNullableString(row.video_status),
     video_error: toNullableString(row.video_error),
     video_duration: toNullableNumber(row.video_duration),
