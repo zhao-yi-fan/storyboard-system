@@ -14,6 +14,7 @@ import {
 } from "../api";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import styles from "./AssetConfirmation.module.scss";
 
 const KIND_LABELS = { character: "角色", scene: "场景", prop: "道具" } as const;
 const KIND_TABS = [
@@ -49,56 +50,43 @@ function RequirementCard({
 }) {
   const imageUrl = item.file_url || item.preview_url;
   return (
-    <article className="overflow-hidden rounded-2xl bg-white/[0.045] ring-1 ring-white/[0.06]">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[#101313]">
+    <article className={styles.requirementCard}>
+      <div className={styles.requirementPreview}>
         {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={item.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          <img src={imageUrl} alt={item.name} className={styles.image} loading="lazy" />
         ) : (
-          <div className="flex h-full items-center justify-center text-gray-700">
-            <Image className="h-10 w-10" />
+          <div className={styles.imagePlaceholder}>
+            <Image className={styles.placeholderIcon} />
           </div>
         )}
-        <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] text-teal-200 backdrop-blur">
-          {KIND_LABELS[item.kind]}
-        </span>
-        <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] text-gray-200 backdrop-blur">
-          {STATUS_LABELS[item.status]}
-        </span>
+        <span className={styles.kindBadge}>{KIND_LABELS[item.kind]}</span>
+        <span className={styles.statusBadge}>{STATUS_LABELS[item.status]}</span>
       </div>
-      <div className="p-4">
-        <h3 className="truncate font-semibold text-white">{item.name}</h3>
-        <p className="mt-1 line-clamp-2 min-h-10 text-xs leading-5 text-gray-500">
-          {item.description || "暂无补充描述"}
-        </p>
+      <div className={styles.cardContent}>
+        <h3 className={styles.requirementName}>{item.name}</h3>
+        <p className={styles.requirementDescription}>{item.description || "暂无补充描述"}</p>
         {item.error_message ? (
-          <p className="mt-2 text-xs text-red-300">{item.error_message}</p>
+          <p className={styles.requirementError}>{item.error_message}</p>
         ) : null}
         {item.blocking_reason ? (
-          <p className="mt-2 rounded-lg bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
-            {item.blocking_reason}
-          </p>
+          <p className={styles.blockingReason}>{item.blocking_reason}</p>
         ) : null}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className={styles.cardActions}>
           <Button
             size="sm"
             disabled={busy}
             onClick={item.can_generate === false ? onComplete : onGenerate}
-            className="bg-teal-400 text-[#07110f] hover:bg-teal-300"
+            className={styles.primaryButton}
           >
             {busy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className={styles.smallLoadingIcon} />
             ) : (
-              <Sparkles className="h-3.5 w-3.5" />
+              <Sparkles className={styles.smallIcon} />
             )}
             {item.can_generate === false ? "完善参考素材" : imageUrl ? "再生成" : "Seedream 生成"}
           </Button>
           <Button size="sm" variant="outline" onClick={onImport}>
-            <Library className="h-3.5 w-3.5" />
+            <Library className={styles.smallIcon} />
             个人空间
           </Button>
           {imageUrl ? (
@@ -108,7 +96,7 @@ function RequirementCard({
           ) : null}
           {imageUrl ? (
             <Button size="sm" variant="ghost" onClick={onSave}>
-              <Save className="h-3.5 w-3.5" />
+              <Save className={styles.smallIcon} />
               保存复用
             </Button>
           ) : null}
@@ -135,10 +123,12 @@ export default function AssetConfirmation() {
   const [versions, setVersions] = useState<AssetVersion[]>([]);
   const filteredRequirements = requirements.filter((item) => item.kind === activeKind);
   const readyCount = requirements.filter(
-    (item) => (item.status === "pending" || item.status === "failed") && item.can_generate !== false,
+    (item) =>
+      (item.status === "pending" || item.status === "failed") && item.can_generate !== false,
   ).length;
   const blockedCount = requirements.filter(
-    (item) => (item.status === "pending" || item.status === "failed") && item.can_generate === false,
+    (item) =>
+      (item.status === "pending" || item.status === "failed") && item.can_generate === false,
   ).length;
 
   const loadRequirements = async (selectedChapterId = chapterId) => {
@@ -242,18 +232,18 @@ export default function AssetConfirmation() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090b0b] text-gray-100">
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between bg-[#090b0b]/85 px-6 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerStart}>
           <Button variant="ghost" size="icon" onClick={() => navigate("/projects")}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className={styles.icon} />
           </Button>
           <div>
-            <h1 className="font-semibold">{project?.name || "项目"} · 资产准备</h1>
-            <p className="text-xs text-gray-600">按集整理人物、场景和道具，已有图片可直接使用</p>
+            <h1 className={styles.title}>{project?.name || "项目"} · 资产准备</h1>
+            <p className={styles.subtitle}>按集整理人物、场景和道具，已有图片可直接使用</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className={styles.headerActions}>
           <Button variant="ghost" onClick={() => navigate(`/assets?project=${projectId}`)}>
             项目资产编辑
           </Button>
@@ -263,25 +253,27 @@ export default function AssetConfirmation() {
           <Button
             disabled={busyId !== null || readyCount === 0}
             onClick={() => generate()}
-            className="bg-teal-400 text-[#07110f] hover:bg-teal-300"
+            className={styles.primaryButton}
           >
             {busyId === "batch" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className={styles.loadingIcon} />
             ) : (
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className={styles.icon} />
             )}
-            {readyCount ? `生成可用资产 (${readyCount})` : blockedCount ? `${blockedCount} 项待补素材` : "本集资产已齐"}
+            {readyCount
+              ? `生成可用资产 (${readyCount})`
+              : blockedCount
+                ? `${blockedCount} 项待补素材`
+                : "本集资产已齐"}
           </Button>
         </div>
       </header>
-      <main className="mx-auto flex max-w-[1500px] gap-8 px-6 py-8">
-        <aside className="w-48 flex-none">
-          <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-gray-600">
-            按集查看
-          </div>
+      <main className={styles.main}>
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarTitle}>按集查看</div>
           <button
             onClick={() => selectChapter(undefined)}
-            className={`mb-1 w-full rounded-xl px-3 py-2.5 text-left text-sm ${chapterId == null ? "bg-teal-400/15 text-teal-200" : "text-gray-500 hover:bg-white/5"}`}
+            className={chapterId == null ? styles.chapterActive : styles.chapterButton}
           >
             全部资产
           </button>
@@ -289,26 +281,26 @@ export default function AssetConfirmation() {
             <button
               key={chapter.id}
               onClick={() => selectChapter(chapter.id)}
-              className={`mb-1 w-full rounded-xl px-3 py-2.5 text-left text-sm ${chapterId === chapter.id ? "bg-teal-400/15 text-teal-200" : "text-gray-500 hover:bg-white/5"}`}
+              className={chapterId === chapter.id ? styles.chapterActive : styles.chapterButton}
             >
               第 {index + 1} 集 · {chapter.title}
             </button>
           ))}
         </aside>
-        <section className="min-w-0 flex-1">
-          <div className="mb-5 flex items-end justify-between">
+        <section className={styles.content}>
+          <div className={styles.contentHeader}>
             <div>
-              <h2 className="text-2xl font-semibold">资产需求</h2>
-              <p className="mt-1 text-sm text-gray-600">
+              <h2 className={styles.contentTitle}>资产需求</h2>
+              <p className={styles.contentDescription}>
                 {requirements.length} 项 · 已有版本直接可用，缺失图片由 Seedream 补齐
               </p>
             </div>
             <Button size="sm" variant="ghost" onClick={() => loadRequirements()}>
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={styles.icon} />
               刷新
             </Button>
           </div>
-          <div className="mb-6 flex gap-2 border-b border-white/[0.06] pb-3">
+          <div className={styles.kindTabs}>
             {KIND_TABS.map((tab) => {
               const count = requirements.filter((item) => item.kind === tab.value).length;
               return (
@@ -316,20 +308,20 @@ export default function AssetConfirmation() {
                   key={tab.value}
                   type="button"
                   onClick={() => setActiveKind(tab.value)}
-                  className={`rounded-full px-4 py-2 text-sm transition ${activeKind === tab.value ? "bg-teal-400 text-[#07110f]" : "bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-white"}`}
+                  className={activeKind === tab.value ? styles.kindTabActive : styles.kindTab}
                 >
                   {tab.label}
-                  <span className="ml-2 text-xs opacity-65">{count}</span>
+                  <span className={styles.tabCount}>{count}</span>
                 </button>
               );
             })}
           </div>
           {loading ? (
-            <div className="flex h-64 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-teal-300" />
+            <div className={styles.loadingState}>
+              <Loader2 className={styles.pageLoadingIcon} />
             </div>
           ) : filteredRequirements.length ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className={styles.requirementGrid}>
               {filteredRequirements.map((item) => (
                 <RequirementCard
                   key={item.id}
@@ -339,13 +331,17 @@ export default function AssetConfirmation() {
                   onImport={() => openPersonal(item)}
                   onSave={() => saveToPersonal(item)}
                   onVersions={() => openVersions(item)}
-                  onComplete={() => navigate(`/assets?project=${projectId}&character=${item.linked_entity_id || ""}`)}
+                  onComplete={() =>
+                    navigate(
+                      `/assets?project=${projectId}&character=${item.linked_entity_id || ""}`,
+                    )
+                  }
                 />
               ))}
             </div>
           ) : (
-            <div className="flex h-72 flex-col items-center justify-center rounded-3xl bg-white/[0.025] text-gray-600">
-              <Image className="mb-3 h-10 w-10" />
+            <div className={styles.emptyState}>
+              <Image className={styles.emptyIcon} />
               <p>本集暂无{KIND_TABS.find((tab) => tab.value === activeKind)?.label}需求</p>
             </div>
           )}
@@ -353,30 +349,27 @@ export default function AssetConfirmation() {
       </main>
 
       <Dialog open={Boolean(importTarget)} onOpenChange={(open) => !open && setImportTarget(null)}>
-        <DialogContent className="max-w-3xl bg-[#121515] text-white">
+        <DialogContent className={styles.dialog}>
           <DialogHeader>
             <DialogTitle>从个人空间导入 · {importTarget?.name}</DialogTitle>
           </DialogHeader>
-          <div className="grid max-h-[60vh] grid-cols-3 gap-3 overflow-y-auto">
+          <div className={styles.dialogGrid}>
             {personalAssets.map((item) => (
               <button
                 key={item.id}
                 onClick={() => importPersonal(item)}
-                className="overflow-hidden rounded-xl bg-white/5 text-left hover:bg-white/10"
+                className={styles.personalAsset}
               >
-                <div className="aspect-square bg-black/30">
+                <div className={styles.squarePreview}>
                   {item.file_url || item.preview_url ? (
-                    <img
-                      src={item.file_url || item.preview_url}
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={item.file_url || item.preview_url} className={styles.image} />
                   ) : null}
                 </div>
-                <div className="p-3 text-sm">{item.name}</div>
+                <div className={styles.personalAssetName}>{item.name}</div>
               </button>
             ))}
             {!personalAssets.length ? (
-              <p className="col-span-3 py-16 text-center text-gray-500">个人空间暂无同类资产</p>
+              <p className={styles.dialogEmpty}>个人空间暂无同类资产</p>
             ) : null}
           </div>
         </DialogContent>
@@ -386,24 +379,21 @@ export default function AssetConfirmation() {
         open={Boolean(versionTarget)}
         onOpenChange={(open) => !open && setVersionTarget(null)}
       >
-        <DialogContent className="max-w-3xl bg-[#121515] text-white">
+        <DialogContent className={styles.dialog}>
           <DialogHeader>
             <DialogTitle>{versionTarget?.name} · 版本</DialogTitle>
           </DialogHeader>
-          <div className="grid max-h-[60vh] grid-cols-3 gap-3 overflow-y-auto">
+          <div className={styles.dialogGrid}>
             {versions.map((version) => (
               <button
                 key={version.id}
                 onClick={() => chooseVersion(version)}
-                className={`overflow-hidden rounded-xl text-left ring-1 ${version.is_current ? "bg-teal-400/10 ring-teal-400" : "bg-white/5 ring-white/5"}`}
+                className={version.is_current ? styles.versionCurrent : styles.version}
               >
-                <div className="aspect-square bg-black/30">
-                  <img
-                    src={version.preview_url || version.file_url}
-                    className="h-full w-full object-cover"
-                  />
+                <div className={styles.squarePreview}>
+                  <img src={version.preview_url || version.file_url} className={styles.image} />
                 </div>
-                <div className="flex justify-between p-3 text-xs">
+                <div className={styles.versionInfo}>
                   <span>{version.model}</span>
                   <span>{version.is_current ? "当前版本" : "设为当前"}</span>
                 </div>

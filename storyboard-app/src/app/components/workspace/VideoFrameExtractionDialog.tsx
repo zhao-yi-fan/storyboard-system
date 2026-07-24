@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Slider } from "../ui/slider";
+import styles from "./VideoFrameExtractionDialog.module.scss";
 
 type Thumbnail = {
   time: number;
@@ -257,7 +258,10 @@ export function VideoFrameExtractionDialog({
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
-      if (mode === "video" && (video.currentTime < clipRange[0] || video.currentTime >= clipRange[1])) {
+      if (
+        mode === "video" &&
+        (video.currentTime < clipRange[0] || video.currentTime >= clipRange[1])
+      ) {
         video.currentTime = clipRange[0];
         setCurrentTime(clipRange[0]);
       }
@@ -316,8 +320,7 @@ export function VideoFrameExtractionDialog({
 
   const updateClipRange = ([start, end]: number[]) => {
     const next: [number, number] = [start, end];
-    const movedTime =
-      Math.abs(start - clipRange[0]) >= Math.abs(end - clipRange[1]) ? start : end;
+    const movedTime = Math.abs(start - clipRange[0]) >= Math.abs(end - clipRange[1]) ? start : end;
     setClipRange(next);
     seek(movedTime);
   };
@@ -337,13 +340,10 @@ export function VideoFrameExtractionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="flex h-[92dvh] max-h-[880px] max-w-[min(1280px,96vw)] grid-cols-none flex-col gap-4 overflow-hidden border-white/10 bg-[#101514] p-6 text-gray-100"
-        overlayClassName="bg-black/70 backdrop-blur-md"
-      >
-        <DialogHeader className="flex-none">
-          <DialogTitle className="flex items-center gap-3 text-2xl">
-            <Film className="h-6 w-6 text-teal-300" />
+      <DialogContent className={styles.dialog} overlayClassName={styles.overlay}>
+        <DialogHeader className={styles.header}>
+          <DialogTitle className={styles.title}>
+            <Film className={styles.titleIcon} />
             视频截取
           </DialogTitle>
           <DialogDescription>
@@ -351,10 +351,10 @@ export function VideoFrameExtractionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <section className="flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden rounded-2xl bg-black/30 p-4">
-            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl bg-black">
-              {isLoading ? <Loader2 className="h-9 w-9 animate-spin text-teal-300" /> : null}
+        <div className={styles.body}>
+          <section className={styles.playerSection}>
+            <div className={styles.player}>
+              {isLoading ? <Loader2 className={styles.playerLoadingIcon} /> : null}
               {videoUrl ? (
                 <video
                   ref={videoRef}
@@ -362,9 +362,11 @@ export function VideoFrameExtractionDialog({
                   crossOrigin="anonymous"
                   playsInline
                   preload="auto"
-                  className="h-full max-h-full w-full max-w-full object-contain"
+                  className={styles.video}
                   onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
-                  onError={(event) => setError(mediaErrorMessage(event.currentTarget, "加载主视频"))}
+                  onError={(event) =>
+                    setError(mediaErrorMessage(event.currentTarget, "加载主视频"))
+                  }
                   onTimeUpdate={(event) => {
                     const video = event.currentTarget;
                     if (mode === "video" && !video.paused && video.currentTime >= clipRange[1]) {
@@ -378,28 +380,28 @@ export function VideoFrameExtractionDialog({
                 />
               ) : null}
               {!isLoading && !videoUrl && !error ? (
-                <span className="text-sm text-gray-500">视频不可用</span>
+                <span className={styles.unavailable}>视频不可用</span>
               ) : null}
-              <div className="absolute left-1/2 top-4 z-10 flex -translate-x-1/2 rounded-xl bg-black/70 p-1 backdrop-blur-md">
+              <div className={styles.modeSwitch}>
                 <button
                   type="button"
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs transition ${mode === "image" ? "bg-white/15 text-white" : "text-gray-400 hover:text-white"}`}
+                  className={mode === "image" ? styles.modeActive : styles.modeButton}
                   onClick={() => switchMode("image")}
                 >
-                  <ImageIcon className="h-4 w-4" /> 截取图片
+                  <ImageIcon className={styles.modeIcon} /> 截取图片
                 </button>
                 <button
                   type="button"
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs transition ${mode === "video" ? "bg-white/15 text-white" : "text-gray-400 hover:text-white"}`}
+                  className={mode === "video" ? styles.modeActive : styles.modeButton}
                   onClick={() => switchMode("video")}
                 >
-                  <Video className="h-4 w-4" /> 截取视频
+                  <Video className={styles.modeIcon} /> 截取视频
                 </button>
               </div>
             </div>
 
-            <div className="flex-none space-y-3">
-              <div className="flex items-center gap-4">
+            <div className={styles.controls}>
+              <div className={styles.timelineControl}>
                 <Button
                   type="button"
                   variant="ghost"
@@ -407,7 +409,11 @@ export function VideoFrameExtractionDialog({
                   disabled={!videoUrl || !duration}
                   onClick={() => void togglePlayback()}
                 >
-                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  {isPlaying ? (
+                    <Pause className={styles.playIcon} />
+                  ) : (
+                    <Play className={styles.playIcon} />
+                  )}
                 </Button>
                 {mode === "image" ? (
                   <Slider
@@ -417,7 +423,7 @@ export function VideoFrameExtractionDialog({
                     step={0.1}
                     onValueChange={([value]) => seek(value)}
                     disabled={!duration}
-                    className="flex-1"
+                    className={styles.slider}
                   />
                 ) : (
                   <Slider
@@ -428,40 +434,38 @@ export function VideoFrameExtractionDialog({
                     minStepsBetweenThumbs={40}
                     onValueChange={updateClipRange}
                     disabled={duration < 4}
-                    className="flex-1"
+                    className={styles.slider}
                   />
                 )}
-                <span className="w-24 text-right font-mono text-xs text-gray-400">
+                <span className={styles.time}>
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
               </div>
               {mode === "video" ? (
-                <div className="flex justify-center gap-5 text-xs text-gray-400">
+                <div className={styles.clipRange}>
                   <span>开始 {formatTime(clipRange[0])}</span>
                   <span>结束 {formatTime(clipRange[1])}</span>
-                  <span className="text-teal-300">
+                  <span className={styles.clipDuration}>
                     截取 {formatTime(selectedClipDuration)}
                   </span>
                 </div>
               ) : null}
-              <div className="flex h-[72px] w-full gap-1 overflow-hidden rounded-xl bg-black/35 p-2">
+              <div className={styles.thumbnails}>
                 {thumbnails.map((item) => (
                   <button
                     type="button"
                     key={`${item.time}-${item.url}`}
-                    className="relative h-14 min-w-0 flex-1 overflow-hidden rounded-md bg-black"
+                    className={styles.thumbnail}
                     onClick={() => seek(item.time)}
                     title={formatTime(item.time)}
                   >
-                    <img src={item.url} alt="" className="h-full w-full object-cover" />
-                    <span className="absolute inset-x-0 bottom-0 bg-black/70 py-0.5 text-[9px] text-white">
-                      {formatTime(item.time)}
-                    </span>
+                    <img src={item.url} alt="" className={styles.thumbnailImage} />
+                    <span className={styles.thumbnailTime}>{formatTime(item.time)}</span>
                   </button>
                 ))}
                 {isSampling ? (
-                  <div className="flex h-14 items-center gap-2 px-3 text-xs text-gray-500">
-                    <Loader2 className="h-4 w-4 animate-spin" /> 采样缩略图
+                  <div className={styles.sampling}>
+                    <Loader2 className={styles.savingIcon} /> 采样缩略图
                   </div>
                 ) : null}
               </div>
@@ -469,22 +473,16 @@ export function VideoFrameExtractionDialog({
           </section>
         </div>
 
-        {error ? (
-          <div className="rounded-xl bg-red-950/50 px-4 py-3 text-sm text-red-200">{error}</div>
-        ) : null}
-        {!error && samplingWarning ? (
-          <div className="rounded-xl bg-amber-950/45 px-4 py-2 text-xs text-amber-200">
-            {samplingWarning}
-          </div>
-        ) : null}
+        {error ? <div className={styles.error}>{error}</div> : null}
+        {!error && samplingWarning ? <div className={styles.warning}>{samplingWarning}</div> : null}
 
-        <DialogFooter className="flex-none items-center border-t border-white/[0.06] pt-4 sm:justify-between">
-          <div className="text-xs text-gray-500">
+        <DialogFooter className={styles.footer}>
+          <div className={styles.footerSummary}>
             {mode === "image"
               ? `当前画面 ${formatTime(currentTime)}，按 0.1 秒保存`
               : `视频区间 ${formatTime(clipRange[0])} - ${formatTime(clipRange[1])}`}
           </div>
-          <div className="flex gap-2">
+          <div className={styles.footerActions}>
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               取消
             </Button>
@@ -496,7 +494,9 @@ export function VideoFrameExtractionDialog({
                   disabled={!duration || savingTargetId !== null}
                   onClick={() => void insertFrame(sourceScene)}
                 >
-                  {savingTargetId === sourceScene.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {savingTargetId === sourceScene.id ? (
+                    <Loader2 className={styles.savingIcon} />
+                  ) : null}
                   插入本片段
                 </Button>
                 <Button
@@ -506,7 +506,7 @@ export function VideoFrameExtractionDialog({
                   title={nextScene ? `插入「${nextScene.title}」` : "当前已经是本集最后一个片段"}
                 >
                   {nextScene && savingTargetId === nextScene.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className={styles.savingIcon} />
                   ) : null}
                   插入下一片段
                 </Button>
@@ -518,7 +518,11 @@ export function VideoFrameExtractionDialog({
                 onClick={() => void saveClip()}
                 title={duration < 4 ? "来源视频不足 4 秒，无法截取" : "保存为新的视频版本"}
               >
-                {isSavingClip ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+                {isSavingClip ? (
+                  <Loader2 className={styles.savingIcon} />
+                ) : (
+                  <Video className={styles.actionIcon} />
+                )}
                 保存到视频版本
               </Button>
             )}

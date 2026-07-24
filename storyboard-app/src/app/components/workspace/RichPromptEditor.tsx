@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import type { VirtualElement } from "@popperjs/core";
 import { Box, Check, Image as ImageIcon, MapPin, Music2, UserRound, Volume2 } from "lucide-react";
+import styles from "./RichPromptEditor.module.scss";
 
 export type PromptMentionCategory = "character" | "scene" | "image" | "audio" | "other";
 
@@ -80,17 +81,15 @@ function createMentionNode(option: PromptMentionOption) {
   chip.dataset.mentionId = String(option.id);
   chip.dataset.mentionKind = option.kind;
   chip.dataset.mentionName = option.name;
-  chip.className =
-    "mx-0.5 inline-flex max-w-full items-center gap-1 rounded-md border border-teal-400/35 bg-teal-400/10 px-1.5 py-0.5 align-middle text-teal-100";
+  chip.className = styles.mentionChip;
 
   const thumb = document.createElement("span");
-  thumb.className =
-    "inline-flex h-4 w-4 flex-none items-center justify-center overflow-hidden rounded bg-gradient-to-br from-teal-300/70 to-cyan-700/70";
+  thumb.className = styles.mentionThumbnail;
   if (option.imageUrl) {
     const image = document.createElement("img");
     image.src = option.imageUrl;
     image.alt = "";
-    image.className = "h-full w-full object-cover";
+    image.className = styles.thumbnailImage;
     thumb.append(image);
   }
 
@@ -128,6 +127,22 @@ function renderValue(root: HTMLElement, value: string, options: PromptMentionOpt
     root.append(option ? createMentionNode(option) : document.createTextNode(`@${next.name}`));
     cursor = next.index + next.name.length + 1;
   }
+}
+
+function insertPlainTextAtSelection(root: HTMLElement, text: string) {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || !root.contains(selection.anchorNode)) return false;
+
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+
+  const textNode = document.createTextNode(text.replace(/\r\n?/g, "\n"));
+  range.insertNode(textNode);
+  range.setStartAfter(textNode);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  return true;
 }
 
 function getEditableTextBeforeCaret(anchorNode: Node, anchorOffset: number) {
@@ -366,7 +381,7 @@ export function RichPromptEditor({
   };
 
   return (
-    <div className={`relative flex min-h-0 flex-1 flex-col ${className}`}>
+    <div className={[styles.root, className].filter(Boolean).join(" ")}>
       <div
         ref={editorRef}
         contentEditable
@@ -378,7 +393,16 @@ export function RichPromptEditor({
           query !== null && filteredOptions.length ? `prompt-mention-${activeIndex}` : undefined
         }
         data-placeholder={placeholder}
-        className="rich-prompt-editor min-h-[180px] flex-1 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-white/[0.07] bg-[rgba(8,13,14,0.58)] px-4 py-3 pb-8 text-sm leading-7 text-gray-100 outline-none transition focus:border-teal-400/45 focus:ring-2 focus:ring-teal-400/10 empty:before:pointer-events-none empty:before:text-gray-600 empty:before:content-[attr(data-placeholder)]"
+        className={styles.editor}
+        onPaste={(event) => {
+          const editor = editorRef.current;
+          if (!editor) return;
+
+          event.preventDefault();
+          mentionKeysBeforeInputRef.current = getMentionKeys(editor);
+          const plainText = event.clipboardData.getData("text/plain");
+          if (insertPlainTextAtSelection(editor, plainText)) syncValue();
+        }}
         onBeforeInput={() => {
           const editor = editorRef.current;
           mentionKeysBeforeInputRef.current = editor ? getMentionKeys(editor) : null;
@@ -413,7 +437,7 @@ export function RichPromptEditor({
         }}
       />
 
-      <div className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-gray-600">
+      <div className={styles.characterCount}>
         {value.length} / {maxLength}
       </div>
 
@@ -425,15 +449,15 @@ export function RichPromptEditor({
               role="listbox"
               style={popperStyles.popper}
               {...popperAttributes.popper}
-              className="z-[100] max-h-80 w-[360px] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#1b2525]/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl"
+              className={styles.mentionMenu}
             >
               {CATEGORY_CONFIG.map(({ category, label: categoryLabel, icon: CategoryIcon }) => {
                 const group = filteredOptions.filter((option) => option.category === category);
                 if (!group.length) return null;
                 return (
-                  <div key={category} className="mb-2 last:mb-0">
-                    <div className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-gray-500">
-                      <CategoryIcon className="h-3 w-3" />
+                  <div key={category} className={styles.category}>
+                    <div className={styles.categoryHeader}>
+                      <CategoryIcon className={styles.categoryIcon} />
                       {categoryLabel}
                     </div>
                     {group.map((option) => {
@@ -446,44 +470,37 @@ export function RichPromptEditor({
                           aria-selected={optionIndex === activeIndex}
                           data-option-index={optionIndex}
                           type="button"
-                          className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition ${
-                            optionIndex === activeIndex
-                              ? "bg-teal-400/15 text-teal-50"
-                              : "text-gray-300 hover:bg-white/5"
-                          }`}
+                          className={
+                            optionIndex === activeIndex ? styles.optionActive : styles.option
+                          }
                           onMouseDown={(event) => {
                             event.preventDefault();
                             void insertMention(option);
                           }}
                         >
-                          <span className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-md bg-gradient-to-br from-teal-300/60 to-cyan-800/60">
+                          <span className={styles.optionThumbnail}>
                             {option.imageUrl ? (
-                              <img
-                                src={option.imageUrl}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
+                              <img src={option.imageUrl} alt="" className={styles.thumbnailImage} />
                             ) : option.media.includes("audio") ? (
-                              <Volume2 className="h-4 w-4 text-teal-50/80" />
+                              <Volume2 className={styles.audioIcon} />
                             ) : (
-                              <ImageIcon className="h-3.5 w-3.5 text-white/70" />
+                              <ImageIcon className={styles.imageIcon} />
                             )}
                           </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate">{option.name}</span>
-                            <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-600">
-                              <span className="truncate">{option.description || "可引用资产"}</span>
+                          <span className={styles.optionContent}>
+                            <span className={styles.optionName}>{option.name}</span>
+                            <span className={styles.optionMeta}>
+                              <span className={styles.optionDescription}>
+                                {option.description || "可引用资产"}
+                              </span>
                               {option.media.map((media) => (
-                                <span
-                                  key={media}
-                                  className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-gray-500"
-                                >
+                                <span key={media} className={styles.mediaBadge}>
                                   {media === "image" ? "图片" : "音频"}
                                 </span>
                               ))}
                             </span>
                           </span>
-                          {option.isBound ? <Check className="h-4 w-4 text-teal-300" /> : null}
+                          {option.isBound ? <Check className={styles.boundIcon} /> : null}
                         </button>
                       );
                     })}
@@ -491,9 +508,7 @@ export function RichPromptEditor({
                 );
               })}
               {filteredOptions.length === 0 ? (
-                <div className="px-3 py-6 text-center text-xs text-gray-500">
-                  没有匹配的人物、场景或其他资产
-                </div>
+                <div className={styles.emptyState}>没有匹配的人物、场景或其他资产</div>
               ) : null}
             </div>,
             document.body,

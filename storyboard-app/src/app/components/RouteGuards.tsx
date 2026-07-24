@@ -2,15 +2,12 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { authApi } from "../api";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "../lib/auth";
+import styles from "./RouteGuards.module.scss";
 
 type AuthStatus = "checking" | "authenticated" | "guest";
 
 function AuthCheckingScreen() {
-  return (
-    <div className="dark flex min-h-screen items-center justify-center bg-[#0a0a0a] text-sm text-gray-400">
-      正在校验登录状态...
-    </div>
-  );
+  return <div className={`dark ${styles.checkingScreen}`}>正在校验登录状态...</div>;
 }
 
 function useAuthStatus() {

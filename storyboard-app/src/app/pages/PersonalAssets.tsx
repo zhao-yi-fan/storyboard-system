@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, Image, Loader2 } from "lucide-react";
 import { assetWorkspaceApi, type PersonalAsset } from "../api";
 import { Button } from "../components/ui/button";
+import styles from "./PersonalAssets.module.scss";
 
 const FILTERS = [
   { value: "", label: "全部" },
@@ -26,56 +27,56 @@ export default function PersonalAssets() {
   }, [kind]);
 
   return (
-    <div className="min-h-screen bg-[#090b0b] text-gray-100">
-      <header className="flex h-16 items-center gap-3 px-6">
+    <div className={styles.page}>
+      <header className={styles.header}>
         <Button variant="ghost" size="icon" onClick={() => navigate("/projects")}>
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className={styles.backIcon} />
         </Button>
         <div>
-          <h1 className="font-semibold">个人空间</h1>
-          <p className="text-xs text-gray-600">跨项目复用已确认资产</p>
+          <h1 className={styles.title}>个人空间</h1>
+          <p className={styles.subtitle}>跨项目复用已确认资产</p>
         </div>
       </header>
-      <main className="mx-auto max-w-[1400px] px-6 py-8">
-        <div className="mb-8 flex gap-2">
+      <main className={styles.main}>
+        <div className={styles.filters}>
           {FILTERS.map((filter) => (
             <button
               key={filter.value}
               onClick={() => setKind(filter.value)}
-              className={`rounded-full px-4 py-2 text-sm ${kind === filter.value ? "bg-teal-400 text-[#07110f]" : "bg-white/5 text-gray-400 hover:bg-white/10"}`}
+              className={kind === filter.value ? styles.filterActive : styles.filter}
             >
               {filter.label}
             </button>
           ))}
         </div>
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-teal-300" />
+          <div className={styles.loading}>
+            <Loader2 className={styles.loadingIcon} />
           </div>
         ) : items.length ? (
-          <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+          <div className={styles.grid}>
             {items.map((item) => (
-              <article key={item.id} className="overflow-hidden rounded-2xl bg-white/[0.045]">
-                <div className="aspect-square bg-[#101313]">
+              <article key={item.id} className={styles.card}>
+                <div className={styles.preview}>
                   {item.file_url || item.preview_url ? (
                     <img
                       src={item.file_url || item.preview_url}
                       alt={item.name}
-                      className="h-full w-full object-cover"
+                      className={styles.image}
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-gray-700">
-                      <Image className="h-9 w-9" />
+                    <div className={styles.imagePlaceholder}>
+                      <Image className={styles.placeholderIcon} />
                     </div>
                   )}
                 </div>
-                <div className="p-4">
-                  <div className="text-[11px] text-teal-300">
+                <div className={styles.cardContent}>
+                  <div className={styles.assetKind}>
                     {FILTERS.find((filter) => filter.value === item.kind)?.label}
                   </div>
-                  <h2 className="mt-1 truncate font-medium">{item.name}</h2>
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-600">
+                  <h2 className={styles.assetName}>{item.name}</h2>
+                  <p className={styles.assetDescription}>
                     {item.description || "来自已确认项目资产"}
                   </p>
                 </div>
@@ -83,10 +84,10 @@ export default function PersonalAssets() {
             ))}
           </div>
         ) : (
-          <div className="flex h-72 flex-col items-center justify-center rounded-3xl bg-white/[0.025] text-gray-600">
-            <Image className="mb-3 h-10 w-10" />
+          <div className={styles.emptyState}>
+            <Image className={styles.emptyIcon} />
             <p>还没有可复用资产</p>
-            <p className="mt-1 text-xs">在项目资产确认页点击“保存复用”</p>
+            <p className={styles.emptyHint}>在项目资产确认页点击“保存复用”</p>
           </div>
         )}
       </main>

@@ -1,0 +1,11 @@
+/* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
+.checkingScreen {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background-color: #0a0a0a;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: var(--tw-leading, var(--text-sm--line-height, calc(1.25 / 0.875)));
+  color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
+}

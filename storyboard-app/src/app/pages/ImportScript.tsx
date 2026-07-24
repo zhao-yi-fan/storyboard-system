@@ -8,6 +8,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { UserMenu } from "../components/UserMenu";
 import { projectApi } from "../api";
+import styles from "./ImportScript.module.scss";
 
 export default function ImportScript() {
   const navigate = useNavigate();
@@ -124,34 +125,34 @@ export default function ImportScript() {
   };
 
   return (
-    <div className="dark min-h-screen bg-[#0a0a0a] text-gray-100">
-      <header className="border-b border-gray-800 bg-[#111111]">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <div className={`dark ${styles.page}`}>
+      <header className={styles.header}>
+        <div className={styles.headerContent}>
+          <div className={styles.headerStart}>
             <Button
               size="sm"
               variant="ghost"
               onClick={() => navigate("/projects")}
-              className="h-8 text-gray-400 hover:text-gray-200"
+              className={styles.backButton}
             >
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              <ArrowLeft className={styles.backIcon} />
               返回项目列表
             </Button>
-            <div className="h-6 w-px bg-gray-700"></div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-[0_8px_24px_rgba(168,85,247,0.35)]">
-                <Film className="w-5 h-5 text-white" />
+            <div className={styles.headerDivider}></div>
+            <div className={styles.brand}>
+              <div className={styles.brandIcon}>
+                <Film className={styles.filmIcon} />
               </div>
-              <span className="text-base">新建项目</span>
+              <span className={styles.brandTitle}>新建项目</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <span className="text-purple-400">1. 导入剧本</span>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-600">2. 确认资产</span>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-600">3. 生成分镜</span>
-            <div className="ml-3">
+          <div className={styles.steps}>
+            <span className={styles.stepActive}>1. 导入剧本</span>
+            <ChevronRight className={styles.stepIcon} />
+            <span className={styles.stepPending}>2. 确认资产</span>
+            <ChevronRight className={styles.stepIcon} />
+            <span className={styles.stepPending}>3. 生成分镜</span>
+            <div className={styles.userMenu}>
               <UserMenu />
             </div>
           </div>
@@ -159,78 +160,74 @@ export default function ImportScript() {
       </header>
 
       {isParsing ? (
-        <div className="mx-auto flex max-w-3xl flex-col items-center px-6 py-24 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-[0_16px_40px_rgba(168,85,247,0.28)]">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
+        <div className={styles.parsingState}>
+          <div className={styles.parsingIconWrap}>
+            <Loader2 className={styles.parsingIcon} />
           </div>
-          <h2 className="mt-6 text-2xl font-semibold">正在解析《{projectName || "未命名项目"}》</h2>
-          <p className="mt-2 text-sm text-gray-400">
+          <h2 className={styles.parsingTitle}>正在解析《{projectName || "未命名项目"}》</h2>
+          <p className={styles.parsingDescription}>
             正在创建章节、片段、镜头和按集资产需求，完成后会进入资产确认页。
           </p>
         </div>
       ) : (
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="mb-8 bg-[#141414] border border-gray-800 rounded-lg p-6">
-            <h2 className="text-base font-medium mb-4">项目信息</h2>
-            {errorMessage && (
-              <div className="mb-4 rounded-xl border border-red-900/70 bg-red-950/30 px-4 py-3 text-sm text-red-200">
-                {errorMessage}
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
+        <div className={styles.main}>
+          <div className={styles.projectInfo}>
+            <h2 className={styles.projectInfoTitle}>项目信息</h2>
+            {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
+            <div className={styles.projectFields}>
               <div>
-                <Label className="text-sm text-gray-300">项目名称</Label>
+                <Label className={styles.label}>项目名称</Label>
                 <Input
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   placeholder="例如：觉醒之路"
-                  className="mt-1.5 bg-[#0a0a0a] border-gray-700 text-gray-100"
+                  className={styles.input}
                 />
               </div>
               <div>
-                <Label className="text-sm text-gray-300">项目描述（可选）</Label>
+                <Label className={styles.label}>项目描述（可选）</Label>
                 <Input
                   value={projectDescription}
                   onChange={(e) => setProjectDescription(e.target.value)}
                   placeholder="简短描述项目内容"
-                  className="mt-1.5 bg-[#0a0a0a] border-gray-700 text-gray-100"
+                  className={styles.input}
                 />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
-            <div className="space-y-6">
+          <div className={styles.columns}>
+            <div className={styles.column}>
               <div>
-                <h2 className="mb-2 text-[28px] font-semibold tracking-tight">剧本导入</h2>
-                <p className="text-sm text-gray-400">粘贴剧本文本，系统将自动解析剧本结构</p>
+                <h2 className={styles.sectionTitle}>剧本导入</h2>
+                <p className={styles.sectionDescription}>粘贴剧本文本，系统将自动解析剧本结构</p>
               </div>
 
-              <div className="bg-[#141414] border border-gray-800 rounded-lg overflow-hidden">
-                <div className="border-b border-gray-800 flex">
-                  <div className="px-4 py-3 text-sm bg-[#1a1a1a] border-b-2 border-purple-500 flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
+              <div className={styles.scriptPanel}>
+                <div className={styles.scriptTabs}>
+                  <div className={styles.scriptTabActive}>
+                    <FileText className={styles.smallIcon} />
                     文本导入
                   </div>
                 </div>
 
-                <div className="p-4">
+                <div className={styles.scriptBody}>
                   <Textarea
                     value={scriptText}
                     onChange={(e) => setScriptText(e.target.value)}
                     placeholder="请粘贴剧本内容...&#10;&#10;格式示例：&#10;场景1：都市夜晚-天台&#10;[场景描述]&#10;人物台词..."
-                    className="min-h-[400px] bg-[#0a0a0a] border-gray-700 text-gray-100 font-mono text-sm resize-none"
+                    className={styles.scriptTextarea}
                   />
-                  <div className="mt-3 flex justify-between items-center">
+                  <div className={styles.scriptFooter}>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleLoadExample}
-                      className="text-gray-400 border-gray-700 hover:bg-gray-800"
+                      className={styles.exampleButton}
                     >
                       加载示例剧本
                     </Button>
-                    <span className="text-xs text-gray-500">{scriptText.length} 字符</span>
+                    <span className={styles.characterCount}>{scriptText.length} 字符</span>
                   </div>
                 </div>
               </div>
@@ -238,76 +235,71 @@ export default function ImportScript() {
               <Button
                 onClick={handleGenerate}
                 disabled={loading || !projectName.trim() || !scriptText.trim()}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50"
+                className={styles.generateButton}
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className={styles.generateLoadingIcon} />
                     创建项目中...
                   </>
                 ) : (
                   <>
-                    <Play className="w-4 h-4 mr-2" />
+                    <Play className={styles.generateIcon} />
                     开始生成分镜草稿
                   </>
                 )}
               </Button>
             </div>
 
-            <div className="space-y-6">
+            <div className={styles.column}>
               <div>
-                <h2 className="mb-2 text-[28px] font-semibold tracking-tight">剧本结构预览</h2>
-                <p className="text-sm text-gray-400">解析后的章节和场景结构</p>
+                <h2 className={styles.sectionTitle}>剧本结构预览</h2>
+                <p className={styles.sectionDescription}>解析后的章节和场景结构</p>
               </div>
 
-              <div className="bg-[#141414] border border-gray-800 rounded-lg p-4">
+              <div className={styles.previewPanel}>
                 {scriptText && previewScenes.length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-purple-400">
-                        <div className="w-1 h-4 bg-purple-500 rounded"></div>
+                  <div className={styles.previewContent}>
+                    <div className={styles.chapter}>
+                      <div className={styles.chapterTitle}>
+                        <div className={styles.chapterMarker}></div>
                         第一章：觉醒
                       </div>
-                      <div className="ml-4 space-y-3">
+                      <div className={styles.sceneList}>
                         {previewScenes.map((scene) => (
-                          <div
-                            key={scene.title}
-                            className="bg-[#0a0a0a] border border-gray-800 rounded p-3 space-y-2"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm">{scene.title}</span>
-                              <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
-                                {scene.shotEstimate}
-                              </span>
+                          <div key={scene.title} className={styles.sceneCard}>
+                            <div className={styles.sceneHeader}>
+                              <span className={styles.sceneTitle}>{scene.title}</span>
+                              <span className={styles.shotEstimate}>{scene.shotEstimate}</span>
                             </div>
-                            <p className="text-xs text-gray-500">{scene.description}</p>
+                            <p className={styles.sceneDescription}>{scene.description}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-800 grid grid-cols-3 gap-4 text-center">
+                    <div className={styles.stats}>
                       <div>
-                        <div className="text-2xl text-purple-400">1</div>
-                        <div className="text-xs text-gray-500 mt-1">章节</div>
+                        <div className={styles.chapterStat}>1</div>
+                        <div className={styles.statLabel}>章节</div>
                       </div>
                       <div>
-                        <div className="text-2xl text-pink-400">{previewScenes.length}</div>
-                        <div className="text-xs text-gray-500 mt-1">场景</div>
+                        <div className={styles.sceneStat}>{previewScenes.length}</div>
+                        <div className={styles.statLabel}>场景</div>
                       </div>
                       <div>
-                        <div className="text-2xl text-blue-400">
+                        <div className={styles.shotStat}>
                           ~{Math.max(previewScenes.length * 2, 1)}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">预估镜头</div>
+                        <div className={styles.statLabel}>预估镜头</div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="py-16 text-center text-gray-500">
-                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">请先输入剧本内容</p>
-                    <p className="text-xs mt-1">系统将自动解析剧本结构</p>
+                  <div className={styles.emptyPreview}>
+                    <FileText className={styles.emptyPreviewIcon} />
+                    <p className={styles.emptyPreviewTitle}>请先输入剧本内容</p>
+                    <p className={styles.emptyPreviewDescription}>系统将自动解析剧本结构</p>
                   </div>
                 )}
               </div>

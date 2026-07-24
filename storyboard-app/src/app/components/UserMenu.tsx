@@ -4,6 +4,7 @@ import { LogOut, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { authApi } from "../api";
 import { clearAuthSession, getAuthSession } from "../lib/auth";
+import styles from "./UserMenu.module.scss";
 
 function getInitials(displayName: string) {
   return displayName.trim().slice(0, 1).toUpperCase() || "创";
@@ -55,55 +56,33 @@ export function UserMenu({ placement = "header" }: UserMenuProps) {
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={styles.menu}>
       <button
         onClick={() => setOpen((value) => !value)}
-        className={[
-          "flex h-8 select-none items-center gap-2 rounded-md border pl-1.5 pr-2 text-left outline-none transition-colors duration-150",
-          open
-            ? "border-gray-700 bg-[#1a1a1a] text-gray-200"
-            : "border-transparent bg-transparent text-gray-400 hover:border-gray-800 hover:bg-[#1a1a1a] hover:text-gray-200",
-        ].join(" ")}
+        className={open ? styles.triggerOpen : styles.trigger}
       >
-        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded bg-gradient-to-br from-purple-500 to-pink-600">
-          <span className="text-white" style={{ fontSize: "10px", fontWeight: 600, lineHeight: 1 }}>
-            {userInfo.initials}
-          </span>
+        <div className={styles.triggerAvatar}>
+          <span className={styles.triggerInitials}>{userInfo.initials}</span>
         </div>
-        <span className="hidden max-w-[80px] truncate text-xs sm:block">{userInfo.name}</span>
-        <ChevronDown
-          size={11}
-          className={`opacity-40 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
-        />
+        <span className={styles.triggerName}>{userInfo.name}</span>
+        <ChevronDown size={11} className={open ? styles.chevronOpen : styles.chevron} />
       </button>
 
       {open ? (
-        <div
-          className={[
-            "absolute z-50 w-52 overflow-hidden rounded-lg border border-gray-800 bg-[#141414]",
-            placement === "sidebar" ? "bottom-0 left-full ml-2" : "right-0 top-full mt-1.5",
-          ].join(" ")}
-          style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)" }}
-        >
-          <div className="border-b border-gray-800/80 px-3 py-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-purple-500 to-pink-600">
-                <span className="text-white font-semibold" style={{ fontSize: "12px" }}>
-                  {userInfo.initials}
-                </span>
+        <div className={placement === "sidebar" ? styles.popoverSidebar : styles.popoverHeader}>
+          <div className={styles.profile}>
+            <div className={styles.profileRow}>
+              <div className={styles.profileAvatar}>
+                <span className={styles.profileInitials}>{userInfo.initials}</span>
               </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium leading-tight text-gray-200">
-                  {userInfo.name}
-                </div>
-                <div className="mt-0.5 truncate text-xs leading-tight text-gray-600">
-                  {userInfo.role}
-                </div>
+              <div className={styles.profileText}>
+                <div className={styles.profileName}>{userInfo.name}</div>
+                <div className={styles.profileRole}>{userInfo.role}</div>
               </div>
             </div>
           </div>
 
-          <div className="p-1">
+          <div className={styles.actions}>
             <MenuItem icon={<LogOut size={13} />} label="退出登录" onClick={handleLogout} subtle />
           </div>
         </div>
@@ -124,17 +103,8 @@ function MenuItem({
   subtle?: boolean;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={[
-        "w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-100",
-        "flex items-center gap-2.5",
-        subtle
-          ? "text-gray-500 hover:bg-[#1c1c1c] hover:text-gray-300"
-          : "text-gray-400 hover:bg-[#1c1c1c] hover:text-gray-200",
-      ].join(" ")}
-    >
-      <span className="flex-shrink-0 opacity-70">{icon}</span>
+    <button onClick={onClick} className={subtle ? styles.menuItemSubtle : styles.menuItem}>
+      <span className={styles.menuItemIcon}>{icon}</span>
       {label}
     </button>
   );
