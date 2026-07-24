@@ -33,11 +33,12 @@ cd <deploy-directory>
 - The deploy script handles:
   - `git fetch` + `git pull --ff-only origin main`
   - frontend build
-  - Go backend build + restart on `8082`
   - Egg backend build/runtime dependency install
   - installation, enablement, and restart of `storyboard-backend-node.service` on `8083`
-  - smoke testing `http://127.0.0.1:8082/api/projects`
   - smoke testing `http://127.0.0.1:8083/api/health`
+
+The retired Go backend in `backend/` is not built, started, restarted, or health-checked by the
+deployment flow.
 
 ## Node backend process supervision
 

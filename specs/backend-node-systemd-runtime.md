@@ -9,6 +9,7 @@
 1. systemd 以前台模式启动并守护 Egg master。
 2. Egg Cluster 管理 agent worker 和 app worker，并在 app worker 异常退出时重新拉起。
 3. `scripts/deploy.sh` 负责安装或更新 unit、启用开机自启、重启服务并执行健康检查。
+4. 已弃用的 Go 后端不再参与构建、启动、重启或健康检查。
 
 ## 服务状态
 
@@ -27,6 +28,7 @@
 ## 验收标准
 
 - Node 后端不依赖 PM2 或 `nohup`。
+- 部署流程仅发布 Node 后端，不启动 `backend/` 中已弃用的 Go 服务。
 - Egg 以前台模式运行，systemd 能准确跟踪主进程。
 - unit 使用 `admin` 用户运行，不以 root 运行应用代码。
 - unit 已启用开机自启，并配置异常退出自动重启。
