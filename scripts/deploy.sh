@@ -16,7 +16,9 @@ BACKEND_DIR="$ROOT_DIR/backend"
 BACKEND_BIN="$BACKEND_DIR/storyboard-backend"
 BACKEND_LOG="$BACKEND_DIR/storyboard-backend.log"
 NODE_BACKEND_DIR="$ROOT_DIR/backend-node"
-NODE_BACKEND_LOG="$NODE_BACKEND_DIR/backend-node.log"
+NODE_BACKEND_SERVICE="storyboard-backend-node.service"
+NODE_BACKEND_UNIT_SOURCE="$ROOT_DIR/scripts/systemd/$NODE_BACKEND_SERVICE"
+NODE_BACKEND_UNIT_TARGET="/etc/systemd/system/$NODE_BACKEND_SERVICE"
 API_HEALTH_URL="http://127.0.0.1:8082/api/projects"
 NODE_API_HEALTH_URL="http://127.0.0.1:8083/api/health"
 
@@ -44,6 +46,7 @@ require_command curl
 require_command ss
 require_command sudo
 require_command ffmpeg
+require_command systemctl
 
 cd "$ROOT_DIR"
 
@@ -81,9 +84,11 @@ if pgrep -f 'storyboard-backend$' >/dev/null 2>&1; then
   sleep 1
 fi
 
-log "stopping existing backend-node process if present"
-bash -lc "cd '$NODE_BACKEND_DIR' && npm run stop >/dev/null 2>&1 || true"
-sleep 1
+if ! sudo systemctl is-active --quiet "$NODE_BACKEND_SERVICE"; then
+  log "stopping legacy daemonized backend-node process if present"
+  bash -lc "cd '$NODE_BACKEND_DIR' && npm run stop >/dev/null 2>&1 || true"
+  sleep 1
+fi
 
 if [[ -e "$BACKEND_LOG" && ! -w "$BACKEND_LOG" ]]; then
   log "backend log is not writable by admin, resetting ownership"
@@ -91,7 +96,10 @@ if [[ -e "$BACKEND_LOG" && ! -w "$BACKEND_LOG" ]]; then
 fi
 
 run "start backend" bash -lc "cd '$BACKEND_DIR' && nohup '$BACKEND_BIN' > '$BACKEND_LOG' 2>&1 < /dev/null &"
-run "start backend-node" bash -lc "cd '$NODE_BACKEND_DIR' && SERVER_HOST=0.0.0.0 SERVER_PORT=8083 nohup npm run start > '$NODE_BACKEND_LOG' 2>&1 < /dev/null &"
+run "install backend-node systemd unit" sudo install -m 0644 "$NODE_BACKEND_UNIT_SOURCE" "$NODE_BACKEND_UNIT_TARGET"
+run "reload systemd units" sudo systemctl daemon-reload
+run "enable backend-node service" sudo systemctl enable "$NODE_BACKEND_SERVICE"
+run "restart backend-node service" sudo systemctl restart "$NODE_BACKEND_SERVICE"
 
 log "waiting for backend smoke test"
 smoke_ok=0
@@ -122,8 +130,10 @@ done
 
 if [[ "$node_smoke_ok" -ne 1 ]]; then
   echo "[deploy] backend-node smoke test failed: $NODE_API_HEALTH_URL" >&2
-  echo "[deploy] recent backend-node log:" >&2
-  tail -n 80 "$NODE_BACKEND_LOG" >&2 || true
+  echo "[deploy] backend-node service status:" >&2
+  sudo systemctl status "$NODE_BACKEND_SERVICE" --no-pager >&2 || true
+  echo "[deploy] recent backend-node journal:" >&2
+  sudo journalctl -u "$NODE_BACKEND_SERVICE" -n 80 --no-pager >&2 || true
   exit 1
 fi
 
@@ -133,6 +143,6 @@ ss -ltnp | grep 8083 || true
 
 log "backend process:"
 ps -eo user=,pid=,args= | grep 'storyboard-backend$' | grep -v grep || true
-ps -eo user=,pid=,args= | grep 'storyboard-backend-node' | grep -v grep || true
+sudo systemctl status "$NODE_BACKEND_SERVICE" --no-pager || true
 
 log "smoke test passed"

@@ -34,9 +34,28 @@ cd <deploy-directory>
   - `git fetch` + `git pull --ff-only origin main`
   - frontend build
   - Go backend build + restart on `8082`
-  - Egg backend build/runtime dependency install + restart on `8083`
+  - Egg backend build/runtime dependency install
+  - installation, enablement, and restart of `storyboard-backend-node.service` on `8083`
   - smoke testing `http://127.0.0.1:8082/api/projects`
   - smoke testing `http://127.0.0.1:8083/api/health`
+
+## Node backend process supervision
+
+The production Egg.js service runs in the foreground under systemd:
+
+- systemd service: `storyboard-backend-node.service`
+- service account: `admin`
+- Egg master recovery: systemd with `Restart=always`
+- app worker recovery: Egg Cluster
+- logs: `journalctl -u storyboard-backend-node.service`
+- boot startup: enabled by `scripts/deploy.sh`
+
+Useful read-only checks:
+
+```bash
+sudo systemctl status storyboard-backend-node.service
+sudo journalctl -u storyboard-backend-node.service -n 100 --no-pager
+```
 
 ## OSS CORS for browser frame extraction
 

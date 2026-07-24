@@ -1,0 +1,25 @@
+[Unit]
+Description=Storyboard Egg.js backend
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/projects/storyboard-system/backend-node
+Environment=NODE_ENV=production
+Environment=SERVER_HOST=0.0.0.0
+Environment=SERVER_PORT=8083
+ExecStart=/usr/bin/env node node_modules/egg-scripts/bin/egg-scripts.js start dist --title=storyboard-backend-node
+Restart=always
+RestartSec=5s
+KillSignal=SIGTERM
+KillMode=control-group
+TimeoutStopSec=30s
+SyslogIdentifier=storyboard-backend-node
+
+[Install]
+WantedBy=multi-user.target
