@@ -12,6 +12,11 @@ const {
 } = require('../lib/media');
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const { buildAssetCoverPrompt } = require('../lib/prompt_library');
+const {
+  ASSET_KIND,
+  ENTITY_TYPE,
+  GENERATION_STATUS,
+} = require('../lib/domain_constants');
 
 class AssetService extends Service {
   get pool() {
@@ -79,7 +84,9 @@ class AssetService extends Service {
         row.cover_url || '',
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
-      cover_status: row.cover_status || (row.cover_url ? 'succeeded' : 'idle'),
+      cover_status:
+        row.cover_status ||
+        (row.cover_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
       cover_error: row.cover_error || '',
       thumbnail_url: resolveUrl(
         this.app,
@@ -363,7 +370,7 @@ class AssetService extends Service {
   async previewCoverGeneration(id) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
-    if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== 'prop') {
+    if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== ASSET_KIND.PROP) {
       throw new Error('当前资产类型不支持生成封面');
     }
     const coverPrompt = buildAssetCoverPrompt(asset);
@@ -394,7 +401,7 @@ class AssetService extends Service {
   async generateCover(id) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
-    if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== 'prop') {
+    if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== ASSET_KIND.PROP) {
       throw new Error('当前资产类型不支持生成封面');
     }
     await this.pool.execute(
@@ -416,7 +423,12 @@ class AssetService extends Service {
       );
       const updated = await this.findById(id);
       await this.ctx.service.assetWorkspace.recordVersion(
-        'asset', id, updated.project_id, updated.cover_url, updated.thumbnail_url, prompt,
+        ENTITY_TYPE.ASSET,
+        id,
+        updated.project_id,
+        updated.cover_url,
+        updated.thumbnail_url,
+        prompt,
       );
       return updated;
     } catch (error) {

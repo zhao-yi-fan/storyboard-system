@@ -1,13 +1,9 @@
 'use strict';
 // @ts-nocheck
 
+const { LLM_JSON_PROTOCOL } = require('./llm_json_protocol');
+
 const DEFAULT_MAX_SCRIPT_CHARS = 12000;
-const JSON_CONTENT_TYPE = 'application/json';
-const POST_METHOD = 'POST';
-const JSON_FENCE_PREFIX = /^```json/;
-const CODE_FENCE_PREFIX = /^```/;
-const CODE_FENCE_SUFFIX = /```$/;
-const TRAILING_SLASH_PATTERN = /\/$/;
 
 const SYSTEM_PROMPT =
   '你是一个影视分镜整理助手。你的任务是把任意小说片段、剧本文本或叙事内容整理成可直接导入分镜系统的结构化 JSON。你只能输出一个 JSON 对象，不要输出解释、不要输出 Markdown、不要输出代码块、不要输出额外文本。没有明确章节时，自动合理分章；至少输出 1 个章节、每章至少 1 个场景、每个场景至少 1 个分镜。characters 字段只能填写人物/角色名字，绝对不能填写场景标题、地点、时间、氛围描述、镜头描述，也不能把多个信息用标点连接成一个字符串。每个 storyboard 都必须填写 visual_description，不能留空；如果原文没有直接描写，也要根据上下文补出可视化画面描述。';
@@ -166,12 +162,12 @@ export async function requestDeepSeekText(
   const errorLabel = request.errorLabel || 'DeepSeek 请求';
   ensureConfigured(config, errorLabel);
   const resp = await fetch(
-    `${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`,
+    `${String(config.deepSeekBaseUrl).replace(LLM_JSON_PROTOCOL.TRAILING_SLASH_PATTERN, '')}/chat/completions`,
     {
-      method: POST_METHOD,
+      method: LLM_JSON_PROTOCOL.POST_METHOD,
       headers: {
         Authorization: `Bearer ${config.deepSeekApiKey}`,
-        'Content-Type': JSON_CONTENT_TYPE,
+        'Content-Type': LLM_JSON_PROTOCOL.CONTENT_TYPE,
       },
       body: JSON.stringify({
         model: config.deepSeekModel,
@@ -215,9 +211,9 @@ export async function parseScriptWithDeepSeek(config: DeepSeekConfig, scriptText
 
   const normalized = extractJSONObject(
     content
-      .replace(JSON_FENCE_PREFIX, '')
-      .replace(CODE_FENCE_PREFIX, '')
-      .replace(CODE_FENCE_SUFFIX, '')
+      .replace(LLM_JSON_PROTOCOL.JSON_FENCE_PREFIX, '')
+      .replace(LLM_JSON_PROTOCOL.CODE_FENCE_PREFIX, '')
+      .replace(LLM_JSON_PROTOCOL.CODE_FENCE_SUFFIX, '')
       .trim(),
   );
 

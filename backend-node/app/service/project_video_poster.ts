@@ -2,6 +2,7 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
+const { GENERATION_STATUS } = require('../lib/domain_constants');
 const path = require('node:path');
 const {
   createPreviewFromRemoteSource,
@@ -60,7 +61,7 @@ class ProjectVideoPosterService extends Service {
 
   async ensureForProject(project) {
     if (project?.video_poster_url) return project.video_poster_url;
-    if (project?.video_status !== 'succeeded' || !project?.video_url) {
+    if (project?.video_status !== GENERATION_STATUS.SUCCEEDED || !project?.video_url) {
       throw new Error('only a successful project video can create a poster');
     }
     const posterUrl = await this.extract(project.id, project.video_url);

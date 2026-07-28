@@ -9,11 +9,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../ui/alert-dialog";
+import {
+  ASSET_KIND,
+  ENTITY_TYPE,
+  type AssetKind,
+} from "../../../constants/domain";
 import styles from "../../../pages/AssetLibrary.module.scss";
 
 export type DeleteAssetTarget =
-  | { type: "character"; id: number; name: string }
-  | { type: "asset"; id: number; name: string; assetKind: "scene" | "prop" }
+  | { type: typeof ENTITY_TYPE.CHARACTER; id: number; name: string }
+  | {
+      type: typeof ENTITY_TYPE.ASSET;
+      id: number;
+      name: string;
+      assetKind: Exclude<AssetKind, "character" | "voice">;
+    }
   | null;
 
 type DeleteAssetDialogProps = {
@@ -29,7 +39,7 @@ export function DeleteAssetDialog({
   onClose,
   onConfirm,
 }: DeleteAssetDialogProps) {
-  const isCharacter = target?.type === "character";
+  const isCharacter = target?.type === ENTITY_TYPE.CHARACTER;
 
   return (
     <AlertDialog open={!!target} onOpenChange={(open) => !open && onClose()}>
@@ -38,7 +48,12 @@ export function DeleteAssetDialog({
           <AlertDialogTitle>
             {isCharacter
               ? "确认删除角色"
-              : `确认删除${target?.type === "asset" && target.assetKind === "prop" ? "道具" : "场景"}资产`}
+              : `确认删除${
+                  target?.type === ENTITY_TYPE.ASSET &&
+                  target.assetKind === ASSET_KIND.PROP
+                    ? "道具"
+                    : "场景"
+                }资产`}
           </AlertDialogTitle>
           <AlertDialogDescription className={styles.dialogDescription}>
             {isCharacter

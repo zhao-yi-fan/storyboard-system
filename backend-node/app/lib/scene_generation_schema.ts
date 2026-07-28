@@ -1,6 +1,8 @@
 'use strict';
 // @ts-nocheck
 
+const { MEDIA_TYPE } = require('./domain_constants');
+
 async function columnExists(pool, tableName, columnName) {
   const [rows] = await pool.query(
     `SELECT 1 FROM information_schema.COLUMNS
@@ -168,7 +170,7 @@ async function _migrateLegacySceneData(connection) {
       );
     }
 
-    for (const mediaType of ['cover', 'video']) {
+    for (const mediaType of Object.values(MEDIA_TYPE)) {
       const [currentRows] = await connection.query(
         `SELECT id FROM scene_media_generations
          WHERE scene_id = ? AND media_type = ? AND deleted_at IS NULL AND status = 'succeeded'
@@ -379,7 +381,7 @@ async function migrateLegacyStoryboardsToScenes(connection) {
         );
 
         const preserveNew = index === 0;
-        for (const mediaType of ['cover', 'video']) {
+        for (const mediaType of Object.values(MEDIA_TYPE)) {
           const current = await selectCurrentSceneMedia(
             connection,
             targetSceneId,
@@ -396,7 +398,7 @@ async function migrateLegacyStoryboardsToScenes(connection) {
               'UPDATE scene_media_generations SET is_current = 1 WHERE id = ?',
               [current.id],
             );
-            if (mediaType === 'cover') {
+            if (mediaType === MEDIA_TYPE.COVER) {
               await connection.execute(
                 'UPDATE scenes SET cover_url = ?, cover_preview_url = ? WHERE id = ?',
                 [

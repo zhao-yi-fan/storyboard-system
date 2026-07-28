@@ -3,6 +3,15 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
+const { AI_VIDEO_DEFAULT } = cjsRequire('../app/lib/ai_client_constants');
+const { DEFAULT_PROVIDER_MODEL } = cjsRequire('../config/shared/constants');
+const {
+  ASSET_KIND,
+  REFERENCE_TYPE,
+  VIDEO_ASPECT_RATIO,
+  VIDEO_MODEL,
+  VIDEO_RESOLUTION,
+} = cjsRequire('../app/lib/domain_constants');
 const { buildSeedanceVideoPayload, generateSeedanceVideo } = cjsRequire('../app/lib/ai_clients');
 const StoryboardService = cjsRequire('../app/service/storyboard');
 const AssetService = cjsRequire('../app/service/asset');
@@ -14,13 +23,13 @@ const normalizationContext = {
 describe('test/seedance_video_generation.test.ts', () => {
   it('builds a Seedance first-frame payload without reference media', () => {
     const payload = buildSeedanceVideoPayload({
-      model: 'doubao-seedance-2-0-260128',
+      model: DEFAULT_PROVIDER_MODEL.SEEDANCE,
       prompt: '人物从门口走入室内',
       imageUrl: 'https://example.com/first-frame.png',
       duration: 12,
       useFirstFrame: true,
-      resolution: '1080p',
-      aspectRatio: '9:16',
+      resolution: VIDEO_RESOLUTION.FULL_HD,
+      aspectRatio: VIDEO_ASPECT_RATIO.PORTRAIT,
       generateAudio: true,
     });
 
@@ -41,7 +50,7 @@ describe('test/seedance_video_generation.test.ts', () => {
     assert.throws(
       () =>
         buildSeedanceVideoPayload({
-          model: 'doubao-seedance-2-0-260128',
+          model: DEFAULT_PROVIDER_MODEL.SEEDANCE,
           prompt: '人物从门口走入室内',
           imageUrl: 'https://example.com/first-frame.png',
           useFirstFrame: true,
@@ -54,7 +63,7 @@ describe('test/seedance_video_generation.test.ts', () => {
 
   it('builds a reference-media payload without a first frame', () => {
     const payload = buildSeedanceVideoPayload({
-      model: 'doubao-seedance-2-0-260128',
+      model: DEFAULT_PROVIDER_MODEL.SEEDANCE,
       prompt: '人物从门口走入室内',
       useFirstFrame: false,
       referenceImageUrls: ['https://example.com/character.png', 'https://example.com/scene.png'],
@@ -99,7 +108,7 @@ describe('test/seedance_video_generation.test.ts', () => {
           config: {
             storyboard: {
               seedanceApiKey: 'test-key',
-              seedanceModel: 'doubao-seedance-2-0-260128',
+              seedanceModel: DEFAULT_PROVIDER_MODEL.SEEDANCE,
               seedanceRequestTimeoutSeconds: 1,
             },
           },
@@ -111,8 +120,8 @@ describe('test/seedance_video_generation.test.ts', () => {
         false,
         [],
         [],
-        '720p',
-        '9:16',
+        VIDEO_RESOLUTION.HD,
+        VIDEO_ASPECT_RATIO.PORTRAIT,
         false,
         {
           pollIntervalMs: 0,
@@ -129,13 +138,13 @@ describe('test/seedance_video_generation.test.ts', () => {
 
   it('omits reference audio when audio is disabled', () => {
     const payload = buildSeedanceVideoPayload({
-      model: 'doubao-seedance-2-0-260128',
+      model: DEFAULT_PROVIDER_MODEL.SEEDANCE,
       prompt: '无声镜头',
-      duration: 5,
+      duration: AI_VIDEO_DEFAULT.DURATION_SECONDS,
       useFirstFrame: false,
       referenceImageUrls: ['https://example.com/scene.png'],
       referenceAudioUrls: ['https://example.com/voice.wav'],
-      resolution: '720p',
+      resolution: VIDEO_RESOLUTION.HD,
       generateAudio: false,
     });
     assert.equal(payload.generate_audio, false);
@@ -146,16 +155,16 @@ describe('test/seedance_video_generation.test.ts', () => {
     assert.equal(
       StoryboardService.prototype.normalizeVideoAspectRatio.call(
         normalizationContext,
-        'seedance-2.0',
-        '9:16',
+        VIDEO_MODEL.SEEDANCE_2,
+        VIDEO_ASPECT_RATIO.PORTRAIT,
       ),
       '9:16',
     );
-    for (const resolution of ['480p', '720p', '1080p']) {
+    for (const resolution of Object.values(VIDEO_RESOLUTION)) {
       assert.equal(
         StoryboardService.prototype.normalizeVideoResolution.call(
           normalizationContext,
-          'seedance-2.0',
+          VIDEO_MODEL.SEEDANCE_2,
           resolution,
         ),
         resolution,
@@ -164,7 +173,7 @@ describe('test/seedance_video_generation.test.ts', () => {
     assert.equal(
       StoryboardService.prototype.normalizeVideoDuration.call(
         normalizationContext,
-        'seedance-2.0',
+        VIDEO_MODEL.SEEDANCE_2,
         4,
       ),
       4,
@@ -172,7 +181,7 @@ describe('test/seedance_video_generation.test.ts', () => {
     assert.equal(
       StoryboardService.prototype.normalizeVideoDuration.call(
         normalizationContext,
-        'seedance-2.0',
+        VIDEO_MODEL.SEEDANCE_2,
         15,
       ),
       15,
@@ -184,7 +193,7 @@ describe('test/seedance_video_generation.test.ts', () => {
       () =>
         StoryboardService.prototype.normalizeVideoAspectRatio.call(
           normalizationContext,
-          'seedance-2.0',
+          VIDEO_MODEL.SEEDANCE_2,
           '16:9',
         ),
       /仅支持 9:16/,
@@ -193,7 +202,7 @@ describe('test/seedance_video_generation.test.ts', () => {
       () =>
         StoryboardService.prototype.normalizeVideoResolution.call(
           normalizationContext,
-          'seedance-2.0',
+          VIDEO_MODEL.SEEDANCE_2,
           '4k',
         ),
       /仅支持 480p、720p 或 1080p/,
@@ -203,7 +212,7 @@ describe('test/seedance_video_generation.test.ts', () => {
         () =>
           StoryboardService.prototype.normalizeVideoDuration.call(
             normalizationContext,
-            'seedance-2.0',
+            VIDEO_MODEL.SEEDANCE_2,
             duration,
           ),
         /视频时长/,
@@ -223,7 +232,7 @@ describe('test/seedance_video_generation.test.ts', () => {
         {
           id: 1,
           name: '卧室场景',
-          type: 'scene',
+          type: ASSET_KIND.SCENE,
           file_url: 'https://example.com/room.png',
         },
         {
@@ -237,7 +246,7 @@ describe('test/seedance_video_generation.test.ts', () => {
 
     assert.equal(result.references.length, 1);
     assert.equal(result.references[0].name, '卧室场景');
-    assert.equal(result.references[0].type, 'scene');
+    assert.equal(result.references[0].type, REFERENCE_TYPE.SCENE);
   });
 
   it('routes bound audio assets into Seedance reference audio', async () => {
@@ -256,7 +265,7 @@ describe('test/seedance_video_generation.test.ts', () => {
           {
             id: 9,
             name: '雨声音效',
-            type: 'audio',
+            type: REFERENCE_TYPE.AUDIO,
             file_url: 'https://example.com/rain.mp3',
           },
         ],
@@ -280,7 +289,10 @@ describe('test/seedance_video_generation.test.ts', () => {
       true,
     );
     assert.equal(
-      AssetService.prototype.isAudioAsset({ type: 'scene', file_url: '/assets/room.webp' }),
+      AssetService.prototype.isAudioAsset({
+        type: ASSET_KIND.SCENE,
+        file_url: '/assets/room.webp',
+      }),
       false,
     );
   });

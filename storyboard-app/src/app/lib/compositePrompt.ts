@@ -1,13 +1,14 @@
 import type { Scene, Storyboard } from "../api";
 
-export const COMPOSITE_PROMPT_MAX_LENGTH = 10000;
-
-const DEFAULT_REQUIREMENT =
-  "严格遵守180度轴线与视线匹配原则，严防越轴跳切。画面干净又高级；画面里前中远景递进关系分明。极具影视写实感与物理细节真实感。";
-const DEFAULT_PICTURE =
-  "无水印，无字幕，无logo，无背景音乐。电影级光影，人物皮肤纹理清晰，自然微表情，真实肢体动作，电影质感，专业影视摄影。";
-const DEFAULT_BAN =
-  "视频全程严禁出现外形、着装、配饰完全相同的两个人；杜绝双胞胎或分身效果，确保同一时刻画面中该人物唯一。";
+export const COMPOSITE_PROMPT_SPEC = {
+  MAX_LENGTH: 10000,
+  DEFAULT_REQUIREMENT:
+    "严格遵守180度轴线与视线匹配原则，严防越轴跳切。画面干净又高级；画面里前中远景递进关系分明。极具影视写实感与物理细节真实感。",
+  DEFAULT_PICTURE:
+    "无水印，无字幕，无logo，无背景音乐。电影级光影，人物皮肤纹理清晰，自然微表情，真实肢体动作，电影质感，专业影视摄影。",
+  DEFAULT_BAN:
+    "视频全程严禁出现外形、着装、配饰完全相同的两个人；杜绝双胞胎或分身效果，确保同一时刻画面中该人物唯一。",
+} as const;
 
 export function isCompositeStoryboardPrompt(value: string | null | undefined) {
   const prompt = String(value || "").trim();
@@ -60,11 +61,11 @@ export function buildLegacyCompositePrompt(shot: Storyboard, scene: Scene | null
   return [
     environment ? `[环境光影]：${environment}` : "",
     position ? `[人物站位]：${position}` : "",
-    `[要求]：${DEFAULT_REQUIREMENT}`,
+    `[要求]：${COMPOSITE_PROMPT_SPEC.DEFAULT_REQUIREMENT}`,
     shotLine,
-    `[画面]：${DEFAULT_PICTURE}`,
+    `[画面]：${COMPOSITE_PROMPT_SPEC.DEFAULT_PICTURE}`,
     dialogue ? "【角色严格按照台词说话，不要增加台词或减少台词】" : "",
-    `[禁令]：${DEFAULT_BAN}`,
+    `[禁令]：${COMPOSITE_PROMPT_SPEC.DEFAULT_BAN}`,
   ]
     .filter(Boolean)
     .join("\n\n");

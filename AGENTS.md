@@ -62,6 +62,7 @@ npm run build
   - 成功：`{ code: 200, data, message: "" }`
   - 失败：`{ code: 0, data: null, message }`
 - 重视 AI/长任务的异步状态追踪和失败记录，不要仅依赖内存缓存或短暂 Toast 提示，必须持久化到 MySQL 数据库中。
+- 新增或修改 AI Provider、模型、尺寸、清晰度、超时、轮询和音频规格时，必须遵循 `specs/ai-client-configuration-architecture.md`，复用配置层和 AI 客户端公共模块，禁止在业务客户端中重复声明默认值。
 
 Useful commands:
 

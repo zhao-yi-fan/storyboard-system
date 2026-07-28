@@ -14,21 +14,26 @@ import {
 } from "../api";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { ASSET_KIND, GENERATION_STATUS } from "../constants/domain";
 import styles from "./AssetConfirmation.module.scss";
 
-const KIND_LABELS = { character: "角色", scene: "场景", prop: "道具" } as const;
+const KIND_LABELS = {
+  [ASSET_KIND.CHARACTER]: "角色",
+  [ASSET_KIND.SCENE]: "场景",
+  [ASSET_KIND.PROP]: "道具",
+} as const;
 const KIND_TABS = [
-  { value: "character", label: "人物" },
-  { value: "scene", label: "场景" },
-  { value: "prop", label: "道具" },
+  { value: ASSET_KIND.CHARACTER, label: "人物" },
+  { value: ASSET_KIND.SCENE, label: "场景" },
+  { value: ASSET_KIND.PROP, label: "道具" },
 ] as const;
 type RequirementKind = (typeof KIND_TABS)[number]["value"];
 const STATUS_LABELS = {
-  pending: "待生成",
-  generating: "生成中",
-  generated: "可用",
-  confirmed: "可用",
-  failed: "生成失败",
+  [GENERATION_STATUS.PENDING]: "待生成",
+  [GENERATION_STATUS.GENERATING]: "生成中",
+  [GENERATION_STATUS.GENERATED]: "可用",
+  [GENERATION_STATUS.CONFIRMED]: "可用",
+  [GENERATION_STATUS.FAILED]: "生成失败",
 } as const;
 
 function RequirementCard({
@@ -113,7 +118,7 @@ export default function AssetConfirmation() {
   const [project, setProject] = useState<Project | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [chapterId, setChapterId] = useState<number | undefined>();
-  const [activeKind, setActiveKind] = useState<RequirementKind>("character");
+  const [activeKind, setActiveKind] = useState<RequirementKind>(ASSET_KIND.CHARACTER);
   const [requirements, setRequirements] = useState<AssetRequirement[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | "batch" | null>(null);
@@ -124,11 +129,15 @@ export default function AssetConfirmation() {
   const filteredRequirements = requirements.filter((item) => item.kind === activeKind);
   const readyCount = requirements.filter(
     (item) =>
-      (item.status === "pending" || item.status === "failed") && item.can_generate !== false,
+      (item.status === GENERATION_STATUS.PENDING ||
+        item.status === GENERATION_STATUS.FAILED) &&
+      item.can_generate !== false,
   ).length;
   const blockedCount = requirements.filter(
     (item) =>
-      (item.status === "pending" || item.status === "failed") && item.can_generate === false,
+      (item.status === GENERATION_STATUS.PENDING ||
+        item.status === GENERATION_STATUS.FAILED) &&
+      item.can_generate === false,
   ).length;
 
   const loadRequirements = async (selectedChapterId = chapterId) => {
@@ -168,7 +177,9 @@ export default function AssetConfirmation() {
         chapter_id: chapterId,
         requirement_id: requirementId,
       });
-      const failedItems = result.filter((item) => item.status === "failed");
+      const failedItems = result.filter(
+        (item) => item.status === GENERATION_STATUS.FAILED,
+      );
       const blockedItems = result.filter((item) => item.status === "blocked");
       if (failedItems.length) {
         const firstError = failedItems.find((item) => item.error)?.error;
@@ -225,7 +236,7 @@ export default function AssetConfirmation() {
 
   const saveToPersonal = async (item: AssetRequirement) => {
     if (!item.linked_entity_id || !item.linked_entity_type) return;
-    if (item.linked_entity_type === "character")
+    if (item.linked_entity_type === ASSET_KIND.CHARACTER)
       await assetWorkspaceApi.saveCharacterToPersonal(item.linked_entity_id);
     else await assetWorkspaceApi.saveAssetToPersonal(item.linked_entity_id);
     toast.success("已保存到个人空间");

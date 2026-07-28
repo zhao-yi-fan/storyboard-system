@@ -3,6 +3,7 @@
 
 const path = require('node:path');
 const Service = require('egg').Service;
+const { GENERATION_STATUS, MEDIA_TYPE } = require('../lib/domain_constants');
 const {
   deleteGeneratedAsset,
   generatedPublicPath,
@@ -11,8 +12,10 @@ const {
 } = require('../lib/generated_asset');
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 
-const ALLOWED_IMAGE_TYPES = new Set(['image/webp', 'image/jpeg', 'image/png']);
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const FRAME_UPLOAD_SPEC = Object.freeze({
+  ALLOWED_IMAGE_TYPES: Object.freeze(['image/webp', 'image/jpeg', 'image/png']),
+  MAX_FILE_SIZE_BYTES: 10 * 1024 * 1024,
+});
 
 class SceneVideoFrameService extends Service {
   get pool() {
@@ -138,7 +141,11 @@ class SceneVideoFrameService extends Service {
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
       throw new Error('视频版本不存在');
     }
-    if (generation.media_type !== 'video' || generation.status !== 'succeeded' || !generation.result_url) {
+    if (
+      generation.media_type !== MEDIA_TYPE.VIDEO ||
+      generation.status !== GENERATION_STATUS.SUCCEEDED ||
+      !generation.result_url
+    ) {
       throw new Error('只能从生成成功的视频版本抽帧');
     }
     return { scene, generation };
@@ -174,9 +181,13 @@ class SceneVideoFrameService extends Service {
     }
     const contentType = String(payload.content_type || '').toLowerCase();
     const buffer = payload.buffer;
-    if (!ALLOWED_IMAGE_TYPES.has(contentType)) throw new Error('仅支持 WebP、JPEG 或 PNG 图片');
+    if (!FRAME_UPLOAD_SPEC.ALLOWED_IMAGE_TYPES.includes(contentType)) {
+      throw new Error('仅支持 WebP、JPEG 或 PNG 图片');
+    }
     if (!Buffer.isBuffer(buffer) || !buffer.length) throw new Error('抽帧图片不能为空');
-    if (buffer.length > MAX_FILE_SIZE) throw new Error('抽帧图片不能超过 10MB');
+    if (buffer.length > FRAME_UPLOAD_SPEC.MAX_FILE_SIZE_BYTES) {
+      throw new Error('抽帧图片不能超过 10MB');
+    }
 
     const [existingRows] = await this.pool.query(
       `SELECT f.*, s.title AS source_scene_title

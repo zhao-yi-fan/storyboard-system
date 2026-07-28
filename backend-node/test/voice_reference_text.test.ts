@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const require = createRequire(import.meta.url);
+const { DEFAULT_PROVIDER_MODEL } = require('../config/shared/constants');
 const {
   createCharacterVoicePreview,
   generateCharacterVoiceReference,
@@ -16,7 +17,7 @@ function mockApp() {
       storyboard: {
         dashScopeApiKey: 'test-key',
         dashScopeVoiceBaseUrl: 'https://dashscope.test/api/v1',
-        dashScopeVoiceDesignModel: 'qwen-voice-design',
+        dashScopeVoiceDesignModel: DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_DESIGN,
         dashScopeVoiceTargetModel: 'qwen3-tts-vd-test',
         dashScopeVoiceRequestTimeoutSeconds: 5,
       },

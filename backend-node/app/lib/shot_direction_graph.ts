@@ -3,13 +3,7 @@
 
 import { END, START, StateGraph, StateSchema } from '@langchain/langgraph';
 import { z } from 'zod';
-
-const JSON_CONTENT_TYPE = 'application/json';
-const POST_METHOD = 'POST';
-const TRAILING_SLASH_PATTERN = /\/$/;
-const JSON_FENCE_PREFIX = /^```json/;
-const CODE_FENCE_PREFIX = /^```/;
-const CODE_FENCE_SUFFIX = /```$/;
+import { LLM_JSON_PROTOCOL } from './llm_json_protocol';
 
 const SYSTEM_PROMPT = [
   '你是专业影视分镜导演、剪辑顾问和视频生成提示词顾问。',
@@ -49,9 +43,9 @@ function cleanStringList(values: unknown): string[] {
 
 function extractJSONObject(content: string): string {
   const trimmed = cleanString(content)
-    .replace(JSON_FENCE_PREFIX, '')
-    .replace(CODE_FENCE_PREFIX, '')
-    .replace(CODE_FENCE_SUFFIX, '')
+    .replace(LLM_JSON_PROTOCOL.JSON_FENCE_PREFIX, '')
+    .replace(LLM_JSON_PROTOCOL.CODE_FENCE_PREFIX, '')
+    .replace(LLM_JSON_PROTOCOL.CODE_FENCE_SUFFIX, '')
     .trim();
   const start = trimmed.indexOf('{');
   const end = trimmed.lastIndexOf('}');
@@ -209,12 +203,12 @@ async function requestShotDirectionAnalysis(
 ) {
   ensureConfigured(config);
   const response = await fetch(
-    `${String(config.deepSeekBaseUrl).replace(TRAILING_SLASH_PATTERN, '')}/chat/completions`,
+    `${String(config.deepSeekBaseUrl).replace(LLM_JSON_PROTOCOL.TRAILING_SLASH_PATTERN, '')}/chat/completions`,
     {
-      method: POST_METHOD,
+      method: LLM_JSON_PROTOCOL.POST_METHOD,
       headers: {
         Authorization: `Bearer ${config.deepSeekApiKey}`,
-        'Content-Type': JSON_CONTENT_TYPE,
+        'Content-Type': LLM_JSON_PROTOCOL.CONTENT_TYPE,
       },
       body: JSON.stringify({
         model: config.deepSeekModel,

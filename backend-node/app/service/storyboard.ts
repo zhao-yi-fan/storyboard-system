@@ -34,17 +34,27 @@ const {
   isCompositeStoryboardPrompt,
 } = require('../lib/composite_prompt');
 const { StoryboardRepository } = require('../repository/storyboard_repository');
+const {
+  ASSET_SOURCE_TYPE,
+  ENTITY_TYPE,
+  GENERATION_STATUS,
+  MEDIA_TYPE,
+  REFERENCE_TYPE,
+  VIDEO_MODEL,
+  VIDEO_ASPECT_RATIO,
+  VIDEO_RESOLUTION,
+} = require('../lib/domain_constants');
 
 class StoryboardService extends Service {
   static REFERENCE_ASSET_USAGE = 'reference_asset';
-  static SEEDANCE_VIDEO_MODEL = 'seedance-2.0';
-  static VIDEO_ASPECT_RATIO_9_16 = '9:16';
+  static SEEDANCE_VIDEO_MODEL = VIDEO_MODEL.SEEDANCE_2;
+  static VIDEO_ASPECT_RATIO_9_16 = VIDEO_ASPECT_RATIO.PORTRAIT;
   static SEEDANCE_MAX_REFERENCE_AUDIO_COUNT = 3;
   static SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS = 2;
   static SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS = 15;
   static SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS = 15;
   static SEEDANCE_MAX_VISUAL_INPUT_COUNT = 9;
-  static SEEDANCE_RESOLUTIONS = new Set(['480p', '720p', '1080p']);
+  static SEEDANCE_RESOLUTIONS = new Set(Object.values(VIDEO_RESOLUTION));
 
   get pool() {
     return this.app.mysqlPool;
@@ -289,7 +299,7 @@ class StoryboardService extends Service {
   }
 
   supportedVideoModels() {
-    return new Set(['wan2.7-i2v', StoryboardService.SEEDANCE_VIDEO_MODEL]);
+    return new Set([VIDEO_MODEL.WAN_2_7_I2V, StoryboardService.SEEDANCE_VIDEO_MODEL]);
   }
 
   isSeedanceVideoModel(model) {
@@ -332,13 +342,15 @@ class StoryboardService extends Service {
 
   normalizeVideoResolution(model, value) {
     const isSeedance = this.isSeedanceVideoModel(model);
-    const resolution = String(value || (isSeedance ? '480p' : '720p'))
+    const resolution = String(
+      value || (isSeedance ? VIDEO_RESOLUTION.SD : VIDEO_RESOLUTION.HD),
+    )
       .trim()
       .toLowerCase();
     if (isSeedance && !StoryboardService.SEEDANCE_RESOLUTIONS.has(resolution)) {
       throw new Error('Seedance 2.0 分辨率仅支持 480p、720p 或 1080p');
     }
-    if (!isSeedance && resolution !== '720p') {
+    if (!isSeedance && resolution !== VIDEO_RESOLUTION.HD) {
       throw new Error('当前 Wan 视频模型仅支持 720p 输出');
     }
     return resolution;
@@ -377,11 +389,13 @@ class StoryboardService extends Service {
 
   getAssetReferenceType(asset) {
     const type = String(asset?.type || '').trim();
-    if (/(scene|background|location|场景|背景|地点)/i.test(type)) return 'scene';
-    if (this.isAudioAsset(asset)) return 'audio';
-    if (/(prop|道具)/i.test(type)) return 'prop';
-    if (/(costume|服装)/i.test(type)) return 'costume';
-    return 'asset';
+    if (/(scene|background|location|场景|背景|地点)/i.test(type)) {
+      return REFERENCE_TYPE.SCENE;
+    }
+    if (this.isAudioAsset(asset)) return REFERENCE_TYPE.AUDIO;
+    if (/(prop|道具)/i.test(type)) return REFERENCE_TYPE.PROP;
+    if (/(costume|服装)/i.test(type)) return REFERENCE_TYPE.COSTUME;
+    return REFERENCE_TYPE.ASSET;
   }
 
   async selectAssetReferenceImages(storyboard) {
@@ -424,7 +438,7 @@ class StoryboardService extends Service {
       }
       references.push({
         asset_id: Number(character.id),
-        type: 'character',
+        type: ENTITY_TYPE.CHARACTER,
         name: character.name,
         url,
         source: 'character.design_sheet_url',
@@ -448,7 +462,7 @@ class StoryboardService extends Service {
       }
       references.push({
         asset_id: Number(character.id),
-        type: 'character',
+        type: ENTITY_TYPE.CHARACTER,
         name: character.name,
         url,
         source: 'character.design_sheet_url',
@@ -549,7 +563,7 @@ class StoryboardService extends Service {
       references.push({
         reference_id: `character:${character.id}`,
         character_id: Number(character.id),
-        type: 'character',
+        type: ENTITY_TYPE.CHARACTER,
         name: character.name,
         url,
         source: 'character.voice_reference_url',
@@ -571,7 +585,7 @@ class StoryboardService extends Service {
       references.push({
         reference_id: `asset:${asset.id}`,
         asset_id: Number(asset.id),
-        type: 'asset',
+        type: ENTITY_TYPE.ASSET,
         name: String(asset.name || '').trim(),
         url,
         source: 'asset.file_url',
@@ -767,9 +781,9 @@ class StoryboardService extends Service {
     const preview = await this.previewCoverGeneration(id, selectedModel);
     const generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,
-      media_type: 'cover',
+      media_type: MEDIA_TYPE.COVER,
       model: preview.model,
-      status: 'generating',
+      status: GENERATION_STATUS.GENERATING,
       source_url: preview.reference_images[0]?.url || null,
       meta_json: JSON.stringify({
         resolution: '1024x576',
@@ -804,12 +818,12 @@ class StoryboardService extends Service {
       });
 
       await this.ctx.service.mediaGeneration.update(generation.id, {
-        status: 'succeeded',
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: stored.publicPath,
         preview_url: previewPath,
         error_message: null,
       });
-      await this.ctx.service.mediaGeneration.markCurrent(id, 'cover', generation.id);
+      await this.ctx.service.mediaGeneration.markCurrent(id, MEDIA_TYPE.COVER, generation.id);
 
       const storyboardAfter = await this.findById(id);
       return {
@@ -820,7 +834,7 @@ class StoryboardService extends Service {
       };
     } catch (error) {
       await this.ctx.service.mediaGeneration.update(generation.id, {
-        status: 'failed',
+        status: GENERATION_STATUS.FAILED,
         error_message: error.message,
       });
       throw error;
@@ -842,16 +856,16 @@ class StoryboardService extends Service {
 
     const generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,
-      media_type: 'cover',
-      model: 'manual-upload',
-      status: 'succeeded',
+      media_type: MEDIA_TYPE.COVER,
+      model: ASSET_SOURCE_TYPE.MANUAL_UPLOAD,
+      status: GENERATION_STATUS.SUCCEEDED,
       result_url: normalizedThumbnailUrl,
       preview_url: normalizedThumbnailUrl,
       source_url: normalizedThumbnailUrl,
       is_current: false,
-      meta_json: JSON.stringify({ source: 'manual-upload' }),
+      meta_json: JSON.stringify({ source: ASSET_SOURCE_TYPE.MANUAL_UPLOAD }),
     });
-    await this.ctx.service.mediaGeneration.markCurrent(id, 'cover', generation.id);
+    await this.ctx.service.mediaGeneration.markCurrent(id, MEDIA_TYPE.COVER, generation.id);
     const nextStoryboard = await this.applyMediaGeneration(id, generation);
     return {
       storyboard: nextStoryboard,
@@ -880,7 +894,7 @@ class StoryboardService extends Service {
       String(selectedModel || '').trim() ||
       (composite
         ? StoryboardService.SEEDANCE_VIDEO_MODEL
-        : this.app.config.storyboard.wanxVideoModel || 'wan2.7-i2v');
+        : this.app.config.storyboard.wanxVideoModel || VIDEO_MODEL.WAN_2_7_I2V);
     if (!this.supportedVideoModels().has(model)) {
       throw new Error('unsupported video model');
     }
@@ -1037,7 +1051,7 @@ class StoryboardService extends Service {
       throw new Error(preview.blocking_reasons.join('；'));
     }
     const current = await this.findById(id);
-    if (current.video_status === 'generating') {
+    if (current.video_status === GENERATION_STATUS.GENERATING) {
       return {
         storyboard_id: current.id,
         video_url: current.video_url,
@@ -1047,9 +1061,9 @@ class StoryboardService extends Service {
     }
     const generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,
-      media_type: 'video',
+      media_type: MEDIA_TYPE.VIDEO,
       model: preview.model,
-      status: 'generating',
+      status: GENERATION_STATUS.GENERATING,
       source_url: preview.use_first_frame ? current.thumbnail_url || null : null,
       meta_json: JSON.stringify({
         prompt_mode: preview.prompt_mode,
@@ -1066,7 +1080,7 @@ class StoryboardService extends Service {
     });
 
     await this.update(id, {
-      video_status: 'generating',
+      video_status: GENERATION_STATUS.GENERATING,
       video_error: '',
     });
 
@@ -1141,13 +1155,13 @@ class StoryboardService extends Service {
       await this.update(id, {
         video_url: stored.publicPath,
         video_preview_url: stored.publicPath,
-        video_status: 'succeeded',
+        video_status: GENERATION_STATUS.SUCCEEDED,
         video_error: '',
         video_duration: result.duration,
         duration: result.duration,
       });
       await this.ctx.service.mediaGeneration.update(generation.id, {
-        status: 'succeeded',
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: stored.publicPath,
         preview_url: stored.publicPath,
         source_url: preview.use_first_frame ? storyboard.thumbnail_url : '',
@@ -1168,16 +1182,16 @@ class StoryboardService extends Service {
           provider_task_id: result.taskId || undefined,
         }),
       });
-      await this.ctx.service.mediaGeneration.markCurrent(id, 'video', generation.id);
+      await this.ctx.service.mediaGeneration.markCurrent(id, MEDIA_TYPE.VIDEO, generation.id);
     } catch (error) {
       await this.update(id, {
         video_url: '',
         video_preview_url: '',
-        video_status: 'failed',
+        video_status: GENERATION_STATUS.FAILED,
         video_error: error.message,
       });
       await this.ctx.service.mediaGeneration.update(generation.id, {
-        status: 'failed',
+        status: GENERATION_STATUS.FAILED,
         error_message: error.message,
       });
     }
@@ -1187,17 +1201,17 @@ class StoryboardService extends Service {
     if (!generation) {
       return await this.findById(storyboardId);
     }
-    if (generation.media_type === 'cover') {
+    if (generation.media_type === MEDIA_TYPE.COVER) {
       await this.update(storyboardId, {
         thumbnail_url: generation.result_url || '',
         thumbnail_preview_url: generation.preview_url || '',
       });
-    } else if (generation.media_type === 'video') {
+    } else if (generation.media_type === MEDIA_TYPE.VIDEO) {
       const meta = parseMediaGenerationMeta(generation.meta_json);
       await this.update(storyboardId, {
         video_url: generation.result_url || '',
         video_preview_url: generation.preview_url || '',
-        video_status: generation.result_url ? 'succeeded' : '',
+        video_status: generation.result_url ? GENERATION_STATUS.SUCCEEDED : '',
         video_error: '',
         video_duration: Number(meta.duration || 0) || 0,
       });
@@ -1206,9 +1220,9 @@ class StoryboardService extends Service {
   }
 
   async clearMedia(storyboardId, mediaType) {
-    if (mediaType === 'cover') {
+    if (mediaType === MEDIA_TYPE.COVER) {
       await this.update(storyboardId, { thumbnail_url: '', thumbnail_preview_url: '' });
-    } else if (mediaType === 'video') {
+    } else if (mediaType === MEDIA_TYPE.VIDEO) {
       await this.update(storyboardId, {
         video_url: '',
         video_preview_url: '',
@@ -1223,7 +1237,7 @@ class StoryboardService extends Service {
   async listSceneVideoInputs(sceneId) {
     const items = await this.findBySceneId(sceneId);
     return items
-      .filter((item) => item.video_status === 'succeeded' && item.video_url)
+      .filter((item) => item.video_status === GENERATION_STATUS.SUCCEEDED && item.video_url)
       .sort((a, b) => a.sort_order - b.sort_order || a.shot_number - b.shot_number)
       .map((item) => ({
         source: item.video_url,

@@ -2,6 +2,7 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
+const { ASSET_KIND } = require('../lib/domain_constants');
 const { parseScriptWithDeepSeek } = require('../lib/deepseek');
 const {
   normalizeLLMStoryboardDocument,
@@ -197,10 +198,15 @@ class ScriptImportService extends Service {
           if (sceneAssetName) {
             const sceneAssetId = await upsertAsset(
               sceneAssetName,
-              'scene',
+              ASSET_KIND.SCENE,
               [scene.description, scene.timeOfDay].filter(Boolean).join('\n'),
             );
-            collectAssetRequirement('scene', sceneAssetName, scene.description, sceneAssetId);
+            collectAssetRequirement(
+              ASSET_KIND.SCENE,
+              sceneAssetName,
+              scene.description,
+              sceneAssetId,
+            );
             await conn.execute(
               `INSERT IGNORE INTO scene_asset_usages (scene_id, asset_id, usage_type)
                VALUES (?, ?, 'reference_asset')`,
@@ -209,8 +215,17 @@ class ScriptImportService extends Service {
           }
 
           for (const prop of scene.props || []) {
-            const propAssetId = await upsertAsset(prop.name, 'prop', prop.description);
-            collectAssetRequirement('prop', prop.name, prop.description, propAssetId);
+            const propAssetId = await upsertAsset(
+              prop.name,
+              ASSET_KIND.PROP,
+              prop.description,
+            );
+            collectAssetRequirement(
+              ASSET_KIND.PROP,
+              prop.name,
+              prop.description,
+              propAssetId,
+            );
             await conn.execute(
               `INSERT IGNORE INTO scene_asset_usages (scene_id, asset_id, usage_type)
                VALUES (?, ?, 'reference_asset')`,

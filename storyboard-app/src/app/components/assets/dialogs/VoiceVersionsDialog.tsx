@@ -1,4 +1,5 @@
 import type { CharacterVoiceVersion } from "../../../api";
+import { ASSET_SOURCE_TYPE } from "../../../constants/domain";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -41,7 +42,10 @@ export function VoiceVersionsDialog({
                 </audio>
                 <div className={styles.voiceVersionFooter}>
                   <span>
-                    {version.source_type === "manual-upload" ? "手动上传" : "AI 生成"} ·{" "}
+                    {version.source_type === ASSET_SOURCE_TYPE.MANUAL_UPLOAD
+                      ? "手动上传"
+                      : "AI 生成"}{" "}
+                    ·{" "}
                     {version.duration.toFixed(1)}s
                   </span>
                   <Button

@@ -5,6 +5,7 @@ const { Service } = require('egg');
 const { mapProject, mapProjectWithStats } = require('../lib/project');
 const { composeVideos, sanitizeFileName } = require('../lib/media');
 const { hasOwn } = require('../lib/common');
+const { GENERATION_STATUS } = require('../lib/domain_constants');
 
 class ProjectService extends Service {
   get pool() {
@@ -63,7 +64,9 @@ class ProjectService extends Service {
   async backfillMissingPosters(projects) {
     const missingPosterRows = projects.filter(
       (project) =>
-        project.video_status === 'succeeded' && project.video_url && !project.video_poster_url,
+        project.video_status === GENERATION_STATUS.SUCCEEDED &&
+        project.video_url &&
+        !project.video_poster_url,
     );
     const posterConcurrency = 2;
     for (let index = 0; index < missingPosterRows.length; index += posterConcurrency) {
@@ -310,7 +313,7 @@ class ProjectService extends Service {
         [chapter.id],
       );
       for (const scene of scenes) {
-        if (scene.video_status === 'succeeded' && scene.video_url) {
+        if (scene.video_status === GENERATION_STATUS.SUCCEEDED && scene.video_url) {
           inputs.push(String(scene.video_url));
         }
       }
@@ -320,7 +323,7 @@ class ProjectService extends Service {
     }
     await this.pool.execute(
       'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-      ['', '', '', 'generating', '', 0, id],
+      ['', '', '', GENERATION_STATUS.GENERATING, '', 0, id],
     );
     try {
       const filename = `${sanitizeFileName(`project-${id}`)}-${Date.now()}.mp4`;
@@ -329,7 +332,7 @@ class ProjectService extends Service {
         {
           id,
           video_url: composed.publicPath,
-          video_status: 'succeeded',
+          video_status: GENERATION_STATUS.SUCCEEDED,
         },
         { force: true },
       );
@@ -339,7 +342,7 @@ class ProjectService extends Service {
           composed.publicPath,
           composed.previewPath,
           posterUrl,
-          'succeeded',
+          GENERATION_STATUS.SUCCEEDED,
           '',
           composed.duration,
           id,
@@ -349,7 +352,7 @@ class ProjectService extends Service {
     } catch (error: any) {
       await this.pool.execute(
         'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-        ['', '', '', 'failed', error.message, 0, id],
+        ['', '', '', GENERATION_STATUS.FAILED, error.message, 0, id],
       );
       throw error;
     }

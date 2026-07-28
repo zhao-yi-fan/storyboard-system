@@ -12,9 +12,9 @@ import { buildWanxConfig } from './providers/wanx';
 import { buildSeedanceConfig } from './providers/seedance';
 import { buildSeedreamConfig } from './providers/seedream';
 import { buildOssConfig } from './providers/oss';
-import { FALLBACK_GO_ENV_PATH, LOCAL_ENV_PATH } from './shared/constants';
+import { DEFAULT_ENV_PATH } from './shared/constants';
 
-const ENV_PATHS = [LOCAL_ENV_PATH, FALLBACK_GO_ENV_PATH];
+const ENV_PATHS = [DEFAULT_ENV_PATH.LOCAL, DEFAULT_ENV_PATH.LEGACY_GO_FALLBACK];
 const DIST_DIR_NAME = 'dist';
 
 function resolveBackendNodeRootDir(): string {

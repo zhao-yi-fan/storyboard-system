@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
+const { GENERATION_STATUS } = cjsRequire('../app/lib/domain_constants');
 const ProjectService = cjsRequire('../app/service/project');
 const ProjectVideoPosterService = cjsRequire('../app/service/project_video_poster');
 
@@ -22,7 +23,7 @@ describe('test/project_video_poster.test.ts', () => {
               name: '项目',
               description: '',
               video_url: '/generated/project-videos/project-19.mp4',
-              video_status: 'succeeded',
+              video_status: GENERATION_STATUS.SUCCEEDED,
               video_poster_url: '',
             },
           ],
@@ -71,7 +72,7 @@ describe('test/project_video_poster.test.ts', () => {
     const posterUrl = await ProjectVideoPosterService.prototype.ensureBestEffort.call(context, {
       id: 19,
       video_url: '/generated/project-videos/project-19.mp4',
-      video_status: 'succeeded',
+      video_status: GENERATION_STATUS.SUCCEEDED,
     });
     assert.equal(posterUrl, '');
     assert.match(warning, /ffmpeg failed/);
@@ -96,7 +97,7 @@ describe('test/project_video_poster.test.ts', () => {
     const project = {
       id: 30,
       video_url: '/generated/project-videos/project-30.mp4',
-      video_status: 'succeeded',
+      video_status: GENERATION_STATUS.SUCCEEDED,
     };
     await ProjectVideoPosterService.prototype.ensureBestEffort.call(context, project);
     await ProjectVideoPosterService.prototype.ensureBestEffort.call(context, project);
@@ -121,7 +122,7 @@ describe('test/project_video_poster.test.ts', () => {
     const posterUrl = await ProjectVideoPosterService.prototype.ensureForProject.call(context, {
       id: 19,
       video_url: '/generated/project-videos/project-19.mp4',
-      video_status: 'succeeded',
+      video_status: GENERATION_STATUS.SUCCEEDED,
       video_poster_url: '',
     });
     assert.equal(posterUrl, '/generated/project-video-posters/project-19.webp');

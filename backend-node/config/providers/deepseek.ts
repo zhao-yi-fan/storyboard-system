@@ -1,20 +1,20 @@
 'use strict';
 
 import {
-  DEFAULT_DEEPSEEK_BASE_URL,
-  DEFAULT_DEEPSEEK_MODEL,
-  DEFAULT_DEEPSEEK_TIMEOUT_SECONDS,
+  DEFAULT_PROVIDER_BASE_URL,
+  DEFAULT_PROVIDER_MODEL,
+  DEFAULT_REQUEST_TIMEOUT_SECONDS,
 } from '../shared/constants';
 import { getNumberEnv, getStringEnv } from '../shared/env';
 
 export function buildDeepSeekConfig() {
   return {
     deepSeekApiKey: getStringEnv('DEEPSEEK_API_KEY', ''),
-    deepSeekBaseUrl: getStringEnv('DEEPSEEK_BASE_URL', DEFAULT_DEEPSEEK_BASE_URL),
-    deepSeekModel: getStringEnv('DEEPSEEK_MODEL', DEFAULT_DEEPSEEK_MODEL),
+    deepSeekBaseUrl: getStringEnv('DEEPSEEK_BASE_URL', DEFAULT_PROVIDER_BASE_URL.DEEPSEEK),
+    deepSeekModel: getStringEnv('DEEPSEEK_MODEL', DEFAULT_PROVIDER_MODEL.DEEPSEEK),
     deepSeekRequestTimeoutSeconds: getNumberEnv(
       'DEEPSEEK_REQUEST_TIMEOUT_SECONDS',
-      DEFAULT_DEEPSEEK_TIMEOUT_SECONDS,
+      DEFAULT_REQUEST_TIMEOUT_SECONDS.STANDARD,
     ),
   };
 }

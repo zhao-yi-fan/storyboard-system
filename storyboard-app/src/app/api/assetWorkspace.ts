@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { ENTITY_TYPE, type EntityType } from "../constants/domain";
 import type {
   AssetRequirement,
   AssetVersion,
@@ -45,19 +46,19 @@ export function saveAssetToPersonal(id: number) {
   return apiClient.post<PersonalAsset>(`/assets/${id}/save-to-personal`, {});
 }
 
-export function getVersions(entityType: "character" | "asset", id: number) {
+export function getVersions(entityType: Exclude<EntityType, "project">, id: number) {
   return apiClient.get<AssetVersion[]>(
-    `/${entityType === "character" ? "characters" : "assets"}/${id}/versions`,
+    `/${entityType === ENTITY_TYPE.CHARACTER ? "characters" : "assets"}/${id}/versions`,
   );
 }
 
 export function setCurrentVersion(
-  entityType: "character" | "asset",
+  entityType: Exclude<EntityType, "project">,
   id: number,
   versionId: number,
 ) {
   return apiClient.post<AssetVersion[]>(
-    `/${entityType === "character" ? "characters" : "assets"}/${id}/versions/${versionId}/set-current`,
+    `/${entityType === ENTITY_TYPE.CHARACTER ? "characters" : "assets"}/${id}/versions/${versionId}/set-current`,
     {},
   );
 }

@@ -3,6 +3,9 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
+const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = cjsRequire(
+  '../app/lib/domain_constants',
+);
 const SceneService = cjsRequire('../app/service/scene');
 const SceneMediaGenerationService = cjsRequire('../app/service/scene_media_generation');
 const SceneVideoPosterService = cjsRequire('../app/service/scene_video_poster');
@@ -21,8 +24,8 @@ describe('test/scene_video_poster.test.ts', () => {
       {
         id: 89,
         scene_id: 21,
-        media_type: 'video',
-        status: 'succeeded',
+        media_type: MEDIA_TYPE.VIDEO,
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: '/generated/scene-videos/scene-21.mp4',
         poster_url: '/generated/scene-video-posters/scene-21-video-89-poster.webp',
       },
@@ -70,8 +73,8 @@ describe('test/scene_video_poster.test.ts', () => {
     await SceneService.prototype.applyMediaGeneration.call(context, 21, {
       id: 89,
       scene_id: 21,
-      media_type: 'video',
-      status: 'succeeded',
+      media_type: MEDIA_TYPE.VIDEO,
+      status: GENERATION_STATUS.SUCCEEDED,
       result_url: '/generated/scene-videos/current.mp4',
       preview_url: '/generated/scene-videos/current.mp4',
       error_message: '',
@@ -80,7 +83,7 @@ describe('test/scene_video_poster.test.ts', () => {
       video_url: '/generated/scene-videos/current.mp4',
       video_preview_url: '/generated/scene-videos/current.mp4',
       video_poster_url: '/generated/scene-video-posters/current.webp',
-      video_status: 'succeeded',
+      video_status: GENERATION_STATUS.SUCCEEDED,
       video_error: '',
     });
     assert.equal(Object.hasOwn(updatePayload || {}, 'cover_url'), false);
@@ -103,8 +106,8 @@ describe('test/scene_video_poster.test.ts', () => {
       },
       findById: async () => ({
         id: 89,
-        model: 'seedance-2.0',
-        status: 'succeeded',
+        model: VIDEO_MODEL.SEEDANCE_2,
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: signedUrl,
         preview_url: signedUrl,
         poster_url: '',

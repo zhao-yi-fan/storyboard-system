@@ -1,4 +1,5 @@
 import type { StoryboardVideoGenerationPreview } from "../../../api";
+import { ASSET_KIND, VIDEO_ASPECT_RATIO } from "../../../constants/domain";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import {
@@ -69,7 +70,7 @@ export function VideoGenerationDialog({
               <span className={styles.labelText}>输出规格</span>
               <span>
                 {preview
-                  ? `${preview.aspect_ratio || "9:16"} / ${preview.resolution} / ${preview.duration}秒 / ${preview.audio ? "有声" : "无声"}`
+                  ? `${preview.aspect_ratio || VIDEO_ASPECT_RATIO.PORTRAIT} / ${preview.resolution} / ${preview.duration}秒 / ${preview.audio ? "有声" : "无声"}`
                   : previewSpecLabel}
               </span>
             </div>
@@ -165,9 +166,9 @@ export function VideoGenerationDialog({
                     <div className={styles.referenceDetails}>
                       <div className={styles.inlineItems}>
                         <Badge className={styles.referenceTypeBadge}>
-                          {reference.type === "character"
+                          {reference.type === ASSET_KIND.CHARACTER
                             ? "角色"
-                            : reference.type === "scene"
+                            : reference.type === ASSET_KIND.SCENE
                               ? "背景"
                               : reference.type === "video_frame"
                                 ? "视频抽帧"

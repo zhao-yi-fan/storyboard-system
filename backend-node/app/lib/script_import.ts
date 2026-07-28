@@ -1,9 +1,11 @@
 'use strict';
 // @ts-nocheck
 
-const CHARACTER_NAME_MAX_LENGTH = 12;
-const DEFAULT_DURATION_SECONDS = 5;
-const DEFAULT_CAMERA_DIRECTION = '平视';
+const SCRIPT_IMPORT_RULE = Object.freeze({
+  CHARACTER_NAME_MAX_LENGTH: 12,
+  DEFAULT_DURATION_SECONDS: 5,
+  DEFAULT_CAMERA_DIRECTION: '平视',
+});
 
 const INVALID_CHARACTER_PATTERN = /[·，,。：:；;、（）()《》[\]【】/|]/;
 const CHARACTER_BLOCKLIST = [
@@ -60,7 +62,7 @@ function containsAnyKeyword(value: string, keywords: string[]): boolean {
 function isLikelyCharacterName(name: unknown): boolean {
   const trimmed = String(name || '').trim();
   if (!trimmed) return false;
-  if ([...trimmed].length > CHARACTER_NAME_MAX_LENGTH) return false;
+  if ([...trimmed].length > SCRIPT_IMPORT_RULE.CHARACTER_NAME_MAX_LENGTH) return false;
   if (INVALID_CHARACTER_PATTERN.test(trimmed)) return false;
   if (containsAnyKeyword(trimmed, CHARACTER_BLOCKLIST)) return false;
   return true;
@@ -71,7 +73,7 @@ function normalizeCharacterNames(values: unknown[]): string[] {
 }
 
 function normalizeDuration(duration: unknown): number {
-  return Number(duration) > 0 ? Number(duration) : DEFAULT_DURATION_SECONDS;
+  return Number(duration) > 0 ? Number(duration) : SCRIPT_IMPORT_RULE.DEFAULT_DURATION_SECONDS;
 }
 
 function normalizeVisualDescription(
@@ -206,7 +208,9 @@ export function normalizeLLMStoryboardDocument(document: Record<string, any>) {
           dialogue: String(storyboard.dialogue || '').trim(),
           shotType: String(storyboard.shot_type || '').trim(),
           mood: String(storyboard.mood || '').trim(),
-          cameraDirection: String(storyboard.camera_angle || '').trim() || DEFAULT_CAMERA_DIRECTION,
+          cameraDirection:
+            String(storyboard.camera_angle || '').trim() ||
+            SCRIPT_IMPORT_RULE.DEFAULT_CAMERA_DIRECTION,
           cameraMotion: '',
           duration: normalizeDuration(storyboard.duration_seconds),
           background: buildStoryboardBackground(

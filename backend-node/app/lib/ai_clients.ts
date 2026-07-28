@@ -1,109 +1,36 @@
 // @ts-nocheck
 'use strict';
 
-const JSON_CONTENT_TYPE = 'application/json';
-const POST_METHOD = 'POST';
-const HTTP_PROTOCOL_PATTERN = /^https?:\/\//;
-const MP4_SUFFIX = '.mp4';
-
-const HTTP_STATUS_KEYS = ['message', 'msg'];
-const SUCCESS_VIDEO_STATUSES = ['succeeded', 'success', 'completed'];
-const FAILED_VIDEO_STATUSES = ['failed', 'error', 'canceled', 'cancelled'];
-
-const DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
-const ARK_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
-
-const DEFAULT_IMAGE_TIMEOUT_MS = 300 * 1000;
-const DEFAULT_VIDEO_TIMEOUT_MS = 300 * 1000;
-const DEFAULT_AUDIO_TIMEOUT_MS = 120 * 1000;
-const DEFAULT_IMAGE_DURATION_SECONDS = 5;
-const DEFAULT_POLL_INTERVAL_MS = 15000;
-const DEFAULT_SEEDANCE_POLL_INTERVAL_MS = 10000;
-
-const SEEDREAM_IMAGE_SIZE = '2560x1440';
-const SEEDREAM_DESIGN_SHEET_SIZE = '2304x1600';
-const VIDEO_RESOLUTION_720P = '720P';
-const VIDEO_RESOLUTION_480P = '480p';
-const VOICE_RESPONSE_FORMAT_WAV = 'wav';
-const VOICE_LANGUAGE_ZH = 'zh';
+const {
+  DEFAULT_PROVIDER_BASE_URL,
+  DEFAULT_PROVIDER_MODEL,
+} = require('../../config/shared/constants');
+const {
+  AI_HTTP,
+  AI_IMAGE_DEFAULT,
+  AI_IMAGE_SIZE,
+  AI_POLL_INTERVAL_MS,
+  AI_REQUEST_TIMEOUT,
+  AI_TASK_STATUS,
+  AI_VIDEO_DEFAULT,
+  AI_VOICE_DEFAULT,
+  SEEDANCE_CONTENT,
+  WANX_MEDIA_TYPE,
+} = require('./ai_client_constants');
+const {
+  findFirstMessage,
+  findFirstVideoUrl,
+  getJson,
+  normalizeBaseUrl,
+  postJson,
+  requireValue,
+  resolveTimeoutMs,
+  wait,
+} = require('./ai_client_http');
 const { buildCharacterVoicePromptText } = require('./prompt_library');
-
-const DEFAULT_SEEDREAM_MODEL = 'doubao-seedream-4-5-251128';
-const DEFAULT_WANX_VIDEO_MODEL = 'wan2.7-i2v';
-const DEFAULT_WANX_TEXT_VIDEO_MODEL = 'wan2.7-t2v-2026-04-25';
-const DEFAULT_SEEDANCE_MODEL = 'doubao-seedance-2-0-260128';
-const DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL = 'qwen-voice-design';
-const DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL = 'qwen3-tts-vd-2026-01-26';
-const VOICE_REFERENCE_DURATION_INSTRUCTION =
-  '试听参考音频必须控制在3-5秒内，使用一句中文短句，语速自然，不要拉长停顿。';
-const FIXED_VOICE_REFERENCE_TEXT = '今天风很轻，我们慢慢把事情说清楚。';
 
 function getConfig(app) {
   return app.config.storyboard || {};
-}
-
-async function postJson(url, apiKey, payload, timeoutMs) {
-  const response = await fetch(url, {
-    method: POST_METHOD,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': JSON_CONTENT_TYPE,
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  const text = await response.text();
-  let data = {};
-  if (text.trim()) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error(`non-json response: HTTP ${response.status}`);
-    }
-  }
-  if (!response.ok) {
-    const message = data?.error?.message || data?.message || `${response.status}`;
-    const error = new Error(String(message));
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-}
-
-async function getJson(url, apiKey, timeoutMs) {
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  const text = await response.text();
-  let data = {};
-  if (text.trim()) {
-    data = JSON.parse(text);
-  }
-  if (!response.ok) {
-    const error = new Error(String(data?.error?.message || data?.message || response.status));
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-}
-
-function requireValue(value, message) {
-  if (!String(value || '').trim()) {
-    throw new Error(message);
-  }
-}
-
-function normalizeBaseUrl(value, fallback) {
-  return String(value || fallback).replace(/\/$/, '');
-}
-
-function resolveTimeoutMs(value, fallbackSeconds, fallbackTimeoutMs) {
-  return Number(value || fallbackSeconds) * 1000 || fallbackTimeoutMs;
-}
-
-async function wait(ms) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -120,18 +47,23 @@ async function wait(ms) {
 async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
-  const baseUrl = normalizeBaseUrl(cfg.seedreamImageBaseUrl, ARK_BASE_URL);
+  const baseUrl = normalizeBaseUrl(
+    cfg.seedreamImageBaseUrl,
+    DEFAULT_PROVIDER_BASE_URL.ARK,
+  );
   const timeoutMs = resolveTimeoutMs(
     cfg.seedreamImageTimeoutSeconds,
-    180,
-    DEFAULT_IMAGE_TIMEOUT_MS,
+    AI_REQUEST_TIMEOUT.SEEDREAM_SECONDS,
+    AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
   );
   const payload = {
-    model: String(cfg.seedreamImageModel || DEFAULT_SEEDREAM_MODEL).trim(),
+    model: String(
+      cfg.seedreamImageModel || DEFAULT_PROVIDER_MODEL.SEEDREAM_IMAGE,
+    ).trim(),
     prompt: String(prompt || '').trim(),
-    size: String(options.size || SEEDREAM_IMAGE_SIZE).trim(),
-    response_format: 'url',
-    watermark: false,
+    size: String(options.size || AI_IMAGE_SIZE.STORYBOARD_COVER).trim(),
+    response_format: AI_IMAGE_DEFAULT.RESPONSE_FORMAT,
+    watermark: AI_IMAGE_DEFAULT.WATERMARK,
   };
   const refs = imageUrls.filter(Boolean);
   if (refs.length === 1) {
@@ -165,44 +97,60 @@ async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
  * await generateWanxVideo(app, "镜头缓慢推进，李明抬头", "https://cover.png", "wan2.7-i2v", 5, true)
  * // => "https://..."
  */
-async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirstFrame = true) {
+async function generateWanxVideo(
+  app,
+  prompt,
+  imageUrl,
+  model,
+  duration,
+  useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
+) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '镜头视频生成未配置：缺少 DASHSCOPE_API_KEY');
-  const baseUrl = normalizeBaseUrl(cfg.wanxVideoBaseUrl, DASHSCOPE_BASE_URL);
+  const baseUrl = normalizeBaseUrl(
+    cfg.wanxVideoBaseUrl,
+    DEFAULT_PROVIDER_BASE_URL.DASHSCOPE,
+  );
   const timeoutMs = resolveTimeoutMs(
     cfg.wanxVideoRequestTimeoutSeconds,
-    300,
-    DEFAULT_VIDEO_TIMEOUT_MS,
+    AI_REQUEST_TIMEOUT.WANX_VIDEO_SECONDS,
+    AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
   );
   const selectedModel = useFirstFrame
-    ? String(model || cfg.wanxVideoModel || DEFAULT_WANX_VIDEO_MODEL).trim()
-    : String(cfg.wanxTextVideoModel || DEFAULT_WANX_TEXT_VIDEO_MODEL).trim();
+    ? String(
+        model ||
+          cfg.wanxVideoModel ||
+          DEFAULT_PROVIDER_MODEL.WANX_VIDEO,
+      ).trim()
+    : String(
+        cfg.wanxTextVideoModel || DEFAULT_PROVIDER_MODEL.WANX_TEXT_VIDEO,
+      ).trim();
   const payload = {
     model: selectedModel,
     parameters: {
-      resolution: VIDEO_RESOLUTION_720P,
-      duration: duration || DEFAULT_IMAGE_DURATION_SECONDS,
-      prompt_extend: true,
-      watermark: false,
-      audio: true,
+      resolution: AI_VIDEO_DEFAULT.WANX_RESOLUTION,
+      duration: duration || AI_VIDEO_DEFAULT.DURATION_SECONDS,
+      prompt_extend: AI_VIDEO_DEFAULT.PROMPT_EXTEND,
+      watermark: AI_VIDEO_DEFAULT.WATERMARK,
+      audio: AI_VIDEO_DEFAULT.GENERATE_AUDIO,
     },
   };
   if (!useFirstFrame) {
     payload.input = { prompt };
-  } else if (selectedModel === 'wan2.7-i2v') {
+  } else if (selectedModel === DEFAULT_PROVIDER_MODEL.WANX_VIDEO) {
     payload.input = {
       prompt,
-      media: [{ type: 'first_frame', url: imageUrl }],
+      media: [{ type: WANX_MEDIA_TYPE.FIRST_FRAME, url: imageUrl }],
     };
   } else {
     payload.input = { prompt, img_url: imageUrl };
   }
   const response = await fetch(`${baseUrl}/services/aigc/video-generation/video-synthesis`, {
-    method: POST_METHOD,
+    method: AI_HTTP.POST_METHOD,
     headers: {
       Authorization: `Bearer ${cfg.dashScopeApiKey}`,
-      'Content-Type': JSON_CONTENT_TYPE,
-      'X-DashScope-Async': 'enable',
+      'Content-Type': AI_HTTP.JSON_CONTENT_TYPE,
+      [AI_HTTP.DASHSCOPE_ASYNC_HEADER]: AI_HTTP.DASHSCOPE_ASYNC_VALUE,
     },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(timeoutMs),
@@ -218,10 +166,10 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
 
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    await wait(DEFAULT_POLL_INTERVAL_MS);
+    await wait(AI_POLL_INTERVAL_MS.WANX_VIDEO);
     const taskData = await getJson(`${baseUrl}/tasks/${taskId}`, cfg.dashScopeApiKey, timeoutMs);
     const status = String(taskData?.output?.task_status || '').toUpperCase();
-    if (status === 'SUCCEEDED') {
+    if (status === AI_TASK_STATUS.WANX_SUCCEEDED) {
       const videoUrl = taskData?.output?.video_url;
       if (!videoUrl) {
         throw new Error('视频任务成功但未返回 video_url');
@@ -230,11 +178,14 @@ async function generateWanxVideo(app, prompt, imageUrl, model, duration, useFirs
         taskData?.usage?.output_video_duration ||
           taskData?.usage?.duration ||
           duration ||
-          DEFAULT_IMAGE_DURATION_SECONDS,
+          AI_VIDEO_DEFAULT.DURATION_SECONDS,
       );
       return { videoUrl, duration: actualDuration };
     }
-    if (status === 'FAILED' || status === 'CANCELED') {
+    if (
+      status === AI_TASK_STATUS.WANX_FAILED ||
+      status === AI_TASK_STATUS.WANX_CANCELED
+    ) {
       throw new Error(String(taskData?.output?.message || taskData?.message || '视频任务失败'));
     }
   }
@@ -260,34 +211,46 @@ function buildSeedanceVideoPayload({
   prompt,
   imageUrl,
   duration,
-  useFirstFrame = true,
+  useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
   referenceImageUrls = [],
   referenceAudioUrls = [],
-  resolution = VIDEO_RESOLUTION_480P,
-  aspectRatio = '9:16',
-  generateAudio = true,
+  resolution = AI_VIDEO_DEFAULT.SEEDANCE_RESOLUTION,
+  aspectRatio = AI_VIDEO_DEFAULT.ASPECT_RATIO,
+  generateAudio = AI_VIDEO_DEFAULT.GENERATE_AUDIO,
 }) {
   const normalizedReferenceImages = referenceImageUrls.filter(Boolean);
   const normalizedReferenceAudio = generateAudio ? referenceAudioUrls.filter(Boolean) : [];
   if (useFirstFrame && (normalizedReferenceImages.length || normalizedReferenceAudio.length)) {
     throw new Error('Seedance 2.0 首帧模式不能与角色、场景或音频参考素材混用');
   }
-  const content = [{ type: 'text', text: prompt }];
+  const content = [{ type: SEEDANCE_CONTENT.TEXT, text: prompt }];
   if (useFirstFrame && String(imageUrl || '').trim()) {
-    content.push({ type: 'image_url', role: 'first_frame', image_url: { url: imageUrl } });
+    content.push({
+      type: SEEDANCE_CONTENT.IMAGE_URL,
+      role: SEEDANCE_CONTENT.FIRST_FRAME,
+      image_url: { url: imageUrl },
+    });
   }
   for (const url of normalizedReferenceImages) {
-    content.push({ type: 'image_url', role: 'reference_image', image_url: { url } });
+    content.push({
+      type: SEEDANCE_CONTENT.IMAGE_URL,
+      role: SEEDANCE_CONTENT.REFERENCE_IMAGE,
+      image_url: { url },
+    });
   }
   if (generateAudio) {
     for (const url of normalizedReferenceAudio) {
-      content.push({ type: 'audio_url', role: 'reference_audio', audio_url: { url } });
+      content.push({
+        type: SEEDANCE_CONTENT.AUDIO_URL,
+        role: SEEDANCE_CONTENT.REFERENCE_AUDIO,
+        audio_url: { url },
+      });
     }
   }
   return {
     model,
     content,
-    duration: duration || DEFAULT_IMAGE_DURATION_SECONDS,
+    duration: duration || AI_VIDEO_DEFAULT.DURATION_SECONDS,
     resolution,
     aspect_ratio: aspectRatio,
     generate_audio: Boolean(generateAudio),
@@ -299,24 +262,29 @@ async function generateSeedanceVideo(
   prompt,
   imageUrl,
   duration,
-  useFirstFrame = true,
+  useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
   referenceImageUrls = [],
   referenceAudioUrls = [],
-  resolution = VIDEO_RESOLUTION_480P,
-  aspectRatio = '9:16',
-  generateAudio = true,
+  resolution = AI_VIDEO_DEFAULT.SEEDANCE_RESOLUTION,
+  aspectRatio = AI_VIDEO_DEFAULT.ASPECT_RATIO,
+  generateAudio = AI_VIDEO_DEFAULT.GENERATE_AUDIO,
   options = {},
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
-  const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, ARK_BASE_URL);
+  const baseUrl = normalizeBaseUrl(
+    cfg.seedanceBaseUrl,
+    DEFAULT_PROVIDER_BASE_URL.ARK,
+  );
   const timeoutMs = resolveTimeoutMs(
     cfg.seedanceRequestTimeoutSeconds,
-    300,
-    DEFAULT_VIDEO_TIMEOUT_MS,
+    AI_REQUEST_TIMEOUT.SEEDANCE_SECONDS,
+    AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
   );
   const payload = buildSeedanceVideoPayload({
-    model: String(cfg.seedanceModel || DEFAULT_SEEDANCE_MODEL).trim(),
+    model: String(
+      cfg.seedanceModel || DEFAULT_PROVIDER_MODEL.SEEDANCE,
+    ).trim(),
     prompt,
     imageUrl,
     duration,
@@ -329,7 +297,7 @@ async function generateSeedanceVideo(
   });
   if (payload.model.includes('1-5') || payload.model.includes('1.5')) {
     throw new Error(
-      'Seedance 2.0 生成未配置正确模型 ID，请将 SEEDANCE_MODEL 设置为 doubao-seedance-2-0-260128',
+      `Seedance 2.0 生成未配置正确模型 ID，请将 SEEDANCE_MODEL 设置为 ${DEFAULT_PROVIDER_MODEL.SEEDANCE}`,
     );
   }
   const createData = await postJson(
@@ -351,7 +319,7 @@ async function generateSeedanceVideo(
   }
   const pollIntervalMs = Number.isFinite(Number(options.pollIntervalMs))
     ? Math.max(0, Number(options.pollIntervalMs))
-    : DEFAULT_SEEDANCE_POLL_INTERVAL_MS;
+    : AI_POLL_INTERVAL_MS.SEEDANCE_VIDEO;
 
   while (true) {
     await wait(pollIntervalMs);
@@ -368,7 +336,7 @@ async function generateSeedanceVideo(
       continue;
     }
     const status = String(taskData?.status || '').toLowerCase();
-    if (SUCCESS_VIDEO_STATUSES.includes(status)) {
+    if (AI_TASK_STATUS.SUCCEEDED_ALIASES.includes(status)) {
       const videoUrl = findFirstVideoUrl(taskData);
       if (!videoUrl) {
         throw new Error('Seedance 视频任务成功但未返回视频地址');
@@ -376,69 +344,13 @@ async function generateSeedanceVideo(
       return {
         taskId,
         videoUrl,
-        duration: Number(duration || DEFAULT_IMAGE_DURATION_SECONDS),
+        duration: Number(duration || AI_VIDEO_DEFAULT.DURATION_SECONDS),
       };
     }
-    if (FAILED_VIDEO_STATUSES.includes(status)) {
+    if (AI_TASK_STATUS.FAILED_ALIASES.includes(status)) {
       throw new Error(String(findFirstMessage(taskData) || 'Seedance 视频任务失败'));
     }
   }
-}
-
-function findFirstMessage(value) {
-  if (!value || typeof value !== 'object') {
-    return '';
-  }
-  for (const key of HTTP_STATUS_KEYS) {
-    if (typeof value[key] === 'string' && value[key].trim()) {
-      return value[key].trim();
-    }
-  }
-  for (const child of Object.values(value)) {
-    if (Array.isArray(child)) {
-      for (const item of child) {
-        const nested = findFirstMessage(item);
-        if (nested) {
-          return nested;
-        }
-      }
-    } else if (child && typeof child === 'object') {
-      const nested = findFirstMessage(child);
-      if (nested) {
-        return nested;
-      }
-    }
-  }
-  return '';
-}
-
-function findFirstVideoUrl(value) {
-  if (!value || typeof value !== 'object') {
-    return '';
-  }
-  for (const [key, child] of Object.entries(value)) {
-    if (
-      typeof child === 'string' &&
-      HTTP_PROTOCOL_PATTERN.test(child) &&
-      (key.toLowerCase().includes('video') || child.toLowerCase().endsWith(MP4_SUFFIX))
-    ) {
-      return child;
-    }
-    if (Array.isArray(child)) {
-      for (const item of child) {
-        const nested = findFirstVideoUrl(item);
-        if (nested) {
-          return nested;
-        }
-      }
-    } else if (child && typeof child === 'object') {
-      const nested = findFirstVideoUrl(child);
-      if (nested) {
-        return nested;
-      }
-    }
-  }
-  return '';
 }
 
 /**
@@ -460,10 +372,12 @@ async function createCharacterVoicePreview(app, character, customPrompt, _custom
   const previewText = buildCharacterVoiceReferenceText(character);
   return {
     designModel: String(
-      cfg.dashScopeVoiceDesignModel || DEFAULT_DASHSCOPE_VOICE_DESIGN_MODEL,
+      cfg.dashScopeVoiceDesignModel ||
+        DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_DESIGN,
     ).trim(),
     targetModel: String(
-      cfg.dashScopeVoiceTargetModel || DEFAULT_DASHSCOPE_VOICE_TARGET_MODEL,
+      cfg.dashScopeVoiceTargetModel ||
+        DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_TARGET,
     ).trim(),
     voicePrompt,
     previewText,
@@ -488,10 +402,13 @@ async function generateCharacterVoiceReference(app, character, customPrompt, cus
   const preview = await createCharacterVoicePreview(app, character, customPrompt, customText);
   const timeoutMs = resolveTimeoutMs(
     cfg.dashScopeVoiceRequestTimeoutSeconds,
-    120,
-    DEFAULT_AUDIO_TIMEOUT_MS,
+    AI_REQUEST_TIMEOUT.VOICE_SECONDS,
+    AI_REQUEST_TIMEOUT.VOICE_INVALID_VALUE_MS,
   );
-  const baseUrl = normalizeBaseUrl(cfg.dashScopeVoiceBaseUrl, DASHSCOPE_BASE_URL);
+  const baseUrl = normalizeBaseUrl(
+    cfg.dashScopeVoiceBaseUrl,
+    DEFAULT_PROVIDER_BASE_URL.DASHSCOPE,
+  );
   const data = await postJson(
     `${baseUrl}/services/audio/tts/customization`,
     cfg.dashScopeApiKey,
@@ -503,11 +420,11 @@ async function generateCharacterVoiceReference(app, character, customPrompt, cus
         voice_prompt: preview.voicePrompt,
         preview_text: preview.previewText,
         preferred_name: preview.preferredVoiceName,
-        language: VOICE_LANGUAGE_ZH,
+        language: AI_VOICE_DEFAULT.LANGUAGE,
       },
       parameters: {
-        sample_rate: 24000,
-        response_format: VOICE_RESPONSE_FORMAT_WAV,
+        sample_rate: AI_VOICE_DEFAULT.SAMPLE_RATE,
+        response_format: AI_VOICE_DEFAULT.RESPONSE_FORMAT,
       },
     },
     timeoutMs,
@@ -523,38 +440,39 @@ async function generateCharacterVoiceReference(app, character, customPrompt, cus
     voicePrompt: preview.voicePrompt,
     voiceReferenceText: preview.previewText,
     audioBuffer: Buffer.from(audioB64, 'base64'),
-    extension: VOICE_RESPONSE_FORMAT_WAV,
+    extension: AI_VOICE_DEFAULT.RESPONSE_FORMAT,
   };
 }
 
 function preferredVoiceName(character) {
   const token =
-    String(character?.name || 'character')
+    String(character?.name || AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK)
       .toLowerCase()
       .replace(/[^a-z0-9_]+/g, '_')
       .replace(/^_+|_+$/g, '')
-      .slice(0, 12) || 'character';
+      .slice(0, AI_VOICE_DEFAULT.PREFERRED_NAME_MAX_LENGTH) ||
+    AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK;
   return `${token}_${character.id}`;
 }
 
 function withVoiceDurationInstruction(prompt) {
   const text = String(prompt || '').trim();
   if (!text) {
-    return VOICE_REFERENCE_DURATION_INSTRUCTION;
+    return AI_VOICE_DEFAULT.DURATION_INSTRUCTION;
   }
   if (/3\s*[-~—至到]\s*5\s*秒/.test(text)) {
     return text;
   }
-  return `${text}\n${VOICE_REFERENCE_DURATION_INSTRUCTION}`;
+  return `${text}\n${AI_VOICE_DEFAULT.DURATION_INSTRUCTION}`;
 }
 
 function buildCharacterVoiceReferenceText(_character) {
-  return FIXED_VOICE_REFERENCE_TEXT;
+  return AI_VOICE_DEFAULT.REFERENCE_TEXT;
 }
 
 module.exports = {
   generateSeedreamImage,
-  SEEDREAM_DESIGN_SHEET_SIZE,
+  SEEDREAM_DESIGN_SHEET_SIZE: AI_IMAGE_SIZE.CHARACTER_DESIGN_SHEET,
   generateWanxVideo,
   generateSeedanceVideo,
   buildSeedanceVideoPayload,

@@ -3,6 +3,7 @@
 
 const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
+const { GENERATION_STATUS } = require('../lib/domain_constants');
 
 class StoryboardController extends ApiController {
 
@@ -132,7 +133,7 @@ class StoryboardController extends ApiController {
       if (!generation || generation.storyboard_id !== storyboardId) {
         throw new Error('media generation not found');
       }
-      if (generation.status !== 'succeeded') {
+      if (generation.status !== GENERATION_STATUS.SUCCEEDED) {
         throw new Error('only succeeded history can be set as current');
       }
       await this.ctx.service.mediaGeneration.markCurrent(
@@ -170,7 +171,7 @@ class StoryboardController extends ApiController {
       if (!generation || generation.storyboard_id !== storyboardId) {
         throw new Error('media generation not found');
       }
-      if (generation.status === 'generating') {
+      if (generation.status === GENERATION_STATUS.GENERATING) {
         throw new Error('generating history cannot be deleted');
       }
       await this.ctx.service.mediaGeneration.softDelete(generationId);

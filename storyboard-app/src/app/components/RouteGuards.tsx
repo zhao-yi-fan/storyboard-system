@@ -4,14 +4,20 @@ import { authApi } from "../api";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "../lib/auth";
 import styles from "./RouteGuards.module.scss";
 
-type AuthStatus = "checking" | "authenticated" | "guest";
+const AUTH_STATUS = {
+  CHECKING: "checking",
+  AUTHENTICATED: "authenticated",
+  GUEST: "guest",
+} as const;
+
+type AuthStatus = (typeof AUTH_STATUS)[keyof typeof AUTH_STATUS];
 
 function AuthCheckingScreen() {
   return <div className={`dark ${styles.checkingScreen}`}>正在校验登录状态...</div>;
 }
 
 function useAuthStatus() {
-  const [status, setStatus] = useState<AuthStatus>("checking");
+  const [status, setStatus] = useState<AuthStatus>(AUTH_STATUS.CHECKING);
 
   useEffect(() => {
     let active = true;
@@ -21,11 +27,11 @@ function useAuthStatus() {
         const user = await authApi.getCurrentUser({ suppressToast: true });
         if (!active) return;
         saveAuthSession(user);
-        setStatus("authenticated");
+        setStatus(AUTH_STATUS.AUTHENTICATED);
       } catch {
         if (!active) return;
         clearAuthSession();
-        setStatus("guest");
+        setStatus(AUTH_STATUS.GUEST);
       }
     };
 
@@ -48,11 +54,11 @@ export function RequireAuthRoute() {
   const location = useLocation();
   const status = useAuthStatus();
 
-  if (status === "checking") {
+  if (status === AUTH_STATUS.CHECKING) {
     return <AuthCheckingScreen />;
   }
 
-  if (status !== "authenticated") {
+  if (status !== AUTH_STATUS.AUTHENTICATED) {
     const redirectTarget = `${location.pathname}${location.search}${location.hash}`;
     return <Navigate to="/login" replace state={{ from: redirectTarget }} />;
   }
@@ -64,11 +70,11 @@ export function GuestOnlyRoute() {
   const location = useLocation();
   const status = useAuthStatus();
 
-  if (status === "checking") {
+  if (status === AUTH_STATUS.CHECKING) {
     return <AuthCheckingScreen />;
   }
 
-  if (status === "authenticated") {
+  if (status === AUTH_STATUS.AUTHENTICATED) {
     const redirectTarget =
       typeof location.state === "object" &&
       location.state &&

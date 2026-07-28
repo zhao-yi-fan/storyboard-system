@@ -2,6 +2,7 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
+const { GENERATION_STATUS, MEDIA_TYPE } = require('../lib/domain_constants');
 const {
   deleteGeneratedAsset,
   normalizeGeneratedAssetReference,
@@ -50,9 +51,9 @@ class SceneVideoClipService extends Service {
     try {
       const clipGeneration = await this.ctx.service.sceneMediaGeneration.create({
         scene_id: sceneId,
-        media_type: 'video',
+        media_type: MEDIA_TYPE.VIDEO,
         model: 'video-clip',
-        status: 'succeeded',
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: stored.publicPath,
         preview_url: stored.previewPath,
         source_url: sourceReference,

@@ -2,6 +2,7 @@
 // @ts-nocheck
 
 const Service = require('egg').Service;
+const { GENERATION_STATUS, MEDIA_TYPE } = require('../lib/domain_constants');
 const path = require('node:path');
 const {
   createPreviewFromLocalPath,
@@ -29,10 +30,10 @@ class SceneVideoPosterService extends Service {
   }
 
   async ensureForGeneration(generation, localPath = '') {
-    if (!generation || generation.media_type !== 'video') {
+    if (!generation || generation.media_type !== MEDIA_TYPE.VIDEO) {
       throw new Error('video generation is required');
     }
-    if (generation.status !== 'succeeded' || !generation.result_url) {
+    if (generation.status !== GENERATION_STATUS.SUCCEEDED || !generation.result_url) {
       throw new Error('only succeeded video media can create a poster');
     }
     if (generation.poster_url) return generation.poster_url;

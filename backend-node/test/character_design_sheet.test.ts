@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'mocha';
+import {
+  ENTITY_TYPE,
+  GENERATION_STATUS,
+} from '../app/lib/domain_constants';
 import { buildCharacterDesignPrompt } from '../app/lib/prompt_library';
 import * as CharacterServiceNamespace from '../app/service/character';
 import * as AssetWorkspaceServiceNamespace from '../app/service/asset_workspace';
@@ -158,11 +162,11 @@ describe('test/character_design_sheet.test.ts', () => {
     const writes: Array<{ sql: string; params: unknown[] }> = [];
     const versionRow = {
       id: 11,
-      entity_type: 'character',
+      entity_type: ENTITY_TYPE.CHARACTER,
       entity_id: 8,
       file_url: '/generated/characters/old.png',
       preview_url: '',
-      status: 'succeeded',
+      status: GENERATION_STATUS.SUCCEEDED,
       is_current: 1,
       user_id: 7,
     };
@@ -195,7 +199,12 @@ describe('test/character_design_sheet.test.ts', () => {
       },
     };
 
-    const versions = await service.setCurrentVersion('character', 8, 11, 7);
+    const versions = await service.setCurrentVersion(
+      ENTITY_TYPE.CHARACTER,
+      8,
+      11,
+      7,
+    );
 
     assert.ok(
       writes.some(

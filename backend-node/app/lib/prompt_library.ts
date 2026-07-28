@@ -32,11 +32,13 @@ type PromptDisplayToken = {
   text: string;
 };
 
-const DEFAULT_TEMPLATE = 'cinematic-default';
-const DIALOGUE_TEMPLATE = 'dramatic-dialogue';
-const MYTHIC_TEMPLATE = 'mythic-awakening';
-const SUSPENSE_TEMPLATE = 'suspense-pressure';
-const TRANSFORMATION_TEMPLATE = 'transformation-spectacle';
+const PROMPT_TEMPLATE = Object.freeze({
+  DEFAULT: 'cinematic-default',
+  DIALOGUE: 'dramatic-dialogue',
+  MYTHIC: 'mythic-awakening',
+  SUSPENSE: 'suspense-pressure',
+  TRANSFORMATION: 'transformation-spectacle',
+});
 
 const CHINESE_PERIOD = '。';
 const CHINESE_SEMICOLON = '；';
@@ -61,37 +63,37 @@ const STYLE_PRESET_PROMPT_MAP: Record<string, string> = {
 };
 
 const IMAGE_COVER_STYLE_TEMPLATE_MAP: Record<string, string> = {
-  realistic_cinematic: DEFAULT_TEMPLATE,
-  dark_realism: SUSPENSE_TEMPLATE,
-  mystery_thriller: SUSPENSE_TEMPLATE,
-  youthful_bright: DEFAULT_TEMPLATE,
-  japanese_animation: DEFAULT_TEMPLATE,
-  retro_film: DEFAULT_TEMPLATE,
-  warm_poetic: DEFAULT_TEMPLATE,
-  cold_noir: SUSPENSE_TEMPLATE,
+  realistic_cinematic: PROMPT_TEMPLATE.DEFAULT,
+  dark_realism: PROMPT_TEMPLATE.SUSPENSE,
+  mystery_thriller: PROMPT_TEMPLATE.SUSPENSE,
+  youthful_bright: PROMPT_TEMPLATE.DEFAULT,
+  japanese_animation: PROMPT_TEMPLATE.DEFAULT,
+  retro_film: PROMPT_TEMPLATE.DEFAULT,
+  warm_poetic: PROMPT_TEMPLATE.DEFAULT,
+  cold_noir: PROMPT_TEMPLATE.SUSPENSE,
 };
 
 const TEMPLATE_LIBRARY: Record<string, Partial<PromptBlueprint>> = {
-  [DEFAULT_TEMPLATE]: {
+  [PROMPT_TEMPLATE.DEFAULT]: {
     style: ['写实电影感', '叙事性强', '构图克制'],
     quality: ['画面稳定', '色彩统一', '主体和背景层次分明'],
   },
-  [DIALOGUE_TEMPLATE]: {
+  [PROMPT_TEMPLATE.DIALOGUE]: {
     style: ['情绪张力明确', '人物关系可读', '氛围克制而压迫'],
     camera: ['镜头优先锁定眼神、停顿和角色之间的距离变化'],
     quality: ['保留细微表情和呼吸感停顿'],
   },
-  [MYTHIC_TEMPLATE]: {
+  [PROMPT_TEMPLATE.MYTHIC]: {
     style: ['东方神话史诗感', '冷冽神性气质', '高预算电影级 CG 质感'],
     effects: ['高质量粒子拖尾', '能量光晕', '空间涟漪或符文层次'],
     quality: ['高光与暗部层次充足', '特效与人物边缘清晰'],
   },
-  [SUSPENSE_TEMPLATE]: {
+  [PROMPT_TEMPLATE.SUSPENSE]: {
     style: ['悬疑压迫感', '低饱和冷调', '空间留白增强不确定性'],
     camera: ['镜头运动克制，优先制造观察感和逼近感'],
     quality: ['暗部细节可读', '氛围真实，不要过曝'],
   },
-  [TRANSFORMATION_TEMPLATE]: {
+  [PROMPT_TEMPLATE.TRANSFORMATION]: {
     style: ['短视频爆点感', '华丽变形过程', '高潮段视觉反差明显'],
     effects: ['服装或粒子形态变化', '高密度能量爆发', '动作卡点清楚'],
     quality: ['变化过程连续', '关键形变节点完整可见'],
@@ -100,19 +102,19 @@ const TEMPLATE_LIBRARY: Record<string, Partial<PromptBlueprint>> = {
 
 const TEMPLATE_KEYWORDS = [
   {
-    name: MYTHIC_TEMPLATE,
+    name: PROMPT_TEMPLATE.MYTHIC,
     patterns: ['神女', '神明', '仙', '古风', '法印', '符文', '神轮', '史诗', '粒子', '神性'],
   },
   {
-    name: TRANSFORMATION_TEMPLATE,
+    name: PROMPT_TEMPLATE.TRANSFORMATION,
     patterns: ['变装', '蜕变', '换装', '爆发', '觉醒', '进化', '成型', '汇聚'],
   },
   {
-    name: SUSPENSE_TEMPLATE,
+    name: PROMPT_TEMPLATE.SUSPENSE,
     patterns: ['悬疑', '神秘', '雨夜', '黑暗', '压迫', '阴影', '监视', '窒息', '追踪', '危机'],
   },
   {
-    name: DIALOGUE_TEMPLATE,
+    name: PROMPT_TEMPLATE.DIALOGUE,
     patterns: ['对话', '对白', '独白', '凝视', '沉默', '对峙', '争执', '告白'],
   },
 ];
@@ -316,7 +318,7 @@ export function selectPromptTemplate(values: unknown[]): string {
       return template.name;
     }
   }
-  return DEFAULT_TEMPLATE;
+  return PROMPT_TEMPLATE.DEFAULT;
 }
 
 function resolveStylePresetPrompt(stylePreset: unknown): string {
@@ -326,14 +328,15 @@ function resolveStylePresetPrompt(stylePreset: unknown): string {
 function selectImageCoverTemplate(stylePreset: unknown, values: unknown[]): string {
   const preset = String(stylePreset || '').trim();
   if (preset) {
-    return IMAGE_COVER_STYLE_TEMPLATE_MAP[preset] || DEFAULT_TEMPLATE;
+    return IMAGE_COVER_STYLE_TEMPLATE_MAP[preset] || PROMPT_TEMPLATE.DEFAULT;
   }
   return selectPromptTemplate(values);
 }
 
 export function buildPromptBlueprint(input: Partial<PromptBlueprint>): PromptBlueprint {
-  const template = input.template || DEFAULT_TEMPLATE;
-  const templateDefaults = TEMPLATE_LIBRARY[template] || TEMPLATE_LIBRARY[DEFAULT_TEMPLATE] || {};
+  const template = input.template || PROMPT_TEMPLATE.DEFAULT;
+  const templateDefaults =
+    TEMPLATE_LIBRARY[template] || TEMPLATE_LIBRARY[PROMPT_TEMPLATE.DEFAULT] || {};
   const blueprint: PromptBlueprint = {
     template,
     intro: String(input.intro || '').trim(),
@@ -767,7 +770,7 @@ export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
  * // => { template: "mythic-awakening", blueprint: {...}, prompt: "..." }
  */
 export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
-  const template = DEFAULT_TEMPLATE;
+  const template = PROMPT_TEMPLATE.DEFAULT;
   const blueprint = buildPromptBlueprint({
     template,
     intro: '为漫剧分镜系统生成高细节角色主设定板',

@@ -2,6 +2,7 @@
 // @ts-nocheck
 
 const { ApiController } = require('../lib/api_controller');
+const { ENTITY_TYPE } = require('../lib/domain_constants');
 
 class AssetWorkspaceController extends ApiController {
   userId() {
@@ -71,16 +72,16 @@ class AssetWorkspaceController extends ApiController {
   }
 
   async characterVersions() {
-    await this.versions('character');
+    await this.versions(ENTITY_TYPE.CHARACTER);
   }
   async assetVersions() {
-    await this.versions('asset');
+    await this.versions(ENTITY_TYPE.ASSET);
   }
   async setCharacterVersion() {
-    await this.setVersion('character');
+    await this.setVersion(ENTITY_TYPE.CHARACTER);
   }
   async setAssetVersion() {
-    await this.setVersion('asset');
+    await this.setVersion(ENTITY_TYPE.ASSET);
   }
 
   async characterVoiceVersions() {

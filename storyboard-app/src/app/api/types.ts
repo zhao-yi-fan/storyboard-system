@@ -1,3 +1,17 @@
+import type {
+  AssetKind,
+  AssetSourceType,
+  EntityType,
+  GenerationStatus,
+  GenerationInputMode,
+  MediaType,
+  PromptMode,
+  PromptTokenType,
+  SourceImageStatus,
+  VideoAspectRatio,
+  VideoResolution,
+} from "../constants/domain";
+
 export type ApiResponse<T = unknown> = {
   code: number;
   data: T;
@@ -99,9 +113,9 @@ export type SceneMediaGeneration = {
   id: number;
   scene_id: number;
   legacy_storyboard_id?: number | null;
-  media_type: "cover" | "video" | string;
+  media_type: MediaType | string;
   model: string;
-  status: "pending" | "generating" | "succeeded" | "failed" | string;
+  status: GenerationStatus | string;
   result_url?: string;
   preview_url?: string;
   poster_url?: string;
@@ -138,14 +152,14 @@ export type Character = {
   description: string;
   avatar_url: string;
   design_sheet_url?: string;
-  design_sheet_status?: "idle" | "generating" | "succeeded" | "failed" | string;
+  design_sheet_status?: GenerationStatus | string;
   design_sheet_error?: string;
   voice_reference_url?: string;
   voice_reference_duration?: number;
   voice_reference_text?: string;
   voice_name?: string;
   voice_prompt?: string;
-  voice_reference_status?: "idle" | "generating" | "succeeded" | "failed" | string;
+  voice_reference_status?: GenerationStatus | string;
   voice_reference_error?: string;
   created_at?: string;
   updated_at?: string;
@@ -159,7 +173,7 @@ export type Asset = {
   type: string;
   file_url: string;
   cover_url?: string;
-  cover_status?: "idle" | "generating" | "succeeded" | "failed" | string;
+  cover_status?: GenerationStatus | string;
   cover_error?: string;
   thumbnail_url?: string;
   meta?: string;
@@ -172,11 +186,11 @@ export type AssetRequirement = {
   project_id: number;
   chapter_id: number;
   chapter_title: string;
-  kind: "character" | "scene" | "prop";
+  kind: Exclude<AssetKind, "voice">;
   name: string;
   description: string;
-  status: "pending" | "generating" | "generated" | "confirmed" | "failed";
-  linked_entity_type?: "character" | "asset";
+  status: GenerationStatus;
+  linked_entity_type?: Exclude<EntityType, "project">;
   linked_entity_id?: number;
   file_url?: string;
   preview_url?: string;
@@ -188,7 +202,7 @@ export type AssetRequirement = {
 export type PersonalAsset = {
   id: number;
   user_id: number;
-  kind: "character" | "scene" | "prop" | "voice";
+  kind: AssetKind;
   name: string;
   description?: string;
   file_url?: string;
@@ -202,7 +216,7 @@ export type PersonalAsset = {
 
 export type AssetVersion = {
   id: number;
-  entity_type: "character" | "asset";
+  entity_type: Exclude<EntityType, "project">;
   entity_id: number;
   file_url: string;
   preview_url?: string;
@@ -210,7 +224,7 @@ export type AssetVersion = {
   prompt?: string;
   status: string;
   is_current: boolean;
-  source_type?: "generated" | "legacy-import" | "manual-upload" | string;
+  source_type?: AssetSourceType | string;
   created_at?: string;
 };
 
@@ -223,7 +237,7 @@ export type CharacterVoiceVersion = {
   user_prompt?: string;
   effective_prompt?: string;
   reference_text?: string;
-  source_type: "generated" | "manual-upload" | string;
+  source_type: AssetSourceType | string;
   status: string;
   is_current: boolean;
   created_at?: string;
@@ -265,9 +279,9 @@ export type Storyboard = {
 export type StoryboardMediaGeneration = {
   id: number;
   storyboard_id: number;
-  media_type: "cover" | "video" | string;
+  media_type: MediaType | string;
   model: string;
-  status: "pending" | "generating" | "succeeded" | "failed" | string;
+  status: GenerationStatus | string;
   result_url?: string;
   preview_url?: string;
   poster_url?: string;
@@ -300,7 +314,7 @@ export type StoryboardDirectionAnalysis = {
   project_id: number;
   scene_id: number;
   storyboard_id: number;
-  status: "pending" | "analyzing" | "succeeded" | "failed" | string;
+  status: GenerationStatus | string;
   result_json: StoryboardDirectionAnalysisResult | null;
   error_message: string;
   created_at?: string | null;
@@ -315,7 +329,7 @@ export type GenerateStoryboardCoverResult = {
 };
 
 export type StoryboardCoverGenerationReferenceImage = {
-  type: "scene" | "character" | string;
+  type: Extract<AssetKind, "scene" | "character"> | string;
   name: string;
   url: string;
   source: string;
@@ -338,8 +352,8 @@ export type StoryboardCoverGenerationFields = {
 };
 
 export type StoryboardCoverGenerationPreview = {
-  prompt_mode?: "composite" | "legacy";
-  mode: "reference" | "text-only" | string;
+  prompt_mode?: PromptMode;
+  mode: Extract<GenerationInputMode, "reference" | "text-only"> | string;
   model: string;
   reference_images: StoryboardCoverGenerationReferenceImage[];
   missing_references: string[];
@@ -416,22 +430,25 @@ export type PromptDisplayBlock = {
 };
 
 export type PromptDisplayToken = {
-  type: "badge" | "text";
+  type: PromptTokenType;
   label?: string;
   text: string;
 };
 
 export type StoryboardVideoGenerationPreview = {
-  prompt_mode: "composite" | "legacy";
+  prompt_mode: PromptMode;
   model: string;
   duration: number;
   resolution: string;
   aspect_ratio: VideoAspectRatio;
   audio: boolean;
   use_first_frame: boolean;
-  media_input_mode?: "first_frame" | "reference_media" | "text";
+  media_input_mode?: Extract<
+    GenerationInputMode,
+    "first_frame" | "reference_media" | "text"
+  >;
   source_image_url: string;
-  source_image_status: "existing-cover" | "will-generate-cover" | "not-required" | string;
+  source_image_status: SourceImageStatus | string;
   will_generate_cover: boolean;
   reference_images?: StoryboardCoverGenerationReferenceImage[];
   omitted_reference_images?: StoryboardCoverGenerationReferenceImage[];
@@ -466,8 +483,7 @@ export type StoryboardVideoGenerationPreview = {
   final_prompt: string;
 };
 
-export type VideoResolution = "480p" | "720p" | "1080p";
-export type VideoAspectRatio = "9:16";
+export type { VideoAspectRatio, VideoResolution } from "../constants/domain";
 
 export type StoryboardVideoGenerationOptions = {
   model?: string;

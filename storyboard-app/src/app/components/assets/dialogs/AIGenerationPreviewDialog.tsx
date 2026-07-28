@@ -11,10 +11,14 @@ import {
 import { Textarea } from "../../ui/textarea";
 import styles from "../../../pages/AssetLibrary.module.scss";
 
+export const AI_PREVIEW_ACTION = {
+  CHARACTER_DESIGN_SHEET: "character-design-sheet",
+  CHARACTER_VOICE_REFERENCE: "character-voice-reference",
+  ASSET_COVER: "asset-cover",
+} as const;
+
 export type AIPreviewAction =
-  | "character-design-sheet"
-  | "character-voice-reference"
-  | "asset-cover";
+  (typeof AI_PREVIEW_ACTION)[keyof typeof AI_PREVIEW_ACTION];
 
 export type AIPreviewDialogState = {
   action: AIPreviewAction;
@@ -72,7 +76,8 @@ export function AIGenerationPreviewDialog({
   onPreviewReference,
   onConfirm,
 }: AIGenerationPreviewDialogProps) {
-  const promptIsEditable = state?.action === "character-design-sheet";
+  const promptIsEditable =
+    state?.action === AI_PREVIEW_ACTION.CHARACTER_DESIGN_SHEET;
 
   return (
     <Dialog open={!!state} onOpenChange={(open) => !open && onClose()}>

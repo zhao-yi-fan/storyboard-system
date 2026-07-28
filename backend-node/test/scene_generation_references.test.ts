@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import * as SceneServiceNamespace from '../app/service/scene';
+import { REFERENCE_TYPE } from '../app/lib/domain_constants';
 
 const SceneService: any =
   (SceneServiceNamespace as { default?: { prototype: object } }).default || SceneServiceNamespace;
@@ -15,13 +16,13 @@ describe('scene generation reference mapping', () => {
       },
       [
         {
-          type: 'scene',
+          type: REFERENCE_TYPE.SCENE,
           name: '神殿',
           source: 'asset.cover_url',
           url: 'https://example.com/scene.png',
         },
         {
-          type: 'character',
+          type: REFERENCE_TYPE.CHARACTER,
           name: '女神',
           source: 'character.design_sheet_url',
           url: 'https://example.com/character.png',
@@ -57,7 +58,7 @@ describe('scene generation reference mapping', () => {
       },
       [
         {
-          type: 'character',
+          type: REFERENCE_TYPE.CHARACTER,
           name: '女神',
           source: 'character.design_sheet_url',
           url: 'https://example.com/character.png',

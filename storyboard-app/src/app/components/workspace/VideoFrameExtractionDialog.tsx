@@ -18,6 +18,14 @@ type Thumbnail = {
   url: string;
 };
 
+const FRAME_EXTRACTION_MODE = {
+  IMAGE: "image",
+  VIDEO: "video",
+} as const;
+
+type FrameExtractionMode =
+  (typeof FRAME_EXTRACTION_MODE)[keyof typeof FRAME_EXTRACTION_MODE];
+
 type Props = {
   open: boolean;
   sourceScene: Scene;
@@ -159,7 +167,7 @@ export function VideoFrameExtractionDialog({
   const [isSampling, setIsSampling] = useState(false);
   const [savingTargetId, setSavingTargetId] = useState<number | null>(null);
   const [isSavingClip, setIsSavingClip] = useState(false);
-  const [mode, setMode] = useState<"image" | "video">("image");
+  const [mode, setMode] = useState<FrameExtractionMode>(FRAME_EXTRACTION_MODE.IMAGE);
   const [clipRange, setClipRange] = useState<[number, number]>([0, 4]);
   const [error, setError] = useState("");
   const [samplingWarning, setSamplingWarning] = useState("");
@@ -169,7 +177,7 @@ export function VideoFrameExtractionDialog({
     if (!open) return;
     const controller = new AbortController();
     const source = generation.result_url || generation.preview_url || "";
-    setMode("image");
+    setMode(FRAME_EXTRACTION_MODE.IMAGE);
     setClipRange([0, 4]);
     setError("");
     setSamplingWarning("");
@@ -259,7 +267,7 @@ export function VideoFrameExtractionDialog({
     if (!video) return;
     if (video.paused) {
       if (
-        mode === "video" &&
+        mode === FRAME_EXTRACTION_MODE.VIDEO &&
         (video.currentTime < clipRange[0] || video.currentTime >= clipRange[1])
       ) {
         video.currentTime = clipRange[0];
@@ -327,7 +335,7 @@ export function VideoFrameExtractionDialog({
 
   const selectedClipDuration = Math.round((clipRange[1] - clipRange[0]) * 10) / 10;
 
-  const switchMode = (nextMode: "image" | "video") => {
+  const switchMode = (nextMode: FrameExtractionMode) => {
     const video = videoRef.current;
     video?.pause();
     if (video) video.currentTime = 0;
@@ -369,7 +377,11 @@ export function VideoFrameExtractionDialog({
                   }
                   onTimeUpdate={(event) => {
                     const video = event.currentTarget;
-                    if (mode === "video" && !video.paused && video.currentTime >= clipRange[1]) {
+                    if (
+                      mode === FRAME_EXTRACTION_MODE.VIDEO &&
+                      !video.paused &&
+                      video.currentTime >= clipRange[1]
+                    ) {
                       video.pause();
                       video.currentTime = clipRange[1];
                     }
@@ -392,8 +404,12 @@ export function VideoFrameExtractionDialog({
                 </button>
                 <button
                   type="button"
-                  className={mode === "video" ? styles.modeActive : styles.modeButton}
-                  onClick={() => switchMode("video")}
+                  className={
+                    mode === FRAME_EXTRACTION_MODE.VIDEO
+                      ? styles.modeActive
+                      : styles.modeButton
+                  }
+                  onClick={() => switchMode(FRAME_EXTRACTION_MODE.VIDEO)}
                 >
                   <Video className={styles.modeIcon} /> 截取视频
                 </button>
@@ -441,7 +457,7 @@ export function VideoFrameExtractionDialog({
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
               </div>
-              {mode === "video" ? (
+              {mode === FRAME_EXTRACTION_MODE.VIDEO ? (
                 <div className={styles.clipRange}>
                   <span>开始 {formatTime(clipRange[0])}</span>
                   <span>结束 {formatTime(clipRange[1])}</span>

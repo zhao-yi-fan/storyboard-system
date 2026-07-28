@@ -27,6 +27,11 @@ const {
 const { optimizeStoryboardPrompt } = require('../lib/prompt_optimizer');
 const { optimizeSceneDescription } = require('../lib/scene_description_optimizer');
 const { SceneRepository } = require('../repository/scene_repository');
+const {
+  GENERATION_STATUS,
+  MEDIA_TYPE,
+  VIDEO_MODEL,
+} = require('../lib/domain_constants');
 
 class SceneService extends Service {
   get pool() {
@@ -568,9 +573,9 @@ class SceneService extends Service {
     const preview = await this.previewCoverGeneration(id, selectedModel);
     const generation = await this.ctx.service.sceneMediaGeneration.create({
       scene_id: id,
-      media_type: 'cover',
+      media_type: MEDIA_TYPE.COVER,
       model: preview.model,
-      status: 'generating',
+      status: GENERATION_STATUS.GENERATING,
       source_url: preview.reference_images[0]?.url || null,
       meta_json: JSON.stringify({
         prompt_mode: 'composite',
@@ -598,16 +603,16 @@ class SceneService extends Service {
       );
       await this.update(id, { cover_url: stored.publicPath, cover_preview_url: previewPath });
       await this.ctx.service.sceneMediaGeneration.update(generation.id, {
-        status: 'succeeded',
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: stored.publicPath,
         preview_url: previewPath,
         error_message: null,
       });
-      await this.ctx.service.sceneMediaGeneration.markCurrent(id, 'cover', generation.id);
+      await this.ctx.service.sceneMediaGeneration.markCurrent(id, MEDIA_TYPE.COVER, generation.id);
       return await this.findById(id);
     } catch (error) {
       await this.ctx.service.sceneMediaGeneration.update(generation.id, {
-        status: 'failed',
+        status: GENERATION_STATUS.FAILED,
         error_message: error.message,
       });
       throw error;
@@ -650,13 +655,13 @@ class SceneService extends Service {
     if (!generation || Number(generation.scene_id) !== Number(id)) {
       throw new Error('scene media generation not found');
     }
-    if (generation.media_type === 'cover') {
+    if (generation.media_type === MEDIA_TYPE.COVER) {
       return await this.update(id, {
         cover_url: generation.result_url || '',
         cover_preview_url: generation.preview_url || generation.result_url || '',
       });
     }
-    if (generation.media_type === 'video') {
+    if (generation.media_type === MEDIA_TYPE.VIDEO) {
       const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(generation);
       return await this.update(id, {
         video_url: generation.result_url || '',
@@ -695,7 +700,7 @@ class SceneService extends Service {
     const prompt = assertCompositePromptLength(scene.prompt || '');
     if (!prompt) throw new Error('片段 Prompt 不能为空');
     const helper = this.ctx.service.storyboard;
-    const model = String(selectedModel || '').trim() || 'seedance-2.0';
+    const model = String(selectedModel || '').trim() || VIDEO_MODEL.SEEDANCE_2;
     if (!helper.supportedVideoModels().has(model)) throw new Error('unsupported video model');
     const selectedDuration = helper.normalizeVideoDuration(
       model,
@@ -786,12 +791,14 @@ class SceneService extends Service {
     );
     if (preview.blocking_reasons.length) throw new Error(preview.blocking_reasons.join('；'));
     const current = await this.findById(id);
-    if (current.video_status === 'generating') return { scene_id: id, scene: current };
+    if (current.video_status === GENERATION_STATUS.GENERATING) {
+      return { scene_id: id, scene: current };
+    }
     const generation = await this.ctx.service.sceneMediaGeneration.create({
       scene_id: id,
-      media_type: 'video',
+      media_type: MEDIA_TYPE.VIDEO,
       model: preview.model,
-      status: 'generating',
+      status: GENERATION_STATUS.GENERATING,
       source_url: preview.use_first_frame ? current.cover_url || null : null,
       meta_json: JSON.stringify({
         prompt_mode: 'composite',
@@ -806,7 +813,7 @@ class SceneService extends Service {
     });
     await this.update(id, {
       generation_duration: preview.duration,
-      video_status: 'generating',
+      video_status: GENERATION_STATUS.GENERATING,
       video_error: '',
     });
     void this.generateVideoAsync(id, preview, generation.id).catch((error) =>
@@ -870,13 +877,13 @@ class SceneService extends Service {
       await this.update(id, {
         video_url: stored.publicPath,
         video_preview_url: stored.publicPath,
-        video_status: 'succeeded',
+        video_status: GENERATION_STATUS.SUCCEEDED,
         video_error: '',
         video_duration: result.duration,
         generation_duration: result.duration,
       });
       await this.ctx.service.sceneMediaGeneration.update(generationId, {
-        status: 'succeeded',
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: stored.publicPath,
         preview_url: stored.publicPath,
         source_url: preview.use_first_frame ? scene.cover_url : '',
@@ -895,17 +902,17 @@ class SceneService extends Service {
         stored.localPath,
       );
       await this.update(id, { video_poster_url: posterUrl });
-      await this.ctx.service.sceneMediaGeneration.markCurrent(id, 'video', generationId);
+      await this.ctx.service.sceneMediaGeneration.markCurrent(id, MEDIA_TYPE.VIDEO, generationId);
     } catch (error) {
       await this.update(id, {
         video_url: '',
         video_preview_url: '',
         video_poster_url: '',
-        video_status: 'failed',
+        video_status: GENERATION_STATUS.FAILED,
         video_error: error.message,
       });
       await this.ctx.service.sceneMediaGeneration.update(generationId, {
-        status: 'failed',
+        status: GENERATION_STATUS.FAILED,
         error_message: error.message,
       });
       throw error;
@@ -933,7 +940,7 @@ class SceneService extends Service {
     if (!inputs.length) {
       throw new Error('当前场景没有可合成的视频镜头');
     }
-    await this.update(id, { video_status: 'generating', video_error: '' });
+    await this.update(id, { video_status: GENERATION_STATUS.GENERATING, video_error: '' });
     try {
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(
@@ -946,15 +953,15 @@ class SceneService extends Service {
         video_url: composed.publicPath,
         video_preview_url: composed.previewPath,
         video_poster_url: '',
-        video_status: 'succeeded',
+        video_status: GENERATION_STATUS.SUCCEEDED,
         video_error: '',
         video_duration: composed.duration,
       });
       const generation = await this.ctx.service.sceneMediaGeneration.create({
         scene_id: id,
-        media_type: 'video',
+        media_type: MEDIA_TYPE.VIDEO,
         model: 'legacy-ffmpeg-compose',
-        status: 'succeeded',
+        status: GENERATION_STATUS.SUCCEEDED,
         result_url: composed.publicPath,
         preview_url: composed.previewPath,
         meta_json: JSON.stringify({
@@ -964,11 +971,11 @@ class SceneService extends Service {
       });
       const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(generation);
       const sceneWithPoster = await this.update(id, { video_poster_url: posterUrl });
-      await this.ctx.service.sceneMediaGeneration.markCurrent(id, 'video', generation.id);
+      await this.ctx.service.sceneMediaGeneration.markCurrent(id, MEDIA_TYPE.VIDEO, generation.id);
       return posterUrl ? sceneWithPoster : nextScene;
     } catch (error) {
       await this.update(id, {
-        video_status: 'failed',
+        video_status: GENERATION_STATUS.FAILED,
         video_error: error.message,
       });
       throw error;

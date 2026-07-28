@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import {
+  PROMPT_MENTION_CATEGORY,
   RichPromptEditor,
   type PromptMentionOption,
 } from "../components/workspace/RichPromptEditor";
@@ -87,13 +88,21 @@ import {
   type VideoResolution,
 } from "../api";
 import styles from "./Workspace.module.scss";
-import { COMPOSITE_PROMPT_MAX_LENGTH, buildLegacyCompositePrompt } from "../lib/compositePrompt";
+import { COMPOSITE_PROMPT_SPEC, buildLegacyCompositePrompt } from "../lib/compositePrompt";
+import {
+  ENTITY_TYPE,
+  GENERATION_STATUS,
+  MEDIA_TYPE,
+  VIDEO_ASPECT_RATIO,
+  VIDEO_MODEL,
+  VIDEO_RESOLUTION,
+} from "../constants/domain";
 
 const VIDEO_MODEL_OPTIONS = [
-  { value: "seedance-2.0", label: "Seedance 2.0" },
-  { value: "wan2.7-i2v", label: "Wan 2.7 I2V" },
+  { value: VIDEO_MODEL.SEEDANCE_2, label: "Seedance 2.0" },
+  { value: VIDEO_MODEL.WAN_2_7_I2V, label: "Wan 2.7 I2V" },
 ] as const;
-const FIXED_VIDEO_ASPECT_RATIO: VideoAspectRatio = "9:16";
+const FIXED_VIDEO_ASPECT_RATIO: VideoAspectRatio = VIDEO_ASPECT_RATIO.PORTRAIT;
 
 const AUDIO_ASSET_PATTERN = /(audio|voice|sound|music|sfx|配音|语音|音频|音乐|音效)/i;
 const SCENE_ASSET_PATTERN = /(scene|background|location|场景|背景|地点)/i;
@@ -112,7 +121,7 @@ function getAssetMentionPresentation(asset: Asset) {
     AUDIO_ASSET_PATTERN.test(type) ||
     ["mp3", "wav", "m4a", "aac", "ogg", "flac"].includes(extension);
   if (isAudio) {
-    return { category: "audio" as const, media: ["audio" as const] };
+    return { category: PROMPT_MENTION_CATEGORY.AUDIO, media: ["audio" as const] };
   }
   const isScene = SCENE_ASSET_PATTERN.test(type);
   const isImage =
@@ -121,12 +130,12 @@ function getAssetMentionPresentation(asset: Asset) {
     ["png", "jpg", "jpeg", "webp", "gif", "avif", "bmp"].includes(extension) ||
     !!asset.cover_url;
   if (isScene) {
-    return { category: "scene" as const, media: ["image" as const] };
+    return { category: PROMPT_MENTION_CATEGORY.SCENE, media: ["image" as const] };
   }
   if (isImage) {
-    return { category: "image" as const, media: ["image" as const] };
+    return { category: PROMPT_MENTION_CATEGORY.IMAGE, media: ["image" as const] };
   }
-  return { category: "other" as const, media: [] };
+  return { category: PROMPT_MENTION_CATEGORY.OTHER, media: [] };
 }
 
 const PROMPT_SECTION_BREAKS = [
@@ -234,11 +243,14 @@ const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
   generation?.preview_url || generation?.result_url || "";
 
-const isSeedanceVideoModel = (model: string) => model === "seedance-2.0";
+const isSeedanceVideoModel = (model: string) => model === VIDEO_MODEL.SEEDANCE_2;
 
 const buildCoverPreviewItems = (generations: StoryboardMediaGeneration[]) =>
   generations
-    .filter((generation) => generation.status === "succeeded" && !!generation.result_url)
+    .filter(
+      (generation) =>
+        generation.status === GENERATION_STATUS.SUCCEEDED && !!generation.result_url,
+    )
     .map((generation) => ({
       src: generation.result_url as string,
       alt: `首帧历史 ${generation.id}`,
@@ -316,7 +328,8 @@ export default function Workspace() {
   const [selectedVideoModel, setSelectedVideoModel] = useState<
     (typeof VIDEO_MODEL_OPTIONS)[number]["value"]
   >(VIDEO_MODEL_OPTIONS[0].value);
-  const [selectedVideoResolution, setSelectedVideoResolution] = useState<VideoResolution>("720p");
+  const [selectedVideoResolution, setSelectedVideoResolution] =
+    useState<VideoResolution>(VIDEO_RESOLUTION.HD);
   const [selectedVideoDuration, setSelectedVideoDuration] = useState(5);
   const [generateVideoAudio, setGenerateVideoAudio] = useState(true);
   const [useFirstFrameForVideo, setUseFirstFrameForVideo] = useState(false);
@@ -665,16 +678,16 @@ export default function Workspace() {
     ? storyboards.filter((shot) => shot.scene_id === selectedScene.id)
     : [];
   const composableShots = filteredShots.filter(
-    (shot) => shot.video_status === "succeeded" && !!shot.video_url,
+    (shot) => shot.video_status === GENERATION_STATUS.SUCCEEDED && !!shot.video_url,
   );
   const promptMentionOptions: PromptMentionOption[] = [
     ...projectCharacters.map((character) => ({
       id: character.id,
-      kind: "character" as const,
+      kind: ENTITY_TYPE.CHARACTER,
       name: character.name,
       imageUrl: character.design_sheet_url || character.avatar_url,
       isBound: !!selectedShot?.characters?.some((item) => item.id === character.id),
-      category: "character" as const,
+      category: PROMPT_MENTION_CATEGORY.CHARACTER,
       description: character.description || "人物资产",
       media: [
         ...(character.design_sheet_url ? (["image"] as const) : []),
@@ -686,10 +699,10 @@ export default function Workspace() {
       const presentation = getAssetMentionPresentation(asset);
       return {
         id: asset.id,
-        kind: "asset" as const,
+        kind: ENTITY_TYPE.ASSET,
         name: asset.name,
         imageUrl:
-          presentation.category === "audio"
+          presentation.category === PROMPT_MENTION_CATEGORY.AUDIO
             ? asset.thumbnail_url || asset.cover_url
             : asset.cover_url || asset.file_url || asset.thumbnail_url,
         isBound: !!selectedShot?.assets?.some((item) => item.id === asset.id),
@@ -713,7 +726,7 @@ export default function Workspace() {
 
   const activeVideoResolution: VideoResolution = isSeedanceVideoModel(selectedVideoModel)
     ? selectedVideoResolution
-    : "720p";
+    : VIDEO_RESOLUTION.HD;
   const activeVideoDuration = isSeedanceVideoModel(selectedVideoModel) ? selectedVideoDuration : 5;
   const activeVideoAudio = isSeedanceVideoModel(selectedVideoModel) ? generateVideoAudio : true;
   const activeVideoSpecLabel = getVideoGenerationSpecLabel(
@@ -744,7 +757,7 @@ export default function Workspace() {
     const model = value as (typeof VIDEO_MODEL_OPTIONS)[number]["value"];
     setSelectedVideoModel(model);
     if (!isSeedanceVideoModel(model)) {
-      setSelectedVideoResolution("720p");
+      setSelectedVideoResolution(VIDEO_RESOLUTION.HD);
       setSelectedVideoDuration(5);
       setGenerateVideoAudio(true);
     }
@@ -765,8 +778,8 @@ export default function Workspace() {
   const saveShotDraft = async (onlyWhenDirty = false) => {
     if (!selectedShot) return false;
     if (onlyWhenDirty && !isShotDraftDirty()) return true;
-    if (shotForm.content.length > COMPOSITE_PROMPT_MAX_LENGTH) {
-      toast.error(`提示词最多支持 ${COMPOSITE_PROMPT_MAX_LENGTH} 个字符`);
+    if (shotForm.content.length > COMPOSITE_PROMPT_SPEC.MAX_LENGTH) {
+      toast.error(`提示词最多支持 ${COMPOSITE_PROMPT_SPEC.MAX_LENGTH} 个字符`);
       return false;
     }
 
@@ -859,7 +872,7 @@ export default function Workspace() {
       const nextScene = result.scene;
       applyClipSceneUpdate(nextScene);
       await loadMediaGenerations(nextScene.id);
-      if (nextScene.video_status === "generating") {
+      if (nextScene.video_status === GENERATION_STATUS.GENERATING) {
         pollStoryboardVideo(nextScene.id);
       } else {
         setGeneratingVideoId(null);
@@ -1188,7 +1201,7 @@ export default function Workspace() {
     if (!selectedShot) {
       return;
     }
-    if (generation.status !== "succeeded" || !generation.result_url) {
+    if (generation.status !== GENERATION_STATUS.SUCCEEDED || !generation.result_url) {
       toast.error("该版本尚未生成成功，不能设为当前版本");
       return;
     }
@@ -1290,7 +1303,7 @@ export default function Workspace() {
     if (!selectedShot || option.isBound) {
       return;
     }
-    if (option.kind === "character") {
+    if (option.kind === ENTITY_TYPE.CHARACTER) {
       await handleAddStoryboardCharacter(option.id);
       return;
     }
@@ -1305,7 +1318,7 @@ export default function Workspace() {
     for (const option of removedOptions) {
       try {
         const nextScene =
-          option.kind === "character"
+          option.kind === ENTITY_TYPE.CHARACTER
             ? await sceneApi.removeSceneCharacter(sceneId, option.id)
             : await sceneApi.removeSceneAsset(sceneId, option.id);
         applyClipSceneUpdate(nextScene);
@@ -1380,8 +1393,8 @@ export default function Workspace() {
       toast.error("请先输入需要优化的提示词");
       return;
     }
-    if (shotForm.content.length > COMPOSITE_PROMPT_MAX_LENGTH) {
-      toast.error(`提示词最多支持 ${COMPOSITE_PROMPT_MAX_LENGTH} 个字符`);
+    if (shotForm.content.length > COMPOSITE_PROMPT_SPEC.MAX_LENGTH) {
+      toast.error(`提示词最多支持 ${COMPOSITE_PROMPT_SPEC.MAX_LENGTH} 个字符`);
       return;
     }
 
@@ -1515,11 +1528,16 @@ export default function Workspace() {
     await saveShotDraft();
   };
 
-  const coverGenerations = mediaGenerations.filter((item) => item.media_type === "cover");
-  const videoGenerations = mediaGenerations.filter((item) => item.media_type === "video");
+  const coverGenerations = mediaGenerations.filter(
+    (item) => item.media_type === MEDIA_TYPE.COVER,
+  );
+  const videoGenerations = mediaGenerations.filter(
+    (item) => item.media_type === MEDIA_TYPE.VIDEO,
+  );
   const currentVideoGeneration =
     videoGenerations.find(
-      (item) => item.is_current && item.status === "succeeded" && item.result_url,
+      (item) =>
+        item.is_current && item.status === GENERATION_STATUS.SUCCEEDED && item.result_url,
     ) || null;
   const selectedSceneIndex = selectedScene
     ? scenes.findIndex((scene) => scene.id === selectedScene.id)
@@ -1548,7 +1566,7 @@ export default function Workspace() {
     : null;
 
   useEffect(() => {
-    if (selectedShot?.video_status === "generating") {
+    if (selectedShot?.video_status === GENERATION_STATUS.GENERATING) {
       setGeneratingVideoId(selectedShot.id);
       pollStoryboardVideo(selectedShot.id);
       return;
@@ -1775,7 +1793,7 @@ export default function Workspace() {
           <div className={styles.previewStage}>
             {selectedShot ? (
               <div className={styles.previewContainer}>
-                {selectedShot.video_status === "generating" ? (
+                {selectedShot.video_status === GENERATION_STATUS.GENERATING ? (
                   <div className={`storyboard-media-frame ${styles.generatingPreview}`}>
                     <Loader2 className={styles.previewLoadingIcon} />
                     <span className={styles.generatingText}>视频生成中，状态会自动刷新</span>
@@ -1815,7 +1833,8 @@ export default function Workspace() {
                   </div>
                 )}
 
-                {selectedShot.video_status === "failed" && selectedShot.video_error ? (
+                {selectedShot.video_status === GENERATION_STATUS.FAILED &&
+                selectedShot.video_error ? (
                   <div className={styles.videoError}>
                     <div className={styles.videoErrorTitle}>视频生成失败</div>
                     <div className={styles.videoErrorMessage}>{selectedShot.video_error}</div>
@@ -1853,25 +1872,27 @@ export default function Workspace() {
                     onClick={() => void handleSetCurrentGeneration(generation)}
                     disabled={
                       generation.is_current ||
-                      generation.status !== "succeeded" ||
+                      generation.status !== GENERATION_STATUS.SUCCEEDED ||
                       !generation.result_url ||
                       activeMediaActionKey === "set-current:" + generation.id
                     }
                     title={
-                      generation.status !== "succeeded" || !generation.result_url
+                      generation.status !== GENERATION_STATUS.SUCCEEDED ||
+                      !generation.result_url
                         ? "该版本未生成成功，不能切换"
                         : generation.is_current
                           ? "当前版本"
                           : "设为当前版本"
                     }
                   >
-                    {generation.status === "succeeded"
+                    {generation.status === GENERATION_STATUS.SUCCEEDED
                       ? `v${videoGenerations.length - index}`
-                      : generation.status === "failed"
+                      : generation.status === GENERATION_STATUS.FAILED
                         ? "失败"
                         : "生成中"}
                   </button>
-                  {generation.status === "succeeded" && generation.result_url ? (
+                  {generation.status === GENERATION_STATUS.SUCCEEDED &&
+                  generation.result_url ? (
                     <button
                       type="button"
                       className={styles.historyExtractButton}
@@ -2309,7 +2330,8 @@ export default function Workspace() {
         items={[
           {
             label: "类型",
-            value: deleteTargetGeneration?.media_type === "video" ? "视频" : "首帧",
+            value:
+              deleteTargetGeneration?.media_type === MEDIA_TYPE.VIDEO ? "视频" : "首帧",
           },
           { label: "模型", value: deleteTargetGeneration?.model || "-" },
           {

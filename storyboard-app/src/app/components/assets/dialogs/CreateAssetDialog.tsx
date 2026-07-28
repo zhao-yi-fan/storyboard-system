@@ -11,9 +11,10 @@ import {
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
+import { ASSET_KIND, type AssetKind } from "../../../constants/domain";
 import styles from "../../../pages/AssetLibrary.module.scss";
 
-export type CreateAssetMode = "character" | "scene" | "prop";
+export type CreateAssetMode = Exclude<AssetKind, "voice">;
 
 export type NewCharacterDraft = {
   name: string;
@@ -46,9 +47,9 @@ type CreateAssetDialogProps = {
 };
 
 const CREATE_TYPE_OPTIONS: Array<{ value: CreateAssetMode; label: string }> = [
-  { value: "character", label: "角色资产" },
-  { value: "scene", label: "场景资产" },
-  { value: "prop", label: "道具资产" },
+  { value: ASSET_KIND.CHARACTER, label: "角色资产" },
+  { value: ASSET_KIND.SCENE, label: "场景资产" },
+  { value: ASSET_KIND.PROP, label: "道具资产" },
 ];
 
 export function CreateAssetDialog({
@@ -99,7 +100,7 @@ export function CreateAssetDialog({
               ))}
             </div>
           </div>
-          {mode === "character" ? (
+          {mode === ASSET_KIND.CHARACTER ? (
             <>
               <div>
                 <Label className={styles.detailLabel}>名称</Label>
@@ -155,7 +156,7 @@ export function CreateAssetDialog({
               </div>
               <div>
                 <Label className={styles.detailLabel}>
-                  {mode === "prop" ? "道具说明" : "场景说明"}
+                  {mode === ASSET_KIND.PROP ? "道具说明" : "场景说明"}
                 </Label>
                 <Textarea
                   value={asset.meta}

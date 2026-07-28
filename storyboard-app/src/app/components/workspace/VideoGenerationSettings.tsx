@@ -1,12 +1,13 @@
 import { Settings2 } from "lucide-react";
 import type { VideoAspectRatio, VideoResolution } from "../../api";
+import { VIDEO_MODEL, VIDEO_RESOLUTION } from "../../constants/domain";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Slider } from "../ui/slider";
 import { Switch } from "../ui/switch";
 import styles from "./VideoGenerationSettings.module.scss";
 
-const SEEDANCE_RESOLUTIONS: VideoResolution[] = ["480p", "720p", "1080p"];
+const SEEDANCE_RESOLUTIONS: VideoResolution[] = Object.values(VIDEO_RESOLUTION);
 
 type VideoGenerationSettingsProps = {
   model: string;
@@ -38,7 +39,7 @@ export function VideoGenerationSettings({
   onDurationChange,
   onGenerateAudioChange,
 }: VideoGenerationSettingsProps) {
-  const isSeedance = model === "seedance-2.0";
+  const isSeedance = model === VIDEO_MODEL.SEEDANCE_2;
 
   return (
     <Popover>

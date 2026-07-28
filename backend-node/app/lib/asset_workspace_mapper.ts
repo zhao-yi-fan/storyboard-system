@@ -11,6 +11,7 @@ type DataRow = Record<string, unknown>;
 const { resolveUrl } = require('./generated_asset') as {
   resolveUrl: (app: StoryboardApp, value: string, base: string) => string;
 };
+const { GENERATION_STATUS } = require('./domain_constants');
 
 export function mapPersonalAsset(app: StoryboardApp, row: DataRow) {
   const base = app.config.storyboard.publicAppBaseUrl || '';
@@ -54,11 +55,16 @@ export function mapCharacterVoiceVersion(app: StoryboardApp, row: DataRow) {
 }
 
 export function deriveAssetRequirementStatus(currentStatus: string, hasMedia: boolean) {
-  if (currentStatus === 'generating' || currentStatus === 'failed') {
+  if (
+    currentStatus === GENERATION_STATUS.GENERATING ||
+    currentStatus === GENERATION_STATUS.FAILED
+  ) {
     return currentStatus;
   }
   if (!hasMedia) {
-    return 'pending';
+    return GENERATION_STATUS.PENDING;
   }
-  return currentStatus === 'confirmed' ? 'confirmed' : 'generated';
+  return currentStatus === GENERATION_STATUS.CONFIRMED
+    ? GENERATION_STATUS.CONFIRMED
+    : GENERATION_STATUS.GENERATED;
 }

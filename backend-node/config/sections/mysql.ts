@@ -1,20 +1,15 @@
 'use strict';
 
-import {
-  DEFAULT_DB_HOST,
-  DEFAULT_DB_NAME,
-  DEFAULT_DB_PORT,
-  DEFAULT_DB_USER,
-} from '../shared/constants';
+import { DEFAULT_DATABASE } from '../shared/constants';
 import { getNumberEnv, getStringEnv } from '../shared/env';
 
 export function buildMysqlConfig() {
   return {
-    host: getStringEnv('DB_HOST', DEFAULT_DB_HOST),
-    port: getNumberEnv('DB_PORT', DEFAULT_DB_PORT),
-    user: getStringEnv('DB_USER', DEFAULT_DB_USER),
+    host: getStringEnv('DB_HOST', DEFAULT_DATABASE.HOST),
+    port: getNumberEnv('DB_PORT', DEFAULT_DATABASE.PORT),
+    user: getStringEnv('DB_USER', DEFAULT_DATABASE.USER),
     password: getStringEnv('DB_PASSWORD', ''),
-    database: getStringEnv('DB_NAME', DEFAULT_DB_NAME),
+    database: getStringEnv('DB_NAME', DEFAULT_DATABASE.NAME),
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,

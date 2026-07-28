@@ -4,6 +4,7 @@ import * as AiClientsNamespace from '../app/lib/ai_clients';
 import * as AssetServiceNamespace from '../app/service/asset';
 import * as AssetWorkspaceServiceNamespace from '../app/service/asset_workspace';
 import * as ScriptImportNamespace from '../app/lib/script_import';
+import { GENERATION_STATUS } from '../app/lib/domain_constants';
 
 const aiClients: any = (AiClientsNamespace as any).default || AiClientsNamespace;
 const scriptImport: any = (ScriptImportNamespace as any).default || ScriptImportNamespace;
@@ -70,11 +71,29 @@ describe('test/asset_workspace_foundation.test.ts', () => {
 
   it('keeps a failed regeneration visible when the previous media still exists', () => {
     const service = Object.create(AssetWorkspaceService.prototype);
-    assert.equal(service.deriveRequirementStatus('failed', true), 'failed');
-    assert.equal(service.deriveRequirementStatus('generating', true), 'generating');
-    assert.equal(service.deriveRequirementStatus('confirmed', true), 'confirmed');
-    assert.equal(service.deriveRequirementStatus('generated', true), 'generated');
-    assert.equal(service.deriveRequirementStatus('failed', false), 'failed');
-    assert.equal(service.deriveRequirementStatus('generated', false), 'pending');
+    assert.equal(
+      service.deriveRequirementStatus(GENERATION_STATUS.FAILED, true),
+      GENERATION_STATUS.FAILED,
+    );
+    assert.equal(
+      service.deriveRequirementStatus(GENERATION_STATUS.GENERATING, true),
+      GENERATION_STATUS.GENERATING,
+    );
+    assert.equal(
+      service.deriveRequirementStatus(GENERATION_STATUS.CONFIRMED, true),
+      GENERATION_STATUS.CONFIRMED,
+    );
+    assert.equal(
+      service.deriveRequirementStatus(GENERATION_STATUS.GENERATED, true),
+      GENERATION_STATUS.GENERATED,
+    );
+    assert.equal(
+      service.deriveRequirementStatus(GENERATION_STATUS.FAILED, false),
+      GENERATION_STATUS.FAILED,
+    );
+    assert.equal(
+      service.deriveRequirementStatus(GENERATION_STATUS.GENERATED, false),
+      GENERATION_STATUS.PENDING,
+    );
   });
 });

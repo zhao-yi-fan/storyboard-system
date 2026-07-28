@@ -3,13 +3,23 @@ import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import type { VirtualElement } from "@popperjs/core";
 import { Box, Check, Image as ImageIcon, MapPin, Music2, UserRound, Volume2 } from "lucide-react";
+import type { EntityType } from "../../constants/domain";
 import styles from "./RichPromptEditor.module.scss";
 
-export type PromptMentionCategory = "character" | "scene" | "image" | "audio" | "other";
+export const PROMPT_MENTION_CATEGORY = {
+  CHARACTER: "character",
+  SCENE: "scene",
+  IMAGE: "image",
+  AUDIO: "audio",
+  OTHER: "other",
+} as const;
+
+export type PromptMentionCategory =
+  (typeof PROMPT_MENTION_CATEGORY)[keyof typeof PROMPT_MENTION_CATEGORY];
 
 export type PromptMentionOption = {
   id: number;
-  kind: "character" | "asset";
+  kind: Exclude<EntityType, "project">;
   name: string;
   imageUrl?: string;
   isBound: boolean;
@@ -203,11 +213,11 @@ const CATEGORY_CONFIG: Array<{
   label: string;
   icon: typeof UserRound;
 }> = [
-  { category: "character", label: "人物", icon: UserRound },
-  { category: "scene", label: "场景", icon: MapPin },
-  { category: "image", label: "图片资产", icon: ImageIcon },
-  { category: "audio", label: "音频资产", icon: Music2 },
-  { category: "other", label: "其他资产", icon: Box },
+  { category: PROMPT_MENTION_CATEGORY.CHARACTER, label: "人物", icon: UserRound },
+  { category: PROMPT_MENTION_CATEGORY.SCENE, label: "场景", icon: MapPin },
+  { category: PROMPT_MENTION_CATEGORY.IMAGE, label: "图片资产", icon: ImageIcon },
+  { category: PROMPT_MENTION_CATEGORY.AUDIO, label: "音频资产", icon: Music2 },
+  { category: PROMPT_MENTION_CATEGORY.OTHER, label: "其他资产", icon: Box },
 ];
 
 export function RichPromptEditor({

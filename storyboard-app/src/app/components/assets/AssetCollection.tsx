@@ -1,5 +1,12 @@
 import { Loader2, MapPin, Package } from "lucide-react";
 import type { Asset } from "../../api";
+import {
+  ASSET_KIND,
+  ASSET_LIBRARY_TAB,
+  type AssetKind,
+  type AssetLibraryTab,
+  type AssetViewMode,
+} from "../../constants/domain";
 import { Badge } from "../ui/badge";
 import styles from "../../pages/AssetLibrary.module.scss";
 
@@ -41,10 +48,12 @@ export function isPropAsset(asset: Asset) {
   return type.includes("prop") || type.includes("道具");
 }
 
-export const getAssetKind = (asset: Asset): "scene" | "prop" =>
-  isPropAsset(asset) ? "prop" : "scene";
-export const getAssetTab = (asset: Asset): "scenes" | "props" =>
-  isPropAsset(asset) ? "props" : "scenes";
+export const getAssetKind = (asset: Asset): Exclude<AssetKind, "character" | "voice"> =>
+  isPropAsset(asset) ? ASSET_KIND.PROP : ASSET_KIND.SCENE;
+export const getAssetTab = (
+  asset: Asset,
+): Exclude<AssetLibraryTab, "characters"> =>
+  isPropAsset(asset) ? ASSET_LIBRARY_TAB.PROPS : ASSET_LIBRARY_TAB.SCENES;
 export const getAssetKindLabel = (asset: Asset) => (isPropAsset(asset) ? "道具" : "场景");
 
 function deriveAssetDescription(asset: Asset) {
@@ -55,7 +64,7 @@ type AssetCollectionProps = {
   assets: Asset[];
   emptyLabel: string;
   loading: boolean;
-  viewMode: "grid" | "list";
+  viewMode: AssetViewMode;
   selectedAssetId: number | null;
   onSelect: (asset: Asset) => void;
 };

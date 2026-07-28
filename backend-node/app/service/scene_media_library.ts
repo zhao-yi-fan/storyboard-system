@@ -2,6 +2,11 @@
 
 const Service = require('egg').Service;
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const {
+  ASSET_SOURCE_TYPE,
+  GENERATION_STATUS,
+  MEDIA_TYPE,
+} = require('../lib/domain_constants');
 
 class SceneMediaLibraryService extends Service {
   async list(sceneId) {
@@ -14,13 +19,13 @@ class SceneMediaLibraryService extends Service {
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
       throw new Error('scene media generation not found');
     }
-    if (generation.media_type === 'cover') {
+    if (generation.media_type === MEDIA_TYPE.COVER) {
       return await this.ctx.service.scene.update(sceneId, {
         cover_url: generation.result_url || '',
         cover_preview_url: generation.preview_url || generation.result_url || '',
       });
     }
-    if (generation.media_type === 'video') {
+    if (generation.media_type === MEDIA_TYPE.VIDEO) {
       const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(generation);
       return await this.ctx.service.scene.update(sceneId, {
         video_url: generation.result_url || '',
@@ -38,7 +43,7 @@ class SceneMediaLibraryService extends Service {
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
       throw new Error('scene media generation not found');
     }
-    if (generation.status !== 'succeeded' || !generation.result_url) {
+    if (generation.status !== GENERATION_STATUS.SUCCEEDED || !generation.result_url) {
       throw new Error('只有生成成功且存在结果文件的媒体版本才能设为当前版本');
     }
     await this.ctx.service.sceneMediaGeneration.markCurrent(
@@ -61,7 +66,7 @@ class SceneMediaLibraryService extends Service {
       const replacement = remaining.find(
         (item) =>
           item.media_type === generation.media_type &&
-          item.status === 'succeeded' &&
+          item.status === GENERATION_STATUS.SUCCEEDED &&
           item.result_url,
       );
       if (replacement) {
@@ -71,7 +76,7 @@ class SceneMediaLibraryService extends Service {
           replacement.id,
         );
         await this.apply(sceneId, replacement);
-      } else if (generation.media_type === 'cover') {
+      } else if (generation.media_type === MEDIA_TYPE.COVER) {
         await this.ctx.service.scene.update(sceneId, {
           cover_url: '',
           cover_preview_url: '',
@@ -101,15 +106,19 @@ class SceneMediaLibraryService extends Service {
     if (!normalized) throw new Error('cover_url is required');
     const generation = await this.ctx.service.sceneMediaGeneration.create({
       scene_id: sceneId,
-      media_type: 'cover',
-      model: 'manual-upload',
-      status: 'succeeded',
+      media_type: MEDIA_TYPE.COVER,
+      model: ASSET_SOURCE_TYPE.MANUAL_UPLOAD,
+      status: GENERATION_STATUS.SUCCEEDED,
       result_url: normalized,
       preview_url: normalized,
       source_url: normalized,
-      meta_json: JSON.stringify({ source: 'manual-upload' }),
+      meta_json: JSON.stringify({ source: ASSET_SOURCE_TYPE.MANUAL_UPLOAD }),
     });
-    await this.ctx.service.sceneMediaGeneration.markCurrent(sceneId, 'cover', generation.id);
+    await this.ctx.service.sceneMediaGeneration.markCurrent(
+      sceneId,
+      MEDIA_TYPE.COVER,
+      generation.id,
+    );
     await this.apply(sceneId, generation);
     return {
       scene: await this.ctx.service.scene.findById(sceneId),

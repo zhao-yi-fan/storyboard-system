@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'mocha';
 import { buildSceneCoverPrompt, buildStoryboardCoverPrompt } from '../app/lib/prompt_library';
+import { REFERENCE_TYPE } from '../app/lib/domain_constants';
 
 const MYTHIC_PHRASES = [
   '东方神话史诗感',
@@ -24,7 +25,7 @@ describe('test/prompt_library_cover.test.ts', () => {
         style_preset: 'realistic_cinematic',
         notes: '景别：中景\n情绪：紧张凝重',
       },
-      [{ type: 'character' }],
+      [{ type: REFERENCE_TYPE.CHARACTER }],
     );
 
     assert.equal(result.template, 'cinematic-default');

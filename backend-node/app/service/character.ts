@@ -19,14 +19,20 @@ const {
   generateCharacterVoiceReference,
 } = require('../lib/ai_clients');
 const { buildCharacterDesignPrompt } = require('../lib/prompt_library');
+const { ASSET_SOURCE_TYPE, GENERATION_STATUS } = require('../lib/domain_constants');
 
-const CHARACTER_DESIGN_MODEL = 'seedream-4.5';
-const CHARACTER_DESIGN_PROMPT_MAX_LENGTH = 10000;
-const VOICE_REFERENCE_MIN_SECONDS = 3;
-const VOICE_REFERENCE_MAX_SECONDS = 5;
-const VOICE_REFERENCE_SAMPLE_RATE = 24000;
-const VOICE_REFERENCE_CHANNELS = 1;
-const VOICE_REFERENCE_CONTENT_TYPE = 'audio/wav';
+const CHARACTER_DESIGN_SPEC = Object.freeze({
+  MODEL: 'seedream-4.5',
+  PROMPT_MAX_LENGTH: 10000,
+});
+
+const VOICE_REFERENCE_SPEC = Object.freeze({
+  MIN_SECONDS: 3,
+  MAX_SECONDS: 5,
+  SAMPLE_RATE: 24000,
+  CHANNELS: 1,
+  CONTENT_TYPE: 'audio/wav',
+});
 
 class CharacterService extends Service {
   get pool() {
@@ -64,10 +70,13 @@ class CharacterService extends Service {
       ),
       voice_reference_duration:
         row.voice_reference_duration == null ? 0 : Number(row.voice_reference_duration),
-      design_sheet_status: row.design_sheet_status || (row.design_sheet_url ? 'succeeded' : 'idle'),
+      design_sheet_status:
+        row.design_sheet_status ||
+        (row.design_sheet_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
       design_sheet_error: row.design_sheet_error || '',
       voice_reference_status:
-        row.voice_reference_status || (row.voice_reference_url ? 'succeeded' : 'idle'),
+        row.voice_reference_status ||
+        (row.voice_reference_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
       voice_reference_error: row.voice_reference_error || '',
       voice_reference_text: row.voice_reference_text || '',
       voice_name: row.voice_name || '',
@@ -256,8 +265,8 @@ class CharacterService extends Service {
     }
     const prompt = String(promptOverride).trim();
     if (!prompt) throw new Error('最终 Prompt 不能为空');
-    if (prompt.length > CHARACTER_DESIGN_PROMPT_MAX_LENGTH) {
-      throw new Error(`最终 Prompt 不能超过 ${CHARACTER_DESIGN_PROMPT_MAX_LENGTH} 个字符`);
+    if (prompt.length > CHARACTER_DESIGN_SPEC.PROMPT_MAX_LENGTH) {
+      throw new Error(`最终 Prompt 不能超过 ${CHARACTER_DESIGN_SPEC.PROMPT_MAX_LENGTH} 个字符`);
     }
     return prompt;
   }
@@ -310,7 +319,7 @@ class CharacterService extends Service {
     const designPrompt = buildCharacterDesignPrompt(character);
     return {
       action: 'character-design-sheet',
-      model: CHARACTER_DESIGN_MODEL,
+      model: CHARACTER_DESIGN_SPEC.MODEL,
       reference_images: references,
       fields: {
         角色名称: character.name,
@@ -360,14 +369,14 @@ class CharacterService extends Service {
         角色描述: character.description,
         目标语音模型: preview.targetModel,
         音色名称: preview.preferredVoiceName,
-        目标时长: `${VOICE_REFERENCE_MIN_SECONDS}-${VOICE_REFERENCE_MAX_SECONDS}秒`,
-        超时处理: `超过${VOICE_REFERENCE_MAX_SECONDS}秒会自动裁剪到${VOICE_REFERENCE_MAX_SECONDS}秒`,
+        目标时长: `${VOICE_REFERENCE_SPEC.MIN_SECONDS}-${VOICE_REFERENCE_SPEC.MAX_SECONDS}秒`,
+        超时处理: `超过${VOICE_REFERENCE_SPEC.MAX_SECONDS}秒会自动裁剪到${VOICE_REFERENCE_SPEC.MAX_SECONDS}秒`,
         参考文本: preview.previewText,
       },
       final_prompt: preview.voicePrompt,
       notes: [
         '这段主语音参考会绑定到当前角色，后续对白和视频音频优先参考该声音。',
-        `目标时长固定为 ${VOICE_REFERENCE_MIN_SECONDS}-${VOICE_REFERENCE_MAX_SECONDS} 秒；超过 ${VOICE_REFERENCE_MAX_SECONDS} 秒会自动裁剪，低于 ${VOICE_REFERENCE_MIN_SECONDS} 秒会生成失败且不覆盖现有语音。`,
+        `目标时长固定为 ${VOICE_REFERENCE_SPEC.MIN_SECONDS}-${VOICE_REFERENCE_SPEC.MAX_SECONDS} 秒；超过 ${VOICE_REFERENCE_SPEC.MAX_SECONDS} 秒会自动裁剪，低于 ${VOICE_REFERENCE_SPEC.MIN_SECONDS} 秒会生成失败且不覆盖现有语音。`,
       ],
     };
   }
@@ -419,10 +428,10 @@ class CharacterService extends Service {
 
   async normalizeGeneratedVoiceReferenceAudio(audioBuffer, extension, outputExtension = extension) {
     return await normalizeAudioDuration(audioBuffer, {
-      minSeconds: VOICE_REFERENCE_MIN_SECONDS,
-      maxSeconds: VOICE_REFERENCE_MAX_SECONDS,
-      sampleRate: VOICE_REFERENCE_SAMPLE_RATE,
-      channels: VOICE_REFERENCE_CHANNELS,
+      minSeconds: VOICE_REFERENCE_SPEC.MIN_SECONDS,
+      maxSeconds: VOICE_REFERENCE_SPEC.MAX_SECONDS,
+      sampleRate: VOICE_REFERENCE_SPEC.SAMPLE_RATE,
+      channels: VOICE_REFERENCE_SPEC.CHANNELS,
       extension,
       outputExtension,
       label: '生成的主语音参考',
@@ -436,7 +445,7 @@ class CharacterService extends Service {
       audioBuffer,
       'characters',
       filename,
-      VOICE_REFERENCE_CONTENT_TYPE,
+      VOICE_REFERENCE_SPEC.CONTENT_TYPE,
     );
   }
 
@@ -473,7 +482,7 @@ class CharacterService extends Service {
       await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
         userPrompt: String(voicePrompt || '').trim(),
         effectivePrompt: result.voicePrompt,
-        sourceType: 'generated',
+        sourceType: ASSET_SOURCE_TYPE.GENERATED,
       });
       return updated;
     } catch (error) {
@@ -522,13 +531,13 @@ class CharacterService extends Service {
          SET voice_reference_url = ?, voice_reference_duration = ?, voice_name = ?,
              voice_reference_status = 'succeeded', voice_reference_error = NULL
          WHERE id = ?`,
-        [stored.publicPath, normalized.duration, 'manual-upload', id],
+        [stored.publicPath, normalized.duration, ASSET_SOURCE_TYPE.MANUAL_UPLOAD, id],
       );
       const updated = await this.findById(id);
       await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
         userPrompt: updated.voice_prompt || '',
         effectivePrompt: '',
-        sourceType: 'manual-upload',
+        sourceType: ASSET_SOURCE_TYPE.MANUAL_UPLOAD,
       });
     } catch (error) {
       await this.pool.execute(

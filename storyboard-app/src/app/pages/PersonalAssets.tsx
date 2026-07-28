@@ -3,13 +3,14 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, Image, Loader2 } from "lucide-react";
 import { assetWorkspaceApi, type PersonalAsset } from "../api";
 import { Button } from "../components/ui/button";
+import { ASSET_KIND } from "../constants/domain";
 import styles from "./PersonalAssets.module.scss";
 
 const FILTERS = [
   { value: "", label: "全部" },
-  { value: "character", label: "角色" },
-  { value: "scene", label: "场景" },
-  { value: "prop", label: "道具" },
+  { value: ASSET_KIND.CHARACTER, label: "角色" },
+  { value: ASSET_KIND.SCENE, label: "场景" },
+  { value: ASSET_KIND.PROP, label: "道具" },
 ] as const;
 
 export default function PersonalAssets() {

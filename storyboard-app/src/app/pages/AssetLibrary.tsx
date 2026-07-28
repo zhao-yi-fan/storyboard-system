@@ -29,6 +29,7 @@ import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
 import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
 import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
 import {
+  AI_PREVIEW_ACTION,
   AIGenerationPreviewDialog,
   type AIPreviewDialogState,
 } from "../components/assets/dialogs/AIGenerationPreviewDialog";
@@ -67,11 +68,22 @@ import {
   type CharacterVoiceVersion,
   type Project,
 } from "../api";
+import {
+  ASSET_KIND,
+  ASSET_LIBRARY_TAB,
+  ASSET_VIEW_MODE,
+  ENTITY_TYPE,
+  GENERATION_STATUS,
+  type AssetLibraryTab,
+  type AssetViewMode,
+} from "../constants/domain";
 import styles from "./AssetLibrary.module.scss";
 
-type SelectedAsset = { type: "character"; data: Character } | { type: "asset"; data: Asset } | null;
+type SelectedAsset =
+  | { type: typeof ENTITY_TYPE.CHARACTER; data: Character }
+  | { type: typeof ENTITY_TYPE.ASSET; data: Asset }
+  | null;
 
-type AssetLibraryTab = "characters" | "scenes" | "props";
 type CreateMode = CreateAssetMode;
 
 type DeleteTarget = DeleteAssetTarget;
@@ -93,12 +105,14 @@ const getCharacterVoiceReferenceSrc = (character: Character | null | undefined) 
 const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
 
-const CHARACTER_DESIGN_SHEET_MODEL_LABEL = "Seedream 4.5 图生图";
-const FIXED_CHARACTER_VOICE_REFERENCE_TEXT = "今天风很轻，我们慢慢把事情说清楚。";
-const CHARACTER_VOICE_REFERENCE_DURATION_HINT =
-  "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。";
-const CHARACTER_VOICE_REFERENCE_TEXT_HINT =
-  "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。";
+const CHARACTER_GENERATION_COPY = {
+  DESIGN_SHEET_MODEL_LABEL: "Seedream 4.5 图生图",
+  VOICE_REFERENCE_TEXT: "今天风很轻，我们慢慢把事情说清楚。",
+  VOICE_REFERENCE_DURATION_HINT:
+    "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。",
+  VOICE_REFERENCE_TEXT_HINT:
+    "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。",
+} as const;
 
 const getAssetOriginalSrc = (asset: Asset | null | undefined) => asset?.file_url || "";
 
@@ -108,16 +122,18 @@ export default function AssetLibrary() {
   const currentProjectId = Number(searchParams.get("project") || "0");
   const [project, setProject] = useState<Project | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [activeTab, setActiveTab] = useState<AssetLibraryTab>("characters");
+  const [activeTab, setActiveTab] = useState<AssetLibraryTab>(
+    ASSET_LIBRARY_TAB.CHARACTERS,
+  );
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<AssetViewMode>(ASSET_VIEW_MODE.GRID);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [createMode, setCreateMode] = useState<CreateMode>("character");
+  const [createMode, setCreateMode] = useState<CreateMode>(ASSET_KIND.CHARACTER);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [aiPreviewDialog, setAiPreviewDialog] = useState<AIPreviewDialogState | null>(null);
   const [versions, setVersions] = useState<AssetVersion[]>([]);
@@ -131,7 +147,12 @@ export default function AssetLibrary() {
   const [isLoadingAIPreview, setIsLoadingAIPreview] = useState(false);
 
   const [newCharacter, setNewCharacter] = useState({ name: "", description: "", avatar_url: "" });
-  const [newAsset, setNewAsset] = useState({ name: "", type: "scene", meta: "", file_url: "" });
+  const [newAsset, setNewAsset] = useState({
+    name: "",
+    type: ASSET_KIND.SCENE,
+    meta: "",
+    file_url: "",
+  });
   const [createCharacterFile, setCreateCharacterFile] = useState<File | null>(null);
   const [createAssetFile, setCreateAssetFile] = useState<File | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -278,8 +299,8 @@ export default function AssetLibrary() {
             (item) => item.id === requestedCharacterId,
           );
           if (requestedCharacter) {
-            setActiveTab("characters");
-            setSelectedAsset({ type: "character", data: requestedCharacter });
+            setActiveTab(ASSET_LIBRARY_TAB.CHARACTERS);
+            setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: requestedCharacter });
           }
         }
       } catch (error) {
@@ -325,7 +346,7 @@ export default function AssetLibrary() {
 
   const resetCreateState = () => {
     setNewCharacter({ name: "", description: "", avatar_url: "" });
-    setNewAsset({ name: "", type: "scene", meta: "", file_url: "" });
+    setNewAsset({ name: "", type: ASSET_KIND.SCENE, meta: "", file_url: "" });
     setCreateCharacterFile(null);
     setCreateAssetFile(null);
   };
@@ -334,7 +355,7 @@ export default function AssetLibrary() {
     if (!currentProjectId) return;
     setIsCreating(true);
     try {
-      if (createMode === "character") {
+      if (createMode === ASSET_KIND.CHARACTER) {
         if (!newCharacter.name.trim()) {
           toast.error("请输入角色名称");
           return;
@@ -349,11 +370,13 @@ export default function AssetLibrary() {
           avatar_url: avatarURL || undefined,
         });
         await loadCharacters();
-        setActiveTab("characters");
-        setSelectedAsset({ type: "character", data: created });
+        setActiveTab(ASSET_LIBRARY_TAB.CHARACTERS);
+        setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: created });
       } else {
         if (!newAsset.name.trim() || !newAsset.type.trim()) {
-          toast.error(`请填写完整的${createMode === "prop" ? "道具" : "场景"}资产信息`);
+          toast.error(
+            `请填写完整的${createMode === ASSET_KIND.PROP ? "道具" : "场景"}资产信息`,
+          );
           return;
         }
         let fileURL = newAsset.file_url.trim();
@@ -368,7 +391,7 @@ export default function AssetLibrary() {
         });
         await loadAssets();
         setActiveTab(getAssetTab(created));
-        setSelectedAsset({ type: "asset", data: created });
+        setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: created });
       }
       resetCreateState();
       setShowCreateDialog(false);
@@ -380,7 +403,7 @@ export default function AssetLibrary() {
   };
 
   const saveSelectedCharacter = async () => {
-    if (!selectedAsset || selectedAsset.type !== "character") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setIsSavingCharacter(true);
     try {
       const updated = await characterApi.updateCharacter(selectedAsset.data.id, {
@@ -390,7 +413,7 @@ export default function AssetLibrary() {
         voice_prompt: selectedAsset.data.voice_prompt || "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "character", data: updated });
+      setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: updated });
       toast.success("角色修改已保存");
       return updated;
     } catch (error) {
@@ -402,7 +425,7 @@ export default function AssetLibrary() {
   };
 
   const saveSelectedAsset = async () => {
-    if (!selectedAsset || selectedAsset.type !== "asset") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.ASSET) return;
     setIsSavingAsset(true);
     try {
       const updated = await assetApi.updateAsset(selectedAsset.data.id, {
@@ -412,7 +435,7 @@ export default function AssetLibrary() {
         file_url: selectedAsset.data.file_url || "",
       });
       setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "asset", data: updated });
+      setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: updated });
       setActiveTab(getAssetTab(updated));
       toast.success("资产修改已保存");
       return updated;
@@ -425,7 +448,7 @@ export default function AssetLibrary() {
   };
 
   const runGenerateSelectedCharacterDesignSheet = async (promptOverride: string) => {
-    if (!selectedAsset || selectedAsset.type !== "character") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setGeneratingCharacterDesignSheetId(selectedAsset.data.id);
     try {
       const updated = await characterApi.generateCharacterDesignSheet(
@@ -433,8 +456,8 @@ export default function AssetLibrary() {
         promptOverride,
       );
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "character", data: updated });
-      setVersions(await assetWorkspaceApi.getVersions("character", updated.id));
+      setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: updated });
+      setVersions(await assetWorkspaceApi.getVersions(ENTITY_TYPE.CHARACTER, updated.id));
       toast.success("主设定图已生成并保存为新版本");
     } catch (error) {
       console.error("Failed to generate character design sheet:", error);
@@ -445,7 +468,7 @@ export default function AssetLibrary() {
   };
 
   const runGenerateSelectedCharacterVoiceReference = async () => {
-    if (!selectedAsset || selectedAsset.type !== "character") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setGeneratingCharacterVoiceReferenceId(selectedAsset.data.id);
     setCharacterVoiceReferenceError(null);
     try {
@@ -453,7 +476,7 @@ export default function AssetLibrary() {
         voice_prompt: selectedAsset.data.voice_prompt || "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "character", data: updated });
+      setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: updated });
       setCharacterVoiceReferenceError(null);
       toast.success("主语音参考已生成");
     } catch (error) {
@@ -467,12 +490,12 @@ export default function AssetLibrary() {
   };
 
   const runGenerateSelectedAssetCover = async () => {
-    if (!selectedAsset || selectedAsset.type !== "asset") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.ASSET) return;
     setGeneratingAssetCoverId(selectedAsset.data.id);
     try {
       const updated = await assetApi.generateAssetCover(selectedAsset.data.id);
       setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "asset", data: updated });
+      setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: updated });
     } catch (error) {
       console.error("Failed to generate asset cover:", error);
     } finally {
@@ -488,13 +511,13 @@ export default function AssetLibrary() {
   };
 
   const handleGenerateCharacterDesignSheet = async () => {
-    if (!selectedAsset || selectedAsset.type !== "character") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setIsLoadingAIPreview(true);
     try {
       const saved = await saveSelectedCharacter();
       const preview = await characterApi.getCharacterDesignSheetGenerationPreview(saved!.id);
       openAIPreviewDialog({
-        action: "character-design-sheet",
+        action: AI_PREVIEW_ACTION.CHARACTER_DESIGN_SHEET,
         title: "确认生成主设定图",
         description:
           "会用 Seedream 图生图生成当前角色的主设定图。角色参考图只用于这次生成，不参与其他展示链路。",
@@ -510,7 +533,7 @@ export default function AssetLibrary() {
   };
 
   const handleUploadSelectedCharacterReference = async (file: File | null) => {
-    if (!file || !selectedAsset || selectedAsset.type !== "character") return;
+    if (!file || !selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setUploadingCharacterReferenceId(selectedAsset.data.id);
     try {
       const avatarURL = await ossApi.uploadFileToOss(file);
@@ -518,7 +541,7 @@ export default function AssetLibrary() {
         avatar_url: avatarURL,
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "character", data: updated });
+      setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: updated });
       toast.success("角色参考图已更新");
     } catch (error) {
       console.error("Failed to upload character reference image:", error);
@@ -532,7 +555,7 @@ export default function AssetLibrary() {
   };
 
   const handleUploadSelectedCharacterVoiceReference = async (file: File | null) => {
-    if (!file || !selectedAsset || selectedAsset.type !== "character") return;
+    if (!file || !selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setUploadingCharacterVoiceReferenceId(selectedAsset.data.id);
     try {
       const voiceReferenceURL = await ossApi.uploadFileToOss(file);
@@ -541,7 +564,7 @@ export default function AssetLibrary() {
         voiceReferenceURL,
       );
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "character", data: updated });
+      setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: updated });
       setCharacterVoiceReferenceError(null);
       toast.success("主语音参考已更新");
     } catch (error) {
@@ -556,13 +579,13 @@ export default function AssetLibrary() {
   };
 
   const handleUploadSelectedAssetFile = async (file: File | null) => {
-    if (!file || !selectedAsset || selectedAsset.type !== "asset") return;
+    if (!file || !selectedAsset || selectedAsset.type !== ENTITY_TYPE.ASSET) return;
     setIsSavingAsset(true);
     try {
       const fileURL = await ossApi.uploadFileToOss(file);
       const updated = await assetApi.updateAsset(selectedAsset.data.id, { file_url: fileURL });
       setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSelectedAsset({ type: "asset", data: updated });
+      setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: updated });
       toast.success("原始素材已替换");
     } finally {
       setIsSavingAsset(false);
@@ -571,7 +594,7 @@ export default function AssetLibrary() {
   };
 
   const handleGenerateCharacterVoiceReference = async () => {
-    if (!selectedAsset || selectedAsset.type !== "character") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setIsLoadingAIPreview(true);
     try {
       const saved = await saveSelectedCharacter();
@@ -579,9 +602,9 @@ export default function AssetLibrary() {
         voice_prompt: saved!.voice_prompt || "",
       });
       openAIPreviewDialog({
-        action: "character-voice-reference",
+        action: AI_PREVIEW_ACTION.CHARACTER_VOICE_REFERENCE,
         title: "确认生成主语音参考",
-        description: `会用大模型生成当前角色的主语音参考，并绑定到角色资产上。${CHARACTER_VOICE_REFERENCE_DURATION_HINT}`,
+        description: `会用大模型生成当前角色的主语音参考，并绑定到角色资产上。${CHARACTER_GENERATION_COPY.VOICE_REFERENCE_DURATION_HINT}`,
         confirmLabel: "确认生成",
         preview,
       });
@@ -594,13 +617,13 @@ export default function AssetLibrary() {
   };
 
   const handleGenerateAssetCover = async () => {
-    if (!selectedAsset || selectedAsset.type !== "asset") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.ASSET) return;
     setIsLoadingAIPreview(true);
     try {
       const saved = await saveSelectedAsset();
       const preview = await assetApi.getAssetCoverGenerationPreview(saved!.id);
       openAIPreviewDialog({
-        action: "asset-cover",
+        action: AI_PREVIEW_ACTION.ASSET_COVER,
         title: `确认生成${getAssetKindLabel(saved!)}封面`,
         description: `会为当前${getAssetKindLabel(saved!)}资产生成一张封面图，用于资产库预览。`,
         confirmLabel: "确认生成",
@@ -618,19 +641,19 @@ export default function AssetLibrary() {
     if (!aiPreviewDialog) return;
     const action = aiPreviewDialog.action;
     const promptOverride = aiPreviewDialog.promptDraft.trim();
-    if (action === "character-design-sheet" && !promptOverride) {
+    if (action === AI_PREVIEW_ACTION.CHARACTER_DESIGN_SHEET && !promptOverride) {
       toast.error("最终 Prompt 不能为空");
       return;
     }
     setAiPreviewDialog(null);
     switch (action) {
-      case "character-design-sheet":
+      case AI_PREVIEW_ACTION.CHARACTER_DESIGN_SHEET:
         await runGenerateSelectedCharacterDesignSheet(promptOverride);
         return;
-      case "character-voice-reference":
+      case AI_PREVIEW_ACTION.CHARACTER_VOICE_REFERENCE:
         await runGenerateSelectedCharacterVoiceReference();
         return;
-      case "asset-cover":
+      case AI_PREVIEW_ACTION.ASSET_COVER:
         await runGenerateSelectedAssetCover();
         return;
       default:
@@ -643,7 +666,7 @@ export default function AssetLibrary() {
     const actionKey = `${deleteTarget.type}:${deleteTarget.id}`;
     setDeleteActionKey(actionKey);
     try {
-      if (deleteTarget.type === "character") {
+      if (deleteTarget.type === ENTITY_TYPE.CHARACTER) {
         await characterApi.deleteCharacter(deleteTarget.id);
         await loadCharacters();
       } else {
@@ -679,12 +702,12 @@ export default function AssetLibrary() {
     setSwitchingVersionId(version.id);
     try {
       setVersions(await assetWorkspaceApi.setCurrentVersion(type, id, version.id));
-      if (type === "character") await loadCharacters();
+      if (type === ENTITY_TYPE.CHARACTER) await loadCharacters();
       else await loadAssets();
       const refreshed =
-        type === "character" ? await characterApi.getCharacter(id) : await assetApi.getAsset(id);
+        type === ENTITY_TYPE.CHARACTER ? await characterApi.getCharacter(id) : await assetApi.getAsset(id);
       if (refreshed) setSelectedAsset({ type, data: refreshed } as SelectedAsset);
-      toast.success(type === "character" ? "已切换主设定图版本" : "已切换资产版本");
+      toast.success(type === ENTITY_TYPE.CHARACTER ? "已切换主设定图版本" : "已切换资产版本");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "切换版本失败");
     } finally {
@@ -696,7 +719,7 @@ export default function AssetLibrary() {
     if (!selectedAsset) return;
     setIsSavingPersonal(true);
     try {
-      if (selectedAsset.type === "character") {
+      if (selectedAsset.type === ENTITY_TYPE.CHARACTER) {
         await assetWorkspaceApi.saveCharacterToPersonal(selectedAsset.data.id);
       } else {
         await assetWorkspaceApi.saveAssetToPersonal(selectedAsset.data.id);
@@ -708,7 +731,7 @@ export default function AssetLibrary() {
   };
 
   const openVoiceVersions = async () => {
-    if (!selectedAsset || selectedAsset.type !== "character") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setShowVoiceVersions(true);
     setVoiceVersions([]);
     try {
@@ -719,19 +742,23 @@ export default function AssetLibrary() {
   };
 
   const chooseVoiceVersion = async (version: CharacterVoiceVersion) => {
-    if (!selectedAsset || selectedAsset.type !== "character") return;
+    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     const id = selectedAsset.data.id;
     setVoiceVersions(await assetWorkspaceApi.setCurrentCharacterVoiceVersion(id, version.id));
     const refreshed = await characterApi.getCharacter(id);
     setCharacters((prev) => prev.map((item) => (item.id === id ? refreshed : item)));
-    setSelectedAsset({ type: "character", data: refreshed });
+    setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: refreshed });
   };
 
   const openCreateDialog = () => {
     const nextMode: CreateMode =
-      activeTab === "props" ? "prop" : activeTab === "scenes" ? "scene" : "character";
+      activeTab === ASSET_LIBRARY_TAB.PROPS
+        ? ASSET_KIND.PROP
+        : activeTab === ASSET_LIBRARY_TAB.SCENES
+          ? ASSET_KIND.SCENE
+          : ASSET_KIND.CHARACTER;
     setCreateMode(nextMode);
-    if (nextMode !== "character") {
+    if (nextMode !== ASSET_KIND.CHARACTER) {
       setNewAsset((prev) => ({ ...prev, type: nextMode }));
     }
     setShowCreateDialog(true);
@@ -739,7 +766,7 @@ export default function AssetLibrary() {
 
   const selectCreateMode = (mode: CreateMode) => {
     setCreateMode(mode);
-    if (mode !== "character") {
+    if (mode !== ASSET_KIND.CHARACTER) {
       setNewAsset((prev) => ({ ...prev, type: mode }));
     }
   };
@@ -791,17 +818,17 @@ export default function AssetLibrary() {
             <div className={styles.assetToolbar}>
               <div className={styles.assetToolbarContent}>
                 <TabsList className={styles.tabsList}>
-                  <TabsTrigger value="characters" className={styles.tabTrigger}>
+                  <TabsTrigger value={ASSET_LIBRARY_TAB.CHARACTERS} className={styles.tabTrigger}>
                     <Users className={styles.tabIcon} />
                     角色资产
                     <Badge className={styles.tabBadge}>{characters.length}</Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="scenes" className={styles.tabTrigger}>
+                  <TabsTrigger value={ASSET_LIBRARY_TAB.SCENES} className={styles.tabTrigger}>
                     <MapPin className={styles.tabIcon} />
                     场景资产
                     <Badge className={styles.tabBadge}>{sceneAssetCount}</Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="props" className={styles.tabTrigger}>
+                  <TabsTrigger value={ASSET_LIBRARY_TAB.PROPS} className={styles.tabTrigger}>
                     <Package className={styles.tabIcon} />
                     道具资产
                     <Badge className={styles.tabBadge}>{propAssetCount}</Badge>
@@ -822,11 +849,11 @@ export default function AssetLibrary() {
                       size="sm"
                       variant="ghost"
                       className={
-                        viewMode === "grid"
+                        viewMode === ASSET_VIEW_MODE.GRID
                           ? styles.viewToggleButtonActive
                           : styles.viewToggleButton
                       }
-                      onClick={() => setViewMode("grid")}
+                      onClick={() => setViewMode(ASSET_VIEW_MODE.GRID)}
                     >
                       <Grid3x3 className={styles.icon} />
                     </Button>
@@ -834,11 +861,11 @@ export default function AssetLibrary() {
                       size="sm"
                       variant="ghost"
                       className={
-                        viewMode === "list"
+                        viewMode === ASSET_VIEW_MODE.LIST
                           ? styles.viewToggleButtonActive
                           : styles.viewToggleButton
                       }
-                      onClick={() => setViewMode("list")}
+                      onClick={() => setViewMode(ASSET_VIEW_MODE.LIST)}
                     >
                       <List className={styles.icon} />
                     </Button>
@@ -847,7 +874,7 @@ export default function AssetLibrary() {
               </div>
             </div>
 
-            <TabsContent value="characters" className={styles.tabContent}>
+            <TabsContent value={ASSET_LIBRARY_TAB.CHARACTERS} className={styles.tabContent}>
               <div className={styles.collectionScroll}>
                 {loading ? (
                   <div className={styles.collectionLoading}>
@@ -855,14 +882,14 @@ export default function AssetLibrary() {
                   </div>
                 ) : filteredCharacters.length === 0 ? (
                   <div className={styles.collectionEmpty}>暂无角色资产</div>
-                ) : viewMode === "grid" ? (
+                ) : viewMode === ASSET_VIEW_MODE.GRID ? (
                   <div className={styles.characterGrid}>
                     {filteredCharacters.map((character) => (
                       <button
                         key={character.id}
-                        onClick={() => setSelectedAsset({ type: "character", data: character })}
+                        onClick={() => setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: character })}
                         className={
-                          selectedAsset?.type === "character" &&
+                          selectedAsset?.type === ENTITY_TYPE.CHARACTER &&
                           selectedAsset.data.id === character.id
                             ? styles.characterGridCardSelected
                             : styles.characterGridCard
@@ -899,9 +926,9 @@ export default function AssetLibrary() {
                     {filteredCharacters.map((character) => (
                       <button
                         key={character.id}
-                        onClick={() => setSelectedAsset({ type: "character", data: character })}
+                        onClick={() => setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: character })}
                         className={
-                          selectedAsset?.type === "character" &&
+                          selectedAsset?.type === ENTITY_TYPE.CHARACTER &&
                           selectedAsset.data.id === character.id
                             ? styles.assetListCardSelected
                             : styles.assetListCard
@@ -936,8 +963,8 @@ export default function AssetLibrary() {
             </TabsContent>
 
             {[
-              { value: "scenes", items: filteredSceneAssets, emptyLabel: "暂无场景资产" },
-              { value: "props", items: filteredPropAssets, emptyLabel: "暂无道具资产" },
+              { value: ASSET_LIBRARY_TAB.SCENES, items: filteredSceneAssets, emptyLabel: "暂无场景资产" },
+              { value: ASSET_LIBRARY_TAB.PROPS, items: filteredPropAssets, emptyLabel: "暂无道具资产" },
             ].map((collection) => (
               <TabsContent
                 key={collection.value}
@@ -951,9 +978,9 @@ export default function AssetLibrary() {
                     loading={loading}
                     viewMode={viewMode}
                     selectedAssetId={
-                      selectedAsset?.type === "asset" ? selectedAsset.data.id : null
+                      selectedAsset?.type === ENTITY_TYPE.ASSET ? selectedAsset.data.id : null
                     }
-                    onSelect={(asset) => setSelectedAsset({ type: "asset", data: asset })}
+                    onSelect={(asset) => setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: asset })}
                   />
                 </div>
               </TabsContent>
@@ -972,7 +999,7 @@ export default function AssetLibrary() {
               <>
                 <div className={styles.detailHeader}>
                   <h3 className={styles.detailTitle}>
-                    {selectedAsset.type === "character"
+                    {selectedAsset.type === ENTITY_TYPE.CHARACTER
                       ? "角色详情"
                       : `${getAssetKindLabel(selectedAsset.data)}详情`}
                   </h3>
@@ -1000,7 +1027,7 @@ export default function AssetLibrary() {
                           >
                             查看生成版本
                           </button>
-                          {selectedAsset.type === "character" ? (
+                          {selectedAsset.type === ENTITY_TYPE.CHARACTER ? (
                             <button
                               type="button"
                               className={styles.actionMenuItem}
@@ -1032,7 +1059,7 @@ export default function AssetLibrary() {
                                 type: selectedAsset.type,
                                 id: selectedAsset.data.id,
                                 name: selectedAsset.data.name,
-                                ...(selectedAsset.type === "asset"
+                                ...(selectedAsset.type === ENTITY_TYPE.ASSET
                                   ? { assetKind: getAssetKind(selectedAsset.data) }
                                   : {}),
                               });
@@ -1054,7 +1081,7 @@ export default function AssetLibrary() {
                   </div>
                 </div>
                 <div className={styles.detailScroll}>
-                  {selectedAsset.type === "character" ? (
+                  {selectedAsset.type === ENTITY_TYPE.CHARACTER ? (
                     <div className={styles.detailSections}>
                       <div className={styles.detailCard}>
                         <div className={styles.detailCardHeader}>
@@ -1094,7 +1121,7 @@ export default function AssetLibrary() {
                             value={selectedAsset.data.avatar_url || ""}
                             onChange={(e) =>
                               setSelectedAsset({
-                                type: "character",
+                                type: ENTITY_TYPE.CHARACTER,
                                 data: { ...selectedAsset.data, avatar_url: e.target.value },
                               })
                             }
@@ -1216,7 +1243,7 @@ export default function AssetLibrary() {
                         ) : null}
                         <div className={styles.subsection}>
                           <div className={styles.modelLabel}>
-                            {CHARACTER_DESIGN_SHEET_MODEL_LABEL}
+                            {CHARACTER_GENERATION_COPY.DESIGN_SHEET_MODEL_LABEL}
                           </div>
                           <Button
                             type="button"
@@ -1224,12 +1251,12 @@ export default function AssetLibrary() {
                             className={styles.secondaryButton}
                             disabled={
                               generatingCharacterDesignSheetId === selectedAsset.data.id ||
-                              selectedAsset.data.design_sheet_status === "generating"
+                              selectedAsset.data.design_sheet_status === GENERATION_STATUS.GENERATING
                             }
                             onClick={() => void handleGenerateCharacterDesignSheet()}
                           >
                             {generatingCharacterDesignSheetId === selectedAsset.data.id ||
-                            selectedAsset.data.design_sheet_status === "generating" ? (
+                            selectedAsset.data.design_sheet_status === GENERATION_STATUS.GENERATING ? (
                               <>
                                 <Loader2 className={styles.buttonLoadingIcon} />
                                 正在生成主设定图
@@ -1249,7 +1276,7 @@ export default function AssetLibrary() {
                           value={selectedAsset.data.name}
                           onChange={(e) =>
                             setSelectedAsset({
-                              type: "character",
+                              type: ENTITY_TYPE.CHARACTER,
                               data: { ...selectedAsset.data, name: e.target.value },
                             })
                           }
@@ -1262,7 +1289,7 @@ export default function AssetLibrary() {
                           value={selectedAsset.data.description || ""}
                           onChange={(e) =>
                             setSelectedAsset({
-                              type: "character",
+                              type: ENTITY_TYPE.CHARACTER,
                               data: { ...selectedAsset.data, description: e.target.value },
                             })
                           }
@@ -1274,7 +1301,7 @@ export default function AssetLibrary() {
                           <div>
                             <div className={styles.detailCardTitle}>主语音参考</div>
                             <div className={styles.detailCardDescription}>
-                              {CHARACTER_VOICE_REFERENCE_DURATION_HINT}
+                              {CHARACTER_GENERATION_COPY.VOICE_REFERENCE_DURATION_HINT}
                             </div>
                           </div>
                           <Badge className={styles.voiceStatusBadge}>角色语音</Badge>
@@ -1308,7 +1335,7 @@ export default function AssetLibrary() {
                             value={selectedAsset.data.voice_prompt || ""}
                             onChange={(e) =>
                               setSelectedAsset({
-                                type: "character",
+                                type: ENTITY_TYPE.CHARACTER,
                                 data: { ...selectedAsset.data, voice_prompt: e.target.value },
                               })
                             }
@@ -1322,10 +1349,10 @@ export default function AssetLibrary() {
                         <div>
                           <Label className={styles.detailLabel}>参考文本</Label>
                           <div className={styles.referenceText}>
-                            {FIXED_CHARACTER_VOICE_REFERENCE_TEXT}
+                            {CHARACTER_GENERATION_COPY.VOICE_REFERENCE_TEXT}
                           </div>
                           <div className={styles.fieldHint}>
-                            {CHARACTER_VOICE_REFERENCE_TEXT_HINT}
+                            {CHARACTER_GENERATION_COPY.VOICE_REFERENCE_TEXT_HINT}
                           </div>
                         </div>
                         {selectedAsset.data.voice_name ||
@@ -1353,12 +1380,12 @@ export default function AssetLibrary() {
                           className={styles.secondaryButton}
                           disabled={
                             generatingCharacterVoiceReferenceId === selectedAsset.data.id ||
-                            selectedAsset.data.voice_reference_status === "generating"
+                            selectedAsset.data.voice_reference_status === GENERATION_STATUS.GENERATING
                           }
                           onClick={() => void handleGenerateCharacterVoiceReference()}
                         >
                           {generatingCharacterVoiceReferenceId === selectedAsset.data.id ||
-                          selectedAsset.data.voice_reference_status === "generating" ? (
+                          selectedAsset.data.voice_reference_status === GENERATION_STATUS.GENERATING ? (
                             <>
                               <Loader2 className={styles.buttonLoadingIcon} />
                               生成中
@@ -1424,7 +1451,7 @@ export default function AssetLibrary() {
                           className={styles.deleteButton}
                           onClick={() =>
                             setDeleteTarget({
-                              type: "character",
+                              type: ENTITY_TYPE.CHARACTER,
                               id: selectedAsset.data.id,
                               name: selectedAsset.data.name,
                             })
@@ -1486,19 +1513,20 @@ export default function AssetLibrary() {
                       {selectedAsset.data.cover_error ? (
                         <div className={styles.inlineError}>{selectedAsset.data.cover_error}</div>
                       ) : null}
-                      {selectedAsset.data.type === "scene" || selectedAsset.data.type === "prop" ? (
+                      {selectedAsset.data.type === ASSET_KIND.SCENE ||
+                      selectedAsset.data.type === ASSET_KIND.PROP ? (
                         <Button
                           type="button"
                           variant="outline"
                           className={styles.secondaryButton}
                           disabled={
                             generatingAssetCoverId === selectedAsset.data.id ||
-                            selectedAsset.data.cover_status === "generating"
+                            selectedAsset.data.cover_status === GENERATION_STATUS.GENERATING
                           }
                           onClick={() => void handleGenerateAssetCover()}
                         >
                           {generatingAssetCoverId === selectedAsset.data.id ||
-                          selectedAsset.data.cover_status === "generating" ? (
+                          selectedAsset.data.cover_status === GENERATION_STATUS.GENERATING ? (
                             <>
                               <Loader2 className={styles.buttonLoadingIcon} />
                               正在生成
@@ -1521,7 +1549,7 @@ export default function AssetLibrary() {
                           value={selectedAsset.data.name}
                           onChange={(e) =>
                             setSelectedAsset({
-                              type: "asset",
+                              type: ENTITY_TYPE.ASSET,
                               data: { ...selectedAsset.data, name: e.target.value },
                             })
                           }
@@ -1531,10 +1559,14 @@ export default function AssetLibrary() {
                       <div>
                         <Label className={styles.detailLabel}>资源类型</Label>
                         <Select
-                          value={selectedAsset.data.type === "prop" ? "prop" : "scene"}
+                          value={
+                            selectedAsset.data.type === ASSET_KIND.PROP
+                              ? ASSET_KIND.PROP
+                              : ASSET_KIND.SCENE
+                          }
                           onValueChange={(value) =>
                             setSelectedAsset({
-                              type: "asset",
+                              type: ENTITY_TYPE.ASSET,
                               data: { ...selectedAsset.data, type: value },
                             })
                           }
@@ -1543,8 +1575,8 @@ export default function AssetLibrary() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="scene">场景</SelectItem>
-                            <SelectItem value="prop">道具</SelectItem>
+                            <SelectItem value={ASSET_KIND.SCENE}>场景</SelectItem>
+                            <SelectItem value={ASSET_KIND.PROP}>道具</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1556,7 +1588,7 @@ export default function AssetLibrary() {
                           value={selectedAsset.data.meta || ""}
                           onChange={(e) =>
                             setSelectedAsset({
-                              type: "asset",
+                              type: ENTITY_TYPE.ASSET,
                               data: { ...selectedAsset.data, meta: e.target.value },
                             })
                           }
@@ -1594,7 +1626,7 @@ export default function AssetLibrary() {
                           className={styles.deleteButton}
                           onClick={() =>
                             setDeleteTarget({
-                              type: "asset",
+                              type: ENTITY_TYPE.ASSET,
                               id: selectedAsset.data.id,
                               name: selectedAsset.data.name,
                             })
@@ -1627,7 +1659,7 @@ export default function AssetLibrary() {
       <AssetVersionsDialog
         open={showVersions}
         versions={versions}
-        isCharacter={selectedAsset?.type === "character"}
+        isCharacter={selectedAsset?.type === ENTITY_TYPE.CHARACTER}
         switchingVersionId={switchingVersionId}
         onOpenChange={setShowVersions}
         onPreview={(src, alt) => setPreviewImage({ src, alt })}
