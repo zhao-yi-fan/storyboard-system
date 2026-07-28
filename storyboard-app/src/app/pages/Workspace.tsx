@@ -9,20 +9,14 @@ import {
   Play,
   Save,
   Camera,
-  Image as ImageIcon,
   X,
   Loader2,
-  ArrowLeft,
   Maximize2,
-  Minimize2,
   PanelLeftClose,
   PanelLeftOpen,
   Scissors,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
 import {
   Select,
@@ -33,24 +27,6 @@ import {
 } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +50,19 @@ import {
   getVideoGenerationSpecLabel,
 } from "../components/workspace/VideoGenerationSettings";
 import { VideoFrameExtractionDialog } from "../components/workspace/VideoFrameExtractionDialog";
+import { ConfirmationDialog } from "../components/workspace/dialogs/ConfirmationDialog";
+import {
+  VideoPreviewDialog,
+  type VideoPreview,
+} from "../components/workspace/dialogs/VideoPreviewDialog";
+import { CreateSceneDialog } from "../components/workspace/dialogs/CreateSceneDialog";
+import { ManageReferencesDialog } from "../components/workspace/dialogs/ManageReferencesDialog";
+import { FullscreenPromptDialog } from "../components/workspace/dialogs/FullscreenPromptDialog";
+import { useSceneVideoPolling } from "../components/workspace/hooks/useSceneVideoPolling";
+import { CoverGenerationDialog } from "../components/workspace/dialogs/CoverGenerationDialog";
+import { SceneCoverGenerationDialog } from "../components/workspace/dialogs/SceneCoverGenerationDialog";
+import { VideoGenerationDialog } from "../components/workspace/dialogs/VideoGenerationDialog";
+import { WorkspaceHeader } from "../components/workspace/WorkspaceHeader";
 import {
   projectApi,
   chapterApi,
@@ -180,6 +169,15 @@ const emptyShotForm: ShotFormState = {
 const emptySceneForm = {
   title: "",
   description: "",
+};
+
+const emptyDescriptionOptimization = {
+  open: false,
+  loading: false,
+  original: "",
+  candidate: "",
+  model: "",
+  error: "",
 };
 
 const buildShotFormState = (shot: Storyboard | null, scene: Scene | null): ShotFormState => ({
@@ -355,16 +353,8 @@ export default function Workspace() {
     useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
   const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
-  const [previewSceneVideo, setPreviewSceneVideo] = useState<{
-    src: string;
-    originalSrc?: string;
-    title: string;
-  } | null>(null);
-  const [previewProjectVideo, setPreviewProjectVideo] = useState<{
-    src: string;
-    originalSrc?: string;
-    title: string;
-  } | null>(null);
+  const [previewSceneVideo, setPreviewSceneVideo] = useState<VideoPreview | null>(null);
+  const [previewProjectVideo, setPreviewProjectVideo] = useState<VideoPreview | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
   const [isPromptFullscreenOpen, setIsPromptFullscreenOpen] = useState(false);
   const [isPromptOptimizationOpen, setIsPromptOptimizationOpen] = useState(false);
@@ -374,6 +364,9 @@ export default function Workspace() {
   const [promptOptimizationModel, setPromptOptimizationModel] = useState("");
   const [promptOptimizationError, setPromptOptimizationError] = useState("");
   const [newSceneForm, setNewSceneForm] = useState(emptySceneForm);
+  const [descriptionOptimization, setDescriptionOptimization] = useState(
+    emptyDescriptionOptimization,
+  );
   const [projectCharacters, setProjectCharacters] = useState<Character[]>([]);
   const [projectAssets, setProjectAssets] = useState<Asset[]>([]);
   const [isManageCharactersOpen, setIsManageCharactersOpen] = useState(false);
@@ -382,7 +375,6 @@ export default function Workspace() {
   const [isLoadingProjectAssets, setIsLoadingProjectAssets] = useState(false);
   const [activeCharacterActionKey, setActiveCharacterActionKey] = useState<string | null>(null);
   const [activeAssetActionKey, setActiveAssetActionKey] = useState<string | null>(null);
-  const videoPollingTimerRef = useRef<number | null>(null);
   const shotCoverInputRef = useRef<HTMLInputElement>(null);
   const initializedShotFormKeyRef = useRef("");
 
@@ -391,14 +383,6 @@ export default function Workspace() {
     void loadProjects();
     // Project selection is initialized once from the URL or persisted project id.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (videoPollingTimerRef.current !== null) {
-        window.clearInterval(videoPollingTimerRef.current);
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -546,32 +530,16 @@ export default function Workspace() {
     }
   };
 
-  const stopVideoPolling = () => {
-    if (videoPollingTimerRef.current !== null) {
-      window.clearInterval(videoPollingTimerRef.current);
-      videoPollingTimerRef.current = null;
-    }
-  };
-
-  const pollStoryboardVideo = (sceneId: number) => {
-    stopVideoPolling();
-    videoPollingTimerRef.current = window.setInterval(async () => {
-      try {
-        const latest = await sceneApi.getScene(sceneId);
-        applyClipSceneUpdate(latest);
-        const generations = await sceneApi.getSceneMediaGenerations(sceneId);
-        setMediaGenerations(generations.map(sceneMediaToWorkspaceMedia));
-        if (latest.video_status !== "generating") {
-          stopVideoPolling();
-          setGeneratingVideoId(null);
-        }
-      } catch (error) {
-        console.error("Failed to poll storyboard video status:", error);
-        stopVideoPolling();
-        setGeneratingVideoId(null);
-      }
-    }, 5000);
-  };
+  const { start: pollStoryboardVideo, stop: stopVideoPolling } = useSceneVideoPolling({
+    onScene: applyClipSceneUpdate,
+    onGenerations: (generations) =>
+      setMediaGenerations(generations.map(sceneMediaToWorkspaceMedia)),
+    onTerminal: () => setGeneratingVideoId(null),
+    onError: (error) => {
+      console.error("Failed to poll storyboard video status:", error);
+      setGeneratingVideoId(null);
+    },
+  });
 
   const loadScenes = async (chapterId: number, autoSelect = false) => {
     try {
@@ -1455,11 +1423,54 @@ export default function Workspace() {
 
   const resetNewSceneForm = () => {
     setNewSceneForm(emptySceneForm);
+    setDescriptionOptimization(emptyDescriptionOptimization);
   };
 
   const openCreateSceneDialog = (sortOrder: number | null = null) => {
     setSceneInsertSortOrder(sortOrder);
     setIsCreateSceneOpen(true);
+  };
+
+  const requestDescriptionOptimization = async () => {
+    const originalDescription = newSceneForm.description.trim();
+    if (!originalDescription || descriptionOptimization.loading || isCreatingScene) return;
+
+    setDescriptionOptimization({
+      open: true,
+      loading: true,
+      original: originalDescription,
+      candidate: "",
+      model: "",
+      error: "",
+    });
+    try {
+      const result = await sceneApi.optimizeSceneDescription(
+        newSceneForm.title.trim(),
+        originalDescription,
+      );
+      setDescriptionOptimization({
+        open: true,
+        loading: false,
+        original: result.original_description,
+        candidate: result.optimized_description,
+        model: result.model,
+        error: "",
+      });
+    } catch (error) {
+      console.error("Failed to optimize scene description:", error);
+      setDescriptionOptimization((current) => ({
+        ...current,
+        loading: false,
+        error: error instanceof Error ? error.message : "片段描述优化失败，请稍后重试",
+      }));
+    }
+  };
+
+  const confirmDescriptionOptimization = () => {
+    if (!descriptionOptimization.candidate) return;
+    updateNewSceneForm("description", descriptionOptimization.candidate);
+    setDescriptionOptimization(emptyDescriptionOptimization);
+    toast.success("已替换为 AI 候选描述，确认创建后才会保存");
   };
 
   const handleCreateScene = async () => {
@@ -1553,68 +1564,26 @@ export default function Workspace() {
 
   return (
     <div className={`storyboard-product-shell storyboard-workspace dark ${styles.page}`}>
-      <header className={`storyboard-topbar ${styles.topbar}`}>
-        <div className={styles.topbarStart}>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => navigate("/projects")}
-            className={styles.backButton}
-            aria-label="返回项目列表"
-          >
-            <ArrowLeft className={styles.icon} />
-          </Button>
-          <div className={styles.brandIcon}>
-            <Film className={styles.brandFilmIcon} />
-          </div>
-          <span className={styles.projectTitle}>
-            {selectedProject ? "《" + selectedProject.name + "》" : "片段工作台"}
-          </span>
-          <div className={styles.topbarDivider} />
-          <DropdownMenu>
-            <DropdownMenuTrigger className={styles.projectMenuTrigger}>
-              <MoreHorizontal className={styles.smallIcon} />
-              项目操作
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className={styles.dropdownContent}>
-              <DropdownMenuItem
-                onClick={() =>
-                  selectedProject && navigate(`/asset-confirmation?project=${selectedProject.id}`)
-                }
-                disabled={!selectedProject}
-              >
-                <ImageIcon className={styles.icon} />
-                资产确认
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleComposeProjectVideo}
-                disabled={!selectedProject || isComposingProjectVideo}
-              >
-                <Film className={styles.icon} />
-                {isComposingProjectVideo ? "总片合成中..." : "生成项目总片"}
-              </DropdownMenuItem>
-              {selectedProject && getProjectVideoPreviewSrc(selectedProject) ? (
-                <DropdownMenuItem
-                  onClick={() =>
-                    setPreviewProjectVideo({
-                      src: getProjectVideoPreviewSrc(selectedProject),
-                      originalSrc: selectedProject.video_url || undefined,
-                      title: "《" + selectedProject.name + "》项目总片",
-                    })
-                  }
-                >
-                  <Play className={styles.icon} />
-                  播放项目总片
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <span className={styles.topbarSummary}>
-          {scenes.length} 个片段 · 当前片段 {calculateTotalDuration().toFixed(1)}s
-        </span>
-      </header>
+      <WorkspaceHeader
+        project={selectedProject}
+        sceneCount={scenes.length}
+        totalDuration={calculateTotalDuration()}
+        composingProjectVideo={isComposingProjectVideo}
+        projectVideoPreviewSrc={getProjectVideoPreviewSrc(selectedProject)}
+        onBack={() => navigate("/projects")}
+        onOpenAssetConfirmation={() =>
+          selectedProject && navigate(`/asset-confirmation?project=${selectedProject.id}`)
+        }
+        onComposeProjectVideo={handleComposeProjectVideo}
+        onPreviewProjectVideo={() =>
+          selectedProject &&
+          setPreviewProjectVideo({
+            src: getProjectVideoPreviewSrc(selectedProject),
+            originalSrc: selectedProject.video_url || undefined,
+            title: `《${selectedProject.name}》项目总片`,
+          })
+        }
+      />
 
       <div className={styles.workspaceBody}>
         <div
@@ -2113,59 +2082,19 @@ export default function Workspace() {
         }}
       />
 
-      <Dialog open={isPromptFullscreenOpen} onOpenChange={setIsPromptFullscreenOpen}>
-        <DialogContent
-          showCloseButton={false}
-          overlayClassName="bg-black/55 backdrop-blur-lg"
-          className={styles.fullscreenDialog}
-        >
-          <DialogHeader className={styles.fullscreenHeader}>
-            <div className={styles.dialogHeaderRow}>
-              <div>
-                <DialogTitle className={styles.fullscreenTitle}>提示词</DialogTitle>
-                <DialogDescription className={styles.fullscreenDescription}>
-                  当前片段 · {selectedScene?.title || "未命名片段"}
-                </DialogDescription>
-              </div>
-              <div className={styles.dialogActions}>
-                <PromptOptimizeButton
-                  loading={isOptimizingPrompt}
-                  disabled={!shotForm.content.trim()}
-                  onClick={() => void requestPromptOptimization()}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className={styles.minimizeButton}
-                  onClick={() => setIsPromptFullscreenOpen(false)}
-                  aria-label="退出全屏编辑"
-                >
-                  <Minimize2 className={styles.actionIcon} />
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
-          <div className={styles.fullscreenBody}>
-            <RichPromptEditor
-              key={"fullscreen-prompt-" + (selectedShot?.id || 0)}
-              value={shotForm.content}
-              options={promptMentionOptions}
-              onChange={(value) => updateShotForm("content", value)}
-              onSelectMention={handleSelectPromptMention}
-              onRemoveMentions={handleRemovePromptMentions}
-              autoFocus={isPromptFullscreenOpen}
-            />
-          </div>
-          <DialogFooter className={styles.fullscreenFooter}>
-            <Button
-              onClick={() => setIsPromptFullscreenOpen(false)}
-              className={styles.primaryButton}
-            >
-              完成
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FullscreenPromptDialog
+        open={isPromptFullscreenOpen}
+        sceneTitle={selectedScene?.title || "未命名片段"}
+        editorKey={`fullscreen-prompt-${selectedShot?.id || 0}`}
+        value={shotForm.content}
+        options={promptMentionOptions}
+        optimizing={isOptimizingPrompt}
+        onOpenChange={setIsPromptFullscreenOpen}
+        onChange={(value) => updateShotForm("content", value)}
+        onSelectMention={handleSelectPromptMention}
+        onRemoveMentions={handleRemovePromptMentions}
+        onOptimize={() => void requestPromptOptimization()}
+      />
       <PromptOptimizationDialog
         open={isPromptOptimizationOpen}
         originalPrompt={promptOptimizationOriginal}
@@ -2177,261 +2106,109 @@ export default function Workspace() {
         onRetry={() => void requestPromptOptimization()}
         onConfirm={confirmPromptOptimization}
       />
-      <Dialog open={isManageCharactersOpen} onOpenChange={setIsManageCharactersOpen}>
-        <DialogContent className={styles.manageDialog}>
-          <DialogHeader>
-            <DialogTitle>管理片段角色</DialogTitle>
-            <DialogDescription className={styles.dialogDescription}>
-              管理当前片段 Prompt 使用的角色参考。
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.manageSections}>
-            <div className={styles.manageSection}>
-              <div className={styles.manageSectionTitle}>当前片段</div>
-              <div className={styles.currentSceneDescription}>
-                {selectedShot
-                  ? `${selectedScene?.title || "未命名片段"} · ${selectedShot.content || "未填写 Prompt"}`
-                  : "未选择片段"}
-              </div>
-              <div className={styles.assignedItems}>
-                {selectedShot?.characters?.length ? (
-                  selectedShot.characters.map((character) => (
-                    <Badge key={character.id} variant="outline" className={styles.assignedBadge}>
-                      <span>{character.name}</span>
-                      <button
-                        type="button"
-                        className={styles.removeAssignedButton}
-                        onClick={() => void handleRemoveStoryboardCharacter(character.id)}
-                        disabled={activeCharacterActionKey === `remove-character:${character.id}`}
-                        aria-label={`移除角色 ${character.name}`}
-                      >
-                        <X className={styles.smallIcon} />
-                      </button>
-                    </Badge>
-                  ))
-                ) : (
-                  <Badge variant="outline" className={styles.emptyBadge}>
-                    当前片段未关联角色
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            <div className={styles.manageSection}>
-              <div className={styles.manageSectionHeader}>
-                <div className={styles.manageSectionTitle}>项目角色库</div>
-                {selectedProject ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className={styles.refreshButton}
-                    onClick={() => void loadProjectCharacters(selectedProject.id)}
-                    disabled={isLoadingProjectCharacters}
-                  >
-                    {isLoadingProjectCharacters ? (
-                      <>
-                        <Loader2 className={styles.inlineButtonSpinner} />
-                        刷新中
-                      </>
-                    ) : (
-                      "刷新角色库"
-                    )}
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className={styles.libraryList}>
-                {isLoadingProjectCharacters ? (
-                  <div className={styles.inlineLoading}>
-                    <Loader2 className={styles.inlineLoadingIcon} />
-                    正在加载项目角色
-                  </div>
-                ) : projectCharacters.length > 0 ? (
-                  projectCharacters.map((character) => {
-                    const alreadyAssigned = !!selectedShot?.characters?.some(
-                      (item) => item.id === character.id,
-                    );
-                    return (
-                      <div key={character.id} className={styles.libraryItem}>
-                        <div className={styles.libraryItemText}>
-                          <div className={styles.libraryItemName}>{character.name}</div>
-                          <div className={styles.libraryItemDescription}>
-                            {character.description || "暂无角色描述"}
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={alreadyAssigned ? "outline" : "default"}
-                          className={
-                            alreadyAssigned
-                              ? "h-7 border-gray-700 text-xs text-gray-400"
-                              : "h-7 bg-teal-400 px-3 text-xs text-[#071514] hover:bg-teal-300"
-                          }
-                          onClick={() => void handleAddStoryboardCharacter(character.id)}
-                          disabled={
-                            alreadyAssigned ||
-                            activeCharacterActionKey === `add-character:${character.id}`
-                          }
-                        >
-                          {activeCharacterActionKey === `add-character:${character.id}` ? (
-                            <>
-                              <Loader2 className={styles.inlineButtonSpinner} />
-                              添加中
-                            </>
-                          ) : alreadyAssigned ? (
-                            "已关联"
-                          ) : (
-                            "加入片段"
-                          )}
-                        </Button>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className={styles.libraryEmpty}>当前项目还没有可选角色。</div>
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsManageCharactersOpen(false)}
-            >
-              关闭
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={isManageAssetsOpen} onOpenChange={setIsManageAssetsOpen}>
-        <DialogContent className={styles.manageDialog}>
-          <DialogHeader>
-            <DialogTitle>管理参考资产</DialogTitle>
-            <DialogDescription className={styles.dialogDescription}>
-              给当前片段添加或移除场景、图片、道具和音频资产。生成时会按媒体类型分别作为参考图或参考音频传入。
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.manageSections}>
-            <div className={styles.manageSection}>
-              <div className={styles.manageSectionTitle}>当前片段</div>
-              <div className={styles.currentSceneDescription}>
-                {selectedShot
-                  ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}`
-                  : "未选择片段"}
-              </div>
-              <div className={styles.assignedItems}>
-                {selectedShot?.assets?.length ? (
-                  selectedShot.assets.map((asset) => (
-                    <Badge key={asset.id} variant="outline" className={styles.assignedBadge}>
-                      <span>{asset.name}</span>
-                      <button
-                        type="button"
-                        className={styles.removeAssignedButton}
-                        onClick={() => void handleRemoveStoryboardAsset(asset.id)}
-                        disabled={activeAssetActionKey === `remove-asset:${asset.id}`}
-                        aria-label={`移除参考资产 ${asset.name}`}
-                      >
-                        <X className={styles.smallIcon} />
-                      </button>
-                    </Badge>
-                  ))
-                ) : (
-                  <Badge variant="outline" className={styles.emptyBadge}>
-                    当前片段未关联参考资产
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            <div className={styles.manageSection}>
-              <div className={styles.manageSectionHeader}>
-                <div className={styles.manageSectionTitle}>项目参考资产库</div>
-                {selectedProject ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className={styles.refreshButton}
-                    onClick={() => void loadProjectAssets(selectedProject.id)}
-                    disabled={isLoadingProjectAssets}
-                  >
-                    {isLoadingProjectAssets ? (
-                      <>
-                        <Loader2 className={styles.inlineButtonSpinner} />
-                        刷新中
-                      </>
-                    ) : (
-                      "刷新资产库"
-                    )}
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className={styles.libraryList}>
-                {isLoadingProjectAssets ? (
-                  <div className={styles.inlineLoading}>
-                    <Loader2 className={styles.inlineLoadingIcon} />
-                    正在加载项目参考资产
-                  </div>
-                ) : projectAssets.length > 0 ? (
-                  projectAssets.map((asset) => {
-                    const alreadyAssigned = !!selectedShot?.assets?.some(
-                      (item) => item.id === asset.id,
-                    );
-                    return (
-                      <div key={asset.id} className={styles.libraryItem}>
-                        <div className={styles.libraryItemText}>
-                          <div className={styles.libraryItemName}>{asset.name}</div>
-                          <div className={styles.libraryItemDescription}>
-                            {asset.meta || asset.type || "项目资产"}
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={alreadyAssigned ? "outline" : "default"}
-                          className={
-                            alreadyAssigned
-                              ? "h-7 border-gray-700 text-xs text-gray-400"
-                              : "h-7 bg-teal-400 px-3 text-xs text-[#071514] hover:bg-teal-300"
-                          }
-                          onClick={() => void handleAddStoryboardAsset(asset.id)}
-                          disabled={
-                            alreadyAssigned || activeAssetActionKey === `add-asset:${asset.id}`
-                          }
-                        >
-                          {activeAssetActionKey === `add-asset:${asset.id}` ? (
-                            <>
-                              <Loader2 className={styles.inlineButtonSpinner} />
-                              添加中
-                            </>
-                          ) : alreadyAssigned ? (
-                            "已关联"
-                          ) : (
-                            "加入片段"
-                          )}
-                        </Button>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className={styles.libraryEmpty}>当前项目还没有可用的参考资产。</div>
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsManageAssetsOpen(false)}>
-              关闭
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog
+      <PromptOptimizationDialog
+        open={descriptionOptimization.open}
+        originalPrompt={descriptionOptimization.original}
+        optimizedPrompt={descriptionOptimization.candidate}
+        model={descriptionOptimization.model}
+        loading={descriptionOptimization.loading}
+        error={descriptionOptimization.error}
+        onOpenChange={(open) =>
+          setDescriptionOptimization((current) =>
+            open ? { ...current, open: true } : emptyDescriptionOptimization,
+          )
+        }
+        onRetry={() => void requestDescriptionOptimization()}
+        onConfirm={confirmDescriptionOptimization}
+        title="AI 优化片段描述"
+        description="DeepSeek 只生成候选描述。确认前不会覆盖表单，也不会创建片段。"
+        loadingText="DeepSeek 正在按自然剧情节奏整理镜号描述..."
+        reviewText="请核对人物、动作、剧情顺序和台词含义后再替换。"
+        originalLabel="原片段描述"
+        optimizedLabel="AI 候选描述"
+        confirmLabel="确认使用"
+      />
+      <ManageReferencesDialog
+        open={isManageCharactersOpen}
+        title="管理片段角色"
+        description="管理当前片段 Prompt 使用的角色参考。"
+        currentDescription={
+          selectedShot
+            ? `${selectedScene?.title || "未命名片段"} · ${selectedShot.content || "未填写 Prompt"}`
+            : "未选择片段"
+        }
+        emptyAssignedLabel="当前片段未关联角色"
+        libraryTitle="项目角色库"
+        loadingLabel="正在加载项目角色"
+        emptyLibraryLabel="当前项目还没有可选角色。"
+        refreshLabel="刷新角色库"
+        assignedItems={(selectedShot?.characters || []).map((character) => ({
+          id: character.id,
+          name: character.name,
+          description: character.description || "暂无角色描述",
+          assigned: true,
+        }))}
+        items={projectCharacters.map((character) => ({
+          id: character.id,
+          name: character.name,
+          description: character.description || "暂无角色描述",
+          assigned: !!selectedShot?.characters?.some((item) => item.id === character.id),
+        }))}
+        loading={isLoadingProjectCharacters}
+        canRefresh={!!selectedProject}
+        activeActionKey={activeCharacterActionKey}
+        actionPrefix="add-character"
+        removePrefix="remove-character"
+        itemAriaLabel="角色"
+        onOpenChange={setIsManageCharactersOpen}
+        onRefresh={() => selectedProject && void loadProjectCharacters(selectedProject.id)}
+        onAdd={(id) => void handleAddStoryboardCharacter(id)}
+        onRemove={(id) => void handleRemoveStoryboardCharacter(id)}
+      />
+      <ManageReferencesDialog
+        open={isManageAssetsOpen}
+        title="管理参考资产"
+        description="给当前片段添加或移除场景、图片、道具和音频资产。生成时会按媒体类型分别作为参考图或参考音频传入。"
+        currentDescription={
+          selectedShot
+            ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}`
+            : "未选择片段"
+        }
+        emptyAssignedLabel="当前片段未关联参考资产"
+        libraryTitle="项目参考资产库"
+        loadingLabel="正在加载项目参考资产"
+        emptyLibraryLabel="当前项目还没有可用的参考资产。"
+        refreshLabel="刷新资产库"
+        assignedItems={(selectedShot?.assets || []).map((asset) => ({
+          id: asset.id,
+          name: asset.name,
+          description: asset.meta || asset.type || "项目资产",
+          assigned: true,
+        }))}
+        items={projectAssets.map((asset) => ({
+          id: asset.id,
+          name: asset.name,
+          description: asset.meta || asset.type || "项目资产",
+          assigned: !!selectedShot?.assets?.some((item) => item.id === asset.id),
+        }))}
+        loading={isLoadingProjectAssets}
+        canRefresh={!!selectedProject}
+        activeActionKey={activeAssetActionKey}
+        actionPrefix="add-asset"
+        removePrefix="remove-asset"
+        itemAriaLabel="参考资产"
+        onOpenChange={setIsManageAssetsOpen}
+        onRefresh={() => selectedProject && void loadProjectAssets(selectedProject.id)}
+        onAdd={(id) => void handleAddStoryboardAsset(id)}
+        onRemove={(id) => void handleRemoveStoryboardAsset(id)}
+      />
+      <CreateSceneDialog
         open={isCreateSceneOpen}
+        insertSortOrder={sceneInsertSortOrder}
+        sceneCount={scenes.length}
+        draft={newSceneForm}
+        creating={isCreatingScene}
+        optimizingDescription={descriptionOptimization.loading}
         onOpenChange={(open) => {
           setIsCreateSceneOpen(open);
           if (!open) {
@@ -2439,733 +2216,127 @@ export default function Workspace() {
             resetNewSceneForm();
           }
         }}
-      >
-        <DialogContent className={styles.formDialog}>
-          <DialogHeader>
-            <DialogTitle>{sceneInsertSortOrder ? "插入片段" : "新建片段"}</DialogTitle>
-            <DialogDescription className={styles.mutedText}>
-              {sceneInsertSortOrder
-                ? `新片段将插入为当前章节的片段-${sceneInsertSortOrder}，后续片段会自动顺延。`
-                : "在当前章节末尾创建新片段。若项目还没有章节，系统会先自动创建第1章。"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.dialogForm}>
-            <div>
-              <Label className={styles.formLabel}>片段号</Label>
-              <Input
-                value={newSceneForm.title}
-                onChange={(e) => updateNewSceneForm("title", e.target.value)}
-                placeholder={`片段${sceneInsertSortOrder || scenes.length + 1}`}
-                className={styles.dialogInput}
-              />
-            </div>
-            <div>
-              <Label className={styles.formLabel}>片段描述</Label>
-              <Textarea
-                value={newSceneForm.description}
-                onChange={(e) => updateNewSceneForm("description", e.target.value)}
-                placeholder="请输入，可选"
-                className={styles.dialogTextarea}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsCreateSceneOpen(false);
-                setSceneInsertSortOrder(null);
-                resetNewSceneForm();
-              }}
-            >
-              取消
-            </Button>
-            <Button
-              type="button"
-              className={styles.primaryButton}
-              onClick={handleCreateScene}
-              disabled={isCreatingScene || !newSceneForm.title.trim()}
-            >
-              {isCreatingScene ? (
-                <>
-                  <Loader2 className={styles.buttonSpinner} />
-                  创建中
-                </>
-              ) : (
-                "确认创建"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={isCoverConfirmOpen} onOpenChange={setIsCoverConfirmOpen}>
-        <DialogContent className={styles.detailDialog}>
-          <DialogHeader>
-            <DialogTitle>确认生成首帧</DialogTitle>
-            <DialogDescription className={styles.dialogDescriptionLeading}>
-              会为当前片段调用图像模型生成 1
-              张新首帧，并消耗模型额度。弹窗展示的是本次将实际传给大模型的参数。
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.detailScroll}>
-            <div className={styles.summaryGrid}>
-              <div className={styles.detailRow}>
-                <span className={styles.labelText}>片段</span>
-                <span>{selectedScene?.title || "-"}</span>
-              </div>
-              <div className={styles.detailRow}>
-                <span className={styles.labelText}>生成模式</span>
-                <span>
-                  {coverGenerationPreview?.mode === "reference" ? "参考图生成" : "纯文本生成"}
-                </span>
-              </div>
-              <div className={styles.detailRowWide}>
-                <span className={styles.labelText}>实际模型</span>
-                <span>{coverGenerationPreview?.model || "-"}</span>
-              </div>
-            </div>
+        onDraftChange={setNewSceneForm}
+        onOptimizeDescription={() => void requestDescriptionOptimization()}
+        onCreate={handleCreateScene}
+      />
+      <CoverGenerationDialog
+        open={isCoverConfirmOpen}
+        sceneTitle={selectedScene?.title || "-"}
+        preview={coverGenerationPreview}
+        formattedPrompt={formatPromptForDisplay(coverGenerationPreview?.final_prompt)}
+        onOpenChange={setIsCoverConfirmOpen}
+        onPreviewReference={openGenerationReferencePreview}
+        onManageCharacters={handleManageCharactersForCover}
+        onManageAssets={handleManageAssetsForCover}
+        onConfirm={(textOnly) => void confirmGenerateCover(textOnly)}
+      />
 
-            <div className={styles.detailSection}>
-              <div className={styles.sectionTitle}>参考图</div>
-              {coverGenerationPreview?.reference_images?.length ? (
-                <div className={styles.referenceList}>
-                  {coverGenerationPreview.reference_images.map((reference, index) => (
-                    <div
-                      key={`${reference.type}-${reference.name}-${index}`}
-                      className={styles.compactReferenceCard}
-                    >
-                      <div className={styles.referenceGrid}>
-                        <button
-                          type="button"
-                          className={styles.referenceThumbnail}
-                          onClick={() => openGenerationReferencePreview(index)}
-                          aria-label={`预览参考图 ${reference.name || index + 1}`}
-                        >
-                          <img
-                            src={reference.url}
-                            alt={reference.name || `${reference.type} 参考图`}
-                            loading="lazy"
-                            decoding="async"
-                            className={styles.thumbnailImage}
-                          />
-                        </button>
-                        <div className={styles.compactDetails}>
-                          <div className={styles.detailRow}>
-                            <span className={styles.labelText}>类型</span>
-                            <span>{reference.type}</span>
-                          </div>
-                          <div className={styles.detailRow}>
-                            <span className={styles.labelText}>名称</span>
-                            <span>{reference.name || "-"}</span>
-                          </div>
-                          <div className={styles.detailRow}>
-                            <span className={styles.labelText}>来源字段</span>
-                            <span>{reference.source}</span>
-                          </div>
-                          <div className={styles.detailRow}>
-                            <span className={styles.labelText}>Prompt 映射</span>
-                            <span>
-                              {coverGenerationPreview?.mappings?.[index]?.is_mentioned
-                                ? `已对应 ${coverGenerationPreview.mappings[index].mention}`
-                                : "已绑定但正文未引用"}
-                            </span>
-                          </div>
-                          <div>
-                            <div className={styles.fieldLabelLegacy}>URL</div>
-                            <div className={styles.breakableContent}>{reference.url}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.warningTextInline}>当前片段没有任何可用参考图。</div>
-              )}
-              {!!coverGenerationPreview?.missing_references?.length && (
-                <div>
-                  <div className={styles.fieldLabelLegacy}>缺失参考图</div>
-                  <div className={styles.compactContent}>
-                    {coverGenerationPreview.missing_references.join("、")}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className={styles.detailSection}>
-              <div className={styles.sectionTitle}>结构化字段</div>
-              <div className={styles.detailFieldGrid}>
-                <div>
-                  <span className={styles.labelText}>片段标题：</span>
-                  <span>{coverGenerationPreview?.fields.scene_title || "-"}</span>
-                </div>
-                <div>
-                  <span className={styles.labelText}>地点：</span>
-                  <span>{coverGenerationPreview?.fields.location || "-"}</span>
-                </div>
-                <div>
-                  <span className={styles.labelText}>时间：</span>
-                  <span>{coverGenerationPreview?.fields.time_of_day || "-"}</span>
-                </div>
-                <div className={styles.wideField}>
-                  <span className={styles.labelText}>角色：</span>
-                  <span>{coverGenerationPreview?.fields.characters?.join("、") || "-"}</span>
-                </div>
-                <div className={styles.wideField}>
-                  <span className={styles.labelText}>画面描述：</span>
-                  <span>{coverGenerationPreview?.fields.content || "-"}</span>
-                </div>
-                <div>
-                  <span className={styles.labelText}>情绪：</span>
-                  <span>{coverGenerationPreview?.fields.mood || "-"}</span>
-                </div>
-                <div>
-                  <span className={styles.labelText}>台词：</span>
-                  <span>{coverGenerationPreview?.fields.dialogue || "-"}</span>
-                </div>
-                <div className={styles.wideField}>
-                  <span className={styles.labelText}>备注：</span>
-                  <span>{coverGenerationPreview?.fields.notes || "-"}</span>
-                </div>
-              </div>
-            </div>
+      <SceneCoverGenerationDialog
+        open={isSceneCoverConfirmOpen}
+        preview={sceneCoverGenerationPreview}
+        formattedPrompt={formatPromptForDisplay(sceneCoverGenerationPreview?.final_prompt)}
+        onOpenChange={setIsSceneCoverConfirmOpen}
+        onConfirm={() => void confirmGenerateSceneCover()}
+      />
 
-            <div className={styles.detailSection}>
-              <div className={styles.sectionTitle}>最终 Prompt</div>
-              <pre className={styles.promptPreview}>
-                {formatPromptForDisplay(coverGenerationPreview?.final_prompt)}
-              </pre>
-            </div>
-          </div>
-          <DialogFooter className={styles.dialogFooter}>
-            <Button type="button" variant="outline" onClick={() => setIsCoverConfirmOpen(false)}>
-              取消
-            </Button>
-            {coverGenerationPreview?.reference_images?.length ? (
-              <Button
-                type="button"
-                className={styles.primaryButton}
-                onClick={() => void confirmGenerateCover(false)}
-              >
-                确认生成
-              </Button>
-            ) : (
-              <>
-                <Button type="button" variant="outline" onClick={handleManageCharactersForCover}>
-                  管理角色参考
-                </Button>
-                <Button type="button" variant="outline" onClick={handleManageAssetsForCover}>
-                  管理场景参考
-                </Button>
-                <Button
-                  type="button"
-                  className={styles.primaryButton}
-                  onClick={() => void confirmGenerateCover(true)}
-                >
-                  继续用纯文本生成
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isSceneCoverConfirmOpen} onOpenChange={setIsSceneCoverConfirmOpen}>
-        <DialogContent className={styles.detailDialog}>
-          <DialogHeader>
-            <DialogTitle>确认生成片段封面</DialogTitle>
-            <DialogDescription className={styles.dialogDescriptionLeading}>
-              会为当前片段生成 1 张片段级代表封面。弹窗展示的是本次将实际传给大模型的详细参数和最终
-              prompt。
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.detailScroll}>
-            <div className={styles.detailSection}>
-              <div className={styles.detailRow}>
-                <span className={styles.labelText}>实际模型</span>
-                <span>{sceneCoverGenerationPreview?.model || "-"}</span>
-              </div>
-              {sceneCoverGenerationPreview?.notes?.length ? (
-                <div>
-                  <div className={styles.fieldLabelLegacy}>说明</div>
-                  <ul className={styles.noteList}>
-                    {sceneCoverGenerationPreview.notes.map((note, index) => (
-                      <li key={`${note}-${index}`}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-            <div className={styles.detailSection}>
-              <div className={styles.sectionTitle}>详细参数</div>
-              <div className={styles.detailFieldGrid}>
-                {Object.entries(sceneCoverGenerationPreview?.fields || {}).map(([key, value]) => (
-                  <div key={key}>
-                    <span className={styles.labelText}>{key}：</span>
-                    <span>{value || "-"}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className={styles.detailSection}>
-              <div className={styles.sectionTitle}>最终 Prompt</div>
-              <pre className={styles.promptPreview}>
-                {formatPromptForDisplay(sceneCoverGenerationPreview?.final_prompt)}
-              </pre>
-            </div>
-          </div>
-          <DialogFooter className={styles.dialogFooter}>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsSceneCoverConfirmOpen(false)}
-            >
-              取消
-            </Button>
-            <Button
-              type="button"
-              className={styles.primaryButton}
-              onClick={() => void confirmGenerateSceneCover()}
-            >
-              确认生成
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
+      <ConfirmationDialog
         open={isBatchSceneCoverConfirmOpen}
+        title="确认批量生成首帧"
+        description="会为当前片段下的全部镜头串行生成新首帧，并消耗图像模型额度。新结果会保留到各自镜头的首帧历史中。"
+        items={[
+          { label: "片段标题", value: selectedScene?.title || "-" },
+          { label: "镜头数量", value: filteredShots.length },
+          { label: "当前模型", value: "Seedream 4.5" },
+        ]}
+        confirmLabel="确认生成"
         onOpenChange={setIsBatchSceneCoverConfirmOpen}
-      >
-        <AlertDialogContent className={styles.alertDialog}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认批量生成首帧</AlertDialogTitle>
-            <AlertDialogDescription className={styles.dialogDescriptionLeading}>
-              会为当前片段下的全部镜头串行生成新首帧，并消耗图像模型额度。新结果会保留到各自镜头的首帧历史中。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className={styles.confirmationSummary}>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>片段标题</span>
-              <span>{selectedScene?.title || "-"}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>镜头数量</span>
-              <span>{filteredShots.length}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>当前模型</span>
-              <span>Seedream 4.5</span>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              className={styles.primaryButton}
-              onClick={confirmBatchGenerateSceneCovers}
-            >
-              确认生成
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={confirmBatchGenerateSceneCovers}
+      />
 
-      <AlertDialog open={isSceneVideoConfirmOpen} onOpenChange={setIsSceneVideoConfirmOpen}>
-        <AlertDialogContent className={styles.alertDialog}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {selectedScene?.video_url ? "确认重新生成片段视频" : "确认生成片段视频"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className={styles.dialogDescriptionLeading}>
-              {selectedScene?.video_url
-                ? "当前片段已经有一个已生成的视频。继续后会重新合成并覆盖当前片段视频结果。"
-                : "会将当前片段下已有视频镜头按顺序合成为一个片段视频，并保留每个镜头原始音轨。"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className={styles.confirmationSummary}>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>片段标题</span>
-              <span>{selectedScene?.title || "-"}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>可合成镜头数</span>
-              <span>{composableShots.length}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>输出规格</span>
-              <span>720P / 保留原音轨</span>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className={styles.primaryButton} onClick={confirmComposeSceneVideo}>
-              {selectedScene?.video_url ? "确认重新生成" : "确认合成"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationDialog
+        open={isSceneVideoConfirmOpen}
+        title={selectedScene?.video_url ? "确认重新生成片段视频" : "确认生成片段视频"}
+        description={
+          selectedScene?.video_url
+            ? "当前片段已经有一个已生成的视频。继续后会重新合成并覆盖当前片段视频结果。"
+            : "会将当前片段下已有视频镜头按顺序合成为一个片段视频，并保留每个镜头原始音轨。"
+        }
+        items={[
+          { label: "片段标题", value: selectedScene?.title || "-" },
+          { label: "可合成镜头数", value: composableShots.length },
+          { label: "输出规格", value: "720P / 保留原音轨" },
+        ]}
+        confirmLabel={selectedScene?.video_url ? "确认重新生成" : "确认合成"}
+        onOpenChange={setIsSceneVideoConfirmOpen}
+        onConfirm={confirmComposeSceneVideo}
+      />
 
-      <AlertDialog open={isProjectVideoConfirmOpen} onOpenChange={setIsProjectVideoConfirmOpen}>
-        <AlertDialogContent className={styles.alertDialog}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认生成项目总片</AlertDialogTitle>
-            <AlertDialogDescription className={styles.dialogDescriptionLeading}>
-              会自动收集当前项目内已生成成功的片段视频，按章节和片段顺序合成为一个项目级粗剪视频。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className={styles.confirmationSummary}>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>项目名称</span>
-              <span>{selectedProject?.name || "-"}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>输出规格</span>
-              <span>720P / 保留各片段原音轨</span>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              className={styles.primaryButton}
-              onClick={confirmComposeProjectVideo}
-            >
-              确认合成
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationDialog
+        open={isProjectVideoConfirmOpen}
+        title="确认生成项目总片"
+        description="会自动收集当前项目内已生成成功的片段视频，按章节和片段顺序合成为一个项目级粗剪视频。"
+        items={[
+          { label: "项目名称", value: selectedProject?.name || "-" },
+          { label: "输出规格", value: "720P / 保留各片段原音轨" },
+        ]}
+        confirmLabel="确认合成"
+        onOpenChange={setIsProjectVideoConfirmOpen}
+        onConfirm={confirmComposeProjectVideo}
+      />
 
-      <Dialog open={isVideoConfirmOpen} onOpenChange={handleVideoConfirmOpenChange}>
-        <DialogContent className={styles.detailDialog}>
-          <DialogHeader>
-            <DialogTitle>确认生成视频</DialogTitle>
-            <DialogDescription className={styles.dialogDescriptionLeading}>
-              会为当前片段生成 {previewVideoSpecLabel}{" "}
-              视频。弹窗展示的是本次将实际传给大模型的详细参数和最终 prompt。
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.detailScroll}>
-            <div className={styles.summaryGrid}>
-              <div className={styles.detailRow}>
-                <span className={styles.labelText}>片段</span>
-                <span>{selectedScene?.title || "-"}</span>
-              </div>
-              <div className={styles.detailRow}>
-                <span className={styles.labelText}>实际模型</span>
-                <span>{videoGenerationPreview?.model || selectedVideoModel}</span>
-              </div>
-              <div className={styles.detailRow}>
-                <span className={styles.labelText}>时长</span>
-                <span>{videoGenerationPreview?.duration || activeVideoDuration} 秒</span>
-              </div>
-              <div className={styles.detailRow}>
-                <span className={styles.labelText}>输出规格</span>
-                <span>
-                  {videoGenerationPreview
-                    ? `${videoGenerationPreview.aspect_ratio || FIXED_VIDEO_ASPECT_RATIO} / ${videoGenerationPreview.resolution} / ${videoGenerationPreview.duration}秒 / ${videoGenerationPreview.audio ? "有声" : "无声"}`
-                    : previewVideoSpecLabel}
-                </span>
-              </div>
-              <div className={styles.detailRowWide}>
-                <span className={styles.labelText}>首帧来源</span>
-                <span>
-                  {videoGenerationPreview?.use_first_frame
-                    ? videoGenerationPreview?.will_generate_cover
-                      ? "当前无首帧，后端会先自动生成首帧"
-                      : "使用当前片段首帧作为首帧输入"
-                    : "不使用首帧，直接文生视频"}
-                </span>
-              </div>
-            </div>
+      <VideoGenerationDialog
+        open={isVideoConfirmOpen}
+        preview={videoGenerationPreview}
+        previewSpecLabel={previewVideoSpecLabel}
+        sceneTitle={selectedScene?.title || "-"}
+        selectedModel={selectedVideoModel}
+        activeDuration={activeVideoDuration}
+        useFirstFrame={useFirstFrameForVideo}
+        shotNumberLabel={
+          selectedShot ? formatShotNumber(selectedShot.shot_number) : ""
+        }
+        formattedPrompt={formatPromptForDisplay(videoGenerationPreview?.final_prompt)}
+        onOpenChange={handleVideoConfirmOpenChange}
+        onUseFirstFrameChange={setUseFirstFrameForVideo}
+        onConfirm={() => void confirmGenerateVideo()}
+      />
 
-            <div className={styles.settingSection}>
-              <div className={styles.sectionHeaderRow}>
-                <div>
-                  <p className={styles.settingTitle}>指定首帧控制开场</p>
-                  <p className={styles.settingDescription}>
-                    Seedance
-                    的首帧模式与参考素材模式互斥。开启后只发送首帧，关闭后发送角色、场景和语音参考素材。
-                  </p>
-                </div>
-                <Switch
-                  checked={useFirstFrameForVideo}
-                  onCheckedChange={setUseFirstFrameForVideo}
-                />
-              </div>
-            </div>
-
-            {videoGenerationPreview?.use_first_frame ? (
-              <div className={styles.detailSection}>
-                <div className={styles.sectionTitle}>首帧图</div>
-                {videoGenerationPreview?.source_image_url ? (
-                  <div className={styles.firstFrameGrid}>
-                    <div className={styles.firstFrameThumbnail}>
-                      <img
-                        src={videoGenerationPreview.source_image_url}
-                        alt={
-                          selectedShot
-                            ? `${formatShotNumber(selectedShot.shot_number)} 首帧图`
-                            : "首帧图"
-                        }
-                        loading="lazy"
-                        decoding="async"
-                        className={styles.thumbnailImage}
-                      />
-                    </div>
-                    <div className={styles.firstFrameDetails}>
-                      <div className={styles.detailRow}>
-                        <span className={styles.labelText}>状态</span>
-                        <span>
-                          {videoGenerationPreview.source_image_status === "existing-cover"
-                            ? "已有首帧"
-                            : "将自动补首帧"}
-                        </span>
-                      </div>
-                      <div>
-                        <div className={styles.fieldLabelLegacy}>URL</div>
-                        <div className={styles.breakableContent}>
-                          {videoGenerationPreview.source_image_url}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={styles.warningText}>
-                    当前片段还没有首帧。开始生成后，后端会先自动补一张首帧，再继续生成视频。
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            {!!videoGenerationPreview?.omitted_reference_images?.length && (
-              <div className={styles.warningPanel}>
-                当前为首帧模式，已绑定的 {videoGenerationPreview.omitted_reference_images.length}{" "}
-                张视觉参考图不会发送给 Seedance。关闭“指定首帧控制开场”即可改用参考素材模式。
-              </div>
-            )}
-
-            {!!videoGenerationPreview?.reference_images?.length && (
-              <div className={styles.detailSectionRelaxed}>
-                <div className={styles.sectionHeaderRow}>
-                  <div className={styles.sectionTitle}>参考图输入</div>
-                  <div className={styles.itemCount}>
-                    用于生成前确认；Seedance 2.0 会额外传入角色主语音参考
-                  </div>
-                </div>
-                <div className={styles.cardGrid}>
-                  {videoGenerationPreview.reference_images.map((reference, index) => (
-                    <div key={`${reference.name}-${index}`} className={styles.referenceCard}>
-                      <div className={styles.borderedReferenceThumbnail}>
-                        <img
-                          src={reference.url}
-                          alt={reference.name}
-                          loading="lazy"
-                          decoding="async"
-                          className={styles.thumbnailImage}
-                        />
-                      </div>
-                      <div className={styles.referenceDetails}>
-                        <div className={styles.inlineItems}>
-                          <Badge className={styles.referenceTypeBadge}>
-                            {reference.type === "character"
-                              ? "角色"
-                              : reference.type === "scene"
-                                ? "背景"
-                                : reference.type === "video_frame"
-                                  ? "视频抽帧"
-                                  : reference.type}
-                          </Badge>
-                          <span className={styles.truncateContent}>{reference.name}</span>
-                        </div>
-                        <div>
-                          <span className={styles.labelText}>来源：</span>
-                          <span className={styles.contentText}>{reference.source}</span>
-                        </div>
-                        <div>
-                          <div className={styles.fieldLabel}>URL</div>
-                          <div className={styles.breakableValue}>{reference.url}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {!!videoGenerationPreview?.missing_references?.length && (
-                  <div className={styles.compactWarning}>
-                    <div className={styles.warningTitle}>以下参考项缺少可用图片：</div>
-                    <div className={styles.breakableText}>
-                      {videoGenerationPreview.missing_references.join("、")}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {videoGenerationPreview?.audio_reference_limits ? (
-              <div className={styles.detailSectionRelaxed}>
-                <div className={styles.sectionHeaderRow}>
-                  <div className={styles.sectionTitle}>角色主语音参考</div>
-                  <div className={styles.itemCount}>
-                    最多 {videoGenerationPreview.audio_reference_limits.max_count} 段 / 总时长不超过{" "}
-                    {videoGenerationPreview.audio_reference_limits.max_total_duration} 秒
-                  </div>
-                </div>
-                {videoGenerationPreview.audio_reference_assets?.length ? (
-                  <div className={styles.cardGrid}>
-                    {videoGenerationPreview.audio_reference_assets.map((reference) => (
-                      <div
-                        key={reference.reference_id || reference.url}
-                        className={styles.audioReferenceCard}
-                      >
-                        <div className={styles.compactHeaderRow}>
-                          <div className={styles.minWidthContent}>
-                            <div className={styles.truncateContent}>{reference.name}</div>
-                            <div className={styles.secondaryMetadata}>
-                              {reference.voice_name || "角色主语音"} ·{" "}
-                              {reference.duration
-                                ? `${reference.duration.toFixed(1)}s`
-                                : "未知时长"}
-                            </div>
-                          </div>
-                          <Badge className={styles.audioTypeBadge}>reference_audio</Badge>
-                        </div>
-                        <audio controls className={styles.audioPlayer} src={reference.url} />
-                        <div className={styles.breakableMutedValue}>{reference.url}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={styles.emptyReference}>当前片段没有可传入的角色主语音参考。</div>
-                )}
-                {!!videoGenerationPreview.missing_audio_references?.length && (
-                  <div className={styles.compactWarning}>
-                    <div className={styles.warningTitle}>以下角色缺少主语音参考：</div>
-                    <div className={styles.breakableText}>
-                      {videoGenerationPreview.missing_audio_references.join("、")}
-                    </div>
-                  </div>
-                )}
-                {!!videoGenerationPreview.blocking_reasons?.length && (
-                  <div className={styles.blockingError}>
-                    <div className={styles.errorTitle}>当前不能生成 Seedance 2.0 视频：</div>
-                    <ul className={styles.issueList}>
-                      {videoGenerationPreview.blocking_reasons.map((reason) => (
-                        <li key={reason}>{reason}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            <div className={styles.summarySection}>
-              <div className={styles.metadataBadges}>
-                <Badge className={styles.modeBadge}>
-                  {videoGenerationPreview?.prompt_mode === "composite" ? "完整原文" : "兼容模式"}
-                </Badge>
-                <span className={styles.emptyText}>
-                  生成时长 {videoGenerationPreview?.duration || activeVideoDuration} 秒
-                </span>
-                <span className={styles.emptyText}>
-                  首帧 {videoGenerationPreview?.use_first_frame ? "开启" : "关闭"}
-                </span>
-              </div>
-              <div className={styles.detailPromptTitle}>最终提交 Prompt</div>
-              <pre className={styles.scrollablePrompt}>
-                {formatPromptForDisplay(videoGenerationPreview?.final_prompt)}
-              </pre>
-            </div>
-          </div>
-          <DialogFooter className={styles.dialogFooter}>
-            <Button type="button" variant="outline" onClick={() => setIsVideoConfirmOpen(false)}>
-              取消
-            </Button>
-            <Button
-              type="button"
-              className={styles.primaryButton}
-              onClick={() => void confirmGenerateVideo()}
-              disabled={!!videoGenerationPreview?.blocking_reasons?.length}
-            >
-              确认生成
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
+      <ConfirmationDialog
         open={!!deleteTargetGeneration}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteTargetGeneration(null);
-          }
-        }}
-      >
-        <AlertDialogContent className={styles.alertDialog}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除历史版本</AlertDialogTitle>
-            <AlertDialogDescription className={styles.dialogDescriptionLeading}>
-              该操作会从历史列表中移除当前版本记录，但不会删除服务器上的资源文件。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className={styles.confirmationSummary}>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>类型</span>
-              <span>{deleteTargetGeneration?.media_type === "video" ? "视频" : "首帧"}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>模型</span>
-              <span>{deleteTargetGeneration?.model || "-"}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>生成时间</span>
-              <span>{formatShanghaiDateTime(deleteTargetGeneration?.created_at)}</span>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className={styles.dangerButton} onClick={confirmDeleteGeneration}>
-              确认删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="确认删除历史版本"
+        description="该操作会从历史列表中移除当前版本记录，但不会删除服务器上的资源文件。"
+        items={[
+          {
+            label: "类型",
+            value: deleteTargetGeneration?.media_type === "video" ? "视频" : "首帧",
+          },
+          { label: "模型", value: deleteTargetGeneration?.model || "-" },
+          {
+            label: "生成时间",
+            value: formatShanghaiDateTime(deleteTargetGeneration?.created_at),
+          },
+        ]}
+        confirmLabel="确认删除"
+        tone="danger"
+        onOpenChange={(open) => !open && setDeleteTargetGeneration(null)}
+        onConfirm={confirmDeleteGeneration}
+      />
 
-      <AlertDialog
+      <ConfirmationDialog
         open={!!deleteTargetScene}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteTargetScene(null);
-          }
-        }}
-      >
-        <AlertDialogContent className={styles.alertDialog}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除片段</AlertDialogTitle>
-            <AlertDialogDescription className={styles.dialogDescriptionLeading}>
-              该操作会删除当前片段及其 Prompt、引用和媒体历史，需要二次确认。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className={styles.confirmationSummary}>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>片段标题</span>
-              <span>{deleteTargetScene?.title || "-"}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>地点</span>
-              <span>{deleteTargetScene?.location || "-"}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.labelText}>时间</span>
-              <span>{deleteTargetScene?.time_of_day || "-"}</span>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction className={styles.dangerButton} onClick={confirmDeleteScene}>
-              确认删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="确认删除片段"
+        description="该操作会删除当前片段及其 Prompt、引用和媒体历史，需要二次确认。"
+        items={[
+          { label: "片段标题", value: deleteTargetScene?.title || "-" },
+          { label: "地点", value: deleteTargetScene?.location || "-" },
+          { label: "时间", value: deleteTargetScene?.time_of_day || "-" },
+        ]}
+        confirmLabel="确认删除"
+        tone="danger"
+        onOpenChange={(open) => !open && setDeleteTargetScene(null)}
+        onConfirm={confirmDeleteScene}
+      />
 
       <ImagePreviewDialog
         open={!!previewImage}
@@ -3203,95 +2374,19 @@ export default function Workspace() {
         />
       ) : null}
 
-      <Dialog
-        open={!!previewSceneVideo}
-        onOpenChange={(open) => {
-          if (!open) setPreviewSceneVideo(null);
-        }}
-      >
-        <DialogContent className={styles.mediaPreviewDialog}>
-          <DialogHeader className={styles.dialogHeader}>
-            <DialogTitle>{previewSceneVideo?.title || "片段视频预览"}</DialogTitle>
-            <DialogDescription className={styles.mutedText}>
-              默认播放预览版视频。需要查看原始输出时，可在下方打开原视频。
-            </DialogDescription>
-          </DialogHeader>
-          {previewSceneVideo ? (
-            <div className={styles.mediaPreviewBody}>
-              <div className={styles.mediaPreviewStage}>
-                <video
-                  key={previewSceneVideo.src}
-                  src={previewSceneVideo.src}
-                  controls
-                  autoPlay
-                  preload="metadata"
-                  className={styles.mediaPreviewContent}
-                />
-              </div>
-              <div className={styles.previewActions}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={styles.secondaryButton}
-                  onClick={() => {
-                    if (previewSceneVideo.originalSrc) {
-                      window.open(previewSceneVideo.originalSrc, "_blank", "noopener,noreferrer");
-                    }
-                  }}
-                  disabled={!previewSceneVideo.originalSrc}
-                >
-                  打开原视频
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <VideoPreviewDialog
+        preview={previewSceneVideo}
+        fallbackTitle="片段视频预览"
+        description="默认播放预览版视频。需要查看原始输出时，可在下方打开原视频。"
+        onClose={() => setPreviewSceneVideo(null)}
+      />
 
-      <Dialog
-        open={!!previewProjectVideo}
-        onOpenChange={(open) => {
-          if (!open) setPreviewProjectVideo(null);
-        }}
-      >
-        <DialogContent className={styles.mediaPreviewDialog}>
-          <DialogHeader className={styles.dialogHeader}>
-            <DialogTitle>{previewProjectVideo?.title || "项目总片预览"}</DialogTitle>
-            <DialogDescription className={styles.mutedText}>
-              默认播放预览版项目总片。需要查看原始输出时，可在下方打开原视频。
-            </DialogDescription>
-          </DialogHeader>
-          {previewProjectVideo ? (
-            <div className={styles.mediaPreviewBody}>
-              <div className={styles.mediaPreviewStage}>
-                <video
-                  key={previewProjectVideo.src}
-                  src={previewProjectVideo.src}
-                  controls
-                  autoPlay
-                  preload="metadata"
-                  className={styles.mediaPreviewContent}
-                />
-              </div>
-              <div className={styles.previewActions}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={styles.secondaryButton}
-                  onClick={() => {
-                    if (previewProjectVideo.originalSrc) {
-                      window.open(previewProjectVideo.originalSrc, "_blank", "noopener,noreferrer");
-                    }
-                  }}
-                  disabled={!previewProjectVideo.originalSrc}
-                >
-                  打开原视频
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <VideoPreviewDialog
+        preview={previewProjectVideo}
+        fallbackTitle="项目总片预览"
+        description="默认播放预览版项目总片。需要查看原始输出时，可在下方打开原视频。"
+        onClose={() => setPreviewProjectVideo(null)}
+      />
     </div>
   );
 }

@@ -3,6 +3,12 @@
 
 const Service = require('egg').Service;
 const { resolveUrl, normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const {
+  mapPersonalAsset,
+  mapAssetVersion,
+  mapCharacterVoiceVersion,
+  deriveAssetRequirementStatus,
+} = require('../lib/asset_workspace_mapper');
 
 const VALID_KINDS = new Set(['character', 'scene', 'prop', 'voice']);
 
@@ -20,53 +26,19 @@ class AssetWorkspaceService extends Service {
   }
 
   mapPersonal(row) {
-    const base = this.app.config.storyboard.publicAppBaseUrl || '';
-    return {
-      ...row,
-      id: Number(row.id),
-      user_id: Number(row.user_id),
-      source_project_id: row.source_project_id == null ? null : Number(row.source_project_id),
-      source_entity_id: row.source_entity_id == null ? null : Number(row.source_entity_id),
-      file_url: resolveUrl(this.app, row.file_url || '', base),
-      preview_url: resolveUrl(this.app, row.preview_url || '', base),
-    };
+    return mapPersonalAsset(this.app, row);
   }
 
   mapVersion(row) {
-    const base = this.app.config.storyboard.publicAppBaseUrl || '';
-    return {
-      ...row,
-      id: Number(row.id),
-      entity_id: Number(row.entity_id),
-      is_current: Boolean(row.is_current),
-      file_url: resolveUrl(this.app, row.file_url || '', base),
-      preview_url: resolveUrl(this.app, row.preview_url || '', base),
-    };
+    return mapAssetVersion(this.app, row);
   }
 
   mapVoiceVersion(row) {
-    return {
-      ...row,
-      id: Number(row.id),
-      character_id: Number(row.character_id),
-      duration: Number(row.duration || 0),
-      is_current: Boolean(row.is_current),
-      file_url: resolveUrl(
-        this.app,
-        row.file_url || '',
-        this.app.config.storyboard.publicAppBaseUrl || '',
-      ),
-    };
+    return mapCharacterVoiceVersion(this.app, row);
   }
 
   deriveRequirementStatus(currentStatus, hasMedia) {
-    if (currentStatus === 'generating' || currentStatus === 'failed') {
-      return currentStatus;
-    }
-    if (!hasMedia) {
-      return 'pending';
-    }
-    return currentStatus === 'confirmed' ? 'confirmed' : 'generated';
+    return deriveAssetRequirementStatus(currentStatus, hasMedia);
   }
 
   async queryRequirements(projectId, chapterId) {

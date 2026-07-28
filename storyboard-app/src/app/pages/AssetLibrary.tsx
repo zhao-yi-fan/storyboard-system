@@ -26,24 +26,28 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
+import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
+import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog";
+  AIGenerationPreviewDialog,
+  type AIPreviewDialogState,
+} from "../components/assets/dialogs/AIGenerationPreviewDialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../components/ui/alert-dialog";
+  CreateAssetDialog,
+  type CreateAssetMode,
+} from "../components/assets/dialogs/CreateAssetDialog";
+import {
+  DeleteAssetDialog,
+  type DeleteAssetTarget,
+} from "../components/assets/dialogs/DeleteAssetDialog";
+import {
+  AssetCollection,
+  ContainedAssetImage,
+  getAssetKind,
+  getAssetKindLabel,
+  getAssetTab,
+  isPropAsset,
+} from "../components/assets/AssetCollection";
 import {
   Select,
   SelectContent,
@@ -59,7 +63,6 @@ import {
   ossApi,
   type Character,
   type Asset,
-  type AIGenerationPreview,
   type AssetVersion,
   type CharacterVoiceVersion,
   type Project,
@@ -68,25 +71,10 @@ import styles from "./AssetLibrary.module.scss";
 
 type SelectedAsset = { type: "character"; data: Character } | { type: "asset"; data: Asset } | null;
 
-type AssetKind = "scene" | "prop";
 type AssetLibraryTab = "characters" | "scenes" | "props";
-type CreateMode = "character" | AssetKind;
+type CreateMode = CreateAssetMode;
 
-type DeleteTarget =
-  | { type: "character"; id: number; name: string }
-  | { type: "asset"; id: number; name: string; assetKind: AssetKind }
-  | null;
-
-type AIPreviewAction = "character-design-sheet" | "character-voice-reference" | "asset-cover";
-
-type AIPreviewDialogState = {
-  action: AIPreviewAction;
-  title: string;
-  description: string;
-  confirmLabel: string;
-  preview: AIGenerationPreview;
-  promptDraft: string;
-};
+type DeleteTarget = DeleteAssetTarget;
 
 type AIPreviewDialogInput = Omit<AIPreviewDialogState, "promptDraft">;
 
@@ -112,251 +100,7 @@ const CHARACTER_VOICE_REFERENCE_DURATION_HINT =
 const CHARACTER_VOICE_REFERENCE_TEXT_HINT =
   "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。";
 
-const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
-  asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
-
 const getAssetOriginalSrc = (asset: Asset | null | undefined) => asset?.file_url || "";
-
-type ContainedAssetImageProps = {
-  src: string;
-  alt: string;
-  className?: string;
-};
-
-function ContainedAssetImage({ src, alt, className = "" }: ContainedAssetImageProps) {
-  return (
-    <div className={`${styles.containedImage} ${className}`}>
-      <img
-        src={src}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        decoding="async"
-        className={styles.containedImageBackdrop}
-      />
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        className={styles.containedImageSource}
-      />
-    </div>
-  );
-}
-
-type VersionImageCardProps = {
-  version: AssetVersion;
-  src: string;
-  alt: string;
-  label: string;
-  aspectClassName: string;
-  switching: boolean;
-  onPreview: () => void;
-  onSetCurrent: () => void;
-};
-
-function VersionImageCard({
-  version,
-  src,
-  alt,
-  label,
-  aspectClassName,
-  switching,
-  onPreview,
-  onSetCurrent,
-}: VersionImageCardProps) {
-  return (
-    <div className={version.is_current ? styles.versionCardCurrent : styles.versionCard}>
-      <button
-        type="button"
-        className={styles.versionPreviewButton}
-        onClick={onPreview}
-        aria-label={`预览${label}`}
-      >
-        <ContainedAssetImage
-          src={src}
-          alt={alt}
-          className={`${aspectClassName} ${styles.fullWidth}`}
-        />
-      </button>
-      <div className={styles.versionLabel}>{version.is_current ? "当前版本" : label}</div>
-      {!version.is_current ? (
-        <Button
-          type="button"
-          size="sm"
-          disabled={switching}
-          aria-label="设为当前版本"
-          title="设为当前版本"
-          className={styles.setCurrentButton}
-          onClick={onSetCurrent}
-        >
-          {switching ? (
-            <>
-              <Loader2 className={styles.switchingIcon} />
-              切换中
-            </>
-          ) : (
-            "设为当前"
-          )}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-const isPropAsset = (asset: Asset) => {
-  const type = String(asset.type || "").toLowerCase();
-  return type.includes("prop") || type.includes("道具");
-};
-
-const getAssetKind = (asset: Asset): AssetKind => (isPropAsset(asset) ? "prop" : "scene");
-const getAssetTab = (asset: Asset): AssetLibraryTab => (isPropAsset(asset) ? "props" : "scenes");
-const getAssetKindLabel = (asset: Asset) => (isPropAsset(asset) ? "道具" : "场景");
-
-const deriveAssetPrimaryTag = (asset: Asset) => getAssetKindLabel(asset);
-const deriveAssetSecondaryTag = (asset: Asset) => asset.type?.trim() || "资源";
-const deriveAssetDescription = (asset: Asset) => asset.meta?.trim() || `${asset.name} 资源文件`;
-
-type AssetCollectionProps = {
-  assets: Asset[];
-  emptyLabel: string;
-  loading: boolean;
-  viewMode: "grid" | "list";
-  selectedAsset: SelectedAsset;
-  onSelect: (asset: Asset) => void;
-};
-
-function AssetCollection({
-  assets,
-  emptyLabel,
-  loading,
-  viewMode,
-  selectedAsset,
-  onSelect,
-}: AssetCollectionProps) {
-  if (loading) {
-    return (
-      <div className={styles.collectionLoading}>
-        <Loader2 className={styles.collectionLoadingIcon} />
-      </div>
-    );
-  }
-  if (!assets.length) {
-    return <div className={styles.collectionEmpty}>{emptyLabel}</div>;
-  }
-
-  if (viewMode === "grid") {
-    return (
-      <div className={styles.assetGrid}>
-        {assets.map((asset) => {
-          const AssetIcon = isPropAsset(asset) ? Package : MapPin;
-          return (
-            <button
-              key={asset.id}
-              onClick={() => onSelect(asset)}
-              className={
-                selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id
-                  ? styles.assetGridCardSelected
-                  : styles.assetGridCard
-              }
-            >
-              <div className={styles.assetGridPreview}>
-                {getAssetPreviewSrc(asset) ? (
-                  <ContainedAssetImage
-                    src={getAssetPreviewSrc(asset)}
-                    alt={asset.name}
-                    className={styles.fullSize}
-                  />
-                ) : (
-                  <AssetIcon className={styles.assetGridPlaceholderIcon} />
-                )}
-                <div className={styles.primaryBadgePosition}>
-                  <Badge className={styles.primaryBadge}>{deriveAssetPrimaryTag(asset)}</Badge>
-                </div>
-                <div className={styles.secondaryBadgePosition}>
-                  <Badge className={styles.secondaryBadge}>{deriveAssetSecondaryTag(asset)}</Badge>
-                </div>
-              </div>
-              <div className={styles.assetGridContent}>
-                <h4 className={styles.assetName}>{asset.name}</h4>
-                <p className={styles.assetGridDescription}>{deriveAssetDescription(asset)}</p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.assetList}>
-      {assets.map((asset) => {
-        const AssetIcon = isPropAsset(asset) ? Package : MapPin;
-        return (
-          <button
-            key={asset.id}
-            onClick={() => onSelect(asset)}
-            className={
-              selectedAsset?.type === "asset" && selectedAsset.data.id === asset.id
-                ? styles.assetListCardSelected
-                : styles.assetListCard
-            }
-          >
-            <div className={styles.assetListPreview}>
-              {getAssetPreviewSrc(asset) ? (
-                <ContainedAssetImage
-                  src={getAssetPreviewSrc(asset)}
-                  alt={asset.name}
-                  className={styles.assetListImage}
-                />
-              ) : (
-                <AssetIcon className={styles.assetListPlaceholderIcon} />
-              )}
-            </div>
-            <div className={styles.assetListContent}>
-              <div className={styles.assetListHeader}>
-                <h4 className={styles.assetName}>{asset.name}</h4>
-                <Badge className={styles.primaryBadge}>{deriveAssetPrimaryTag(asset)}</Badge>
-              </div>
-              <p className={styles.assetListDescription}>{deriveAssetDescription(asset)}</p>
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-const PROMPT_SECTION_BREAKS = [
-  "主体与画面核心：",
-  "动作与叙事重点：",
-  "镜头设计：",
-  "风格气质：",
-  "特效与氛围：",
-  "一致性要求：",
-  "音频要求：",
-  "画质与完成度：",
-  "输出要求：",
-  "负向约束：",
-  "节奏分段：",
-  "首段：",
-  "中段：",
-  "尾段：",
-  "开场：",
-  "中段：",
-  "高潮：",
-  "收束：",
-] as const;
-
-const formatPromptForDisplay = (prompt: string | null | undefined) => {
-  const raw = String(prompt || "").trim();
-  if (!raw) return "-";
-  return PROMPT_SECTION_BREAKS.reduce((formatted, marker) => {
-    const next = formatted.replaceAll(marker, `\n${marker}`);
-    return next.startsWith("\n") ? next.slice(1) : next;
-  }, raw);
-};
 
 export default function AssetLibrary() {
   const navigate = useNavigate();
@@ -1206,7 +950,9 @@ export default function AssetLibrary() {
                     emptyLabel={collection.emptyLabel}
                     loading={loading}
                     viewMode={viewMode}
-                    selectedAsset={selectedAsset}
+                    selectedAssetId={
+                      selectedAsset?.type === "asset" ? selectedAsset.data.id : null
+                    }
                     onSelect={(asset) => setSelectedAsset({ type: "asset", data: asset })}
                   />
                 </div>
@@ -1867,396 +1613,60 @@ export default function AssetLibrary() {
         ) : null}
       </div>
 
-      <Dialog
-        open={!!aiPreviewDialog}
-        onOpenChange={(open) => {
-          if (!open) setAiPreviewDialog(null);
-        }}
-      >
-        <DialogContent className={styles.aiPreviewDialog}>
-          <DialogHeader>
-            <DialogTitle>{aiPreviewDialog?.title || "确认 AI 生成"}</DialogTitle>
-            <DialogDescription className={styles.aiPreviewDescription}>
-              {aiPreviewDialog?.description || ""}
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.aiPreviewBody}>
-            <div className={styles.previewSection}>
-              <div className={styles.previewRow}>
-                <span className={styles.previewLabel}>实际模型</span>
-                <span>{aiPreviewDialog?.preview.model || "-"}</span>
-              </div>
-              {aiPreviewDialog?.preview.notes?.length ? (
-                <div>
-                  <div className={styles.previewNotesTitle}>说明</div>
-                  <ul className={styles.previewNotes}>
-                    {aiPreviewDialog.preview.notes.map((note, index) => (
-                      <li key={`${note}-${index}`}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-            <div className={styles.previewSection}>
-              <div className={styles.previewSectionTitle}>详细参数</div>
-              <div className={styles.previewFields}>
-                {Object.entries(aiPreviewDialog?.preview.fields || {}).map(([key, value]) => (
-                  <div key={key}>
-                    <span className={styles.previewLabel}>{key}：</span>
-                    <span>{value || "-"}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {aiPreviewDialog?.preview.reference_images?.length ? (
-              <div className={styles.previewReferenceSection}>
-                <div className={styles.previewSectionTitle}>参考图输入</div>
-                <div className={styles.previewReferenceGrid}>
-                  {aiPreviewDialog.preview.reference_images.map((image) => (
-                    <button
-                      key={`${image.type}:${image.name}`}
-                      type="button"
-                      className={styles.previewReferenceCard}
-                      onClick={() => setPreviewImage({ src: image.url, alt: image.name })}
-                    >
-                      <div className={styles.previewReferenceImageWrap}>
-                        <img
-                          src={image.url}
-                          alt={image.name}
-                          className={styles.previewReferenceImage}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
-                      <div className={styles.previewReferenceName}>{image.name}</div>
-                      <div className={styles.previewReferenceSource}>{image.source}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            <div className={styles.previewSection}>
-              <div className={styles.previewPromptHeader}>
-                <div className={styles.previewSectionTitle}>
-                  最终 Prompt
-                  {aiPreviewDialog?.action === "character-design-sheet" ? "（可编辑）" : ""}
-                </div>
-                {aiPreviewDialog?.action === "character-design-sheet" ? (
-                  <div className={styles.promptCount}>
-                    {aiPreviewDialog.promptDraft.length} / 10000
-                  </div>
-                ) : null}
-              </div>
-              {aiPreviewDialog?.action === "character-design-sheet" ? (
-                <Textarea
-                  value={aiPreviewDialog.promptDraft}
-                  maxLength={10000}
-                  onChange={(event) =>
-                    setAiPreviewDialog((current) =>
-                      current ? { ...current, promptDraft: event.target.value } : current,
-                    )
-                  }
-                  className={styles.promptTextarea}
-                  aria-label="可编辑的最终 Prompt"
-                />
-              ) : (
-                <pre className={styles.promptPreview}>
-                  {formatPromptForDisplay(aiPreviewDialog?.preview.final_prompt)}
-                </pre>
-              )}
-            </div>
-          </div>
-          <DialogFooter className={styles.dialogFooter}>
-            <Button type="button" variant="outline" onClick={() => setAiPreviewDialog(null)}>
-              取消
-            </Button>
-            <Button
-              type="button"
-              className={styles.confirmButton}
-              onClick={() => void confirmAIPreviewGeneration()}
-              disabled={
-                isLoadingAIPreview ||
-                (aiPreviewDialog?.action === "character-design-sheet" &&
-                  !aiPreviewDialog.promptDraft.trim())
-              }
-            >
-              {aiPreviewDialog?.confirmLabel || "确认生成"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AIGenerationPreviewDialog
+        state={aiPreviewDialog}
+        loading={isLoadingAIPreview}
+        onClose={() => setAiPreviewDialog(null)}
+        onPromptChange={(promptDraft) =>
+          setAiPreviewDialog((current) => (current ? { ...current, promptDraft } : current))
+        }
+        onPreviewReference={(src, alt) => setPreviewImage({ src, alt })}
+        onConfirm={() => void confirmAIPreviewGeneration()}
+      />
 
-      <Dialog open={showVersions} onOpenChange={setShowVersions}>
-        <DialogContent className={styles.versionsDialog}>
-          <DialogHeader>
-            <DialogTitle>生成版本</DialogTitle>
-            <DialogDescription>
-              点击图片仅预览；移入非当前版本后，点击右上角按钮才会切换。
-            </DialogDescription>
-          </DialogHeader>
-          {versions.length ? (
-            <div className={styles.versionsGrid}>
-              {versions.map((version, index) => {
-                const src =
-                  selectedAsset?.type === "character"
-                    ? version.file_url
-                    : version.preview_url || version.file_url;
-                const label = `v${versions.length - index}`;
-                return (
-                  <VersionImageCard
-                    key={version.id}
-                    version={version}
-                    src={src}
-                    alt={`资产生成版本 ${versions.length - index}`}
-                    label={label}
-                    aspectClassName={styles.aspectVideo}
-                    switching={switchingVersionId === version.id}
-                    onPreview={() =>
-                      setPreviewImage({
-                        src,
-                        alt: `资产生成版本 ${versions.length - index}`,
-                      })
-                    }
-                    onSetCurrent={() => void chooseSelectedVersion(version)}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <div className={styles.dialogEmpty}>尚无生成版本</div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <AssetVersionsDialog
+        open={showVersions}
+        versions={versions}
+        isCharacter={selectedAsset?.type === "character"}
+        switchingVersionId={switchingVersionId}
+        onOpenChange={setShowVersions}
+        onPreview={(src, alt) => setPreviewImage({ src, alt })}
+        onSetCurrent={(version) => void chooseSelectedVersion(version)}
+      />
 
-      <Dialog open={showVoiceVersions} onOpenChange={setShowVoiceVersions}>
-        <DialogContent className={styles.voiceVersionsDialog}>
-          <DialogHeader>
-            <DialogTitle>主语音版本</DialogTitle>
-            <DialogDescription>试听并恢复以前生成或上传的角色主语音。</DialogDescription>
-          </DialogHeader>
-          {voiceVersions.length ? (
-            <div className={styles.voiceVersionsList}>
-              {voiceVersions.map((version) => (
-                <div
-                  key={version.id}
-                  className={version.is_current ? styles.voiceVersionCurrent : styles.voiceVersion}
-                >
-                  <audio controls className={styles.fullWidth}>
-                    <source src={version.file_url} />
-                  </audio>
-                  <div className={styles.voiceVersionFooter}>
-                    <span>
-                      {version.source_type === "manual-upload" ? "手动上传" : "AI 生成"} ·{" "}
-                      {version.duration.toFixed(1)}s
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={version.is_current}
-                      onClick={() => void chooseVoiceVersion(version)}
-                    >
-                      {version.is_current ? "当前版本" : "设为当前"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.dialogEmpty}>尚无语音版本</div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <VoiceVersionsDialog
+        open={showVoiceVersions}
+        versions={voiceVersions}
+        onOpenChange={setShowVoiceVersions}
+        onSetCurrent={(version) => void chooseVoiceVersion(version)}
+      />
 
-      <Dialog
+      <CreateAssetDialog
         open={showCreateDialog}
+        mode={createMode}
+        character={newCharacter}
+        asset={newAsset}
+        hasCharacterFile={Boolean(createCharacterFile)}
+        hasAssetFile={Boolean(createAssetFile)}
+        creating={isCreating}
         onOpenChange={(open) => {
           setShowCreateDialog(open);
           if (!open) resetCreateState();
         }}
-      >
-        <DialogContent
-          className={styles.createDialog}
-          onInteractOutside={(event) => event.preventDefault()}
-          onPointerDownOutside={(event) => event.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>新建资产</DialogTitle>
-            <DialogDescription className={styles.dialogDescription}>
-              选择角色、场景或道具资产，创建后会进入对应分类。
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.createFields}>
-            <div>
-              <Label className={styles.detailLabel}>资产类型</Label>
-              <div className={styles.createTypeGrid}>
-                {[
-                  { value: "character" as const, label: "角色资产" },
-                  { value: "scene" as const, label: "场景资产" },
-                  { value: "prop" as const, label: "道具资产" },
-                ].map((option) => (
-                  <Button
-                    key={option.value}
-                    type="button"
-                    variant={createMode === option.value ? "default" : "outline"}
-                    className={
-                      createMode === option.value
-                        ? styles.createTypeActive
-                        : styles.createTypeButton
-                    }
-                    onClick={() => selectCreateMode(option.value)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            {createMode === "character" ? (
-              <>
-                <div>
-                  <Label className={styles.detailLabel}>名称</Label>
-                  <Input
-                    value={newCharacter.name}
-                    onChange={(e) => setNewCharacter((prev) => ({ ...prev, name: e.target.value }))}
-                    className={styles.detailInput}
-                  />
-                </div>
-                <div>
-                  <Label className={styles.detailLabel}>描述</Label>
-                  <Textarea
-                    value={newCharacter.description}
-                    onChange={(e) =>
-                      setNewCharacter((prev) => ({ ...prev, description: e.target.value }))
-                    }
-                    className={styles.detailTextarea}
-                  />
-                </div>
-                <div>
-                  <Label className={styles.detailLabel}>角色参考图地址（可选）</Label>
-                  <Input
-                    value={newCharacter.avatar_url}
-                    onChange={(e) =>
-                      setNewCharacter((prev) => ({ ...prev, avatar_url: e.target.value }))
-                    }
-                    placeholder="https://..."
-                    disabled={Boolean(createCharacterFile)}
-                    className={styles.detailInput}
-                  />
-                </div>
-                <div>
-                  <Label className={styles.detailLabel}>上传角色参考图（可选）</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setCreateCharacterFile(e.target.files?.[0] || null)}
-                    className={styles.detailInput}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <Label className={styles.detailLabel}>名称</Label>
-                  <Input
-                    value={newAsset.name}
-                    onChange={(e) => setNewAsset((prev) => ({ ...prev, name: e.target.value }))}
-                    className={styles.detailInput}
-                  />
-                </div>
-                <div>
-                  <Label className={styles.detailLabel}>
-                    {createMode === "prop" ? "道具说明" : "场景说明"}
-                  </Label>
-                  <Textarea
-                    value={newAsset.meta}
-                    onChange={(e) => setNewAsset((prev) => ({ ...prev, meta: e.target.value }))}
-                    className={styles.detailTextarea}
-                  />
-                </div>
-                <div>
-                  <Label className={styles.detailLabel}>资源地址（可选）</Label>
-                  <Input
-                    value={newAsset.file_url}
-                    onChange={(e) => setNewAsset((prev) => ({ ...prev, file_url: e.target.value }))}
-                    placeholder="https://..."
-                    disabled={Boolean(createAssetFile)}
-                    className={styles.detailInput}
-                  />
-                </div>
-                <div>
-                  <Label className={styles.detailLabel}>上传图片（可选）</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setCreateAssetFile(e.target.files?.[0] || null)}
-                    className={styles.detailInput}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              className={styles.cancelButton}
-              onClick={() => setShowCreateDialog(false)}
-            >
-              取消
-            </Button>
-            <Button
-              type="button"
-              className={styles.createConfirmButton}
-              disabled={isCreating}
-              onClick={handleCreate}
-            >
-              {isCreating ? (
-                <>
-                  <Loader2 className={styles.buttonLoadingIcon} />
-                  创建中
-                </>
-              ) : (
-                "确认创建"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onModeChange={selectCreateMode}
+        onCharacterChange={setNewCharacter}
+        onAssetChange={setNewAsset}
+        onCharacterFileChange={setCreateCharacterFile}
+        onAssetFileChange={setCreateAssetFile}
+        onCreate={handleCreate}
+      />
 
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent className={styles.deleteDialog}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {deleteTarget?.type === "character"
-                ? "确认删除角色"
-                : `确认删除${deleteTarget?.assetKind === "prop" ? "道具" : "场景"}资产`}
-            </AlertDialogTitle>
-            <AlertDialogDescription className={styles.dialogDescription}>
-              {deleteTarget?.type === "character"
-                ? "该操作会从资产库隐藏该角色，不会删除服务器原始文件。"
-                : "该操作会从资产库隐藏该资产，不会删除服务器原始文件。"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className={styles.cancelButton}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              className={styles.deleteConfirmButton}
-              disabled={deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}`}
-              onClick={confirmDelete}
-            >
-              {deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}` ? (
-                <Loader2 className={styles.iconLoading} />
-              ) : (
-                "确认删除"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteAssetDialog
+        target={deleteTarget}
+        deleting={deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}`}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
 
       <ImagePreviewDialog
         open={!!previewImage}

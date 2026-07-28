@@ -461,6 +461,12 @@ export async function ensureSceneGenerationSchema(pool) {
     );
     await addColumnIfMissing(
       connection,
+      'projects',
+      'video_poster_url',
+      'TEXT NULL AFTER video_preview_url',
+    );
+    await addColumnIfMissing(
+      connection,
       'scenes',
       'legacy_storyboards_migrated_at',
       'DATETIME NULL AFTER generation_duration',

@@ -1,23 +1,15 @@
 'use strict';
 // @ts-nocheck
 
-const Controller = require('egg').Controller;
+const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
-class CharacterController extends Controller {
-  parseId() {
-    const id = Number(this.ctx.params.id);
-    return Number.isInteger(id) && id > 0 ? id : null;
-  }
+class CharacterController extends ApiController {
 
   async indexByProject() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try {
-      response.success(this.ctx, await this.ctx.service.character.findByProjectId(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.character.findByProjectId(id));
   }
 
   /**
@@ -30,13 +22,11 @@ class CharacterController extends Controller {
   async show() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
+    await this.respond(async () => {
       const item = await this.ctx.service.character.findById(id);
-      if (!item) return response.error(this.ctx, 'character not found');
-      response.success(this.ctx, item);
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      if (!item) throw new Error('character not found');
+      return item;
+    });
   }
 
   /**
@@ -49,14 +39,7 @@ class CharacterController extends Controller {
   async create() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.character.create(id, this.ctx.request.body || {}),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.character.create(id, this.ctx.request.body || {}));
   }
 
   /**
@@ -69,14 +52,7 @@ class CharacterController extends Controller {
   async update() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.character.update(id, this.ctx.request.body || {}),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.character.update(id, this.ctx.request.body || {}));
   }
 
   /**
@@ -89,12 +65,10 @@ class CharacterController extends Controller {
   async destroy() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
+    await this.respond(async () => {
       await this.ctx.service.character.softDelete(id);
-      response.success(this.ctx, { success: true });
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      return { success: true };
+    });
   }
 
   /**
@@ -107,18 +81,13 @@ class CharacterController extends Controller {
   async previewDesignSheetGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.character.previewDesignSheetGeneration(
-          id,
-          this.ctx.query.model,
-          this.ctx.query.mode,
-        ),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.character.previewDesignSheetGeneration(
+        id,
+        this.ctx.query.model,
+        this.ctx.query.mode,
+      ),
+    );
   }
   /**
    * 预览角色主设定图生成参数。
@@ -130,18 +99,13 @@ class CharacterController extends Controller {
   async previewVoiceReferenceGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.character.previewVoiceReferenceGeneration(
-          id,
-          this.ctx.query.voice_prompt,
-          this.ctx.query.preview_text,
-        ),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.character.previewVoiceReferenceGeneration(
+        id,
+        this.ctx.query.voice_prompt,
+        this.ctx.query.preview_text,
+      ),
+    );
   }
   /**
    * 预览角色主语音参考生成参数。
@@ -154,14 +118,9 @@ class CharacterController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.character.generateDesignSheet(id, body.prompt_override),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.character.generateDesignSheet(id, body.prompt_override),
+    );
   }
   /**
    * 生成角色主设定图。
@@ -174,32 +133,22 @@ class CharacterController extends Controller {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.character.generateVoiceReference(
-          id,
-          body.voice_prompt,
-          body.preview_text,
-        ),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.character.generateVoiceReference(
+        id,
+        body.voice_prompt,
+        body.preview_text,
+      ),
+    );
   }
 
   async uploadVoiceReference() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.character.uploadVoiceReference(id, body.voice_reference_url),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.character.uploadVoiceReference(id, body.voice_reference_url),
+    );
   }
 
   /**

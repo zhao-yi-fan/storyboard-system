@@ -36,6 +36,7 @@ module.exports = (app: any) => {
   router.get('/api/chapters/:id/scenes', controller.scene.indexByChapter);
   router.post('/api/chapters/:id/scenes', controller.scene.create);
 
+  router.post('/api/scenes/optimize-description', controller.scene.optimizeDescription);
   router.get('/api/scenes/:id', controller.scene.show);
   router.put('/api/scenes/:id', controller.scene.update);
   router.post('/api/scenes/:id/optimize-prompt', controller.scene.optimizePrompt);

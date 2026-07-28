@@ -33,6 +33,7 @@ const {
   extractFirstShotCoverPrompt,
   isCompositeStoryboardPrompt,
 } = require('../lib/composite_prompt');
+const { StoryboardRepository } = require('../repository/storyboard_repository');
 
 class StoryboardService extends Service {
   static REFERENCE_ASSET_USAGE = 'reference_asset';
@@ -49,12 +50,12 @@ class StoryboardService extends Service {
     return this.app.mysqlPool;
   }
 
+  get repository() {
+    return new StoryboardRepository(this.pool);
+  }
+
   async findSceneById(id) {
-    const [rows] = await this.pool.query(
-      'SELECT id, chapter_id, project_id FROM scenes WHERE id = ? AND deleted_at IS NULL',
-      [id],
-    );
-    return rows[0] || null;
+    return await this.repository.findSceneById(id);
   }
 
   async findBySceneId(sceneId) {
@@ -63,15 +64,7 @@ class StoryboardService extends Service {
       throw new Error('scene not found');
     }
 
-    const [rows] = await this.pool.query(
-      `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes,
-              camera_direction, camera_motion, duration, background, thumbnail_url, thumbnail_preview_url, video_url,
-              video_preview_url, video_status, video_error, video_duration, notes, sort_order, created_at, updated_at
-       FROM storyboards
-       WHERE scene_id = ? AND deleted_at IS NULL
-       ORDER BY sort_order ASC, id ASC`,
-      [sceneId],
-    );
+    const rows = await this.repository.findBySceneId(sceneId);
 
     const items = rows.map((row) => mapStoryboard(this.app, row));
     await this.attachCharacters(items);
@@ -80,30 +73,18 @@ class StoryboardService extends Service {
   }
 
   async findById(id) {
-    const [rows] = await this.pool.query(
-      `SELECT id, scene_id, chapter_id, project_id, shot_number, content, dialogue, shot_type, mood, style_preset, style_notes,
-              camera_direction, camera_motion, duration, background, thumbnail_url, thumbnail_preview_url, video_url,
-              video_preview_url, video_status, video_error, video_duration, notes, sort_order, created_at, updated_at
-       FROM storyboards
-       WHERE id = ? AND deleted_at IS NULL`,
-      [id],
-    );
-
-    if (!rows.length) {
+    const row = await this.repository.findById(id);
+    if (!row) {
       return null;
     }
-    const item = mapStoryboard(this.app, rows[0]);
+    const item = mapStoryboard(this.app, row);
     await this.attachCharacters([item]);
     await this.attachAssets([item]);
     return item;
   }
 
   async getMaxSortOrder(sceneId) {
-    const [rows] = await this.pool.query(
-      'SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM storyboards WHERE scene_id = ? AND deleted_at IS NULL',
-      [sceneId],
-    );
-    return Number(rows[0]?.max_sort || 0);
+    return await this.repository.getMaxSortOrder(sceneId);
   }
 
   async create(sceneId, payload) {

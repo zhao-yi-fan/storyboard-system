@@ -6,9 +6,6 @@ const { mapProject, mapProjectWithStats } = require('../lib/project');
 const { composeVideos, sanitizeFileName } = require('../lib/media');
 const { hasOwn } = require('../lib/common');
 
-const EMPTY_MEDIA_FIELDS = ['', '', 'generating', '', 0];
-const FAILED_MEDIA_PREFIX = ['', '', 'failed'];
-
 class ProjectService extends Service {
   get pool() {
     return this.app.mysqlPool;
@@ -30,6 +27,7 @@ class ProjectService extends Service {
         p.script_text,
         p.video_url,
         p.video_preview_url,
+        p.video_poster_url,
         p.video_status,
         p.video_error,
         p.video_duration,
@@ -57,7 +55,23 @@ class ProjectService extends Service {
       [userId],
     );
 
-    return rows.map((row: Record<string, unknown>) => mapProjectWithStats(this.app, row));
+    const projects = rows.map((row: Record<string, unknown>) => mapProjectWithStats(this.app, row));
+    this.ctx.runInBackground(this.backfillMissingPosters(projects));
+    return projects;
+  }
+
+  async backfillMissingPosters(projects) {
+    const missingPosterRows = projects.filter(
+      (project) =>
+        project.video_status === 'succeeded' && project.video_url && !project.video_poster_url,
+    );
+    const posterConcurrency = 2;
+    for (let index = 0; index < missingPosterRows.length; index += posterConcurrency) {
+      const batch = missingPosterRows.slice(index, index + posterConcurrency);
+      await Promise.all(
+        batch.map((project) => this.ctx.service.projectVideoPoster.ensureBestEffort(project)),
+      );
+    }
   }
 
   /**
@@ -77,6 +91,7 @@ class ProjectService extends Service {
         script_text,
         video_url,
         video_preview_url,
+        video_poster_url,
         video_status,
         video_error,
         video_duration,
@@ -304,21 +319,37 @@ class ProjectService extends Service {
       throw new Error('当前项目没有可合成的场景视频');
     }
     await this.pool.execute(
-      'UPDATE projects SET video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-      [...EMPTY_MEDIA_FIELDS, id],
+      'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
+      ['', '', '', 'generating', '', 0, id],
     );
     try {
       const filename = `${sanitizeFileName(`project-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(this.app, inputs, 'project-videos', filename);
+      const posterUrl = await this.ctx.service.projectVideoPoster.ensureBestEffort(
+        {
+          id,
+          video_url: composed.publicPath,
+          video_status: 'succeeded',
+        },
+        { force: true },
+      );
       await this.pool.execute(
-        'UPDATE projects SET video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-        [composed.publicPath, composed.previewPath, 'succeeded', '', composed.duration, id],
+        'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
+        [
+          composed.publicPath,
+          composed.previewPath,
+          posterUrl,
+          'succeeded',
+          '',
+          composed.duration,
+          id,
+        ],
       );
       return await this.findById(id);
     } catch (error: any) {
       await this.pool.execute(
-        'UPDATE projects SET video_url = ?, video_preview_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-        [...FAILED_MEDIA_PREFIX, error.message, 0, id],
+        'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
+        ['', '', '', 'failed', error.message, 0, id],
       );
       throw error;
     }

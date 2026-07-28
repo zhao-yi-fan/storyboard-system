@@ -1,9 +1,9 @@
 'use strict';
 
-const Controller = require('egg').Controller;
+const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
-class AuthController extends Controller {
+class AuthController extends ApiController {
   get sessionCookieName() {
     return this.ctx.app.config.auth?.sessionCookieName || 'storyboard_session';
   }
@@ -18,17 +18,15 @@ class AuthController extends Controller {
   async login() {
     const { account = '', password = '' } = this.ctx.request.body || {};
 
-    try {
+    await this.respond(async () => {
       const result = await this.ctx.service.auth.login(account, password, this.buildRequestMeta());
       this.ctx.cookies.set(
         this.sessionCookieName,
         result.sessionToken,
         this.ctx.service.auth.buildCookieOptions(result.expiresAt),
       );
-      response.success(this.ctx, result.user);
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      return result.user;
+    });
   }
 
   /**
@@ -39,7 +37,7 @@ class AuthController extends Controller {
    * // => { code: 200, data: { id: 1, account: "admin" }, message: "" }
    */
   async logout() {
-    try {
+    await this.respond(async () => {
       const sessionToken = this.ctx.cookies.get(this.sessionCookieName);
       if (sessionToken) {
         await this.ctx.service.auth.revokeSessionByToken(sessionToken);
@@ -49,10 +47,8 @@ class AuthController extends Controller {
         overwrite: true,
         expires: new Date(0),
       });
-      response.success(this.ctx, { success: true });
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      return { success: true };
+    });
   }
 
   /**

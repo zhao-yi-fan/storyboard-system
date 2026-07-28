@@ -35,6 +35,16 @@ describe('test/scene_insertion.test.ts', () => {
     assert.deepEqual(shift?.params, [11, 2]);
     const insert = calls.find((call) => call.sql.startsWith('INSERT INTO scenes'));
     assert.equal(insert?.params?.[insert.params.length - 1], 2);
+    const insertShape = insert?.sql.match(
+      /INSERT INTO scenes\s*\(([\s\S]*?)\)\s*VALUES\s*\((.*?)\)/,
+    );
+    const columns = insertShape?.[1].split(',').map((item) => item.trim()) || [];
+    const values = insertShape?.[2].split(',').map((item) => item.trim()) || [];
+    assert.equal(
+      values.length,
+      columns.length,
+      'scene INSERT columns and values must stay aligned',
+    );
   });
 
   it('appends without shifting when no position is requested', async () => {

@@ -537,10 +537,6 @@ function preferredVoiceName(character) {
   return `${token}_${character.id}`;
 }
 
-function buildCharacterVoicePrompt(character) {
-  return buildCharacterVoicePromptText(character).prompt;
-}
-
 function withVoiceDurationInstruction(prompt) {
   const text = String(prompt || '').trim();
   if (!text) {

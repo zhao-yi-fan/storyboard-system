@@ -23,6 +23,7 @@ export type Project = {
   scriptText?: string;
   video_url?: string;
   video_preview_url?: string;
+  video_poster_url?: string;
   video_status?: string;
   video_error?: string;
   video_duration?: number;
@@ -121,6 +122,12 @@ export type SceneMediaMutationResult = {
 export type PromptOptimizationResult = {
   original_prompt: string;
   optimized_prompt: string;
+  model: string;
+};
+
+export type SceneDescriptionOptimizationResult = {
+  original_description: string;
+  optimized_description: string;
   model: string;
 };
 

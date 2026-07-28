@@ -573,6 +573,14 @@
   --tw-gradient-position: to bottom right in oklab;
   background-image: linear-gradient(var(--tw-gradient-stops));
 }
+.coverImage {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: center;
+}
 .gradientPurple {
   --tw-gradient-from: var(--color-fuchsia-600, oklch(59.1% 0.293 322.896));
   --tw-gradient-via: var(--color-purple-600, oklch(55.8% 0.288 302.321));

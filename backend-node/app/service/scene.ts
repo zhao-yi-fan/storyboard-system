@@ -25,10 +25,16 @@ const {
   extractFirstShotCoverPrompt,
 } = require('../lib/composite_prompt');
 const { optimizeStoryboardPrompt } = require('../lib/prompt_optimizer');
+const { optimizeSceneDescription } = require('../lib/scene_description_optimizer');
+const { SceneRepository } = require('../repository/scene_repository');
 
 class SceneService extends Service {
   get pool() {
     return this.app.mysqlPool;
+  }
+
+  get repository() {
+    return new SceneRepository(this.pool);
   }
 
   /**
@@ -40,11 +46,7 @@ class SceneService extends Service {
    * // => { id: 11, project_id: 19 }
    */
   async findChapterById(id) {
-    const [rows] = await this.pool.query(
-      'SELECT id, project_id FROM chapters WHERE id = ? AND deleted_at IS NULL',
-      [id],
-    );
-    return rows[0] || null;
+    return await this.repository.findChapterById(id);
   }
 
   /**
@@ -61,15 +63,7 @@ class SceneService extends Service {
       throw new Error('chapter not found');
     }
 
-    const [rows] = await this.pool.query(
-      `SELECT id, chapter_id, project_id, title, description, prompt, location, time_of_day, style_preset, style_notes,
-              cover_url, cover_preview_url, video_url, video_preview_url, video_poster_url, video_status, video_error, video_duration,
-              generation_duration, sort_order, created_at, updated_at
-       FROM scenes
-       WHERE chapter_id = ? AND deleted_at IS NULL
-       ORDER BY sort_order ASC, id ASC`,
-      [chapterId],
-    );
+    const rows = await this.repository.findByChapterId(chapterId);
 
     const items = rows.map((row) => mapScene(this.app, row));
     await this.attachCharacters(items);
@@ -87,17 +81,9 @@ class SceneService extends Service {
    * // => { id: 21, title: "便利店门口", chapter_id: 11, project_id: 19 }
    */
   async findById(id) {
-    const [rows] = await this.pool.query(
-      `SELECT id, chapter_id, project_id, title, description, prompt, location, time_of_day, style_preset, style_notes,
-              cover_url, cover_preview_url, video_url, video_preview_url, video_poster_url, video_status, video_error, video_duration,
-              generation_duration, sort_order, created_at, updated_at
-       FROM scenes
-       WHERE id = ? AND deleted_at IS NULL`,
-      [id],
-    );
-
-    if (!rows.length) return null;
-    const item = mapScene(this.app, rows[0]);
+    const row = await this.repository.findById(id);
+    if (!row) return null;
+    const item = mapScene(this.app, row);
     await this.attachCharacters([item]);
     await this.attachAssets([item]);
     await this.attachVideoFrameReferences([item]);
@@ -122,11 +108,7 @@ class SceneService extends Service {
    * // => 4
    */
   async getMaxSortOrder(chapterId) {
-    const [rows] = await this.pool.query(
-      'SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM scenes WHERE chapter_id = ? AND deleted_at IS NULL',
-      [chapterId],
-    );
-    return Number(rows[0]?.max_sort || 0);
+    return await this.repository.getMaxSortOrder(chapterId);
   }
 
   /**
@@ -175,7 +157,7 @@ class SceneService extends Service {
         `INSERT INTO scenes (
           chapter_id, project_id, title, description, prompt, location, time_of_day, style_preset, style_notes,
           cover_url, cover_preview_url, video_url, video_preview_url, video_poster_url, video_status, video_error, video_duration, sort_order
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '', '', NULL, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '', '', NULL, NULL, ?)`,
         [
           chapterId,
           Number(chapter.project_id),
@@ -302,6 +284,10 @@ class SceneService extends Service {
       title: scene.title,
       duration: scene.generation_duration,
     });
+  }
+
+  async optimizeDescription(payload) {
+    return await optimizeSceneDescription(this.config.storyboard, payload);
   }
 
   /**
@@ -657,9 +643,7 @@ class SceneService extends Service {
   }
 
   async listMediaGenerations(id) {
-    if (!(await this.findById(id))) throw new Error('scene not found');
-    const generations = await this.ctx.service.sceneMediaGeneration.listBySceneId(id);
-    return await this.ctx.service.sceneVideoFrame.attachToGenerations(generations);
+    return await this.ctx.service.sceneMediaLibrary.list(id);
   }
 
   async applyMediaGeneration(id, generation) {
@@ -686,82 +670,15 @@ class SceneService extends Service {
   }
 
   async setMediaGenerationCurrent(id, generationId) {
-    const generation = await this.ctx.service.sceneMediaGeneration.findById(generationId);
-    if (!generation || Number(generation.scene_id) !== Number(id)) {
-      throw new Error('scene media generation not found');
-    }
-    if (generation.status !== 'succeeded' || !generation.result_url) {
-      throw new Error('只有生成成功且存在结果文件的媒体版本才能设为当前版本');
-    }
-    await this.ctx.service.sceneMediaGeneration.markCurrent(
-      id,
-      generation.media_type,
-      generationId,
-    );
-    const scene = await this.applyMediaGeneration(id, generation);
-    return { scene, media_generations: await this.listMediaGenerations(id) };
+    return await this.ctx.service.sceneMediaLibrary.setCurrent(id, generationId);
   }
 
   async deleteMediaGeneration(id, generationId) {
-    const generation = await this.ctx.service.sceneMediaGeneration.findById(generationId);
-    if (!generation || Number(generation.scene_id) !== Number(id)) {
-      throw new Error('scene media generation not found');
-    }
-    await this.ctx.service.sceneMediaGeneration.softDelete(generationId);
-    const remaining = await this.listMediaGenerations(id);
-    if (generation.is_current) {
-      const replacement = remaining.find(
-        (item) =>
-          item.media_type === generation.media_type &&
-          item.status === 'succeeded' &&
-          item.result_url,
-      );
-      if (replacement) {
-        await this.ctx.service.sceneMediaGeneration.markCurrent(
-          id,
-          generation.media_type,
-          replacement.id,
-        );
-        await this.applyMediaGeneration(id, replacement);
-      } else if (generation.media_type === 'cover') {
-        await this.update(id, { cover_url: '', cover_preview_url: '' });
-      } else {
-        await this.update(id, {
-          video_url: '',
-          video_preview_url: '',
-          video_poster_url: '',
-          video_status: '',
-          video_error: '',
-        });
-      }
-    }
-    return {
-      scene: await this.findById(id),
-      media_generations: await this.listMediaGenerations(id),
-    };
+    return await this.ctx.service.sceneMediaLibrary.remove(id, generationId);
   }
 
   async uploadCover(id, coverUrl) {
-    const scene = await this.findById(id);
-    if (!scene) throw new Error('scene not found');
-    const normalized = normalizeGeneratedAssetReference(this.app, String(coverUrl || '').trim());
-    if (!normalized) throw new Error('cover_url is required');
-    const generation = await this.ctx.service.sceneMediaGeneration.create({
-      scene_id: id,
-      media_type: 'cover',
-      model: 'manual-upload',
-      status: 'succeeded',
-      result_url: normalized,
-      preview_url: normalized,
-      source_url: normalized,
-      meta_json: JSON.stringify({ source: 'manual-upload' }),
-    });
-    await this.ctx.service.sceneMediaGeneration.markCurrent(id, 'cover', generation.id);
-    await this.applyMediaGeneration(id, generation);
-    return {
-      scene: await this.findById(id),
-      media_generations: await this.listMediaGenerations(id),
-    };
+    return await this.ctx.service.sceneMediaLibrary.uploadCover(id, coverUrl);
   }
 
   async previewVideoGeneration(

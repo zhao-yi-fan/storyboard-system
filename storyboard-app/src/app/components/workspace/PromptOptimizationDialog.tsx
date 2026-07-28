@@ -20,6 +20,13 @@ type PromptOptimizationDialogProps = {
   onOpenChange: (open: boolean) => void;
   onRetry: () => void;
   onConfirm: () => void;
+  title?: string;
+  description?: string;
+  loadingText?: string;
+  reviewText?: string;
+  originalLabel?: string;
+  optimizedLabel?: string;
+  confirmLabel?: string;
 };
 
 type PromptColumnProps = {
@@ -52,6 +59,13 @@ export function PromptOptimizationDialog({
   onOpenChange,
   onRetry,
   onConfirm,
+  title = "AI 优化提示词",
+  description = "DeepSeek 只生成候选稿。确认前不会覆盖编辑器，也不会保存到数据库。",
+  loadingText = "DeepSeek 正在整理镜号、镜头语言和生成约束...",
+  reviewText = "请核对剧情事实、台词、镜号和 @ 资产引用后再替换。",
+  originalLabel = "当前原文",
+  optimizedLabel = "AI 候选稿",
+  confirmLabel = "确认替换",
 }: PromptOptimizationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -59,18 +73,16 @@ export function PromptOptimizationDialog({
         <DialogHeader className={styles.header}>
           <DialogTitle className={styles.dialogTitle}>
             <Sparkles className={styles.titleIcon} />
-            AI 优化提示词
+            {title}
           </DialogTitle>
-          <DialogDescription className={styles.dialogDescription}>
-            DeepSeek 只生成候选稿。确认前不会覆盖编辑器，也不会保存到数据库。
-          </DialogDescription>
+          <DialogDescription className={styles.dialogDescription}>{description}</DialogDescription>
         </DialogHeader>
 
         <div className={styles.body}>
           {loading ? (
             <div className={styles.loadingState}>
               <Loader2 className={styles.loadingIcon} />
-              <p>DeepSeek 正在整理镜号、镜头语言和生成约束...</p>
+              <p>{loadingText}</p>
             </div>
           ) : error ? (
             <div className={styles.errorState}>
@@ -86,12 +98,12 @@ export function PromptOptimizationDialog({
           ) : (
             <>
               <div className={styles.reviewHint}>
-                <span>请核对剧情事实、台词、镜号和 @ 资产引用后再替换。</span>
+                <span>{reviewText}</span>
                 <span>模型：{model || "DeepSeek"}</span>
               </div>
               <div className={styles.promptGrid}>
-                <PromptColumn label="当前原文" prompt={originalPrompt} />
-                <PromptColumn label="AI 候选稿" prompt={optimizedPrompt} accent />
+                <PromptColumn label={originalLabel} prompt={originalPrompt} />
+                <PromptColumn label={optimizedLabel} prompt={optimizedPrompt} accent />
               </div>
             </>
           )}
@@ -106,7 +118,7 @@ export function PromptOptimizationDialog({
             disabled={loading || !!error || !optimizedPrompt}
             onClick={onConfirm}
           >
-            确认替换
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

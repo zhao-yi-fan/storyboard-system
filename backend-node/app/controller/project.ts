@@ -1,24 +1,12 @@
 'use strict';
 
-const Controller = require('egg').Controller;
+const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
-class ProjectController extends Controller {
-  parseId(): number | null {
-    const id = Number(this.ctx.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return null;
-    }
-    return id;
-  }
+class ProjectController extends ApiController {
 
   async index() {
-    try {
-      const projects = await this.ctx.service.project.findAll(this.ctx.state.currentUser.id);
-      response.success(this.ctx, projects);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.project.findAll(this.ctx.state.currentUser.id));
   }
 
   /**
@@ -35,16 +23,13 @@ class ProjectController extends Controller {
       return;
     }
 
-    try {
+    await this.respond(async () => {
       const project = await this.ctx.service.project.findById(id);
       if (!project) {
-        response.error(this.ctx, 'project not found');
-        return;
+        throw new Error('project not found');
       }
-      response.success(this.ctx, project);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+      return project;
+    });
   }
 
   /**
@@ -62,15 +47,12 @@ class ProjectController extends Controller {
       return;
     }
 
-    try {
-      const project = await this.ctx.service.project.create(
+    await this.respond(() =>
+      this.ctx.service.project.create(
         { name: trimmedName, description: String(description || '') },
         this.ctx.state.currentUser.id,
-      );
-      response.success(this.ctx, project);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+      ),
+    );
   }
 
   /**
@@ -87,12 +69,7 @@ class ProjectController extends Controller {
       return;
     }
 
-    try {
-      const project = await this.ctx.service.project.update(id, this.ctx.request.body || {});
-      response.success(this.ctx, project);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.project.update(id, this.ctx.request.body || {}));
   }
 
   /**
@@ -109,12 +86,10 @@ class ProjectController extends Controller {
       return;
     }
 
-    try {
+    await this.respond(async () => {
       await this.ctx.service.project.softDelete(id);
-      response.success(this.ctx, { success: true });
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+      return { success: true };
+    });
   }
 
   /**
@@ -131,12 +106,7 @@ class ProjectController extends Controller {
       return;
     }
 
-    try {
-      const project = await this.ctx.service.project.pin(id);
-      response.success(this.ctx, project);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.project.pin(id));
   }
 
   /**
@@ -153,12 +123,7 @@ class ProjectController extends Controller {
       return;
     }
 
-    try {
-      const project = await this.ctx.service.project.unpin(id);
-      response.success(this.ctx, project);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.project.unpin(id));
   }
 
   /**
@@ -179,12 +144,7 @@ class ProjectController extends Controller {
       response.error(this.ctx, 'script_text is required');
       return;
     }
-    try {
-      const result = await this.ctx.service.scriptImport.parseAndImport(id, script_text);
-      response.success(this.ctx, result);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scriptImport.parseAndImport(id, script_text));
   }
 
   /**
@@ -203,9 +163,9 @@ class ProjectController extends Controller {
     const regenerate =
       !Object.prototype.hasOwnProperty.call(this.ctx.request.body || {}, 'regenerate') ||
       Boolean((this.ctx.request.body || {}).regenerate);
-    try {
+    await this.respond(async () => {
       const project = await this.ctx.service.project.composeVideo(id, regenerate);
-      response.success(this.ctx, {
+      return {
         project_id: project.id,
         video_url: project.video_url,
         video_preview_url: project.video_preview_url,
@@ -213,10 +173,8 @@ class ProjectController extends Controller {
         video_error: project.video_error,
         video_duration: project.video_duration,
         project,
-      });
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+      };
+    });
   }
 
   /**

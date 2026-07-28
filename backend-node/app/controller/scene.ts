@@ -1,17 +1,10 @@
 'use strict';
 // @ts-nocheck
 
-const Controller = require('egg').Controller;
+const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
-class SceneController extends Controller {
-  parseId() {
-    const id = Number(this.ctx.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return null;
-    }
-    return id;
-  }
+class SceneController extends ApiController {
 
   async indexByChapter() {
     const chapterId = this.parseId();
@@ -20,12 +13,7 @@ class SceneController extends Controller {
       return;
     }
 
-    try {
-      const items = await this.ctx.service.scene.findByChapterId(chapterId);
-      response.success(this.ctx, items);
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.findByChapterId(chapterId));
   }
 
   /**
@@ -42,16 +30,13 @@ class SceneController extends Controller {
       return;
     }
 
-    try {
+    await this.respond(async () => {
       const scene = await this.ctx.service.scene.findById(id);
       if (!scene) {
-        response.error(this.ctx, 'scene not found');
-        return;
+        throw new Error('scene not found');
       }
-      response.success(this.ctx, scene);
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      return scene;
+    });
   }
 
   /**
@@ -68,12 +53,7 @@ class SceneController extends Controller {
       return;
     }
 
-    try {
-      const scene = await this.ctx.service.scene.create(chapterId, this.ctx.request.body || {});
-      response.success(this.ctx, scene);
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.create(chapterId, this.ctx.request.body || {}));
   }
 
   /**
@@ -90,12 +70,7 @@ class SceneController extends Controller {
       return;
     }
 
-    try {
-      const scene = await this.ctx.service.scene.update(id, this.ctx.request.body || {});
-      response.success(this.ctx, scene);
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.update(id, this.ctx.request.body || {}));
   }
 
   async optimizePrompt() {
@@ -105,14 +80,15 @@ class SceneController extends Controller {
       return;
     }
 
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.scene.optimizePrompt(id, this.ctx.request.body || {}),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.scene.optimizePrompt(id, this.ctx.request.body || {}),
+    );
+  }
+
+  async optimizeDescription() {
+    await this.respond(() =>
+      this.ctx.service.scene.optimizeDescription(this.ctx.request.body || {}),
+    );
   }
 
   /**
@@ -129,12 +105,10 @@ class SceneController extends Controller {
       return;
     }
 
-    try {
+    await this.respond(async () => {
       await this.ctx.service.scene.softDelete(id);
-      response.success(this.ctx, { success: true });
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      return { success: true };
+    });
   }
 
   /**
@@ -147,24 +121,15 @@ class SceneController extends Controller {
   async previewCoverGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.scene.previewCoverGeneration(id, this.ctx.query.model),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.scene.previewCoverGeneration(id, this.ctx.query.model),
+    );
   }
 
   async generationReferences() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(this.ctx, await this.ctx.service.scene.generationReferences(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.generationReferences(id));
   }
 
   /**
@@ -177,21 +142,19 @@ class SceneController extends Controller {
   async generateCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
+    await this.respond(async () => {
       const scene = await this.ctx.service.scene.generateCover(
         id,
         (this.ctx.request.body || {}).model,
         Boolean((this.ctx.request.body || {}).use_text_only),
       );
-      response.success(this.ctx, {
+      return {
         scene_id: scene.id,
         cover_url: scene.cover_url,
         cover_preview_url: scene.cover_preview_url,
         scene,
-      });
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      };
+    });
   }
 
   /**
@@ -204,11 +167,7 @@ class SceneController extends Controller {
   async generateStoryboardCovers() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(this.ctx, await this.ctx.service.scene.generateStoryboardCovers(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.generateStoryboardCovers(id));
   }
 
   /**
@@ -221,11 +180,7 @@ class SceneController extends Controller {
   async analyzeShotDirections() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(this.ctx, await this.ctx.service.shotDirection.analyzeScene(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.shotDirection.analyzeScene(id));
   }
 
   /**
@@ -238,11 +193,7 @@ class SceneController extends Controller {
   async shotDirectionAnalyses() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(this.ctx, await this.ctx.service.shotDirection.listBySceneId(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.shotDirection.listBySceneId(id));
   }
 
   /**
@@ -258,9 +209,9 @@ class SceneController extends Controller {
     const regenerate =
       !Object.prototype.hasOwnProperty.call(this.ctx.request.body || {}, 'regenerate') ||
       Boolean((this.ctx.request.body || {}).regenerate);
-    try {
+    await this.respond(async () => {
       const scene = await this.ctx.service.scene.composeVideo(id, regenerate);
-      response.success(this.ctx, {
+      return {
         scene_id: scene.id,
         video_url: scene.video_url,
         video_preview_url: scene.video_preview_url,
@@ -268,20 +219,14 @@ class SceneController extends Controller {
         video_error: scene.video_error,
         video_duration: scene.video_duration,
         scene,
-      });
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      };
+    });
   }
 
   async mediaGenerations() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(this.ctx, await this.ctx.service.scene.listMediaGenerations(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.listMediaGenerations(id));
   }
 
   async setMediaGenerationCurrent() {
@@ -290,14 +235,7 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(generationId) || generationId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.scene.setMediaGenerationCurrent(id, generationId),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.setMediaGenerationCurrent(id, generationId));
   }
 
   async deleteMediaGeneration() {
@@ -306,14 +244,7 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(generationId) || generationId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.scene.deleteMediaGeneration(id, generationId),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.deleteMediaGeneration(id, generationId));
   }
 
   async videoFrames() {
@@ -322,15 +253,10 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(generationId) || generationId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
+    await this.respond(async () => {
       await this.ctx.service.sceneVideoFrame.validateSource(id, generationId);
-      response.success(
-        this.ctx,
-        await this.ctx.service.sceneVideoFrame.listByGeneration(id, generationId),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      return await this.ctx.service.sceneVideoFrame.listByGeneration(id, generationId);
+    });
   }
 
   async createVideoFrame() {
@@ -373,14 +299,9 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(generationId) || generationId <= 0 || !Number.isInteger(frameId) || frameId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.sceneVideoFrame.remove(id, generationId, frameId),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.sceneVideoFrame.remove(id, generationId, frameId),
+    );
   }
 
   async createVideoClip() {
@@ -389,74 +310,50 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(generationId) || generationId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.sceneVideoClip.create(
-          id,
-          generationId,
-          this.ctx.request.body || {},
-        ),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.sceneVideoClip.create(id, generationId, this.ctx.request.body || {}),
+    );
   }
 
   async previewVideoGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.scene.previewVideoGeneration(
-          id,
-          this.ctx.query.model,
-          this.ctx.query.duration,
-          this.ctx.query.use_first_frame,
-          this.ctx.query.resolution,
-          this.ctx.query.aspect_ratio,
-          this.ctx.query.generate_audio,
-        ),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.scene.previewVideoGeneration(
+        id,
+        this.ctx.query.model,
+        this.ctx.query.duration,
+        this.ctx.query.use_first_frame,
+        this.ctx.query.resolution,
+        this.ctx.query.aspect_ratio,
+        this.ctx.query.generate_audio,
+      ),
+    );
   }
 
   async generateVideo() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.scene.generateVideo(
-          id,
-          body.model,
-          body.duration,
-          body.use_first_frame,
-          body.resolution,
-          body.aspect_ratio,
-          body.generate_audio,
-        ),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.scene.generateVideo(
+        id,
+        body.model,
+        body.duration,
+        body.use_first_frame,
+        body.resolution,
+        body.aspect_ratio,
+        body.generate_audio,
+      ),
+    );
   }
 
   async uploadCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.scene.uploadCover(id, (this.ctx.request.body || {}).cover_url),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.scene.uploadCover(id, (this.ctx.request.body || {}).cover_url),
+    );
   }
 
   async addCharacter() {
@@ -465,11 +362,7 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(characterId) || characterId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(this.ctx, await this.ctx.service.scene.addCharacter(id, characterId));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.addCharacter(id, characterId));
   }
 
   async removeCharacter() {
@@ -478,11 +371,7 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(characterId) || characterId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(this.ctx, await this.ctx.service.scene.removeCharacter(id, characterId));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.removeCharacter(id, characterId));
   }
 
   async addAsset() {
@@ -491,11 +380,7 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(assetId) || assetId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(this.ctx, await this.ctx.service.scene.addAsset(id, assetId));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.addAsset(id, assetId));
   }
 
   async removeAsset() {
@@ -504,11 +389,7 @@ class SceneController extends Controller {
     if (!id || !Number.isInteger(assetId) || assetId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    try {
-      response.success(this.ctx, await this.ctx.service.scene.removeAsset(id, assetId));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.scene.removeAsset(id, assetId));
   }
 
   /**

@@ -93,10 +93,17 @@ function ProjectCard({
   onDelete,
 }: ProjectCardProps) {
   const stats = deriveStats(project);
+  const [posterFailed, setPosterFailed] = useState(false);
   const metrics = [
     { label: "章节", value: stats.chapters, icon: Layers },
     { label: "片段", value: stats.scenes, icon: Video },
   ];
+
+  useEffect(() => {
+    setPosterFailed(false);
+  }, [project.video_poster_url]);
+
+  const showPoster = Boolean(project.video_poster_url) && !posterFailed;
 
   return (
     <article className={styles.projectCard}>
@@ -105,8 +112,17 @@ function ProjectCard({
         className={`${styles.projectCover} ${gradients[index % gradients.length]}`}
         onClick={() => onOpen(project)}
       >
+        {showPoster ? (
+          <img
+            className={styles.coverImage}
+            src={project.video_poster_url}
+            alt=""
+            loading="lazy"
+            onError={() => setPosterFailed(true)}
+          />
+        ) : null}
         <div className={styles.coverOverlay} />
-        <Film className={styles.coverIcon} />
+        {!showPoster ? <Film className={styles.coverIcon} /> : null}
         <span className={styles.updatedAt}>{formatDate(project.updated_at)} 更新</span>
       </button>
 

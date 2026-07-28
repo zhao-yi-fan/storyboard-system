@@ -77,3 +77,10 @@
 - Repo: `npm run check:spec:working`
 - Backend: `cd backend-node && npm run build && npm run test`
 - Frontend: `cd storyboard-app && npm run build`
+
+## New Scene Description Optimization
+
+The new/insert scene dialog has a separate DeepSeek action for `Scene.description`. It produces a
+concise candidate organized as `镜号1：...`, adding further shot numbers only for natural story
+transitions. This draft endpoint does not require a scene id, does not read or write `Scene.prompt`,
+and replaces the description only after explicit confirmation.

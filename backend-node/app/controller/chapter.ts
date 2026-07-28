@@ -1,16 +1,9 @@
 'use strict';
 
-const Controller = require('egg').Controller;
+const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
-class ChapterController extends Controller {
-  parseId(): number | null {
-    const id = Number(this.ctx.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return null;
-    }
-    return id;
-  }
+class ChapterController extends ApiController {
 
   async indexByProject() {
     const projectId = this.parseId();
@@ -19,12 +12,7 @@ class ChapterController extends Controller {
       return;
     }
 
-    try {
-      const items = await this.ctx.service.chapter.findByProjectId(projectId);
-      response.success(this.ctx, items);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.chapter.findByProjectId(projectId));
   }
 
   /**
@@ -41,16 +29,13 @@ class ChapterController extends Controller {
       return;
     }
 
-    try {
+    await this.respond(async () => {
       const chapter = await this.ctx.service.chapter.findById(id);
       if (!chapter) {
-        response.error(this.ctx, 'chapter not found');
-        return;
+        throw new Error('chapter not found');
       }
-      response.success(this.ctx, chapter);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+      return chapter;
+    });
   }
 
   /**
@@ -67,12 +52,9 @@ class ChapterController extends Controller {
       return;
     }
 
-    try {
-      const chapter = await this.ctx.service.chapter.create(projectId, this.ctx.request.body || {});
-      response.success(this.ctx, chapter);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() =>
+      this.ctx.service.chapter.create(projectId, this.ctx.request.body || {}),
+    );
   }
 
   /**
@@ -89,12 +71,7 @@ class ChapterController extends Controller {
       return;
     }
 
-    try {
-      const chapter = await this.ctx.service.chapter.update(id, this.ctx.request.body || {});
-      response.success(this.ctx, chapter);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.chapter.update(id, this.ctx.request.body || {}));
   }
 
   /**
@@ -111,12 +88,10 @@ class ChapterController extends Controller {
       return;
     }
 
-    try {
+    await this.respond(async () => {
       await this.ctx.service.chapter.softDelete(id);
-      response.success(this.ctx, { success: true });
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+      return { success: true };
+    });
   }
 
   /**

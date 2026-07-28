@@ -21,6 +21,11 @@ function mapProject(app: any, row: Record<string, any>) {
       normalizeGeneratedAssetReference(app, row.video_preview_url),
       publicAppBaseUrl,
     ),
+    video_poster_url: resolveUrl(
+      app,
+      normalizeGeneratedAssetReference(app, row.video_poster_url),
+      publicAppBaseUrl,
+    ),
     video_status: toNullableString(row.video_status),
     video_error: toNullableString(row.video_error),
     video_duration: toNullableNumber(row.video_duration),

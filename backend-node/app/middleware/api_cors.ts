@@ -1,8 +1,14 @@
 'use strict';
 
+const response = require('../lib/response');
+
 type MiddlewareContext = {
   method: string;
   status: number;
+  app: {
+    emit(event: string, error: unknown, ctx: MiddlewareContext): void;
+  };
+  body?: unknown;
   get(name: string): string;
   set(name: string, value: string): void;
 };
@@ -21,6 +27,15 @@ module.exports = (): ((ctx: MiddlewareContext, next: () => Promise<void>) => Pro
       return;
     }
 
-    await next();
+    try {
+      await next();
+    } catch (error) {
+      ctx.app.emit('error', error, ctx);
+      ctx.status = 200;
+      response.error(
+        ctx,
+        error instanceof Error && error.message ? error.message : '服务器内部错误',
+      );
+    }
   };
 };

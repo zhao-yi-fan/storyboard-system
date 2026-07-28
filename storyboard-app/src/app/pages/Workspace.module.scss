@@ -2480,6 +2480,12 @@
   line-height: var(--tw-leading, var(--text-xs--line-height, calc(1 / 0.75)));
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
 }
+.formLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--spacing, 0.25rem) * 3);
+}
 .emptyText {
   font-size: var(--text-xs, 0.75rem);
   line-height: var(--tw-leading, var(--text-xs--line-height, calc(1 / 0.75)));

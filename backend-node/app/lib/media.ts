@@ -132,11 +132,12 @@ function buildScaleFilter(spec) {
 async function createPreviewFromLocalPath(app, localPath, subdir, previewFilename, spec) {
   await ensureFfmpeg();
   const publicPath = generatedPublicPath(app, subdir, previewFilename);
+  const outputExtension = path.extname(previewFilename) || '.webp';
 
   if (isOssEnabled(app)) {
     const tempOutput = path.join(
       os.tmpdir(),
-      `storyboard-preview-${Date.now()}-${Math.random().toString(16).slice(2)}.webp`,
+      `storyboard-preview-${Date.now()}-${Math.random().toString(16).slice(2)}${outputExtension}`,
     );
     try {
       await run('ffmpeg', [
@@ -172,20 +173,48 @@ async function createPreviewFromLocalPath(app, localPath, subdir, previewFilenam
   return publicPath;
 }
 
+function isMissingWebpEncoderError(error) {
+  const message = String(error?.message || error);
+  return /(?:webp|encoder).*(?:disabled|not found)|Error selecting an encoder/i.test(message);
+}
+
+async function createPreviewFromInput(app, input, subdir, baseName, spec) {
+  const sanitizedBaseName = sanitizeFileName(baseName);
+  try {
+    return await createPreviewFromLocalPath(
+      app,
+      input,
+      subdir,
+      `${sanitizedBaseName}.thumb.webp`,
+      spec,
+    );
+  } catch (error) {
+    if (!isMissingWebpEncoderError(error)) throw error;
+    return await createPreviewFromLocalPath(
+      app,
+      input,
+      subdir,
+      `${sanitizedBaseName}.thumb.jpg`,
+      spec,
+    );
+  }
+}
+
 async function createPreviewFromSource(app, source, subdir, baseName, spec) {
   const materialized = await materializeSourceToLocalFile(app, source);
   try {
-    const previewFilename = `${sanitizeFileName(baseName)}.thumb.webp`;
-    return await createPreviewFromLocalPath(
-      app,
-      materialized.localPath,
-      subdir,
-      previewFilename,
-      spec,
-    );
+    return await createPreviewFromInput(app, materialized.localPath, subdir, baseName, spec);
   } finally {
     await materialized.cleanup();
   }
+}
+
+async function createPreviewFromRemoteSource(app, source, subdir, baseName, spec) {
+  const value = String(source || '').trim();
+  if (!/^https?:\/\//.test(value)) {
+    throw new Error('remote preview source must be an HTTP URL');
+  }
+  return await createPreviewFromInput(app, value, subdir, baseName, spec);
 }
 
 async function storeBuffer(
@@ -450,6 +479,7 @@ module.exports = {
   materializeSourceToLocalFile,
   createPreviewFromLocalPath,
   createPreviewFromSource,
+  createPreviewFromRemoteSource,
   storeBuffer,
   downloadAndStore,
   probeDuration,

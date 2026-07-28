@@ -1,9 +1,9 @@
 'use strict';
 
-const Controller = require('egg').Controller;
+const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
-class OssController extends Controller {
+class OssController extends ApiController {
   /**
    * 签发前端直传 OSS 所需的上传地址。
    * @returns {Promise<void>} 通过统一响应格式返回上传签名。
@@ -12,15 +12,12 @@ class OssController extends Controller {
    * // => { code: 200, data: { upload_url: "https://...", public_url: "/generated/assets/demo.png" }, message: "" }
    */
   async sign() {
-    try {
-      const result = await this.ctx.service.oss.signUploadURL(
+    await this.respond(() =>
+      this.ctx.service.oss.signUploadURL(
         String(this.ctx.query.filename || ''),
         String(this.ctx.query.content_type || ''),
-      );
-      response.success(this.ctx, result);
-    } catch (err: any) {
-      response.error(this.ctx, err.message);
-    }
+      ),
+    );
   }
 
   /**

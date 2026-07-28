@@ -16,6 +16,17 @@ type RequestOptions = RequestInit & {
   suppressToast?: boolean;
 };
 
+export type ApiQueryValue = string | number | boolean | null | undefined;
+export type ApiQueryParams = Record<string, ApiQueryValue>;
+export type ApiRequestBody =
+  | Record<string, unknown>
+  | readonly unknown[]
+  | FormData
+  | string
+  | number
+  | boolean
+  | null;
+
 type ToastHandledError = Error & {
   __toastHandled?: boolean;
 };
@@ -56,7 +67,7 @@ async function parseApiResponse<T>(response: Response): Promise<ApiResponse<T>> 
 }
 
 // 统一请求封装
-async function request<T = any>(url: string, options: RequestOptions = {}): Promise<T> {
+async function request<T = unknown>(url: string, options: RequestOptions = {}): Promise<T> {
   const { suppressToast = false, ...requestOptions } = options;
   const defaultHeaders: Record<string, string> =
     requestOptions.body instanceof FormData ? {} : { "Content-Type": "application/json" };
@@ -112,9 +123,9 @@ async function request<T = any>(url: string, options: RequestOptions = {}): Prom
 }
 
 // GET 方法封装
-function get<T = any>(
+function get<T = unknown>(
   url: string,
-  params?: Record<string, any>,
+  params?: ApiQueryParams,
   options?: RequestOptions,
 ): Promise<T> {
   let queryString = "";
@@ -134,7 +145,11 @@ function get<T = any>(
 }
 
 // POST 方法封装
-function post<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
+function post<T = unknown>(
+  url: string,
+  data?: ApiRequestBody,
+  options?: RequestOptions,
+): Promise<T> {
   return request<T>(url, {
     method: "POST",
     body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
@@ -143,7 +158,11 @@ function post<T = any>(url: string, data?: any, options?: RequestOptions): Promi
 }
 
 // PUT 方法封装
-function put<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
+function put<T = unknown>(
+  url: string,
+  data?: ApiRequestBody,
+  options?: RequestOptions,
+): Promise<T> {
   return request<T>(url, {
     method: "PUT",
     body: data ? JSON.stringify(data) : undefined,
@@ -152,7 +171,7 @@ function put<T = any>(url: string, data?: any, options?: RequestOptions): Promis
 }
 
 // DELETE 方法封装
-function del<T = any>(url: string, options?: RequestOptions): Promise<T> {
+function del<T = unknown>(url: string, options?: RequestOptions): Promise<T> {
   return request<T>(url, {
     method: "DELETE",
     ...options,

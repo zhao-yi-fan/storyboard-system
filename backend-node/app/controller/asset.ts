@@ -1,23 +1,15 @@
 'use strict';
 // @ts-nocheck
 
-const Controller = require('egg').Controller;
+const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
-class AssetController extends Controller {
-  parseId() {
-    const id = Number(this.ctx.params.id);
-    return Number.isInteger(id) && id > 0 ? id : null;
-  }
+class AssetController extends ApiController {
 
   async indexByProject() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try {
-      response.success(this.ctx, await this.ctx.service.asset.findByProjectId(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.asset.findByProjectId(id));
   }
 
   /**
@@ -30,23 +22,17 @@ class AssetController extends Controller {
   async indexByCharacter() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid character id');
-    try {
-      response.success(this.ctx, await this.ctx.service.asset.findByCharacterId(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.asset.findByCharacterId(id));
   }
 
   async show() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
+    await this.respond(async () => {
       const item = await this.ctx.service.asset.findById(id);
-      if (!item) return response.error(this.ctx, 'asset not found');
-      response.success(this.ctx, item);
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      if (!item) throw new Error('asset not found');
+      return item;
+    });
   }
 
   /**
@@ -59,14 +45,7 @@ class AssetController extends Controller {
   async create() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.asset.create(id, this.ctx.request.body || {}),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.asset.create(id, this.ctx.request.body || {}));
   }
 
   /**
@@ -79,14 +58,7 @@ class AssetController extends Controller {
   async update() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(
-        this.ctx,
-        await this.ctx.service.asset.update(id, this.ctx.request.body || {}),
-      );
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.asset.update(id, this.ctx.request.body || {}));
   }
 
   /**
@@ -99,12 +71,10 @@ class AssetController extends Controller {
   async destroy() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
+    await this.respond(async () => {
       await this.ctx.service.asset.softDelete(id);
-      response.success(this.ctx, { success: true });
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+      return { success: true };
+    });
   }
 
   /**
@@ -117,11 +87,7 @@ class AssetController extends Controller {
   async previewCoverGeneration() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(this.ctx, await this.ctx.service.asset.previewCoverGeneration(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.asset.previewCoverGeneration(id));
   }
   /**
    * 预览资产封面生成参数。
@@ -133,11 +99,7 @@ class AssetController extends Controller {
   async generateCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    try {
-      response.success(this.ctx, await this.ctx.service.asset.generateCover(id));
-    } catch (err) {
-      response.error(this.ctx, err.message);
-    }
+    await this.respond(() => this.ctx.service.asset.generateCover(id));
   }
 
   /**
