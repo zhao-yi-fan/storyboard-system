@@ -1,29 +1,36 @@
-// @ts-nocheck
 'use strict';
 
 import { toNullableDate, toNullableNumber, toNullableString } from './common';
-import { normalizeGeneratedAssetReference, resolveUrl } from './generated_asset';
 
-function mapProject(app: any, row: Record<string, any>) {
+const generatedAsset = require('./generated_asset') as {
+  normalizeGeneratedAssetReference: (app: App, raw: unknown) => string;
+  resolveUrl: (app: App, raw: unknown, publicBaseUrl: string) => string;
+};
+
+type App = {
+  config: { storyboard: { publicAppBaseUrl?: string } };
+};
+
+function mapProject(app: App, row: Record<string, any>) {
   const publicAppBaseUrl = app.config.storyboard.publicAppBaseUrl || '';
   return {
     id: Number(row.id),
     name: row.name,
     description: toNullableString(row.description),
     script_text: toNullableString(row.script_text),
-    video_url: resolveUrl(
+    video_url: generatedAsset.resolveUrl(
       app,
-      normalizeGeneratedAssetReference(app, row.video_url),
+      generatedAsset.normalizeGeneratedAssetReference(app, row.video_url),
       publicAppBaseUrl,
     ),
-    video_preview_url: resolveUrl(
+    video_preview_url: generatedAsset.resolveUrl(
       app,
-      normalizeGeneratedAssetReference(app, row.video_preview_url),
+      generatedAsset.normalizeGeneratedAssetReference(app, row.video_preview_url),
       publicAppBaseUrl,
     ),
-    video_poster_url: resolveUrl(
+    video_poster_url: generatedAsset.resolveUrl(
       app,
-      normalizeGeneratedAssetReference(app, row.video_poster_url),
+      generatedAsset.normalizeGeneratedAssetReference(app, row.video_poster_url),
       publicAppBaseUrl,
     ),
     video_status: toNullableString(row.video_status),
@@ -38,7 +45,7 @@ function mapProject(app: any, row: Record<string, any>) {
 
 export { mapProject };
 
-export function mapProjectWithStats(app: any, row: Record<string, any>) {
+export function mapProjectWithStats(app: App, row: Record<string, any>) {
   return {
     ...mapProject(app, row),
     chapter_count: Number(row.chapter_count || 0),

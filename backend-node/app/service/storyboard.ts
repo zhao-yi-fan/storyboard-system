@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 
 const Service = require('egg').Service;
@@ -238,7 +237,12 @@ class StoryboardService extends Service {
     await this.pool.execute('UPDATE storyboards SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
-  async attachCharacters(items) {
+  async attachCharacters(items: Array<{
+    id: number;
+    characters: unknown[];
+    character_names: string[];
+    [key: string]: unknown;
+  }>) {
     if (!items.length) {
       return;
     }
@@ -266,7 +270,12 @@ class StoryboardService extends Service {
     }
   }
 
-  async attachAssets(items) {
+  async attachAssets(items: Array<{
+    id: number;
+    assets: unknown[];
+    asset_names: string[];
+    [key: string]: unknown;
+  }>) {
     if (!items.length) {
       return;
     }
@@ -398,7 +407,7 @@ class StoryboardService extends Service {
     return REFERENCE_TYPE.ASSET;
   }
 
-  async selectAssetReferenceImages(storyboard) {
+  async selectAssetReferenceImages(storyboard, _scene?) {
     const references = [];
     const missing = [];
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {

@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const { ApiController } = require('../lib/api_controller');
 const { ENTITY_TYPE } = require('../lib/domain_constants');

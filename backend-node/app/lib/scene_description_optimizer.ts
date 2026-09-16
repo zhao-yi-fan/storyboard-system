@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const { requestDeepSeekText } = require('./deepseek');
 

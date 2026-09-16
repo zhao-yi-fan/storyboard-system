@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const Service = require('egg').Service;
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');

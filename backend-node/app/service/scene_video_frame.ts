@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const path = require('node:path');
 const Service = require('egg').Service;

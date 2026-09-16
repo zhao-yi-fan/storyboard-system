@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const SCRIPT_IMPORT_RULE = Object.freeze({
   CHARACTER_NAME_MAX_LENGTH: 12,

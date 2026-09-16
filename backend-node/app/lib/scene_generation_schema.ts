@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const { MEDIA_TYPE } = require('./domain_constants');
 

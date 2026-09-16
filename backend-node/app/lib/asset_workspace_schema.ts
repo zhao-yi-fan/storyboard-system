@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 async function columnExists(pool, tableName, columnName) {
   const [rows] = await pool.query(

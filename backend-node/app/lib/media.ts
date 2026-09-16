@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const fs = require('node:fs');
 const fsp = fs.promises;
@@ -21,23 +20,32 @@ const {
 
 const execFileAsync = promisify(execFile);
 
-function storyboardPreviewSpec() {
+type PreviewSpec = { width: number; height: number; crop: boolean };
+
+type MaterializedSource = { localPath: string; cleanup: () => Promise<void> };
+
+type App = {
+  baseDir: string;
+  config: { storyboard: { publicAppBaseUrl?: string } };
+};
+
+function storyboardPreviewSpec(): PreviewSpec {
   return { width: 480, height: 270, crop: true };
 }
 
-function assetPreviewSpec() {
+function assetPreviewSpec(): PreviewSpec {
   return { width: 480, height: 270, crop: true };
 }
 
-function avatarPreviewSpec() {
+function avatarPreviewSpec(): PreviewSpec {
   return { width: 256, height: 256, crop: true };
 }
 
-function videoPosterSpec() {
+function videoPosterSpec(): PreviewSpec {
   return { width: 480, height: 480, crop: false };
 }
 
-function sanitizeFileName(value) {
+function sanitizeFileName(value: unknown): string {
   const cleaned = String(value || '')
     .trim()
     .replace(/[/\\ :?&#=]+/g, '-')
@@ -45,24 +53,24 @@ function sanitizeFileName(value) {
   return cleaned || 'preview';
 }
 
-async function run(cmd, args) {
+async function run(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   try {
     return await execFileAsync(cmd, args, { maxBuffer: 20 * 1024 * 1024 });
-  } catch (error) {
+  } catch (error: any) {
     const stderr = String(error.stderr || '').trim();
     throw new Error(stderr || error.message);
   }
 }
 
-async function ensureFfmpeg() {
+async function ensureFfmpeg(): Promise<void> {
   await run('ffmpeg', ['-version']);
 }
 
-async function ensureFfprobe() {
+async function ensureFfprobe(): Promise<void> {
   await run('ffprobe', ['-version']);
 }
 
-async function downloadToBuffer(source, timeoutMs = 120000) {
+async function downloadToBuffer(source: string, timeoutMs = 120000): Promise<Buffer> {
   const response = await fetch(source, { signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) {
     throw new Error(`download failed: HTTP ${response.status}`);
@@ -70,7 +78,7 @@ async function downloadToBuffer(source, timeoutMs = 120000) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function materializeSourceToLocalFile(app, source, suffix = '') {
+async function materializeSourceToLocalFile(app: App, source: unknown, suffix = ''): Promise<MaterializedSource> {
   const value = String(source || '').trim();
   if (!value) {
     throw new Error('source is empty');
@@ -122,14 +130,14 @@ async function materializeSourceToLocalFile(app, source, suffix = '') {
   return { localPath: path.resolve(app.baseDir, value), cleanup: async () => {} };
 }
 
-function buildScaleFilter(spec) {
+function buildScaleFilter(spec: PreviewSpec): string {
   if (spec.crop) {
     return `scale=${spec.width}:${spec.height}:force_original_aspect_ratio=increase,crop=${spec.width}:${spec.height}`;
   }
   return `scale=${spec.width}:${spec.height}:force_original_aspect_ratio=decrease`;
 }
 
-async function createPreviewFromLocalPath(app, localPath, subdir, previewFilename, spec) {
+async function createPreviewFromLocalPath(app: App, localPath: string, subdir: string, previewFilename: string, spec: PreviewSpec): Promise<string> {
   await ensureFfmpeg();
   const publicPath = generatedPublicPath(app, subdir, previewFilename);
   const outputExtension = path.extname(previewFilename) || '.webp';
@@ -173,12 +181,12 @@ async function createPreviewFromLocalPath(app, localPath, subdir, previewFilenam
   return publicPath;
 }
 
-function isMissingWebpEncoderError(error) {
-  const message = String(error?.message || error);
+function isMissingWebpEncoderError(error: unknown): boolean {
+  const message = String((error as Error)?.message || error);
   return /(?:webp|encoder).*(?:disabled|not found)|Error selecting an encoder/i.test(message);
 }
 
-async function createPreviewFromInput(app, input, subdir, baseName, spec) {
+async function createPreviewFromInput(app: App, input: string, subdir: string, baseName: string, spec: PreviewSpec): Promise<string> {
   const sanitizedBaseName = sanitizeFileName(baseName);
   try {
     return await createPreviewFromLocalPath(
@@ -200,7 +208,7 @@ async function createPreviewFromInput(app, input, subdir, baseName, spec) {
   }
 }
 
-async function createPreviewFromSource(app, source, subdir, baseName, spec) {
+async function createPreviewFromSource(app: App, source: unknown, subdir: string, baseName: string, spec: PreviewSpec): Promise<string> {
   const materialized = await materializeSourceToLocalFile(app, source);
   try {
     return await createPreviewFromInput(app, materialized.localPath, subdir, baseName, spec);
@@ -209,7 +217,7 @@ async function createPreviewFromSource(app, source, subdir, baseName, spec) {
   }
 }
 
-async function createPreviewFromRemoteSource(app, source, subdir, baseName, spec) {
+async function createPreviewFromRemoteSource(app: App, source: unknown, subdir: string, baseName: string, spec: PreviewSpec): Promise<string> {
   const value = String(source || '').trim();
   if (!/^https?:\/\//.test(value)) {
     throw new Error('remote preview source must be an HTTP URL');
@@ -218,12 +226,12 @@ async function createPreviewFromRemoteSource(app, source, subdir, baseName, spec
 }
 
 async function storeBuffer(
-  app,
-  buffer,
-  subdir,
-  filename,
-  contentType = 'application/octet-stream',
-) {
+  app: App,
+  buffer: Buffer,
+  subdir: string,
+  filename: string,
+  _contentType = 'application/octet-stream',
+): Promise<{ publicPath: string; localPath: string }> {
   const publicPath = generatedPublicPath(app, subdir, filename);
   if (isOssEnabled(app)) {
     const tempPath = path.join(
@@ -232,7 +240,7 @@ async function storeBuffer(
     );
     try {
       await fsp.writeFile(tempPath, buffer);
-      await uploadLocalFile(app, tempPath, publicPath, contentType);
+      await uploadLocalFile(app, tempPath, publicPath);
       return { publicPath, localPath: tempPath };
     } catch (error) {
       await fsp.rm(tempPath, { force: true });
@@ -248,17 +256,17 @@ async function storeBuffer(
 }
 
 async function downloadAndStore(
-  app,
-  sourceUrl,
-  subdir,
-  filename,
+  app: App,
+  sourceUrl: string,
+  subdir: string,
+  filename: string,
   contentType = 'application/octet-stream',
-) {
+): Promise<{ publicPath: string; localPath: string }> {
   const buffer = await downloadToBuffer(sourceUrl);
   return await storeBuffer(app, buffer, subdir, filename, contentType);
 }
 
-async function probeDuration(localPath) {
+async function probeDuration(localPath: string): Promise<number> {
   await ensureFfprobe();
   const { stdout } = await run('ffprobe', [
     '-v',
@@ -273,12 +281,12 @@ async function probeDuration(localPath) {
   return Number.isFinite(value) ? value : 0;
 }
 
-function formatDurationSeconds(value: any) {
+function formatDurationSeconds(value: number): string {
   const duration = Number(value || 0);
   return `${duration.toFixed(1)}秒`;
 }
 
-async function normalizeAudioDuration(buffer: Buffer, options: any = {}) {
+async function normalizeAudioDuration(buffer: Buffer, options: Record<string, unknown> = {}): Promise<{ audioBuffer: Buffer; duration: number; originalDuration: number; wasTrimmed: boolean }> {
   const minSeconds = Number(options.minSeconds || 0);
   const maxSeconds = Number(options.maxSeconds || 0);
   const extension = String(options.extension || 'wav').replace(/^\./, '') || 'wav';
@@ -339,11 +347,11 @@ async function normalizeAudioDuration(buffer: Buffer, options: any = {}) {
   }
 }
 
-async function composeVideos(app, sources, subdir, filename) {
+async function composeVideos(app: App, sources: unknown[], subdir: string, filename: string): Promise<{ publicPath: string; previewPath: string; duration: number }> {
   await ensureFfmpeg();
   const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-compose-'));
   try {
-    const inputPaths = [];
+    const inputPaths: string[] = [];
     for (let index = 0; index < sources.length; index++) {
       const materialized = await materializeSourceToLocalFile(app, sources[index], '.mp4');
       const tempInput = path.join(workDir, `input-${String(index + 1).padStart(3, '0')}.mp4`);
@@ -417,7 +425,7 @@ async function composeVideos(app, sources, subdir, filename) {
   }
 }
 
-async function trimVideo(app, source, startSeconds, endSeconds, subdir, filename) {
+async function trimVideo(app: App, source: unknown, startSeconds: number, endSeconds: number, subdir: string, filename: string): Promise<{ publicPath: string; previewPath: string; duration: number }> {
   await ensureFfmpeg();
   const materialized = await materializeSourceToLocalFile(app, source, '.mp4');
   const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-trim-'));
@@ -465,26 +473,26 @@ async function trimVideo(app, source, startSeconds, endSeconds, subdir, filename
   }
 }
 
-function resolveMediaUrl(app, raw) {
+function resolveMediaUrl(app: App, raw: unknown): string {
   return resolveUrl(app, raw, app.config.storyboard.publicAppBaseUrl || '');
 }
 
-module.exports = {
-  storyboardPreviewSpec,
+export {
   assetPreviewSpec,
   avatarPreviewSpec,
-  videoPosterSpec,
-  sanitizeFileName,
+  composeVideos,
+  createPreviewFromLocalPath,
+  createPreviewFromRemoteSource,
+  createPreviewFromSource,
+  downloadAndStore,
   downloadToBuffer,
   materializeSourceToLocalFile,
-  createPreviewFromLocalPath,
-  createPreviewFromSource,
-  createPreviewFromRemoteSource,
-  storeBuffer,
-  downloadAndStore,
-  probeDuration,
   normalizeAudioDuration,
-  composeVideos,
-  trimVideo,
+  probeDuration,
   resolveMediaUrl,
+  sanitizeFileName,
+  storeBuffer,
+  storyboardPreviewSpec,
+  trimVideo,
+  videoPosterSpec,
 };

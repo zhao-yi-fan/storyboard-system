@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const path = require('node:path');
 const Service = require('egg').Service;
@@ -10,6 +9,8 @@ const {
   isOssEnabled,
 } = require('../lib/generated_asset');
 
+type AsyncIterableBuffer = AsyncIterable<Buffer | Uint8Array>;
+
 class OssService extends Service {
   /**
    * 创建用于内网/服务端上传的 OSS client。
@@ -18,7 +19,7 @@ class OssService extends Service {
    * service.buildClient()
    * // => OSS client
    */
-  buildClient() {
+  buildClient(): any {
     return createOssClient(this.app, false);
   }
 
@@ -29,7 +30,7 @@ class OssService extends Service {
    * service.buildPublicClient()
    * // => OSS client
    */
-  buildPublicClient() {
+  buildPublicClient(): any {
     return createOssClient(this.app, true);
   }
 
@@ -42,13 +43,13 @@ class OssService extends Service {
    * await service.signUploadURL("assets/demo.png", "image/png")
    * // => { upload_url: "https://...", public_url: "/generated/assets/demo.png", object_key: "assets/demo.png" }
    */
-  async signUploadURL(fileName, contentType) {
+  async signUploadURL(fileName: string, contentType: string): Promise<{ upload_url: string; public_url: string; object_key: string }> {
     if (!fileName) {
       throw new Error('filename is required');
     }
     const client = this.buildPublicClient();
     const objectKey = String(fileName).replace(/^\/+/, '');
-    const uploadUrl = await client.signatureUrl(objectKey, {
+    const uploadUrl: string = await client.signatureUrl(objectKey, {
       method: 'PUT',
       expires: 3600,
       'Content-Type': contentType || 'application/octet-stream',
@@ -70,14 +71,14 @@ class OssService extends Service {
    * await service.uploadStream(fileStream, "poster.png", "image/png")
    * // => { public_url: "/generated/assets/1710000000000-abcd.png", object_key: "assets/1710000000000-abcd.png" }
    */
-  async uploadStream(stream, fileName, contentType) {
+  async uploadStream(stream: AsyncIterableBuffer, fileName: string, contentType: string): Promise<{ public_url: string; object_key: string; file_name: string; content_type: string }> {
     if (!isOssEnabled(this.app)) {
       throw new Error('当前未配置文件上传服务，请先配置 OSS 上传。');
     }
 
     const ext = path.posix.extname(String(fileName || '').trim());
     const objectKey = `assets/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const chunks = [];
+    const chunks: Buffer[] = [];
     for await (const chunk of stream) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }

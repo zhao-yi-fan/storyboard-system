@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const fs = require('node:fs');
 const fsp = fs.promises;
@@ -9,11 +8,27 @@ const { URL } = require('node:url');
 const OSS = require('ali-oss');
 const DIST_DIR_NAME = 'dist';
 
-function storyboardConfig(app) {
+type StoryboardConfig = {
+  generatedAssetBasePath?: string;
+  generatedAssetDir?: string;
+  publicAppBaseUrl?: string;
+  aliyunOssEndpoint?: string;
+  aliyunOssPublicEndpoint?: string;
+  aliyunOssAccessKeyId?: string;
+  aliyunOssAccessKeySecret?: string;
+  aliyunOssBucket?: string;
+};
+
+type App = {
+  baseDir: string;
+  config: { storyboard: StoryboardConfig };
+};
+
+function storyboardConfig(app: App): StoryboardConfig {
   return app.config.storyboard || {};
 }
 
-function resolveBackendNodeRootDir(app) {
+function resolveBackendNodeRootDir(app: App): string {
   const baseDir = String(app.baseDir || '').trim();
   if (!baseDir) {
     return process.cwd();
@@ -21,20 +36,20 @@ function resolveBackendNodeRootDir(app) {
   return path.basename(baseDir) === DIST_DIR_NAME ? path.resolve(baseDir, '..') : baseDir;
 }
 
-function normalizedGeneratedBasePath(app) {
+function normalizedGeneratedBasePath(app: App): string {
   const base =
     String(storyboardConfig(app).generatedAssetBasePath || '/generated').trim() || '/generated';
   return `/${base.replace(/^\/+|\/+$/g, '')}`;
 }
 
-function generatedPublicPathFromObjectKey(app, objectKey) {
+function generatedPublicPathFromObjectKey(app: App, objectKey: string): string {
   const cleaned = String(objectKey || '')
     .trim()
     .replace(/^\/+/, '');
   return `${normalizedGeneratedBasePath(app)}/${cleaned}`;
 }
 
-function generatedPublicPath(app, subdir, filename) {
+function generatedPublicPath(app: App, subdir: string, filename: string): string {
   const left = String(subdir || '')
     .trim()
     .replace(/^\/+|\/+$/g, '');
@@ -44,7 +59,7 @@ function generatedPublicPath(app, subdir, filename) {
   return generatedPublicPathFromObjectKey(app, left ? `${left}/${right}` : right);
 }
 
-function generatedObjectKey(app, raw) {
+function generatedObjectKey(app: App, raw: unknown): string {
   let value = String(raw || '').trim();
   if (!value) {
     throw new Error('empty generated path');
@@ -69,7 +84,7 @@ function generatedObjectKey(app, raw) {
   return relative;
 }
 
-function isGeneratedAssetPath(app, raw) {
+function isGeneratedAssetPath(app: App, raw: unknown): boolean {
   try {
     generatedObjectKey(app, raw);
     return true;
@@ -78,7 +93,7 @@ function isGeneratedAssetPath(app, raw) {
   }
 }
 
-async function resolveGeneratedAssetRoot(app) {
+async function resolveGeneratedAssetRoot(app: App): Promise<string> {
   const configured =
     String(storyboardConfig(app).generatedAssetDir || '../storage').trim() || '../storage';
   if (path.isAbsolute(configured)) {
@@ -87,21 +102,21 @@ async function resolveGeneratedAssetRoot(app) {
   return path.resolve(resolveBackendNodeRootDir(app), configured);
 }
 
-async function generatedObjectKeyToLocalPath(app, objectKey) {
+async function generatedObjectKeyToLocalPath(app: App, objectKey: string): Promise<string> {
   return path.join(await resolveGeneratedAssetRoot(app), objectKey.split('/').join(path.sep));
 }
 
-function buildOssEndpoint(raw) {
+function buildOssEndpoint(raw: unknown): string {
   return String(raw || '')
     .trim()
     .replace(/^https?:\/\//, '');
 }
 
-function derivePublicOssEndpoint(endpoint) {
+function derivePublicOssEndpoint(endpoint: unknown): string {
   return buildOssEndpoint(endpoint).replace('-internal.aliyuncs.com', '.aliyuncs.com');
 }
 
-function isOssEnabled(app) {
+function isOssEnabled(app: App): boolean {
   const cfg = storyboardConfig(app);
   return Boolean(
     cfg.aliyunOssEndpoint &&
@@ -111,7 +126,7 @@ function isOssEnabled(app) {
   );
 }
 
-function createOssClient(app, usePublicEndpoint = false) {
+function createOssClient(app: App, usePublicEndpoint = false): any {
   const cfg = storyboardConfig(app);
   if (!isOssEnabled(app)) {
     throw new Error('OSS not configured');
@@ -129,14 +144,14 @@ function createOssClient(app, usePublicEndpoint = false) {
   });
 }
 
-function normalizeSignedUrl(raw) {
+function normalizeSignedUrl(raw: unknown): string {
   return String(raw || '')
     .replaceAll('%2F', '/')
     .replaceAll('%2f', '/')
     .replace(/^http:\/\//, 'https://');
 }
 
-function resolveGeneratedUrl(app, raw) {
+function resolveGeneratedUrl(app: App, raw: unknown): string {
   const value = String(raw || '').trim();
   if (!value) {
     return '';
@@ -149,14 +164,14 @@ function resolveGeneratedUrl(app, raw) {
     return publicBaseUrl ? `${publicBaseUrl.replace(/\/$/, '')}${value}` : value;
   }
   const client = createOssClient(app, true);
-  const signed = client.signatureUrl(generatedObjectKey(app, value), {
+  const signed: string = client.signatureUrl(generatedObjectKey(app, value), {
     method: 'GET',
     expires: 3600,
   });
   return normalizeSignedUrl(signed);
 }
 
-function resolveUrl(app, raw, publicBaseUrl = '') {
+function resolveUrl(app: App, raw: unknown, publicBaseUrl = ''): string {
   const value = String(raw || '').trim();
   if (!value) {
     return '';
@@ -173,7 +188,7 @@ function resolveUrl(app, raw, publicBaseUrl = '') {
   return value;
 }
 
-function isManagedOssHost(app, host) {
+function isManagedOssHost(app: App, host: string): boolean {
   const value = String(host || '')
     .trim()
     .toLowerCase();
@@ -196,7 +211,7 @@ function isManagedOssHost(app, host) {
   );
 }
 
-function normalizeGeneratedAssetReference(app, raw) {
+function normalizeGeneratedAssetReference(app: App, raw: unknown): string {
   const value = String(raw || '').trim();
   if (!value) {
     return '';
@@ -219,14 +234,14 @@ function normalizeGeneratedAssetReference(app, raw) {
   }
 }
 
-async function ensureGeneratedDir(app, subdir) {
+async function ensureGeneratedDir(app: App, subdir: string): Promise<string> {
   const root = await resolveGeneratedAssetRoot(app);
   const dir = path.join(root, String(subdir || '').trim());
   await fsp.mkdir(dir, { recursive: true });
   return dir;
 }
 
-async function uploadLocalFile(app, localPath, generatedPath) {
+async function uploadLocalFile(app: App, localPath: string, generatedPath: string): Promise<void> {
   if (!isOssEnabled(app)) {
     return;
   }
@@ -234,7 +249,7 @@ async function uploadLocalFile(app, localPath, generatedPath) {
   await client.put(generatedObjectKey(app, generatedPath), localPath);
 }
 
-async function uploadBuffer(app, buffer, generatedPath) {
+async function uploadBuffer(app: App, buffer: Buffer, generatedPath: string): Promise<void> {
   if (!isOssEnabled(app)) {
     const objectKey = generatedObjectKey(app, generatedPath);
     const localPath = await generatedObjectKeyToLocalPath(app, objectKey);
@@ -246,7 +261,7 @@ async function uploadBuffer(app, buffer, generatedPath) {
   await client.put(generatedObjectKey(app, generatedPath), Buffer.from(buffer));
 }
 
-async function deleteGeneratedAsset(app, generatedPath) {
+async function deleteGeneratedAsset(app: App, generatedPath: string): Promise<void> {
   if (!isGeneratedAssetPath(app, generatedPath)) return;
   const objectKey = generatedObjectKey(app, generatedPath);
   if (!isOssEnabled(app)) {
@@ -258,7 +273,7 @@ async function deleteGeneratedAsset(app, generatedPath) {
   await client.delete(objectKey);
 }
 
-async function downloadGeneratedToFile(app, generatedPath, localPath) {
+async function downloadGeneratedToFile(app: App, generatedPath: string, localPath: string): Promise<void> {
   if (!isGeneratedAssetPath(app, generatedPath)) {
     throw new Error(`not a generated path: ${generatedPath}`);
   }
@@ -274,7 +289,7 @@ async function downloadGeneratedToFile(app, generatedPath, localPath) {
   }
 }
 
-async function writeBufferToTempFile(buffer, suffix = '') {
+async function writeBufferToTempFile(buffer: Buffer, suffix = ''): Promise<string> {
   const tempPath = path.join(
     os.tmpdir(),
     `storyboard-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`,

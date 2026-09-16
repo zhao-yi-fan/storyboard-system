@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 
 const {
@@ -44,7 +43,7 @@ function getConfig(app) {
  * await generateSeedreamImage(app, "生成高细节角色主设定板", ["https://role-ref.png"], { size: "1600x2304" })
  * // => "https://..."
  */
-async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
+async function generateSeedreamImage(app, prompt, imageUrls, options: { size?: string } = {}) {
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
   const baseUrl = normalizeBaseUrl(
@@ -56,7 +55,14 @@ async function generateSeedreamImage(app, prompt, imageUrls, options = {}) {
     AI_REQUEST_TIMEOUT.SEEDREAM_SECONDS,
     AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
   );
-  const payload = {
+  const payload: {
+    model: string;
+    prompt: string;
+    size: string;
+    response_format: string;
+    watermark: boolean;
+    image?: string | string[];
+  } = {
     model: String(
       cfg.seedreamImageModel || DEFAULT_PROVIDER_MODEL.SEEDREAM_IMAGE,
     ).trim(),
@@ -125,7 +131,17 @@ async function generateWanxVideo(
     : String(
         cfg.wanxTextVideoModel || DEFAULT_PROVIDER_MODEL.WANX_TEXT_VIDEO,
       ).trim();
-  const payload = {
+  const payload: {
+    model: string;
+    parameters: {
+      resolution: string;
+      duration: number;
+      prompt_extend: boolean;
+      watermark: boolean;
+      audio: boolean;
+    };
+    input?: Record<string, unknown>;
+  } = {
     model: selectedModel,
     parameters: {
       resolution: AI_VIDEO_DEFAULT.WANX_RESOLUTION,
@@ -223,7 +239,13 @@ function buildSeedanceVideoPayload({
   if (useFirstFrame && (normalizedReferenceImages.length || normalizedReferenceAudio.length)) {
     throw new Error('Seedance 2.0 首帧模式不能与角色、场景或音频参考素材混用');
   }
-  const content = [{ type: SEEDANCE_CONTENT.TEXT, text: prompt }];
+  const content: Array<{
+    type: string;
+    text?: string;
+    role?: string;
+    image_url?: { url: string };
+    audio_url?: { url: string };
+  }> = [{ type: SEEDANCE_CONTENT.TEXT, text: prompt }];
   if (useFirstFrame && String(imageUrl || '').trim()) {
     content.push({
       type: SEEDANCE_CONTENT.IMAGE_URL,
@@ -268,7 +290,10 @@ async function generateSeedanceVideo(
   resolution = AI_VIDEO_DEFAULT.SEEDANCE_RESOLUTION,
   aspectRatio = AI_VIDEO_DEFAULT.ASPECT_RATIO,
   generateAudio = AI_VIDEO_DEFAULT.GENERATE_AUDIO,
-  options = {},
+  options: {
+    onTaskCreated?: (taskId: string) => void;
+    pollIntervalMs?: number;
+  } = {},
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');

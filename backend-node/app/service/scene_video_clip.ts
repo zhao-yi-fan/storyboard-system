@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const Service = require('egg').Service;
 const { GENERATION_STATUS, MEDIA_TYPE } = require('../lib/domain_constants');

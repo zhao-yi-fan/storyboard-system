@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const { Service } = require('egg');
 const {
@@ -9,7 +8,53 @@ const {
   verifyPassword,
 } = require('../lib/auth_crypto');
 
-function mapAuthUser(row) {
+type MysqlPool = {
+  query: (sql: string, params?: unknown[]) => Promise<[any[], any[]]>;
+  execute: (sql: string, params?: unknown[]) => Promise<any>;
+};
+
+type AuthConfig = {
+  sessionCookieName?: string;
+  sessionTtlDays?: number;
+};
+
+type AuthUserRow = {
+  id: number;
+  account: string;
+  password_hash: string;
+  password_salt: string;
+  display_name: string;
+  role_label: string;
+  is_active: boolean | number;
+  last_login_at: unknown;
+  created_at: unknown;
+  updated_at: unknown;
+};
+
+type AuthUser = {
+  id: number;
+  account: string;
+  display_name: string;
+  role_label: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+} | null;
+
+type SessionInfo = {
+  id: number;
+  user_id?: number;
+  expires_at: string | null;
+  last_seen_at: string | null;
+};
+
+type RequestMeta = {
+  userAgent?: string;
+  ipAddress?: string;
+};
+
+function mapAuthUser(row: AuthUserRow | undefined | null): AuthUser {
   if (!row) {
     return null;
   }
@@ -19,31 +64,31 @@ function mapAuthUser(row) {
     display_name: String(row.display_name || ''),
     role_label: String(row.role_label || ''),
     is_active: Boolean(row.is_active),
-    last_login_at: row.last_login_at ? new Date(row.last_login_at).toISOString() : null,
-    created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-    updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+    last_login_at: row.last_login_at ? new Date(row.last_login_at as string | number).toISOString() : null,
+    created_at: row.created_at ? new Date(row.created_at as string | number).toISOString() : null,
+    updated_at: row.updated_at ? new Date(row.updated_at as string | number).toISOString() : null,
   };
 }
 
 class AuthService extends Service {
-  get pool() {
-    return this.app.mysqlPool;
+  get pool(): MysqlPool {
+    return (this.app).mysqlPool;
   }
 
-  get authConfig() {
-    return this.app.config.auth || {};
+  get authConfig(): AuthConfig {
+    return (this.app.config).auth || {};
   }
 
-  get sessionCookieName() {
+  get sessionCookieName(): string {
     return this.authConfig.sessionCookieName || 'storyboard_session';
   }
 
-  get sessionTtlDays() {
+  get sessionTtlDays(): number {
     const ttl = Number(this.authConfig.sessionTtlDays || 14);
     return Number.isFinite(ttl) && ttl > 0 ? ttl : 14;
   }
 
-  buildCookieOptions(expiresAt) {
+  buildCookieOptions(expiresAt: Date) {
     return {
       httpOnly: true,
       sameSite: 'lax',
@@ -52,7 +97,7 @@ class AuthService extends Service {
     };
   }
 
-  async findUserByAccount(account) {
+  async findUserByAccount(account: string): Promise<AuthUserRow | null> {
     const [rows] = await this.pool.query(
       `SELECT id, account, password_hash, password_salt, display_name, role_label, is_active, last_login_at, created_at, updated_at
        FROM auth_users
@@ -63,7 +108,7 @@ class AuthService extends Service {
     return rows[0] || null;
   }
 
-  async findUserById(id) {
+  async findUserById(id: number | string): Promise<AuthUserRow | null> {
     const [rows] = await this.pool.query(
       `SELECT id, account, password_hash, password_salt, display_name, role_label, is_active, last_login_at, created_at, updated_at
        FROM auth_users
@@ -74,7 +119,7 @@ class AuthService extends Service {
     return rows[0] || null;
   }
 
-  async createUser(payload) {
+  async createUser(payload: { account?: string; password?: string; display_name?: string; role_label?: string }): Promise<AuthUser> {
     const account = String(payload.account || '').trim();
     const password = String(payload.password || '').trim();
     const displayName = String(payload.display_name || '').trim() || account;
@@ -100,7 +145,7 @@ class AuthService extends Service {
     return mapAuthUser(created);
   }
 
-  async login(account, password, requestMeta) {
+  async login(account: unknown, password: unknown, requestMeta: RequestMeta): Promise<{ user: AuthUser; session: SessionInfo; sessionToken: string; expiresAt: Date }> {
     const normalizedAccount = String(account || '').trim();
     const normalizedPassword = String(password || '').trim();
     if (!normalizedAccount || !normalizedPassword) {
@@ -149,13 +194,14 @@ class AuthService extends Service {
       session: {
         id: result.insertId,
         expires_at: expiresAt.toISOString(),
+        last_seen_at: null,
       },
       sessionToken,
       expiresAt,
     };
   }
 
-  async getCurrentUserByToken(token) {
+  async getCurrentUserByToken(token: unknown): Promise<{ user: AuthUser; session: SessionInfo } | null> {
     const sessionTokenHash = hashSessionToken(String(token || ''));
     const [rows] = await this.pool.query(
       `SELECT
@@ -183,29 +229,29 @@ class AuthService extends Service {
       [sessionTokenHash],
     );
 
-    const row = rows[0];
+    const row = rows[0] as Record<string, any> | undefined;
     if (!row) {
       return null;
     }
 
     return {
-      user: mapAuthUser(row),
+      user: mapAuthUser(row as AuthUserRow),
       session: {
         id: Number(row.session_id),
         user_id: Number(row.user_id),
-        expires_at: row.expires_at ? new Date(row.expires_at).toISOString() : null,
-        last_seen_at: row.last_seen_at ? new Date(row.last_seen_at).toISOString() : null,
+        expires_at: row.expires_at ? new Date(row.expires_at as string | number).toISOString() : null,
+        last_seen_at: row.last_seen_at ? new Date(row.last_seen_at as string | number).toISOString() : null,
       },
     };
   }
 
-  async touchSession(sessionId) {
+  async touchSession(sessionId: number | string): Promise<void> {
     await this.pool.execute('UPDATE auth_sessions SET last_seen_at = NOW() WHERE id = ?', [
       sessionId,
     ]);
   }
 
-  async revokeSessionByToken(token) {
+  async revokeSessionByToken(token: unknown): Promise<void> {
     const normalizedToken = String(token || '').trim();
     if (!normalizedToken) {
       return;

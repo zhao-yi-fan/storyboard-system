@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');

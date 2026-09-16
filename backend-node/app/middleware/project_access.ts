@@ -1,9 +1,8 @@
 'use strict';
-// @ts-nocheck
 
 const response = require('../lib/response');
 
-const ENTITY_TABLES = {
+const ENTITY_TABLES: Record<string, string> = {
   chapters: 'chapters',
   scenes: 'scenes',
   storyboards: 'storyboards',
@@ -12,14 +11,25 @@ const ENTITY_TABLES = {
   'asset-requirements': 'asset_requirements',
 };
 
+type MysqlPool = {
+  query: (sql: string, params?: unknown[]) => Promise<[any[], any[]]>;
+};
+
+type AppContext = {
+  path: string;
+  state: { currentUser?: { id: number | string } };
+  app: { mysqlPool: MysqlPool; config: { storyboard: { publicAppBaseUrl?: string } } };
+  body: { code: number; data: unknown; message: string };
+};
+
 module.exports = () => {
-  return async function projectAccess(ctx, next) {
+  return async function projectAccess(ctx: AppContext, next: () => Promise<void>) {
     if (!ctx.path.startsWith('/api/') || !ctx.state.currentUser) {
       await next();
       return;
     }
 
-    let projectId = null;
+    let projectId: number | null = null;
     const projectMatch = ctx.path.match(/^\/api\/projects\/(\d+)(?:\/|$)/);
     if (projectMatch) {
       projectId = Number(projectMatch[1]);

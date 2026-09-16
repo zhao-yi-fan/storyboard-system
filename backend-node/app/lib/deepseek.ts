@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const { LLM_JSON_PROTOCOL } = require('./llm_json_protocol');
 

@@ -1,13 +1,20 @@
-// @ts-nocheck
 'use strict';
 
 import { toNullableDate, toNullableNumber, toNullableString } from './common';
-import { normalizeGeneratedAssetReference, resolveUrl } from './generated_asset';
 
-function resolvePublicUrl(app: any, raw: unknown): string {
-  return resolveUrl(
+const generatedAsset = require('./generated_asset') as {
+  normalizeGeneratedAssetReference: (app: App, raw: unknown) => string;
+  resolveUrl: (app: App, raw: unknown, publicBaseUrl: string) => string;
+};
+
+type App = {
+  config: { storyboard: { publicAppBaseUrl?: string } };
+};
+
+function resolvePublicUrl(app: App, raw: unknown): string {
+  return generatedAsset.resolveUrl(
     app,
-    normalizeGeneratedAssetReference(app, raw),
+    generatedAsset.normalizeGeneratedAssetReference(app, raw),
     app.config.storyboard.publicAppBaseUrl || '',
   );
 }
@@ -24,7 +31,7 @@ export function mapChapter(row: Record<string, any>) {
   };
 }
 
-export function mapScene(app: any, row: Record<string, any>) {
+export function mapScene(app: App, row: Record<string, any>) {
   return {
     id: Number(row.id),
     chapter_id: Number(row.chapter_id),
@@ -55,7 +62,7 @@ export function mapScene(app: any, row: Record<string, any>) {
   };
 }
 
-export function mapStoryboard(app: any, row: Record<string, any>) {
+export function mapStoryboard(app: App, row: Record<string, any>) {
   return {
     id: Number(row.id),
     scene_id: Number(row.scene_id),

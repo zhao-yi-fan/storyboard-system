@@ -1,5 +1,4 @@
 'use strict';
-// @ts-nocheck
 
 const { Service } = require('egg');
 const { mapProject, mapProjectWithStats } = require('../lib/project');
