@@ -66,7 +66,7 @@
 
 ## Spec Template
 
-新增 spec 时复制 [`specs/_template.md`](/Users/zhaoyifan/Desktop/myProject/storyboard-system/specs/_template.md:1)。
+新增 spec 时复制 [`specs/_template.md`](specs/_template.md)。
 
 模板中的硬性要求：
 
