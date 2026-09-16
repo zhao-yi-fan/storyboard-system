@@ -1,32 +1,48 @@
+import {
+  Camera,
+  Film,
+  Loader2,
+  Maximize2,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Play,
+  Plus,
+  Save,
+  Scissors,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+
 import {
-  Film,
-  Plus,
-  MoreHorizontal,
-  Trash2,
-  Play,
-  Save,
-  Camera,
-  X,
-  Loader2,
-  Maximize2,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Scissors,
-} from "lucide-react";
-import { Button } from "../components/ui/button";
-import { Switch } from "../components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
+  type AIGenerationPreview,
+  type Asset,
+  assetApi,
+  type Chapter,
+  chapterApi,
+  type Character,
+  characterApi,
+  ossApi,
+  type Project,
+  projectApi,
+  type Scene,
+  sceneApi,
+  type SceneGenerationReferences,
+  type SceneMediaGeneration,
+  type Storyboard,
+  type StoryboardCoverGenerationPreview,
+  type StoryboardMediaGeneration,
+  type StoryboardVideoGenerationOptions,
+  type StoryboardVideoGenerationPreview,
+  type VideoAspectRatio,
+  type VideoResolution,
+} from "../api";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,61 +50,44 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import {
-  PROMPT_MENTION_CATEGORY,
-  RichPromptEditor,
-  type PromptMentionOption,
-} from "../components/workspace/RichPromptEditor";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { Switch } from "../components/ui/switch";
+import {
+  CoverReferencePanel,
+  PromptReferenceStatus,
+} from "../components/workspace/CoverReferencePanel";
+import { ConfirmationDialog } from "../components/workspace/dialogs/ConfirmationDialog";
+import { CoverGenerationDialog } from "../components/workspace/dialogs/CoverGenerationDialog";
+import { CreateSceneDialog } from "../components/workspace/dialogs/CreateSceneDialog";
+import { FullscreenPromptDialog } from "../components/workspace/dialogs/FullscreenPromptDialog";
+import { ManageReferencesDialog } from "../components/workspace/dialogs/ManageReferencesDialog";
+import { SceneCoverGenerationDialog } from "../components/workspace/dialogs/SceneCoverGenerationDialog";
+import { VideoGenerationDialog } from "../components/workspace/dialogs/VideoGenerationDialog";
+import {
+  type VideoPreview,
+  VideoPreviewDialog,
+} from "../components/workspace/dialogs/VideoPreviewDialog";
+import { useSceneVideoPolling } from "../components/workspace/hooks/useSceneVideoPolling";
 import {
   PromptOptimizationDialog,
   PromptOptimizeButton,
 } from "../components/workspace/PromptOptimizationDialog";
 import {
-  CoverReferencePanel,
-  PromptReferenceStatus,
-} from "../components/workspace/CoverReferencePanel";
-import {
-  VideoGenerationSettings,
-  getVideoGenerationSpecLabel,
-} from "../components/workspace/VideoGenerationSettings";
+  PROMPT_MENTION_CATEGORY,
+  type PromptMentionOption,
+  RichPromptEditor,
+} from "../components/workspace/RichPromptEditor";
 import { VideoFrameExtractionDialog } from "../components/workspace/VideoFrameExtractionDialog";
-import { ConfirmationDialog } from "../components/workspace/dialogs/ConfirmationDialog";
 import {
-  VideoPreviewDialog,
-  type VideoPreview,
-} from "../components/workspace/dialogs/VideoPreviewDialog";
-import { CreateSceneDialog } from "../components/workspace/dialogs/CreateSceneDialog";
-import { ManageReferencesDialog } from "../components/workspace/dialogs/ManageReferencesDialog";
-import { FullscreenPromptDialog } from "../components/workspace/dialogs/FullscreenPromptDialog";
-import { useSceneVideoPolling } from "../components/workspace/hooks/useSceneVideoPolling";
-import { CoverGenerationDialog } from "../components/workspace/dialogs/CoverGenerationDialog";
-import { SceneCoverGenerationDialog } from "../components/workspace/dialogs/SceneCoverGenerationDialog";
-import { VideoGenerationDialog } from "../components/workspace/dialogs/VideoGenerationDialog";
+  getVideoGenerationSpecLabel,
+  VideoGenerationSettings,
+} from "../components/workspace/VideoGenerationSettings";
 import { WorkspaceHeader } from "../components/workspace/WorkspaceHeader";
-import {
-  projectApi,
-  chapterApi,
-  sceneApi,
-  characterApi,
-  assetApi,
-  ossApi,
-  type Project,
-  type Chapter,
-  type Scene,
-  type Storyboard,
-  type StoryboardCoverGenerationPreview,
-  type SceneGenerationReferences,
-  type StoryboardVideoGenerationPreview,
-  type StoryboardMediaGeneration,
-  type SceneMediaGeneration,
-  type AIGenerationPreview,
-  type Character,
-  type Asset,
-  type StoryboardVideoGenerationOptions,
-  type VideoAspectRatio,
-  type VideoResolution,
-} from "../api";
-import styles from "./Workspace.module.scss";
-import { COMPOSITE_PROMPT_SPEC, buildLegacyCompositePrompt } from "../lib/compositePrompt";
 import {
   ENTITY_TYPE,
   GENERATION_STATUS,
@@ -97,6 +96,8 @@ import {
   VIDEO_MODEL,
   VIDEO_RESOLUTION,
 } from "../constants/domain";
+import { buildLegacyCompositePrompt,COMPOSITE_PROMPT_SPEC } from "../lib/compositePrompt";
+import styles from "./Workspace.module.scss";
 
 const VIDEO_MODEL_OPTIONS = [
   { value: VIDEO_MODEL.SEEDANCE_2, label: "Seedance 2.0" },
@@ -159,7 +160,7 @@ const PROMPT_SECTION_BREAKS = [
 ] as const;
 
 const formatPromptForDisplay = (prompt: string | null | undefined) => {
-  const raw = String(prompt || "").trim();
+  const raw = String(prompt ?? "").trim();
   if (!raw) return "-";
   return PROMPT_SECTION_BREAKS.reduce((formatted, marker) => {
     const next = formatted.replaceAll(marker, `\n${marker}`);
@@ -190,7 +191,7 @@ const emptyDescriptionOptimization = {
 };
 
 const buildShotFormState = (shot: Storyboard | null, scene: Scene | null): ShotFormState => ({
-  content: scene?.prompt || (shot ? buildLegacyCompositePrompt(shot, scene) : ""),
+  content: scene?.prompt ?? (shot ? buildLegacyCompositePrompt(shot, scene) : ""),
 });
 
 function sceneToWorkspaceClip(scene: Scene): Storyboard {
@@ -200,11 +201,11 @@ function sceneToWorkspaceClip(scene: Scene): Storyboard {
     chapter_id: scene.chapter_id,
     project_id: scene.project_id,
     shot_number: 1,
-    content: scene.prompt || "",
+    content: scene.prompt ?? "",
     camera_direction: "",
-    duration: scene.generation_duration || 5,
-    background: scene.location || scene.title,
-    thumbnail_url: scene.cover_url || "",
+    duration: scene.generation_duration ?? 5,
+    background: scene.location ?? scene.title,
+    thumbnail_url: scene.cover_url ?? "",
     thumbnail_preview_url: scene.cover_preview_url,
     video_url: scene.video_url,
     video_preview_url: scene.video_preview_url,
@@ -213,10 +214,10 @@ function sceneToWorkspaceClip(scene: Scene): Storyboard {
     video_duration: scene.video_duration,
     notes: "",
     sort_order: scene.sort_order,
-    characters: scene.characters || [],
-    character_names: scene.character_names || [],
-    assets: scene.assets || [],
-    asset_names: scene.asset_names || [],
+    characters: scene.characters ?? [],
+    character_names: scene.character_names ?? [],
+    assets: scene.assets ?? [],
+    asset_names: scene.asset_names ?? [],
     created_at: scene.created_at,
     updated_at: scene.updated_at,
   };
@@ -228,20 +229,20 @@ function sceneMediaToWorkspaceMedia(item: SceneMediaGeneration): StoryboardMedia
 
 function getStoryboardVideoPreviewSrc(storyboard?: Storyboard | null) {
   if (!storyboard) return "";
-  return storyboard.video_preview_url || storyboard.video_url || "";
+  return storyboard.video_preview_url ?? storyboard.video_url ?? "";
 }
 
 const getStoryboardPreviewSrc = (shot: Storyboard | null | undefined) =>
-  shot?.thumbnail_preview_url || shot?.thumbnail_url || "";
+  shot?.thumbnail_preview_url ?? shot?.thumbnail_url ?? "";
 
 const getSceneNavigatorThumbnailSrc = (scene: Scene | null | undefined) =>
-  scene?.video_poster_url || scene?.cover_preview_url || scene?.cover_url || "";
+  scene?.video_poster_url ?? scene?.cover_preview_url ?? scene?.cover_url ?? "";
 
 const getProjectVideoPreviewSrc = (project: Project | null | undefined) =>
-  project?.video_preview_url || project?.video_url || "";
+  project?.video_preview_url ?? project?.video_url ?? "";
 
 const getGenerationPreviewSrc = (generation: StoryboardMediaGeneration | null | undefined) =>
-  generation?.preview_url || generation?.result_url || "";
+  generation?.preview_url ?? generation?.result_url ?? "";
 
 const isSeedanceVideoModel = (model: string) => model === VIDEO_MODEL.SEEDANCE_2;
 
@@ -349,18 +350,14 @@ export default function Workspace() {
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
-  const [sceneCoverGenerationPreview, setSceneCoverGenerationPreview] =
+  const [sceneCoverGenerationPreview, _setSceneCoverGenerationPreview] =
     useState<AIGenerationPreview | null>(null);
-  const [isLoadingSceneCoverPreview, setIsLoadingSceneCoverPreview] = useState(false);
   const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
   const [isSceneVideoConfirmOpen, setIsSceneVideoConfirmOpen] = useState(false);
   const [isProjectVideoConfirmOpen, setIsProjectVideoConfirmOpen] = useState(false);
   const [isCreateSceneOpen, setIsCreateSceneOpen] = useState(false);
   const [sceneInsertSortOrder, setSceneInsertSortOrder] = useState<number | null>(null);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
-  const [isGeneratingSceneCover, setIsGeneratingSceneCover] = useState(false);
-  const [isBatchGeneratingSceneCover, setIsBatchGeneratingSceneCover] = useState(false);
-  const [isComposingSceneVideo, setIsComposingSceneVideo] = useState(false);
   const [isComposingProjectVideo, setIsComposingProjectVideo] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] =
     useState<StoryboardMediaGeneration | null>(null);
@@ -407,7 +404,7 @@ export default function Workspace() {
   }, [selectedShot?.id]);
 
   useEffect(() => {
-    const formKey = selectedShot ? `${selectedScene?.id || 0}:${selectedShot.id}` : "";
+    const formKey = selectedShot ? `${selectedScene?.id ?? 0}:${selectedShot.id}` : "";
     if (formKey === initializedShotFormKeyRef.current) return;
     initializedShotFormKeyRef.current = formKey;
     setShotForm(buildShotFormState(selectedShot, selectedScene));
@@ -415,8 +412,8 @@ export default function Workspace() {
 
   const resolveProjectId = () => {
     const url = new URL(window.location.href);
-    const fromQuery = Number(url.searchParams.get("project") || "0");
-    const fromStorage = Number(window.localStorage.getItem("currentProjectId") || "0");
+    const fromQuery = Number(url.searchParams.get("project") ?? "0");
+    const fromStorage = Number(window.localStorage.getItem("currentProjectId") ?? "0");
     return fromQuery || fromStorage || 0;
   };
 
@@ -470,11 +467,6 @@ export default function Workspace() {
     }
   }, [selectedShot?.id]);
 
-  const _applyStoryboardUpdate = (nextShot: Storyboard) => {
-    setStoryboards((prev) => prev.map((shot) => (shot.id === nextShot.id ? nextShot : shot)));
-    setSelectedShot((prev) => (prev?.id === nextShot.id ? nextShot : prev));
-  };
-
   const applyClipSceneUpdate = (nextScene: Scene) => {
     const clip = sceneToWorkspaceClip(nextScene);
     applySceneUpdate(nextScene);
@@ -503,7 +495,7 @@ export default function Workspace() {
       if (!prev) {
         return nextStoryboards[0] ?? null;
       }
-      return nextStoryboards.find((shot) => shot.id === prev.id) || nextStoryboards[0] || null;
+      return nextStoryboards.find((shot) => shot.id === prev.id) ?? nextStoryboards[0] ?? null;
     });
   };
 
@@ -571,7 +563,7 @@ export default function Workspace() {
       } else {
         setSelectedScene((prev) => {
           if (!prev) return prev;
-          return data.find((scene) => scene.id === prev.id) || prev;
+          return data.find((scene) => scene.id === prev.id) ?? prev;
         });
       }
     } catch (error) {
@@ -685,15 +677,15 @@ export default function Workspace() {
       id: character.id,
       kind: ENTITY_TYPE.CHARACTER,
       name: character.name,
-      imageUrl: character.design_sheet_url || character.avatar_url,
+        imageUrl: character.design_sheet_url ?? character.avatar_url,
       isBound: !!selectedShot?.characters?.some((item) => item.id === character.id),
       category: PROMPT_MENTION_CATEGORY.CHARACTER,
-      description: character.description || "人物资产",
+        description: character.description ?? "人物资产",
       media: [
         ...(character.design_sheet_url ? (["image"] as const) : []),
         ...(character.voice_reference_url ? (["audio"] as const) : []),
       ],
-      searchText: `${character.voice_name || ""} 人物 角色`,
+      searchText: `${character.voice_name ?? ""} 人物 角色`,
     })),
     ...projectAssets.map((asset) => {
       const presentation = getAssetMentionPresentation(asset);
@@ -703,24 +695,24 @@ export default function Workspace() {
         name: asset.name,
         imageUrl:
           presentation.category === PROMPT_MENTION_CATEGORY.AUDIO
-            ? asset.thumbnail_url || asset.cover_url
-            : asset.cover_url || asset.file_url || asset.thumbnail_url,
+            ? asset.thumbnail_url ?? asset.cover_url
+            : asset.cover_url ?? asset.file_url ?? asset.thumbnail_url,
         isBound: !!selectedShot?.assets?.some((item) => item.id === asset.id),
         category: presentation.category,
-        description: asset.meta || asset.type || "项目资产",
+        description: asset.meta ?? asset.type ?? "项目资产",
         media: presentation.media,
-        searchText: `${asset.type || ""} ${asset.meta || ""}`,
+        searchText: `${asset.type ?? ""} ${asset.meta ?? ""}`,
       };
     }),
   ];
   const activeChapterForSceneCreation = selectedChapter ?? chapters[0] ?? null;
 
   const calculateTotalDuration = () => {
-    return selectedScene?.generation_duration || activeVideoDuration;
+    return selectedScene?.generation_duration ?? activeVideoDuration;
   };
 
   const countPromptShots = (prompt?: string) =>
-    Math.max(1, (String(prompt || "").match(/(?:^|\n)\s*镜号\s*[：:]/g) || []).length);
+    Math.max(1, (String(prompt ?? "").match(/(?:^|\n)\s*镜号\s*[：:]/g) ?? []).length);
 
   const formatShotNumber = (num?: number) => String(num ?? 0).padStart(3, "0");
 
@@ -835,7 +827,7 @@ export default function Workspace() {
     const items = buildCoverPreviewItems(coverGenerations);
     const currentIndex = items.findIndex((item) => item.src === generation.result_url);
     setPreviewImage({
-      src: generation.result_url || "",
+      src: generation.result_url ?? "",
       alt: `首帧历史 ${generation.id}`,
       items,
       currentIndex: currentIndex >= 0 ? currentIndex : 0,
@@ -843,7 +835,7 @@ export default function Workspace() {
   };
 
   const openGenerationReferencePreview = (referenceIndex: number) => {
-    const references = generationReferences?.reference_images || [];
+    const references = generationReferences?.reference_images ?? [];
     const reference = references[referenceIndex];
     if (!reference) return;
     const items = references.map((item) => ({
@@ -867,7 +859,7 @@ export default function Workspace() {
     try {
       const result = await sceneApi.generateSceneVideo(
         selectedShot.id,
-        videoGenerationRequest || buildVideoGenerationRequest(),
+        videoGenerationRequest ?? buildVideoGenerationRequest(),
       );
       const nextScene = result.scene;
       applyClipSceneUpdate(nextScene);
@@ -910,10 +902,10 @@ export default function Workspace() {
       setGenerationReferences({
         reference_images: preview.reference_images,
         missing_references: preview.missing_references,
-        mappings: preview.mappings || [],
-        bound_without_mentions: preview.bound_without_mentions || [],
-        unbound_mentions: preview.unbound_mentions || [],
-        recognized_bound_mentions: (preview.mappings || [])
+        mappings: preview.mappings ?? [],
+        bound_without_mentions: preview.bound_without_mentions ?? [],
+        unbound_mentions: preview.unbound_mentions ?? [],
+        recognized_bound_mentions: (preview.mappings ?? [])
           .filter((mapping) => mapping.is_mentioned)
           .map((mapping) => mapping.name),
       });
@@ -1052,25 +1044,6 @@ export default function Workspace() {
       setActiveAssetActionKey(null);
     }
   };
-  const _handleGenerateSceneCover = () => {
-    if (!selectedScene || isGeneratingSceneCover || isLoadingSceneCoverPreview) {
-      return;
-    }
-    setIsLoadingSceneCoverPreview(true);
-    void sceneApi
-      .getSceneCoverGenerationPreview(selectedScene.id)
-      .then((preview) => {
-        setSceneCoverGenerationPreview(preview);
-        setIsSceneCoverConfirmOpen(true);
-      })
-      .catch((error) => {
-        console.error("Failed to preview scene cover generation:", error);
-        toast.error(error instanceof Error ? error.message : "获取片段封面预览失败");
-      })
-      .finally(() => {
-        setIsLoadingSceneCoverPreview(false);
-      });
-  };
 
   const runGenerateSceneCover = async () => {
     if (!selectedScene) {
@@ -1092,13 +1065,6 @@ export default function Workspace() {
   const confirmGenerateSceneCover = async () => {
     setIsSceneCoverConfirmOpen(false);
     await runGenerateSceneCover();
-  };
-
-  const _handleBatchGenerateSceneCovers = () => {
-    if (!selectedScene || filteredShots.length === 0 || isBatchGeneratingSceneCover) {
-      return;
-    }
-    setIsBatchSceneCoverConfirmOpen(true);
   };
 
   const runBatchGenerateSceneCovers = async () => {
@@ -1137,13 +1103,6 @@ export default function Workspace() {
   const confirmBatchGenerateSceneCovers = async () => {
     setIsBatchSceneCoverConfirmOpen(false);
     await runBatchGenerateSceneCovers();
-  };
-
-  const _handleComposeSceneVideo = () => {
-    if (!selectedScene || isComposingSceneVideo) {
-      return;
-    }
-    setIsSceneVideoConfirmOpen(true);
   };
 
   const runComposeSceneVideo = async () => {
@@ -1506,7 +1465,7 @@ export default function Workspace() {
       const scene = await sceneApi.createScene(targetChapter.id, {
         title: newSceneForm.title.trim(),
         description: newSceneForm.description.trim(),
-        sort_order: sceneInsertSortOrder || undefined,
+        sort_order: sceneInsertSortOrder ?? undefined,
       });
 
       setSelectedChapter(targetChapter);
@@ -1538,7 +1497,7 @@ export default function Workspace() {
     videoGenerations.find(
       (item) =>
         item.is_current && item.status === GENERATION_STATUS.SUCCEEDED && item.result_url,
-    ) || null;
+    ) ?? null;
   const selectedSceneIndex = selectedScene
     ? scenes.findIndex((scene) => scene.id === selectedScene.id)
     : -1;
@@ -1588,16 +1547,16 @@ export default function Workspace() {
         totalDuration={calculateTotalDuration()}
         composingProjectVideo={isComposingProjectVideo}
         projectVideoPreviewSrc={getProjectVideoPreviewSrc(selectedProject)}
-        onBack={() => navigate("/projects")}
+        onBack={() => void navigate("/projects")}
         onOpenAssetConfirmation={() =>
-          selectedProject && navigate(`/asset-confirmation?project=${selectedProject.id}`)
+          void (selectedProject && navigate(`/asset-confirmation?project=${selectedProject.id}`))
         }
         onComposeProjectVideo={handleComposeProjectVideo}
         onPreviewProjectVideo={() =>
           selectedProject &&
           setPreviewProjectVideo({
             src: getProjectVideoPreviewSrc(selectedProject),
-            originalSrc: selectedProject.video_url || undefined,
+            originalSrc: selectedProject.video_url ?? undefined,
             title: `《${selectedProject.name}》项目总片`,
           })
         }
@@ -1656,7 +1615,7 @@ export default function Workspace() {
                 </Button>
                 <div className={styles.sceneNavigatorTitleWrap}>
                   <div className={styles.sceneNavigatorTitle}>
-                    {selectedChapter?.title || "请选择章节"}
+                    {selectedChapter?.title ?? "请选择章节"}
                   </div>
                   <div className={styles.sceneCount}>{scenes.length} 个片段</div>
                 </div>
@@ -2047,7 +2006,7 @@ export default function Workspace() {
                 <div className={styles.generateActions}>
                   <Button
                     className={styles.generateVideoButton}
-                    onClick={handleGenerateVideo}
+                    onClick={() => void handleGenerateVideo()}
                     disabled={
                       generatingVideoId === selectedShot.id || isLoadingVideoPreview || isSavingShot
                     }
@@ -2064,7 +2023,7 @@ export default function Workspace() {
                       <MoreHorizontal className={styles.actionIcon} />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className={styles.selectContent}>
-                      <DropdownMenuItem onClick={handleSaveShot} disabled={isSavingShot}>
+                      <DropdownMenuItem onClick={() => void handleSaveShot()} disabled={isSavingShot}>
                         <Save className={styles.actionIcon} />
                         保存片段 Prompt
                       </DropdownMenuItem>
@@ -2105,15 +2064,15 @@ export default function Workspace() {
 
       <FullscreenPromptDialog
         open={isPromptFullscreenOpen}
-        sceneTitle={selectedScene?.title || "未命名片段"}
-        editorKey={`fullscreen-prompt-${selectedShot?.id || 0}`}
+        sceneTitle={selectedScene?.title ?? "未命名片段"}
+        editorKey={`fullscreen-prompt-${selectedShot?.id ?? 0}`}
         value={shotForm.content}
         options={promptMentionOptions}
         optimizing={isOptimizingPrompt}
         onOpenChange={setIsPromptFullscreenOpen}
         onChange={(value) => updateShotForm("content", value)}
-        onSelectMention={handleSelectPromptMention}
-        onRemoveMentions={handleRemovePromptMentions}
+        onSelectMention={(option) => void handleSelectPromptMention(option)}
+        onRemoveMentions={(options) => void handleRemovePromptMentions(options)}
         onOptimize={() => void requestPromptOptimization()}
       />
       <PromptOptimizationDialog
@@ -2155,7 +2114,7 @@ export default function Workspace() {
         description="管理当前片段 Prompt 使用的角色参考。"
         currentDescription={
           selectedShot
-            ? `${selectedScene?.title || "未命名片段"} · ${selectedShot.content || "未填写 Prompt"}`
+            ? `${selectedScene?.title ?? "未命名片段"} · ${selectedShot.content ?? "未填写 Prompt"}`
             : "未选择片段"
         }
         emptyAssignedLabel="当前片段未关联角色"
@@ -2163,16 +2122,16 @@ export default function Workspace() {
         loadingLabel="正在加载项目角色"
         emptyLibraryLabel="当前项目还没有可选角色。"
         refreshLabel="刷新角色库"
-        assignedItems={(selectedShot?.characters || []).map((character) => ({
+        assignedItems={(selectedShot?.characters ?? []).map((character) => ({
           id: character.id,
           name: character.name,
-          description: character.description || "暂无角色描述",
+          description: character.description ?? "暂无角色描述",
           assigned: true,
         }))}
         items={projectCharacters.map((character) => ({
           id: character.id,
           name: character.name,
-          description: character.description || "暂无角色描述",
+          description: character.description ?? "暂无角色描述",
           assigned: !!selectedShot?.characters?.some((item) => item.id === character.id),
         }))}
         loading={isLoadingProjectCharacters}
@@ -2192,7 +2151,7 @@ export default function Workspace() {
         description="给当前片段添加或移除场景、图片、道具和音频资产。生成时会按媒体类型分别作为参考图或参考音频传入。"
         currentDescription={
           selectedShot
-            ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content || "未填写画面描述"}`
+            ? `${formatShotNumber(selectedShot.shot_number)} · ${selectedShot.content ?? "未填写画面描述"}`
             : "未选择片段"
         }
         emptyAssignedLabel="当前片段未关联参考资产"
@@ -2200,16 +2159,16 @@ export default function Workspace() {
         loadingLabel="正在加载项目参考资产"
         emptyLibraryLabel="当前项目还没有可用的参考资产。"
         refreshLabel="刷新资产库"
-        assignedItems={(selectedShot?.assets || []).map((asset) => ({
+        assignedItems={(selectedShot?.assets ?? []).map((asset) => ({
           id: asset.id,
           name: asset.name,
-          description: asset.meta || asset.type || "项目资产",
+          description: asset.meta ?? asset.type ?? "项目资产",
           assigned: true,
         }))}
         items={projectAssets.map((asset) => ({
           id: asset.id,
           name: asset.name,
-          description: asset.meta || asset.type || "项目资产",
+          description: asset.meta ?? asset.type ?? "项目资产",
           assigned: !!selectedShot?.assets?.some((item) => item.id === asset.id),
         }))}
         loading={isLoadingProjectAssets}
@@ -2239,11 +2198,11 @@ export default function Workspace() {
         }}
         onDraftChange={setNewSceneForm}
         onOptimizeDescription={() => void requestDescriptionOptimization()}
-        onCreate={handleCreateScene}
+        onCreate={() => void handleCreateScene()}
       />
       <CoverGenerationDialog
         open={isCoverConfirmOpen}
-        sceneTitle={selectedScene?.title || "-"}
+        sceneTitle={selectedScene?.title ?? "-"}
         preview={coverGenerationPreview}
         formattedPrompt={formatPromptForDisplay(coverGenerationPreview?.final_prompt)}
         onOpenChange={setIsCoverConfirmOpen}
@@ -2266,13 +2225,13 @@ export default function Workspace() {
         title="确认批量生成首帧"
         description="会为当前片段下的全部镜头串行生成新首帧，并消耗图像模型额度。新结果会保留到各自镜头的首帧历史中。"
         items={[
-          { label: "片段标题", value: selectedScene?.title || "-" },
+          { label: "片段标题", value: selectedScene?.title ?? "-" },
           { label: "镜头数量", value: filteredShots.length },
           { label: "当前模型", value: "Seedream 4.5" },
         ]}
         confirmLabel="确认生成"
         onOpenChange={setIsBatchSceneCoverConfirmOpen}
-        onConfirm={confirmBatchGenerateSceneCovers}
+        onConfirm={() => void confirmBatchGenerateSceneCovers()}
       />
 
       <ConfirmationDialog
@@ -2284,13 +2243,13 @@ export default function Workspace() {
             : "会将当前片段下已有视频镜头按顺序合成为一个片段视频，并保留每个镜头原始音轨。"
         }
         items={[
-          { label: "片段标题", value: selectedScene?.title || "-" },
+          { label: "片段标题", value: selectedScene?.title ?? "-" },
           { label: "可合成镜头数", value: composableShots.length },
           { label: "输出规格", value: "720P / 保留原音轨" },
         ]}
         confirmLabel={selectedScene?.video_url ? "确认重新生成" : "确认合成"}
         onOpenChange={setIsSceneVideoConfirmOpen}
-        onConfirm={confirmComposeSceneVideo}
+        onConfirm={() => void confirmComposeSceneVideo()}
       />
 
       <ConfirmationDialog
@@ -2298,19 +2257,19 @@ export default function Workspace() {
         title="确认生成项目总片"
         description="会自动收集当前项目内已生成成功的片段视频，按章节和片段顺序合成为一个项目级粗剪视频。"
         items={[
-          { label: "项目名称", value: selectedProject?.name || "-" },
+          { label: "项目名称", value: selectedProject?.name ?? "-" },
           { label: "输出规格", value: "720P / 保留各片段原音轨" },
         ]}
         confirmLabel="确认合成"
         onOpenChange={setIsProjectVideoConfirmOpen}
-        onConfirm={confirmComposeProjectVideo}
+        onConfirm={() => void confirmComposeProjectVideo()}
       />
 
       <VideoGenerationDialog
         open={isVideoConfirmOpen}
         preview={videoGenerationPreview}
         previewSpecLabel={previewVideoSpecLabel}
-        sceneTitle={selectedScene?.title || "-"}
+        sceneTitle={selectedScene?.title ?? "-"}
         selectedModel={selectedVideoModel}
         activeDuration={activeVideoDuration}
         useFirstFrame={useFirstFrameForVideo}
@@ -2333,7 +2292,7 @@ export default function Workspace() {
             value:
               deleteTargetGeneration?.media_type === MEDIA_TYPE.VIDEO ? "视频" : "首帧",
           },
-          { label: "模型", value: deleteTargetGeneration?.model || "-" },
+          { label: "模型", value: deleteTargetGeneration?.model ?? "-" },
           {
             label: "生成时间",
             value: formatShanghaiDateTime(deleteTargetGeneration?.created_at),
@@ -2342,7 +2301,7 @@ export default function Workspace() {
         confirmLabel="确认删除"
         tone="danger"
         onOpenChange={(open) => !open && setDeleteTargetGeneration(null)}
-        onConfirm={confirmDeleteGeneration}
+        onConfirm={() => void confirmDeleteGeneration()}
       />
 
       <ConfirmationDialog
@@ -2350,14 +2309,14 @@ export default function Workspace() {
         title="确认删除片段"
         description="该操作会删除当前片段及其 Prompt、引用和媒体历史，需要二次确认。"
         items={[
-          { label: "片段标题", value: deleteTargetScene?.title || "-" },
-          { label: "地点", value: deleteTargetScene?.location || "-" },
-          { label: "时间", value: deleteTargetScene?.time_of_day || "-" },
+          { label: "片段标题", value: deleteTargetScene?.title ?? "-" },
+          { label: "地点", value: deleteTargetScene?.location ?? "-" },
+          { label: "时间", value: deleteTargetScene?.time_of_day ?? "-" },
         ]}
         confirmLabel="确认删除"
         tone="danger"
         onOpenChange={(open) => !open && setDeleteTargetScene(null)}
-        onConfirm={confirmDeleteScene}
+        onConfirm={() => void confirmDeleteScene()}
       />
 
       <ImagePreviewDialog
@@ -2365,8 +2324,8 @@ export default function Workspace() {
         onOpenChange={(open) => {
           if (!open) setPreviewImage(null);
         }}
-        src={previewImage?.src || ""}
-        alt={previewImage?.alt || "片段预览图"}
+        src={previewImage?.src ?? ""}
+        alt={previewImage?.alt ?? "片段预览图"}
         items={previewImage?.items}
         currentIndex={previewImage?.currentIndex}
         onNavigate={(nextIndex) => {

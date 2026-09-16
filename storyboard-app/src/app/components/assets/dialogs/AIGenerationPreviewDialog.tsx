@@ -1,4 +1,5 @@
 import type { AIGenerationPreview } from "../../../api";
+import styles from "../../../pages/AssetLibrary.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -9,7 +10,6 @@ import {
   DialogTitle,
 } from "../../ui/dialog";
 import { Textarea } from "../../ui/textarea";
-import styles from "../../../pages/AssetLibrary.module.scss";
 
 export const AI_PREVIEW_ACTION = {
   CHARACTER_DESIGN_SHEET: "character-design-sheet",
@@ -60,7 +60,7 @@ const PROMPT_SECTION_BREAKS = [
 ] as const;
 
 function formatPromptForDisplay(prompt: string | null | undefined) {
-  const raw = String(prompt || "").trim();
+  const raw = String(prompt ?? "").trim();
   if (!raw) return "-";
   return PROMPT_SECTION_BREAKS.reduce((formatted, marker) => {
     const next = formatted.replaceAll(marker, `\n${marker}`);
@@ -83,16 +83,16 @@ export function AIGenerationPreviewDialog({
     <Dialog open={!!state} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={styles.aiPreviewDialog}>
         <DialogHeader>
-          <DialogTitle>{state?.title || "确认 AI 生成"}</DialogTitle>
+          <DialogTitle>{state?.title ?? "确认 AI 生成"}</DialogTitle>
           <DialogDescription className={styles.aiPreviewDescription}>
-            {state?.description || ""}
+            {state?.description ?? ""}
           </DialogDescription>
         </DialogHeader>
         <div className={styles.aiPreviewBody}>
           <div className={styles.previewSection}>
             <div className={styles.previewRow}>
               <span className={styles.previewLabel}>实际模型</span>
-              <span>{state?.preview.model || "-"}</span>
+              <span>{state?.preview.model ?? "-"}</span>
             </div>
             {state?.preview.notes?.length ? (
               <div>
@@ -108,7 +108,7 @@ export function AIGenerationPreviewDialog({
           <div className={styles.previewSection}>
             <div className={styles.previewSectionTitle}>详细参数</div>
             <div className={styles.previewFields}>
-              {Object.entries(state?.preview.fields || {}).map(([key, value]) => (
+              {Object.entries(state?.preview.fields ?? {}).map(([key, value]) => (
                 <div key={key}>
                   <span className={styles.previewLabel}>{key}：</span>
                   <span>{value || "-"}</span>
@@ -177,7 +177,7 @@ export function AIGenerationPreviewDialog({
             onClick={onConfirm}
             disabled={loading || (promptIsEditable && !state?.promptDraft.trim())}
           >
-            {state?.confirmLabel || "确认生成"}
+            {state?.confirmLabel ?? "确认生成"}
           </Button>
         </DialogFooter>
       </DialogContent>

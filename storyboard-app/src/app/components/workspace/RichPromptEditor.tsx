@@ -1,8 +1,9 @@
+import type { VirtualElement } from "@popperjs/core";
+import { Box, Check, Image as ImageIcon, MapPin, Music2, UserRound, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
-import type { VirtualElement } from "@popperjs/core";
-import { Box, Check, Image as ImageIcon, MapPin, Music2, UserRound, Volume2 } from "lucide-react";
+
 import type { EntityType } from "../../constants/domain";
 import styles from "./RichPromptEditor.module.scss";
 
@@ -52,7 +53,7 @@ function getMentionKeys(root: HTMLElement) {
     Array.from(root.querySelectorAll<HTMLElement>(MENTION_SELECTOR))
       .map((node) => {
         const kind = node.dataset.mentionKind as PromptMentionOption["kind"] | undefined;
-        const id = Number(node.dataset.mentionId || 0);
+        const id = Number(node.dataset.mentionId ?? 0);
         return kind && id ? getMentionKey(kind, id) : "";
       })
       .filter(Boolean),
@@ -68,9 +69,9 @@ function getMentionForName(name: string, options: PromptMentionOption[]) {
 
 function serializeEditor(root: HTMLElement) {
   const serializeNode = (node: Node): string => {
-    if (node.nodeType === Node.TEXT_NODE) return node.textContent || "";
-    if (!(node instanceof HTMLElement)) return node.textContent || "";
-    if (node.matches(MENTION_SELECTOR)) return `@${node.dataset.mentionName || ""}`;
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+    if (!(node instanceof HTMLElement)) return node.textContent ?? "";
+    if (node.matches(MENTION_SELECTOR)) return `@${node.dataset.mentionName ?? ""}`;
     if (node.tagName === "BR") return "\n";
 
     const content = Array.from(node.childNodes).map(serializeNode).join("");
@@ -160,7 +161,7 @@ function getEditableTextBeforeCaret(anchorNode: Node, anchorOffset: number) {
   let previousNode: Node | null = null;
 
   if (anchorNode.nodeType === Node.TEXT_NODE) {
-    text = (anchorNode.textContent || "").slice(0, anchorOffset);
+    text = (anchorNode.textContent ?? "").slice(0, anchorOffset);
     previousNode = anchorNode.previousSibling;
   } else if (anchorNode instanceof HTMLElement) {
     previousNode = anchorNode.childNodes[Math.min(anchorOffset, anchorNode.childNodes.length) - 1];
@@ -172,7 +173,7 @@ function getEditableTextBeforeCaret(anchorNode: Node, anchorOffset: number) {
       if (previousNode.tagName === "DIV" || previousNode.tagName === "P") break;
     }
     if (previousNode.nodeType !== Node.TEXT_NODE) break;
-    text = `${previousNode.textContent || ""}${text}`;
+    text = `${previousNode.textContent ?? ""}${text}`;
     previousNode = previousNode.previousSibling;
   }
 
@@ -258,11 +259,11 @@ export function RichPromptEditor({
     ],
   });
 
-  const normalizedQuery = query?.trim().toLowerCase() || "";
+  const normalizedQuery = query?.trim().toLowerCase() ?? "";
   const filteredOptions = CATEGORY_CONFIG.flatMap(({ category }) =>
     options.filter((option) => {
       if (option.category !== category) return false;
-      const searchable = `${option.name} ${option.description || ""} ${option.searchText || ""}`;
+      const searchable = `${option.name} ${option.description ?? ""} ${option.searchText ?? ""}`;
       return searchable.toLowerCase().includes(normalizedQuery);
     }),
   );
@@ -364,7 +365,7 @@ export function RichPromptEditor({
     const range = selection.getRangeAt(0);
     const anchor = selection.anchorNode;
     if (anchor?.nodeType === Node.TEXT_NODE) {
-      const text = anchor.textContent || "";
+      const text = anchor.textContent ?? "";
       const before = text.slice(0, selection.anchorOffset);
       const atIndex = before.lastIndexOf("@");
       if (atIndex >= 0) {
@@ -501,7 +502,7 @@ export function RichPromptEditor({
                             <span className={styles.optionName}>{option.name}</span>
                             <span className={styles.optionMeta}>
                               <span className={styles.optionDescription}>
-                                {option.description || "可引用资产"}
+                                {option.description ?? "可引用资产"}
                               </span>
                               {option.media.map((media) => (
                                 <span key={media} className={styles.mediaBadge}>

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import * as SceneServiceNamespace from '../app/service/scene';
+
 import { REFERENCE_TYPE } from '../app/lib/domain_constants';
+import * as SceneServiceNamespace from '../app/service/scene';
 
 const SceneService: any =
   (SceneServiceNamespace as { default?: { prototype: object } }).default || SceneServiceNamespace;

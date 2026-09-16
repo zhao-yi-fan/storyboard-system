@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import {
   AI_IMAGE_SIZE,
   AI_POLL_INTERVAL_MS,

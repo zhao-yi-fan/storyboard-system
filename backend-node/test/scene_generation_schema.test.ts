@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import { hasCompleteLegacySceneMapping } from '../app/lib/scene_generation_schema';
 
 describe('test/scene_generation_schema.test.ts', () => {

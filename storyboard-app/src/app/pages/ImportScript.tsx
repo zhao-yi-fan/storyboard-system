@@ -1,13 +1,14 @@
+import { ArrowLeft,ChevronRight, FileText, Film, Loader2, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { FileText, Play, ChevronRight, Film, Loader2, ArrowLeft } from "lucide-react";
+
+import { projectApi } from "../api";
 import { Button } from "../components/ui/button";
-import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
 import { UserMenu } from "../components/UserMenu";
-import { projectApi } from "../api";
 import styles from "./ImportScript.module.scss";
 
 export default function ImportScript() {
@@ -101,7 +102,7 @@ export default function ImportScript() {
       if (parsingTimer !== null) {
         window.clearTimeout(parsingTimer);
       }
-      navigate(`/asset-confirmation?project=${targetProjectId}`);
+      void navigate(`/asset-confirmation?project=${targetProjectId}`);
     } catch (error) {
       console.error("Failed to create project:", error);
       if (createdProjectId) {
@@ -132,7 +133,7 @@ export default function ImportScript() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate("/projects")}
+              onClick={() => void navigate("/projects")}
               className={styles.backButton}
             >
               <ArrowLeft className={styles.backIcon} />
@@ -233,7 +234,7 @@ export default function ImportScript() {
               </div>
 
               <Button
-                onClick={handleGenerate}
+                onClick={() => void handleGenerate()}
                 disabled={loading || !projectName.trim() || !scriptText.trim()}
                 className={styles.generateButton}
               >

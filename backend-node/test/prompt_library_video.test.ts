@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import { buildStoryboardVideoPrompt } from '../app/lib/prompt_library';
 
 describe('test/prompt_library_video.test.ts', () => {

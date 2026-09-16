@@ -1,4 +1,7 @@
 import { Loader2 } from "lucide-react";
+
+import { ASSET_KIND, type AssetKind } from "../../../constants/domain";
+import styles from "../../../pages/AssetLibrary.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -11,8 +14,6 @@ import {
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
-import { ASSET_KIND, type AssetKind } from "../../../constants/domain";
-import styles from "../../../pages/AssetLibrary.module.scss";
 
 export type CreateAssetMode = Exclude<AssetKind, "voice">;
 
@@ -139,7 +140,7 @@ export function CreateAssetDialog({
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={(event) => onCharacterFileChange(event.target.files?.[0] || null)}
+                  onChange={(event) => onCharacterFileChange(event.target.files?.[0] ?? null)}
                   className={styles.detailInput}
                 />
               </div>
@@ -179,7 +180,7 @@ export function CreateAssetDialog({
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={(event) => onAssetFileChange(event.target.files?.[0] || null)}
+                  onChange={(event) => onAssetFileChange(event.target.files?.[0] ?? null)}
                   className={styles.detailInput}
                 />
               </div>

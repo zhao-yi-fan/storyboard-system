@@ -415,7 +415,7 @@ class AssetWorkspaceService extends Service {
         id: Number(row.id),
         project_id: Number(row.project_id),
         chapter_id: Number(row.chapter_id),
-        linked_entity_id: row.linked_entity_id == null ? null : Number(row.linked_entity_id),
+        linked_entity_id: row.linked_entity_id === null || row.linked_entity_id === undefined ? null : Number(row.linked_entity_id),
         file_url: resolveUrl(this.app, row.file_url || '', base),
         preview_url: resolveUrl(this.app, row.preview_url || '', base),
         can_generate: canGenerate,

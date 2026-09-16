@@ -1,5 +1,6 @@
 import type { CharacterVoiceVersion } from "../../../api";
 import { ASSET_SOURCE_TYPE } from "../../../constants/domain";
+import styles from "../../../pages/AssetLibrary.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -8,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
-import styles from "../../../pages/AssetLibrary.module.scss";
 
 type VoiceVersionsDialogProps = {
   open: boolean;

@@ -264,7 +264,7 @@ class SceneService extends Service {
           ? String(payload.video_error || '')
           : current.video_error,
         Object.prototype.hasOwnProperty.call(payload, 'video_duration')
-          ? payload.video_duration == null || payload.video_duration === ''
+          ? payload.video_duration === null || payload.video_duration === undefined || payload.video_duration === ''
             ? null
             : Number(payload.video_duration)
           : current.video_duration,

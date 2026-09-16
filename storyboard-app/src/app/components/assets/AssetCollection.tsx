@@ -1,4 +1,5 @@
 import { Loader2, MapPin, Package } from "lucide-react";
+
 import type { Asset } from "../../api";
 import {
   ASSET_KIND,
@@ -7,11 +8,11 @@ import {
   type AssetLibraryTab,
   type AssetViewMode,
 } from "../../constants/domain";
-import { Badge } from "../ui/badge";
 import styles from "../../pages/AssetLibrary.module.scss";
+import { Badge } from "../ui/badge";
 
 export const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
-  asset?.thumbnail_url || asset?.cover_url || asset?.file_url || "";
+  asset?.thumbnail_url ?? asset?.cover_url ?? asset?.file_url ?? "";
 
 export function ContainedAssetImage({
   src,
@@ -57,7 +58,7 @@ export const getAssetTab = (
 export const getAssetKindLabel = (asset: Asset) => (isPropAsset(asset) ? "道具" : "场景");
 
 function deriveAssetDescription(asset: Asset) {
-  return asset.meta?.trim() || `${asset.name} 资源文件`;
+  return asset.meta?.trim() ?? `${asset.name} 资源文件`;
 }
 
 type AssetCollectionProps = {

@@ -6,7 +6,7 @@ export function getStringEnv(key: string, fallback = ''): string {
 
 export function getNumberEnv(key: string, fallback: number): number {
   const raw = process.env[key];
-  if (raw == null || raw === '') {
+  if (raw === null || raw === undefined || raw === '') {
     return fallback;
   }
   const parsed = Number(raw);

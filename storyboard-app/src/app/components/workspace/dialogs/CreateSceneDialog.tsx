@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
-import { PromptOptimizeButton } from "../PromptOptimizationDialog";
+
+import styles from "../../../pages/Workspace.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -12,7 +13,7 @@ import {
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
-import styles from "../../../pages/Workspace.module.scss";
+import { PromptOptimizeButton } from "../PromptOptimizationDialog";
 
 export type NewSceneDraft = {
   title: string;
@@ -61,7 +62,7 @@ export function CreateSceneDialog({
             <Input
               value={draft.title}
               onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
-              placeholder={`片段${insertSortOrder || sceneCount + 1}`}
+              placeholder={`片段${insertSortOrder ?? sceneCount + 1}`}
               className={styles.dialogInput}
             />
           </div>

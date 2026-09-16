@@ -1,16 +1,17 @@
+import { ArrowLeft, Image, Library, Loader2, RefreshCw, Save, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { ArrowLeft, Image, Library, Loader2, RefreshCw, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+
 import {
-  assetWorkspaceApi,
-  chapterApi,
-  projectApi,
   type AssetRequirement,
   type AssetVersion,
+  assetWorkspaceApi,
   type Chapter,
+  chapterApi,
   type PersonalAsset,
   type Project,
+  projectApi,
 } from "../api";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
@@ -53,7 +54,7 @@ function RequirementCard({
   onVersions: () => void;
   onComplete: () => void;
 }) {
-  const imageUrl = item.file_url || item.preview_url;
+  const imageUrl = item.file_url ?? item.preview_url;
   return (
     <article className={styles.requirementCard}>
       <div className={styles.requirementPreview}>
@@ -114,7 +115,7 @@ function RequirementCard({
 export default function AssetConfirmation() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const projectId = Number(searchParams.get("project") || 0);
+  const projectId = Number(searchParams.get("project") ?? 0);
   const [project, setProject] = useState<Project | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [chapterId, setChapterId] = useState<number | undefined>();
@@ -146,10 +147,10 @@ export default function AssetConfirmation() {
 
   useEffect(() => {
     if (!projectId) {
-      navigate("/projects", { replace: true });
+      void navigate("/projects", { replace: true });
       return;
     }
-    Promise.all([projectApi.getProject(projectId), chapterApi.getChaptersByProject(projectId)])
+    void Promise.all([projectApi.getProject(projectId), chapterApi.getChaptersByProject(projectId)])
       .then(async ([projectData, chapterData]) => {
         setProject(projectData);
         setChapters(chapterData);
@@ -171,7 +172,7 @@ export default function AssetConfirmation() {
   };
 
   const generate = async (requirementId?: number) => {
-    setBusyId(requirementId || "batch");
+    setBusyId(requirementId ?? "batch");
     try {
       const result = await assetWorkspaceApi.generateRequirements(projectId, {
         chapter_id: chapterId,
@@ -246,24 +247,24 @@ export default function AssetConfirmation() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerStart}>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/projects")}>
+          <Button variant="ghost" size="icon" onClick={() => void navigate("/projects")}>
             <ArrowLeft className={styles.icon} />
           </Button>
           <div>
-            <h1 className={styles.title}>{project?.name || "项目"} · 资产准备</h1>
+            <h1 className={styles.title}>{project?.name ?? "项目"} · 资产准备</h1>
             <p className={styles.subtitle}>按集整理人物、场景和道具，已有图片可直接使用</p>
           </div>
         </div>
         <div className={styles.headerActions}>
-          <Button variant="ghost" onClick={() => navigate(`/assets?project=${projectId}`)}>
+          <Button variant="ghost" onClick={() => void navigate(`/assets?project=${projectId}`)}>
             项目资产编辑
           </Button>
-          <Button variant="outline" onClick={() => navigate(`/workspace?project=${projectId}`)}>
+          <Button variant="outline" onClick={() => void navigate(`/workspace?project=${projectId}`)}>
             进入分镜工作台
           </Button>
           <Button
             disabled={busyId !== null || readyCount === 0}
-            onClick={() => generate()}
+            onClick={() => void generate()}
             className={styles.primaryButton}
           >
             {busyId === "batch" ? (
@@ -283,15 +284,15 @@ export default function AssetConfirmation() {
         <aside className={styles.sidebar}>
           <div className={styles.sidebarTitle}>按集查看</div>
           <button
-            onClick={() => selectChapter(undefined)}
-            className={chapterId == null ? styles.chapterActive : styles.chapterButton}
+            onClick={() => void selectChapter(undefined)}
+            className={chapterId === null ? styles.chapterActive : styles.chapterButton}
           >
             全部资产
           </button>
           {chapters.map((chapter, index) => (
             <button
               key={chapter.id}
-              onClick={() => selectChapter(chapter.id)}
+              onClick={() => void selectChapter(chapter.id)}
               className={chapterId === chapter.id ? styles.chapterActive : styles.chapterButton}
             >
               第 {index + 1} 集 · {chapter.title}
@@ -306,7 +307,7 @@ export default function AssetConfirmation() {
                 {requirements.length} 项 · 已有版本直接可用，缺失图片由 Seedream 补齐
               </p>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => loadRequirements()}>
+            <Button size="sm" variant="ghost" onClick={() => void loadRequirements()}>
               <RefreshCw className={styles.icon} />
               刷新
             </Button>
@@ -338,13 +339,13 @@ export default function AssetConfirmation() {
                   key={item.id}
                   item={item}
                   busy={busyId === item.id}
-                  onGenerate={() => generate(item.id)}
-                  onImport={() => openPersonal(item)}
-                  onSave={() => saveToPersonal(item)}
-                  onVersions={() => openVersions(item)}
-                  onComplete={() =>
-                    navigate(
-                      `/assets?project=${projectId}&character=${item.linked_entity_id || ""}`,
+                  onGenerate={() => void generate(item.id)}
+                   onImport={() => void openPersonal(item)}
+                   onSave={() => void saveToPersonal(item)}
+                   onVersions={() => void openVersions(item)}
+                   onComplete={() =>
+                     void navigate(
+                       `/assets?project=${projectId}&character=${item.linked_entity_id ?? ""}`,
                     )
                   }
                 />
@@ -368,12 +369,12 @@ export default function AssetConfirmation() {
             {personalAssets.map((item) => (
               <button
                 key={item.id}
-                onClick={() => importPersonal(item)}
+                onClick={() => void importPersonal(item)}
                 className={styles.personalAsset}
               >
                 <div className={styles.squarePreview}>
-                  {item.file_url || item.preview_url ? (
-                    <img src={item.file_url || item.preview_url} className={styles.image} />
+                  {item.file_url ?? item.preview_url ? (
+                    <img src={item.file_url ?? item.preview_url} className={styles.image} />
                   ) : null}
                 </div>
                 <div className={styles.personalAssetName}>{item.name}</div>
@@ -398,11 +399,11 @@ export default function AssetConfirmation() {
             {versions.map((version) => (
               <button
                 key={version.id}
-                onClick={() => chooseVersion(version)}
+                onClick={() => void chooseVersion(version)}
                 className={version.is_current ? styles.versionCurrent : styles.version}
               >
                 <div className={styles.squarePreview}>
-                  <img src={version.preview_url || version.file_url} className={styles.image} />
+                  <img src={version.preview_url ?? version.file_url} className={styles.image} />
                 </div>
                 <div className={styles.versionInfo}>
                   <span>{version.model}</span>

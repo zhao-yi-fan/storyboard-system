@@ -5,16 +5,16 @@ import type {
   GenerateSceneCoverResult,
   GenerateSceneStoryboardCoversResult,
   PromptOptimizationResult,
-  SceneDescriptionOptimizationResult,
   Scene,
+  SceneDescriptionOptimizationResult,
   SceneGenerationReferences,
   SceneMediaGeneration,
   SceneMediaMutationResult,
   SceneVideoFrame,
   StoryboardCoverGenerationPreview,
+  StoryboardDirectionAnalysis,
   StoryboardVideoGenerationOptions,
   StoryboardVideoGenerationPreview,
-  StoryboardDirectionAnalysis,
 } from "./types";
 
 export function getScenesByChapter(chapterId: number) {

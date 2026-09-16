@@ -11,20 +11,20 @@ export const COMPOSITE_PROMPT_SPEC = {
 } as const;
 
 export function isCompositeStoryboardPrompt(value: string | null | undefined) {
-  const prompt = String(value || "").trim();
+  const prompt = String(value ?? "").trim();
   return (
     /(?:^|\n)\s*镜号[：:]/.test(prompt) && /\[(?:环境光影|人物站位|要求|画面)\][：:]/.test(prompt)
   );
 }
 
 function mention(value: string | null | undefined) {
-  const text = String(value || "").trim();
+  const text = String(value ?? "").trim();
   return text ? `@${text.replace(/^@/, "")}` : "";
 }
 
 function joinParts(parts: Array<string | null | undefined>, separator = " | ") {
   return parts
-    .map((part) => String(part || "").trim())
+    .map((part) => String(part ?? "").trim())
     .filter(Boolean)
     .join(separator);
 }
@@ -37,10 +37,10 @@ export function buildLegacyCompositePrompt(shot: Storyboard, scene: Scene | null
       ? shot.duration
       : 5;
   const characterNames = Array.from(
-    new Set([...(shot.character_names || []), ...(shot.characters || []).map((item) => item.name)]),
+    new Set([...(shot.character_names ?? []), ...(shot.characters ?? []).map((item) => item.name)]),
   ).filter(Boolean);
   const sceneName =
-    shot.asset_names?.[0] || shot.assets?.[0]?.name || scene?.location || scene?.title || "";
+    shot.asset_names?.[0] ?? shot.assets?.[0]?.name ?? scene?.location ?? scene?.title ?? "";
   const camera = joinParts(
     [joinParts([shot.shot_type, shot.camera_direction], "，"), shot.camera_motion],
     " | ",
@@ -56,7 +56,7 @@ export function buildLegacyCompositePrompt(shot: Storyboard, scene: Scene | null
     dialogue ? `台词 & 音效：${dialogue}` : "",
   ]);
   const position = characterNames.map(mention).join(" ");
-  const environment = String(shot.style_notes || scene?.style_notes || "").trim();
+  const environment = String(shot.style_notes ?? scene?.style_notes ?? "").trim();
 
   return [
     environment ? `[环境光影]：${environment}` : "",

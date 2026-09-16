@@ -1,4 +1,5 @@
 import type { StoryboardCoverGenerationPreview } from "../../../api";
+import styles from "../../../pages/Workspace.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -8,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
-import styles from "../../../pages/Workspace.module.scss";
 
 type CoverGenerationDialogProps = {
   open: boolean;
@@ -55,7 +55,7 @@ export function CoverGenerationDialog({
             </div>
             <div className={styles.detailRowWide}>
               <span className={styles.labelText}>实际模型</span>
-              <span>{preview?.model || "-"}</span>
+              <span>{preview?.model ?? "-"}</span>
             </div>
           </div>
           <div className={styles.detailSection}>
@@ -124,14 +124,14 @@ export function CoverGenerationDialog({
             <div className={styles.sectionTitle}>结构化字段</div>
             <div className={styles.detailFieldGrid}>
               {[
-                ["片段标题", preview?.fields.scene_title || "-"],
-                ["地点", preview?.fields.location || "-"],
-                ["时间", preview?.fields.time_of_day || "-"],
-                ["角色", preview?.fields.characters?.join("、") || "-"],
-                ["画面描述", preview?.fields.content || "-"],
-                ["情绪", preview?.fields.mood || "-"],
-                ["台词", preview?.fields.dialogue || "-"],
-                ["备注", preview?.fields.notes || "-"],
+                ["片段标题", preview?.fields.scene_title ?? "-"],
+                ["地点", preview?.fields.location ?? "-"],
+                ["时间", preview?.fields.time_of_day ?? "-"],
+                ["角色", preview?.fields.characters?.join("、") ?? "-"],
+                ["画面描述", preview?.fields.content ?? "-"],
+                ["情绪", preview?.fields.mood ?? "-"],
+                ["台词", preview?.fields.dialogue ?? "-"],
+                ["备注", preview?.fields.notes ?? "-"],
               ].map(([label, value], index) => (
                 <div className={[3, 4, 7].includes(index) ? styles.wideField : undefined} key={label}>
                   <span className={styles.labelText}>{label}：</span>

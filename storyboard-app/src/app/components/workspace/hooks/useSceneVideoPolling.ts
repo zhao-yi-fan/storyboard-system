@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sceneApi, type Scene, type SceneMediaGeneration } from "../../../api";
+
+import { type Scene, sceneApi, type SceneMediaGeneration } from "../../../api";
 import { GENERATION_STATUS } from "../../../constants/domain";
 
 export type SceneVideoPollingStatus =

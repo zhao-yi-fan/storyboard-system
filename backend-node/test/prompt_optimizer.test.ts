@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import {
-  SYSTEM_PROMPT,
   assertPromptMentionsPreserved,
   buildPromptOptimizationUserMessage,
   extractPromptMentions,
+  SYSTEM_PROMPT,
 } from '../app/lib/prompt_optimizer';
 
 describe('test/prompt_optimizer.test.ts', () => {

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
 import { Film, Image as ImageIcon, Loader2, Pause, Play, Video } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+
 import type { Scene, SceneVideoFrame, StoryboardMediaGeneration } from "../../api/types";
 import { Button } from "../ui/button";
 import {
@@ -47,7 +48,7 @@ function mediaErrorMessage(target: HTMLMediaElement, stage: string) {
     3: "视频编码解码失败或文件损坏",
     4: "浏览器不支持该视频编码或格式",
   };
-  const code = target.error?.code || 0;
+  const code = target.error?.code ?? 0;
   return `${messages[code] || "视频画面读取失败"}（${stage}${code ? `，错误码 ${code}` : ""}）`;
 }
 
@@ -176,7 +177,7 @@ export function VideoFrameExtractionDialog({
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
-    const source = generation.result_url || generation.preview_url || "";
+    const source = generation.result_url ?? generation.preview_url ?? "";
     setMode(FRAME_EXTRACTION_MODE.IMAGE);
     setClipRange([0, 4]);
     setError("");

@@ -36,7 +36,7 @@ class AssetService extends Service {
   }
 
   normalizeMetaForApi(meta) {
-    if (meta == null || meta === '') return '';
+    if (meta === null || meta === undefined || meta === '') return '';
     if (typeof meta === 'object') {
       return String(meta.description || meta.text || meta.prompt || '').trim();
     }
@@ -71,7 +71,7 @@ class AssetService extends Service {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
-      character_id: row.character_id == null ? undefined : Number(row.character_id),
+      character_id: row.character_id === null || row.character_id === undefined ? undefined : Number(row.character_id),
       name: row.name,
       type: row.type,
       file_url: resolveUrl(
@@ -202,7 +202,7 @@ class AssetService extends Service {
     const type = String(payload.type || '').trim();
     if (!name) throw new Error('name is required');
     if (!type) throw new Error('type is required');
-    const characterId = payload.character_id == null ? null : Number(payload.character_id);
+    const characterId = payload.character_id === null || payload.character_id === undefined ? null : Number(payload.character_id);
     if (characterId) await this.ensureCharacterInProject(characterId, projectId);
     const [result] = await this.pool.execute(
       `INSERT INTO assets (project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta)
@@ -231,7 +231,7 @@ class AssetService extends Service {
   async update(id, payload) {
     const current = await this.findById(id);
     if (!current) throw new Error('asset not found');
-    const characterId = payload.character_id == null ? null : Number(payload.character_id);
+    const characterId = payload.character_id === null || payload.character_id === undefined ? null : Number(payload.character_id);
     if (characterId) await this.ensureCharacterInProject(characterId, current.project_id);
     const nextFile = Object.prototype.hasOwnProperty.call(payload, 'file_url')
       ? normalizeGeneratedAssetReference(this.app, String(payload.file_url || '').trim())

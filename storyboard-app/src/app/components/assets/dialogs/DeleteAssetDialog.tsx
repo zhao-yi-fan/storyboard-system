@@ -1,4 +1,11 @@
 import { Loader2 } from "lucide-react";
+
+import {
+  ASSET_KIND,
+  type AssetKind,
+  ENTITY_TYPE,
+} from "../../../constants/domain";
+import styles from "../../../pages/AssetLibrary.module.scss";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,12 +16,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../ui/alert-dialog";
-import {
-  ASSET_KIND,
-  ENTITY_TYPE,
-  type AssetKind,
-} from "../../../constants/domain";
-import styles from "../../../pages/AssetLibrary.module.scss";
 
 export type DeleteAssetTarget =
   | { type: typeof ENTITY_TYPE.CHARACTER; id: number; name: string }

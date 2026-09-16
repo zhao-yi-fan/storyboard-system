@@ -1,8 +1,9 @@
 import { toast } from "sonner";
-import type { ApiResponse } from "./types";
-import { clearAuthSession } from "../lib/auth";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+import { clearAuthSession } from "../lib/auth";
+import type { ApiResponse } from "./types";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 function isBrowser() {
   return typeof window !== "undefined";

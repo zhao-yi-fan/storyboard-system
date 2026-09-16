@@ -1,7 +1,8 @@
+import { ChevronDown,LogOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { LogOut, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+
 import { authApi } from "../api";
 import { clearAuthSession, getAuthSession } from "../lib/auth";
 import styles from "./UserMenu.module.scss";
@@ -22,9 +23,9 @@ export function UserMenu({ placement = "header" }: UserMenuProps) {
 
   const userInfo = useMemo(
     () => ({
-      name: session?.display_name || "创作者",
-      role: session?.role_label || "分镜工作室",
-      initials: getInitials(session?.display_name || "创作者"),
+      name: session?.display_name ?? "创作者",
+      role: session?.role_label ?? "分镜工作室",
+      initials: getInitials(session?.display_name ?? "创作者"),
     }),
     [session],
   );
@@ -50,7 +51,7 @@ export function UserMenu({ placement = "header" }: UserMenuProps) {
       // 服务端会话失效时仍然允许前端清理本地状态。
     } finally {
       clearAuthSession();
-      navigate("/login", { replace: true });
+      void navigate("/login", { replace: true });
       toast.success("已退出登录");
     }
   };
@@ -83,7 +84,7 @@ export function UserMenu({ placement = "header" }: UserMenuProps) {
           </div>
 
           <div className={styles.actions}>
-            <MenuItem icon={<LogOut size={13} />} label="退出登录" onClick={handleLogout} subtle />
+            <MenuItem icon={<LogOut size={13} />} label="退出登录" onClick={() => void handleLogout()} subtle />
           </div>
         </div>
       ) : null}

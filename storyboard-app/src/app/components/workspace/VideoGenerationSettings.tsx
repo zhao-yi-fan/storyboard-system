@@ -1,4 +1,5 @@
 import { Settings2 } from "lucide-react";
+
 import type { VideoAspectRatio, VideoResolution } from "../../api";
 import { VIDEO_MODEL, VIDEO_RESOLUTION } from "../../constants/domain";
 import { Label } from "../ui/label";

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
 import type { Pool } from 'mysql2/promise';
+
 import { SceneRepository } from '../app/repository/scene_repository';
 import { StoryboardRepository } from '../app/repository/storyboard_repository';
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+
 import * as SceneServiceNamespace from '../app/service/scene';
 
 const SceneService: any =

@@ -14,19 +14,19 @@ export function getAuthSession(): AuthSession | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<AuthSession>;
-    const account = String(parsed.account || "").trim();
-    const displayName = String(parsed.display_name || "").trim();
-    const roleLabel = String(parsed.role_label || "").trim();
+    const account = String(parsed.account ?? "").trim();
+    const displayName = String(parsed.display_name ?? "").trim();
+    const roleLabel = String(parsed.role_label ?? "").trim();
     if (!account || !displayName || !roleLabel) return null;
     return {
-      id: Number(parsed.id || 0),
+      id: Number(parsed.id ?? 0),
       account,
       display_name: displayName,
       role_label: roleLabel,
       is_active: Boolean(parsed.is_active ?? true),
-      last_login_at: parsed.last_login_at || null,
-      created_at: parsed.created_at || null,
-      updated_at: parsed.updated_at || null,
+      last_login_at: parsed.last_login_at ?? null,
+      created_at: parsed.created_at ?? null,
+      updated_at: parsed.updated_at ?? null,
     };
   } catch {
     return null;

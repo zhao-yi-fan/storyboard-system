@@ -1,6 +1,7 @@
+import { ArrowLeft, Image, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, Image, Loader2 } from "lucide-react";
+
 import { assetWorkspaceApi, type PersonalAsset } from "../api";
 import { Button } from "../components/ui/button";
 import { ASSET_KIND } from "../constants/domain";
@@ -21,7 +22,7 @@ export default function PersonalAssets() {
 
   useEffect(() => {
     setLoading(true);
-    assetWorkspaceApi
+    void assetWorkspaceApi
       .getPersonalAssets(kind || undefined)
       .then(setItems)
       .finally(() => setLoading(false));
@@ -30,7 +31,7 @@ export default function PersonalAssets() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <Button variant="ghost" size="icon" onClick={() => navigate("/projects")}>
+        <Button variant="ghost" size="icon" onClick={() => void navigate("/projects")}>
           <ArrowLeft className={styles.backIcon} />
         </Button>
         <div>
@@ -59,9 +60,9 @@ export default function PersonalAssets() {
             {items.map((item) => (
               <article key={item.id} className={styles.card}>
                 <div className={styles.preview}>
-                  {item.file_url || item.preview_url ? (
+                  {item.file_url ?? item.preview_url ? (
                     <img
-                      src={item.file_url || item.preview_url}
+                      src={item.file_url ?? item.preview_url}
                       alt={item.name}
                       className={styles.image}
                       loading="lazy"
@@ -78,7 +79,7 @@ export default function PersonalAssets() {
                   </div>
                   <h2 className={styles.assetName}>{item.name}</h2>
                   <p className={styles.assetDescription}>
-                    {item.description || "来自已确认项目资产"}
+                    {item.description ?? "来自已确认项目资产"}
                   </p>
                 </div>
               </article>

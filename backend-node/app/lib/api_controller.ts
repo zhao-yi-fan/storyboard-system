@@ -1,4 +1,5 @@
 import { Controller } from 'egg';
+
 import { error, success } from './response';
 
 type ApiOperation<T> = () => Promise<T>;

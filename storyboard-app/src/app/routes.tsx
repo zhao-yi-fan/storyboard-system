@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router";
+
 import { GuestOnlyRoute, RequireAuthRoute, RootRedirect } from "./components/RouteGuards";
 
 export const router = createBrowserRouter([

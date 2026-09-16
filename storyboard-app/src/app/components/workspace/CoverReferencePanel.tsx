@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   AlertCircle,
   Image as ImageIcon,
@@ -9,6 +8,9 @@ import {
   Upload,
   Users,
 } from "lucide-react";
+import { useState } from "react";
+
+import type { SceneGenerationReferences } from "../../api";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -16,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import type { SceneGenerationReferences } from "../../api";
 import styles from "./CoverReferencePanel.module.scss";
 
 type CoverHistoryItem = {
@@ -75,7 +76,7 @@ export function CoverReferencePanel({
   onDismissError,
 }: CoverReferencePanelProps) {
   const [expanded, setExpanded] = useState(false);
-  const images = references?.reference_images || [];
+  const images = references?.reference_images ?? [];
   const collapsedImages = images.length > 3 ? images.slice(0, 2) : images;
   const visibleImages = expanded ? images : collapsedImages;
   const hiddenCount = images.length - visibleImages.length;

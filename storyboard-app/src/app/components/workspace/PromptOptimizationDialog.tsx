@@ -1,4 +1,5 @@
 import { AlertCircle, Loader2, RefreshCw, Sparkles } from "lucide-react";
+
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -143,7 +144,7 @@ export function PromptOptimizeButton({
     <Button
       size="sm"
       variant="ghost"
-      disabled={disabled || loading}
+      disabled={disabled ?? loading}
       className={compact ? styles.optimizeButtonCompact : styles.optimizeButton}
       onClick={onClick}
     >

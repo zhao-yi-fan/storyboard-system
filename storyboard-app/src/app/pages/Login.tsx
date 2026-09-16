@@ -1,10 +1,11 @@
+import { Eye, EyeOff, Film, Loader2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { Film, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
+import loginBgVideo from "../../imports/login_bg_video.mp4";
 import { authApi } from "../api";
 import { saveAuthSession } from "../lib/auth";
-import loginBgVideo from "../../imports/login_bg_video.mp4";
 import styles from "./Login.module.scss";
 
 export default function Login() {
@@ -23,10 +24,10 @@ export default function Login() {
 
   const redirectTarget = useMemo(() => {
     const state = location.state as { from?: string } | null;
-    const queryTarget = new URLSearchParams(location.search).get("from") || "";
+    const queryTarget = new URLSearchParams(location.search).get("from") ?? "";
     const safeQueryTarget =
       queryTarget.startsWith("/") && !queryTarget.startsWith("//") ? queryTarget : "";
-    return state?.from || safeQueryTarget || "/projects";
+    return state?.from ?? safeQueryTarget ?? "/projects";
   }, [location.search, location.state]);
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function Login() {
       );
       saveAuthSession(user);
       toast.success("登录成功");
-      navigate(redirectTarget, { replace: true });
+      void navigate(redirectTarget, { replace: true });
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "登录失败";
       setError(message);
@@ -197,7 +198,7 @@ export default function Login() {
               <div className={styles.card}>
                 <div className={styles.cardHighlight} />
 
-                <form onSubmit={handleSubmit} className={styles.form}>
+                <form onSubmit={(e) => void handleSubmit(e)} className={styles.form}>
                   <div className={styles.field}>
                     <label className={styles.label}>账号（邮箱 / 手机号）</label>
                     <input

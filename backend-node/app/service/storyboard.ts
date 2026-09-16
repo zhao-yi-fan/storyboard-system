@@ -130,7 +130,7 @@ class StoryboardService extends Service {
         String(payload.style_notes || ''),
         String(payload.camera_direction || ''),
         String(payload.camera_motion || ''),
-        payload.duration == null || payload.duration === '' ? null : Number(payload.duration),
+        payload.duration === null || payload.duration === undefined || payload.duration === '' ? null : Number(payload.duration),
         String(payload.background || ''),
         String(payload.thumbnail_url || ''),
         String(payload.thumbnail_preview_url || ''),
@@ -193,7 +193,7 @@ class StoryboardService extends Service {
           ? String(payload.camera_motion || '')
           : current.camera_motion,
         Object.prototype.hasOwnProperty.call(payload, 'duration')
-          ? payload.duration == null || payload.duration === ''
+          ? payload.duration === null || payload.duration === undefined || payload.duration === ''
             ? null
             : Number(payload.duration)
           : current.duration,
@@ -219,7 +219,7 @@ class StoryboardService extends Service {
           ? String(payload.video_error || '')
           : current.video_error,
         Object.prototype.hasOwnProperty.call(payload, 'video_duration')
-          ? payload.video_duration == null || payload.video_duration === ''
+          ? payload.video_duration === null || payload.video_duration === undefined || payload.video_duration === ''
             ? null
             : Number(payload.video_duration)
           : current.video_duration,
@@ -318,7 +318,7 @@ class StoryboardService extends Service {
     if (typeof value === 'boolean') {
       return value;
     }
-    const normalized = String(value == null ? defaultValue : value)
+    const normalized = String(value === null || value === undefined ? defaultValue : value)
       .trim()
       .toLowerCase();
     return normalized !== 'false' && normalized !== '0' && normalized !== 'off';
@@ -357,7 +357,7 @@ class StoryboardService extends Service {
   }
 
   normalizeVideoDuration(model, value) {
-    const duration = Number(value == null || value === '' ? 5 : value);
+    const duration = Number(value === null || value === undefined || value === '' ? 5 : value);
     if (!Number.isInteger(duration)) {
       throw new Error('视频时长必须为整数秒');
     }

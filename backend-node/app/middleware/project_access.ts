@@ -33,11 +33,11 @@ module.exports = () => {
           `SELECT project_id FROM \`${table}\` WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
           [Number(entityMatch[2])],
         );
-        projectId = rows[0]?.project_id == null ? null : Number(rows[0].project_id);
+        projectId = rows[0]?.project_id === null || rows[0]?.project_id === undefined ? null : Number(rows[0].project_id);
       }
     }
 
-    if (projectId != null) {
+    if (projectId !== null && projectId !== undefined) {
       const [projects] = await ctx.app.mysqlPool.query(
         'SELECT id FROM projects WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1',
         [projectId, Number(ctx.state.currentUser.id)],

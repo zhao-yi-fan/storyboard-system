@@ -1,46 +1,37 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { useNavigate, useSearchParams } from "react-router";
 import {
-  Film,
-  Search,
-  Plus,
-  Users,
-  MapPin,
   ArrowLeft,
-  MoreHorizontal,
-  X,
+  Film,
   Grid3x3,
   List,
-  Trash2,
-  Save,
   Loader2,
-  Sparkles,
-  Upload,
+  MapPin,
+  MoreHorizontal,
   Package,
+  Plus,
+  Save,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+  Users,
+  X,
 } from "lucide-react";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
-import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
-import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
+
 import {
-  AI_PREVIEW_ACTION,
-  AIGenerationPreviewDialog,
-  type AIPreviewDialogState,
-} from "../components/assets/dialogs/AIGenerationPreviewDialog";
-import {
-  CreateAssetDialog,
-  type CreateAssetMode,
-} from "../components/assets/dialogs/CreateAssetDialog";
-import {
-  DeleteAssetDialog,
-  type DeleteAssetTarget,
-} from "../components/assets/dialogs/DeleteAssetDialog";
+  type Asset,
+  assetApi,
+  type AssetVersion,
+  assetWorkspaceApi,
+  type Character,
+  characterApi,
+  type CharacterVoiceVersion,
+  ossApi,
+  type Project,
+  projectApi,
+} from "../api";
 import {
   AssetCollection,
   ContainedAssetImage,
@@ -50,32 +41,42 @@ import {
   isPropAsset,
 } from "../components/assets/AssetCollection";
 import {
+  AI_PREVIEW_ACTION,
+  AIGenerationPreviewDialog,
+  type AIPreviewDialogState,
+} from "../components/assets/dialogs/AIGenerationPreviewDialog";
+import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
+import {
+  CreateAssetDialog,
+  type CreateAssetMode,
+} from "../components/assets/dialogs/CreateAssetDialog";
+import {
+  DeleteAssetDialog,
+  type DeleteAssetTarget,
+} from "../components/assets/dialogs/DeleteAssetDialog";
+import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
+import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import {
-  characterApi,
-  assetApi,
-  assetWorkspaceApi,
-  projectApi,
-  ossApi,
-  type Character,
-  type Asset,
-  type AssetVersion,
-  type CharacterVoiceVersion,
-  type Project,
-} from "../api";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Textarea } from "../components/ui/textarea";
 import {
   ASSET_KIND,
   ASSET_LIBRARY_TAB,
   ASSET_VIEW_MODE,
-  ENTITY_TYPE,
-  GENERATION_STATUS,
   type AssetLibraryTab,
   type AssetViewMode,
+  ENTITY_TYPE,
+  GENERATION_STATUS,
 } from "../constants/domain";
 import styles from "./AssetLibrary.module.scss";
 
@@ -91,16 +92,16 @@ type DeleteTarget = DeleteAssetTarget;
 type AIPreviewDialogInput = Omit<AIPreviewDialogState, "promptDraft">;
 
 const getCharacterPreviewSrc = (character: Character | null | undefined) =>
-  character?.design_sheet_url || "";
+  character?.design_sheet_url ?? "";
 
 const getCharacterDesignSheetPreviewSrc = (character: Character | null | undefined) =>
-  character?.design_sheet_url || "";
+  character?.design_sheet_url ?? "";
 
 const getCharacterReferenceSrc = (character: Character | null | undefined) =>
-  character?.avatar_url || "";
+  character?.avatar_url ?? "";
 
 const getCharacterVoiceReferenceSrc = (character: Character | null | undefined) =>
-  character?.voice_reference_url || "";
+  character?.voice_reference_url ?? "";
 
 const hasCharacterVoiceReference = (character: Character | null | undefined) =>
   Boolean(character?.voice_reference_url);
@@ -114,12 +115,12 @@ const CHARACTER_GENERATION_COPY = {
     "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。",
 } as const;
 
-const getAssetOriginalSrc = (asset: Asset | null | undefined) => asset?.file_url || "";
+const getAssetOriginalSrc = (asset: Asset | null | undefined) => asset?.file_url ?? "";
 
 export default function AssetLibrary() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const currentProjectId = Number(searchParams.get("project") || "0");
+  const currentProjectId = Number(searchParams.get("project") ?? "0");
   const [project, setProject] = useState<Project | null>(null);
   const [loadError, setLoadError] = useState("");
   const [activeTab, setActiveTab] = useState<AssetLibraryTab>(
@@ -282,7 +283,7 @@ export default function AssetLibrary() {
       setLoadError("");
       try {
         if (!currentProjectId) {
-          navigate("/projects", { replace: true });
+          void navigate("/projects", { replace: true });
           return;
         }
         const [projectData, characterData, assetData] = await Promise.all([
@@ -294,7 +295,7 @@ export default function AssetLibrary() {
           setProject(projectData);
           setCharacters(characterData ?? []);
           setAssets(assetData ?? []);
-          const requestedCharacterId = Number(searchParams.get("character") || 0);
+          const requestedCharacterId = Number(searchParams.get("character") ?? 0);
           const requestedCharacter = characterData?.find(
             (item) => item.id === requestedCharacterId,
           );
@@ -408,9 +409,9 @@ export default function AssetLibrary() {
     try {
       const updated = await characterApi.updateCharacter(selectedAsset.data.id, {
         name: selectedAsset.data.name,
-        description: selectedAsset.data.description || "",
-        avatar_url: selectedAsset.data.avatar_url || "",
-        voice_prompt: selectedAsset.data.voice_prompt || "",
+        description: selectedAsset.data.description ?? "",
+        avatar_url: selectedAsset.data.avatar_url ?? "",
+        voice_prompt: selectedAsset.data.voice_prompt ?? "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: updated });
@@ -431,8 +432,8 @@ export default function AssetLibrary() {
       const updated = await assetApi.updateAsset(selectedAsset.data.id, {
         name: selectedAsset.data.name,
         type: selectedAsset.data.type,
-        meta: selectedAsset.data.meta || "",
-        file_url: selectedAsset.data.file_url || "",
+        meta: selectedAsset.data.meta ?? "",
+        file_url: selectedAsset.data.file_url ?? "",
       });
       setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: updated });
@@ -473,7 +474,7 @@ export default function AssetLibrary() {
     setCharacterVoiceReferenceError(null);
     try {
       const updated = await characterApi.generateCharacterVoiceReference(selectedAsset.data.id, {
-        voice_prompt: selectedAsset.data.voice_prompt || "",
+        voice_prompt: selectedAsset.data.voice_prompt ?? "",
       });
       setCharacters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: updated });
@@ -599,7 +600,7 @@ export default function AssetLibrary() {
     try {
       const saved = await saveSelectedCharacter();
       const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(saved!.id, {
-        voice_prompt: saved!.voice_prompt || "",
+        voice_prompt: saved!.voice_prompt ?? "",
       });
       openAIPreviewDialog({
         action: AI_PREVIEW_ACTION.CHARACTER_VOICE_REFERENCE,
@@ -779,7 +780,7 @@ export default function AssetLibrary() {
               size="sm"
               variant="ghost"
               onClick={() =>
-                navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/projects")
+                void navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/projects")
               }
               className={styles.backButton}
             >
@@ -791,7 +792,7 @@ export default function AssetLibrary() {
               <div className={styles.pageBrandIcon}>
                 <Film className={styles.icon} />
               </div>
-              <span className={styles.pageBrandTitle}>{project?.name || "项目"} · 资产库</span>
+              <span className={styles.pageBrandTitle}>{project?.name ?? "项目"} · 资产库</span>
             </div>
           </div>
           <div className={styles.pageHeaderActions}>
@@ -1137,7 +1138,7 @@ export default function AssetLibrary() {
                             className={styles.hiddenInput}
                             onChange={(e) =>
                               void handleUploadSelectedCharacterReference(
-                                e.target.files?.[0] || null,
+                                e.target.files?.[0] ?? null,
                               )
                             }
                           />
@@ -1176,7 +1177,7 @@ export default function AssetLibrary() {
                               className={styles.fullSize}
                               onClick={() =>
                                 setPreviewImage({
-                                  src: selectedAsset.data.design_sheet_url || "",
+                                  src: selectedAsset.data.design_sheet_url ?? "",
                                   alt: `${selectedAsset.data.name} 设定图`,
                                 })
                               }
@@ -1332,7 +1333,7 @@ export default function AssetLibrary() {
                         <div>
                           <Label className={styles.detailLabel}>声音提示词</Label>
                           <Textarea
-                            value={selectedAsset.data.voice_prompt || ""}
+                            value={selectedAsset.data.voice_prompt ?? ""}
                             onChange={(e) =>
                               setSelectedAsset({
                                 type: ENTITY_TYPE.CHARACTER,
@@ -1361,7 +1362,7 @@ export default function AssetLibrary() {
                             <div className={styles.voiceMetadataCard}>
                               <div className={styles.voiceMetadataLabel}>音色名称</div>
                               <div className={styles.voiceMetadataValueBreak}>
-                                {selectedAsset.data.voice_name || "未生成"}
+                                {selectedAsset.data.voice_name ?? "未生成"}
                               </div>
                             </div>
                             <div className={styles.voiceMetadataCard}>
@@ -1404,7 +1405,7 @@ export default function AssetLibrary() {
                           className={styles.hiddenInput}
                           onChange={(event) =>
                             void handleUploadSelectedCharacterVoiceReference(
-                              event.target.files?.[0] || null,
+                              event.target.files?.[0] ?? null,
                             )
                           }
                         />
@@ -1432,7 +1433,7 @@ export default function AssetLibrary() {
                         <Button
                           className={styles.saveButton}
                           disabled={isSavingCharacter}
-                          onClick={saveSelectedCharacter}
+                          onClick={() => void saveSelectedCharacter()}
                         >
                           {isSavingCharacter ? (
                             <>
@@ -1467,7 +1468,7 @@ export default function AssetLibrary() {
                       <div className={styles.assetMediaGrid}>
                         {[
                           { label: "原始素材", src: getAssetOriginalSrc(selectedAsset.data) },
-                          { label: "AI 封面", src: selectedAsset.data.cover_url || "" },
+                          { label: "AI 封面", src: selectedAsset.data.cover_url ?? "" },
                         ].map((media) => (
                           <div key={media.label} className={styles.mediaItem}>
                             <div className={styles.detailLabel}>{media.label}</div>
@@ -1498,7 +1499,7 @@ export default function AssetLibrary() {
                         accept="image/*"
                         className={styles.hiddenInput}
                         onChange={(event) =>
-                          void handleUploadSelectedAssetFile(event.target.files?.[0] || null)
+                          void handleUploadSelectedAssetFile(event.target.files?.[0] ?? null)
                         }
                       />
                       <Button
@@ -1585,7 +1586,7 @@ export default function AssetLibrary() {
                           {getAssetKindLabel(selectedAsset.data)}描述
                         </Label>
                         <Textarea
-                          value={selectedAsset.data.meta || ""}
+                          value={selectedAsset.data.meta ?? ""}
                           onChange={(e) =>
                             setSelectedAsset({
                               type: ENTITY_TYPE.ASSET,
@@ -1607,7 +1608,7 @@ export default function AssetLibrary() {
                         <Button
                           className={styles.saveButton}
                           disabled={isSavingAsset}
-                          onClick={saveSelectedAsset}
+                          onClick={() => void saveSelectedAsset()}
                         >
                           {isSavingAsset ? (
                             <>
@@ -1690,14 +1691,14 @@ export default function AssetLibrary() {
         onAssetChange={setNewAsset}
         onCharacterFileChange={setCreateCharacterFile}
         onAssetFileChange={setCreateAssetFile}
-        onCreate={handleCreate}
+        onCreate={() => void handleCreate()}
       />
 
       <DeleteAssetDialog
         target={deleteTarget}
         deleting={deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}`}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={confirmDelete}
+        onConfirm={() => void confirmDelete()}
       />
 
       <ImagePreviewDialog
@@ -1705,8 +1706,8 @@ export default function AssetLibrary() {
         onOpenChange={(open) => {
           if (!open) setPreviewImage(null);
         }}
-        src={previewImage?.src || ""}
-        alt={previewImage?.alt || "资产预览图"}
+        src={previewImage?.src ?? ""}
+        alt={previewImage?.alt ?? "资产预览图"}
       />
     </div>
   );

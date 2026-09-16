@@ -1,3 +1,4 @@
+import styles from "../../../pages/Workspace.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -6,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
-import styles from "../../../pages/Workspace.module.scss";
 
 export type VideoPreview = {
   src: string;
@@ -31,7 +31,7 @@ export function VideoPreviewDialog({
     <Dialog open={!!preview} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={styles.mediaPreviewDialog}>
         <DialogHeader className={styles.dialogHeader}>
-          <DialogTitle>{preview?.title || fallbackTitle}</DialogTitle>
+          <DialogTitle>{preview?.title ?? fallbackTitle}</DialogTitle>
           <DialogDescription className={styles.mutedText}>{description}</DialogDescription>
         </DialogHeader>
         {preview ? (

@@ -20,8 +20,8 @@ export function mapPersonalAsset(app: StoryboardApp, row: DataRow) {
     id: Number(row.id),
     user_id: Number(row.user_id),
     source_project_id:
-      row.source_project_id == null ? null : Number(row.source_project_id),
-    source_entity_id: row.source_entity_id == null ? null : Number(row.source_entity_id),
+      row.source_project_id === null ? null : Number(row.source_project_id),
+    source_entity_id: row.source_entity_id === null ? null : Number(row.source_entity_id),
     file_url: resolveUrl(app, String(row.file_url || ''), base),
     preview_url: resolveUrl(app, String(row.preview_url || ''), base),
   };

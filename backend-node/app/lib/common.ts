@@ -3,7 +3,7 @@
 export const EMPTY_STRING = '';
 
 export function toNullableString(value: unknown): string {
-  return value == null ? EMPTY_STRING : String(value);
+  return value === null || value === undefined ? EMPTY_STRING : String(value);
 }
 
 export function toTrimmedString(value: unknown): string {
@@ -11,7 +11,7 @@ export function toTrimmedString(value: unknown): string {
 }
 
 export function toNullableNumber(value: unknown): number {
-  return value == null ? 0 : Number(value);
+  return value === null || value === undefined ? 0 : Number(value);
 }
 
 export function toNullableDate(value: unknown): string | null {

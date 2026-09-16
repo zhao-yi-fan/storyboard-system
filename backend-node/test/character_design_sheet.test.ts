@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import {
   ENTITY_TYPE,
   GENERATION_STATUS,
 } from '../app/lib/domain_constants';
 import { buildCharacterDesignPrompt } from '../app/lib/prompt_library';
-import * as CharacterServiceNamespace from '../app/service/character';
 import * as AssetWorkspaceServiceNamespace from '../app/service/asset_workspace';
+import * as CharacterServiceNamespace from '../app/service/character';
 
 const CharacterService: any =
   (CharacterServiceNamespace as any).default || CharacterServiceNamespace;

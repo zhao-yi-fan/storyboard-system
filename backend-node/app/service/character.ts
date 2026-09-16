@@ -69,7 +69,7 @@ class CharacterService extends Service {
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       voice_reference_duration:
-        row.voice_reference_duration == null ? 0 : Number(row.voice_reference_duration),
+        row.voice_reference_duration === null || row.voice_reference_duration === undefined ? 0 : Number(row.voice_reference_duration),
       design_sheet_status:
         row.design_sheet_status ||
         (row.design_sheet_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),

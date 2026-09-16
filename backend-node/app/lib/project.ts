@@ -1,8 +1,8 @@
 // @ts-nocheck
 'use strict';
 
-import { normalizeGeneratedAssetReference, resolveUrl } from './generated_asset';
 import { toNullableDate, toNullableNumber, toNullableString } from './common';
+import { normalizeGeneratedAssetReference, resolveUrl } from './generated_asset';
 
 function mapProject(app: any, row: Record<string, any>) {
   const publicAppBaseUrl = app.config.storyboard.publicAppBaseUrl || '';

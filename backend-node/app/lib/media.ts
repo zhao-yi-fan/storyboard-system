@@ -40,7 +40,7 @@ function videoPosterSpec() {
 function sanitizeFileName(value) {
   const cleaned = String(value || '')
     .trim()
-    .replace(/[\/\\ :?&#=]+/g, '-')
+    .replace(/[/\\ :?&#=]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return cleaned || 'preview';
 }

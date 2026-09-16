@@ -1,4 +1,5 @@
 import type { AIGenerationPreview } from "../../../api";
+import styles from "../../../pages/Workspace.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -8,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
-import styles from "../../../pages/Workspace.module.scss";
 
 type SceneCoverGenerationDialogProps = {
   open: boolean;
@@ -39,7 +39,7 @@ export function SceneCoverGenerationDialog({
           <div className={styles.detailSection}>
             <div className={styles.detailRow}>
               <span className={styles.labelText}>实际模型</span>
-              <span>{preview?.model || "-"}</span>
+              <span>{preview?.model ?? "-"}</span>
             </div>
             {preview?.notes?.length ? (
               <div>
@@ -55,7 +55,7 @@ export function SceneCoverGenerationDialog({
           <div className={styles.detailSection}>
             <div className={styles.sectionTitle}>详细参数</div>
             <div className={styles.detailFieldGrid}>
-              {Object.entries(preview?.fields || {}).map(([key, value]) => (
+              {Object.entries(preview?.fields ?? {}).map(([key, value]) => (
                 <div key={key}>
                   <span className={styles.labelText}>{key}：</span>
                   <span>{value || "-"}</span>

@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import * as AiClientsNamespace from '../app/lib/ai_clients';
+import { GENERATION_STATUS } from '../app/lib/domain_constants';
+import * as ScriptImportNamespace from '../app/lib/script_import';
 import * as AssetServiceNamespace from '../app/service/asset';
 import * as AssetWorkspaceServiceNamespace from '../app/service/asset_workspace';
-import * as ScriptImportNamespace from '../app/lib/script_import';
-import { GENERATION_STATUS } from '../app/lib/domain_constants';
 
 const aiClients: any = (AiClientsNamespace as any).default || AiClientsNamespace;
 const scriptImport: any = (ScriptImportNamespace as any).default || ScriptImportNamespace;

@@ -55,7 +55,7 @@ function generatedObjectKey(app, raw) {
     if (parsed.pathname) {
       value = parsed.pathname;
     }
-  } catch {}
+  } catch { /* intentionally ignored */ }
 
   const base = normalizedGeneratedBasePath(app);
   if (!value.startsWith(`${base}/`)) {

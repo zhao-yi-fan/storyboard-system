@@ -1,6 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import {
   Film,
   FolderOpen,
@@ -15,8 +12,11 @@ import {
   Trash2,
   Video,
 } from "lucide-react";
-import { projectApi, type Project } from "../api";
-import { UserMenu } from "../components/UserMenu";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+
+import { type Project,projectApi } from "../api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +45,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import { Input } from "../components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
+import { UserMenu } from "../components/UserMenu";
 import styles from "./ProjectDashboard.module.scss";
 
 const gradients = [
@@ -61,7 +62,7 @@ function deriveStats(project: Project) {
 }
 
 function isPinned(project: Project) {
-  return Boolean(project.is_pinned || project.pinned_at);
+  return Boolean(project.is_pinned ?? project.pinned_at);
 }
 
 function formatDate(dateStr?: string) {
@@ -294,7 +295,7 @@ export default function ProjectDashboard() {
         <button
           type="button"
           className={styles.logoButton}
-          onClick={() => navigate("/projects")}
+          onClick={() => void navigate("/projects")}
           aria-label="返回项目列表"
         >
           <Film className={styles.logoIcon} />
@@ -306,7 +307,7 @@ export default function ProjectDashboard() {
             <Film className={styles.icon} />
             AI 制剧
           </button>
-          <button className={styles.navigationButton} onClick={() => navigate("/personal-assets")}>
+          <button className={styles.navigationButton} onClick={() => void navigate("/personal-assets")}>
             <Package className={styles.icon} />
             个人空间
           </button>
@@ -355,7 +356,7 @@ export default function ProjectDashboard() {
               <button
                 type="button"
                 className={styles.createProject}
-                onClick={() => navigate("/import")}
+                onClick={() => void navigate("/import")}
               >
                 <span className={styles.createIconWrap}>
                   <Plus className={styles.logoIcon} />
@@ -372,7 +373,7 @@ export default function ProjectDashboard() {
                   project={project}
                   index={index}
                   pinningProjectId={pinningProjectId}
-                  onOpen={(item) => navigate(`/asset-confirmation?project=${item.id}`)}
+                  onOpen={(item) => void navigate(`/asset-confirmation?project=${item.id}`)}
                   onTogglePin={(item) => void togglePinProject(item)}
                   onRename={openRenameDialog}
                   onDelete={setDeleteTarget}

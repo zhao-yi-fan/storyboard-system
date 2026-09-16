@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import { ApiController } from '../app/lib/api_controller';
 
 type TestContext = {

@@ -1,17 +1,19 @@
 'use strict';
 
 import path from 'node:path';
+
 import dotenv from 'dotenv';
-import { buildServerConfig } from './sections/server';
-import { buildMysqlConfig } from './sections/mysql';
-import { buildAuthConfig } from './sections/auth';
-import { buildStoryboardBaseConfig } from './sections/storyboard';
-import { buildDeepSeekConfig } from './providers/deepseek';
+
 import { buildDashScopeConfig } from './providers/dashscope';
-import { buildWanxConfig } from './providers/wanx';
+import { buildDeepSeekConfig } from './providers/deepseek';
+import { buildOssConfig } from './providers/oss';
 import { buildSeedanceConfig } from './providers/seedance';
 import { buildSeedreamConfig } from './providers/seedream';
-import { buildOssConfig } from './providers/oss';
+import { buildWanxConfig } from './providers/wanx';
+import { buildAuthConfig } from './sections/auth';
+import { buildMysqlConfig } from './sections/mysql';
+import { buildServerConfig } from './sections/server';
+import { buildStoryboardBaseConfig } from './sections/storyboard';
 import { DEFAULT_ENV_PATH } from './shared/constants';
 
 const ENV_PATHS = [DEFAULT_ENV_PATH.LOCAL, DEFAULT_ENV_PATH.LEGACY_GO_FALLBACK];

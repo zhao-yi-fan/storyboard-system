@@ -1,5 +1,7 @@
 import { Loader2 } from "lucide-react";
+
 import type { AssetVersion } from "../../../api";
+import styles from "../../../pages/AssetLibrary.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -8,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
-import styles from "../../../pages/AssetLibrary.module.scss";
 
 type AssetVersionsDialogProps = {
   open: boolean;
@@ -43,7 +44,7 @@ export function AssetVersionsDialog({
             {versions.map((version, index) => {
               const src = isCharacter
                 ? version.file_url
-                : version.preview_url || version.file_url;
+                : version.preview_url ?? version.file_url;
               const alt = `资产生成版本 ${versions.length - index}`;
               const label = `v${versions.length - index}`;
               return (

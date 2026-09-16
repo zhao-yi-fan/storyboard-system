@@ -1,5 +1,6 @@
 import type { StoryboardVideoGenerationPreview } from "../../../api";
 import { ASSET_KIND, VIDEO_ASPECT_RATIO } from "../../../constants/domain";
+import styles from "../../../pages/Workspace.module.scss";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import {
@@ -11,7 +12,6 @@ import {
   DialogTitle,
 } from "../../ui/dialog";
 import { Switch } from "../../ui/switch";
-import styles from "../../../pages/Workspace.module.scss";
 
 type VideoGenerationDialogProps = {
   open: boolean;
@@ -60,11 +60,11 @@ export function VideoGenerationDialog({
             </div>
             <div className={styles.detailRow}>
               <span className={styles.labelText}>实际模型</span>
-              <span>{preview?.model || selectedModel}</span>
+              <span>{preview?.model ?? selectedModel}</span>
             </div>
             <div className={styles.detailRow}>
               <span className={styles.labelText}>时长</span>
-              <span>{preview?.duration || activeDuration} 秒</span>
+              <span>{preview?.duration ?? activeDuration} 秒</span>
             </div>
             <div className={styles.detailRow}>
               <span className={styles.labelText}>输出规格</span>
@@ -219,7 +219,7 @@ export function VideoGenerationDialog({
                         <div className={styles.minWidthContent}>
                           <div className={styles.truncateContent}>{reference.name}</div>
                           <div className={styles.secondaryMetadata}>
-                            {reference.voice_name || "角色主语音"} ·{" "}
+                            {reference.voice_name ?? "角色主语音"} ·{" "}
                             {reference.duration ? `${reference.duration.toFixed(1)}s` : "未知时长"}
                           </div>
                         </div>
@@ -260,7 +260,7 @@ export function VideoGenerationDialog({
                 {preview?.prompt_mode === "composite" ? "完整原文" : "兼容模式"}
               </Badge>
               <span className={styles.emptyText}>
-                生成时长 {preview?.duration || activeDuration} 秒
+                生成时长 {preview?.duration ?? activeDuration} 秒
               </span>
               <span className={styles.emptyText}>
                 首帧 {preview?.use_first_frame ? "开启" : "关闭"}

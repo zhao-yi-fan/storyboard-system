@@ -1,3 +1,4 @@
+import styles from "../../../pages/Workspace.module.scss";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,7 +9,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../ui/alert-dialog";
-import styles from "../../../pages/Workspace.module.scss";
 
 export type ConfirmationSummaryItem = {
   label: string;

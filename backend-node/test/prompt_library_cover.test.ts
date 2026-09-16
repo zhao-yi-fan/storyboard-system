@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
-import { buildSceneCoverPrompt, buildStoryboardCoverPrompt } from '../app/lib/prompt_library';
+
 import { REFERENCE_TYPE } from '../app/lib/domain_constants';
+import { buildSceneCoverPrompt, buildStoryboardCoverPrompt } from '../app/lib/prompt_library';
 
 const MYTHIC_PHRASES = [
   '东方神话史诗感',

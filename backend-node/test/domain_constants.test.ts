@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import {
   ASSET_KIND,
   ASSET_SOURCE_TYPE,

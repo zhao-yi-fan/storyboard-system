@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+
 import { describe, it } from 'mocha';
+
 import {
-  SCENE_DESCRIPTION_SYSTEM_PROMPT,
   buildSceneDescriptionUserMessage,
+  SCENE_DESCRIPTION_SYSTEM_PROMPT,
 } from '../app/lib/scene_description_optimizer';
 
 describe('test/scene_description_optimizer.test.ts', () => {

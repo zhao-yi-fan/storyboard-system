@@ -1,5 +1,6 @@
-import { PhotoSlider } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
+
+import { PhotoSlider } from "react-photo-view";
 
 type PreviewItem = {
   src: string;

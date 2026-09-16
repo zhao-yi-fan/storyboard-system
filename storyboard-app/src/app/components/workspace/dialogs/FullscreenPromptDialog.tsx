@@ -1,4 +1,6 @@
 import { Minimize2 } from "lucide-react";
+
+import styles from "../../../pages/Workspace.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -9,8 +11,7 @@ import {
   DialogTitle,
 } from "../../ui/dialog";
 import { PromptOptimizeButton } from "../PromptOptimizationDialog";
-import { RichPromptEditor, type PromptMentionOption } from "../RichPromptEditor";
-import styles from "../../../pages/Workspace.module.scss";
+import { type PromptMentionOption,RichPromptEditor } from "../RichPromptEditor";
 
 type FullscreenPromptDialogProps = {
   open: boolean;

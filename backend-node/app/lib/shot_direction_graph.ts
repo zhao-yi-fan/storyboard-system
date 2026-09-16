@@ -3,6 +3,7 @@
 
 import { END, START, StateGraph, StateSchema } from '@langchain/langgraph';
 import { z } from 'zod';
+
 import { LLM_JSON_PROTOCOL } from './llm_json_protocol';
 
 const SYSTEM_PROMPT = [
@@ -172,7 +173,7 @@ export function normalizeShotDirectionAnalyses(
       : [];
   const byStoryboardId = new Map<number, Record<string, unknown>>();
   for (const item of rawItems) {
-    const storyboardId = Number((item as any)?.storyboard_id || (item as any)?.id || 0);
+    const storyboardId = Number((item)?.storyboard_id || (item)?.id || 0);
     if (storyboardId > 0 && !byStoryboardId.has(storyboardId)) {
       byStoryboardId.set(storyboardId, item as Record<string, unknown>);
     }
