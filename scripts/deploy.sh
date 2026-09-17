@@ -55,8 +55,10 @@ run "fast-forward local main" git pull --ff-only origin main
 log "commit after pull: $(git rev-parse --short HEAD)"
 
 run "install frontend dependencies" bash -lc "cd '$FRONTEND_DIR' && NODE_OPTIONS=--max-old-space-size=640 npm install --no-audit --no-fund --prefer-offline --include=optional"
+run "typecheck frontend" bash -lc "cd '$FRONTEND_DIR' && npm run typecheck"
 run "build frontend" bash -lc "cd '$FRONTEND_DIR' && npm run build"
 run "install backend-node dependencies" bash -lc "cd '$NODE_BACKEND_DIR' && npm install"
+run "typecheck backend-node" bash -lc "cd '$NODE_BACKEND_DIR' && npm run typecheck"
 run "build backend-node dist" bash -lc "cd '$NODE_BACKEND_DIR' && npm run build"
 
 if ! sudo systemctl is-active --quiet "$NODE_BACKEND_SERVICE"; then

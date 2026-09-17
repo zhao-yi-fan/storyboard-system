@@ -255,7 +255,7 @@ export function RichPromptEditor({
         name: "flip",
         options: { fallbackPlacements: ["top-start", "right-start", "left-start"] },
       },
-      { name: "preventOverflow", options: { boundary: "viewport", padding: 8 } },
+      { name: "preventOverflow", options: { boundary: "viewport" as unknown as Element, padding: 8 } },
     ],
   });
 

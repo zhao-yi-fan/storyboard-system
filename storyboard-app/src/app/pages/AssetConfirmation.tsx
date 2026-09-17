@@ -66,7 +66,7 @@ function RequirementCard({
           </div>
         )}
         <span className={styles.kindBadge}>{KIND_LABELS[item.kind]}</span>
-        <span className={styles.statusBadge}>{STATUS_LABELS[item.status]}</span>
+        <span className={styles.statusBadge}>{STATUS_LABELS[item.status as keyof typeof STATUS_LABELS]}</span>
       </div>
       <div className={styles.cardContent}>
         <h3 className={styles.requirementName}>{item.name}</h3>

@@ -202,6 +202,9 @@ export default function Workspace() {
   const [sceneInsertSortOrder, setSceneInsertSortOrder] = useState<number | null>(null);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isComposingProjectVideo, setIsComposingProjectVideo] = useState(false);
+  const [, setIsGeneratingSceneCover] = useState(false);
+  const [, setIsBatchGeneratingSceneCover] = useState(false);
+  const [, setIsComposingSceneVideo] = useState(false);
   const [deleteTargetGeneration, setDeleteTargetGeneration] =
     useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);

@@ -11,6 +11,7 @@
     "lint:fix": "npm run lint:root:fix && npm --prefix storyboard-app run lint:fix && npm --prefix backend-node run lint:fix",
     "lint:root": "eslint scripts/**/*.mjs --max-warnings=0",
     "lint:root:fix": "eslint scripts/**/*.mjs --fix --max-warnings=0",
+    "typecheck": "npm --prefix storyboard-app run typecheck && npm --prefix backend-node run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

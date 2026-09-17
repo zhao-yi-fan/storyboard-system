@@ -5,6 +5,7 @@
   "description": "Egg.js migration backend for storyboard-system",
   "scripts": {
     "build": "node ./scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
     "predev": "node ./scripts/check-dev-dependencies.mjs",
     "dev": "npm run build && egg-bin dev --baseDir dist",
     "lint": "eslint . --max-warnings=0",

@@ -90,10 +90,10 @@ npm run test
 
 ## 验证
 
-完成前运行最小相关验证：
+完成前运行最小相关验证（`backend/` Go 项目已冻结，不要动）：
 
-- 前端变更：在 `storyboard-app/` 下执行 `npm run build`
-- 后端变更：在 `backend/` 下执行 `go build ./...`
-- Go 格式化：对变更的 Go 文件执行 `gofmt -w`
+- 前端变更：在 `storyboard-app/` 下执行 `npm run typecheck && npm run lint && npm run build`
+- 后端变更：在 `backend-node/` 下执行 `npm run typecheck && npm run lint && npm run test`
+- 根目录可执行 `npm run typecheck` 跑两边类型检查，`npm run lint` 跑全部 lint
 
 如果无法运行验证，在最终回复中说明原因。

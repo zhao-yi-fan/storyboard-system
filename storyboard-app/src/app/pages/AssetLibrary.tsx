@@ -45,7 +45,7 @@ import {
   type AIPreviewDialogState,
 } from "../components/assets/dialogs/AIGenerationPreviewDialog";
 import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
-import { CreateAssetDialog } from "../components/assets/dialogs/CreateAssetDialog";
+import { CreateAssetDialog, type NewAssetDraft } from "../components/assets/dialogs/CreateAssetDialog";
 import { DeleteAssetDialog } from "../components/assets/dialogs/DeleteAssetDialog";
 import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
@@ -90,6 +90,78 @@ import styles from "./AssetLibrary.module.scss";
 import { useAssetLibraryFilters } from "./useAssetLibraryFilters";
 import { useResizableDetailSidebar } from "./useAssetLibrarySidebar";
 
+type VersionImageCardProps = {
+  version: AssetVersion;
+  src: string;
+  alt: string;
+  label: string;
+  aspectClassName: string;
+  switching: boolean;
+  onPreview: () => void;
+  onSetCurrent: () => void;
+};
+
+function VersionImageCard({
+  version,
+  src,
+  alt,
+  label,
+  aspectClassName,
+  switching,
+  onPreview,
+  onSetCurrent,
+}: VersionImageCardProps) {
+  return (
+    <div className={version.is_current ? styles.versionCardCurrent : styles.versionCard}>
+      <button
+        type="button"
+        className={styles.versionPreviewButton}
+        onClick={onPreview}
+        aria-label={`预览${label}`}
+      >
+        <div className={`${styles.containedImage} ${aspectClassName} ${styles.fullWidth}`}>
+          <img
+            src={src}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className={styles.containedImageBackdrop}
+          />
+          <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            className={styles.containedImageSource}
+          />
+        </div>
+      </button>
+      <div className={styles.versionLabel}>{version.is_current ? "当前版本" : label}</div>
+      {!version.is_current ? (
+        <Button
+          type="button"
+          size="sm"
+          disabled={switching}
+          aria-label="设为当前版本"
+          title="设为当前版本"
+          className={styles.setCurrentButton}
+          onClick={onSetCurrent}
+        >
+          {switching ? (
+            <>
+              <Loader2 className={styles.switchingIcon} />
+              切换中
+            </>
+          ) : (
+            "设为当前"
+          )}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AssetLibrary() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -121,7 +193,7 @@ export default function AssetLibrary() {
   const [isLoadingAIPreview, setIsLoadingAIPreview] = useState(false);
 
   const [newCharacter, setNewCharacter] = useState({ name: "", description: "", avatar_url: "" });
-  const [newAsset, setNewAsset] = useState({
+  const [newAsset, setNewAsset] = useState<NewAssetDraft>({
     name: "",
     type: ASSET_KIND.SCENE,
     meta: "",
@@ -972,14 +1044,20 @@ export default function AssetLibrary() {
                             className={styles.actionMenuDelete}
                             onClick={() => {
                               setShowActionMenu(false);
-                              setDeleteTarget({
-                                type: selectedAsset.type,
-                                id: selectedAsset.data.id,
-                                name: selectedAsset.data.name,
-                                ...(selectedAsset.type === ENTITY_TYPE.ASSET
-                                  ? { assetKind: getAssetKind(selectedAsset.data) }
-                                  : {}),
-                              });
+                              setDeleteTarget(
+                                selectedAsset.type === ENTITY_TYPE.ASSET
+                                  ? {
+                                      type: selectedAsset.type,
+                                      id: selectedAsset.data.id,
+                                      name: selectedAsset.data.name,
+                                      assetKind: getAssetKind(selectedAsset.data),
+                                    }
+                                  : {
+                                      type: selectedAsset.type,
+                                      id: selectedAsset.data.id,
+                                      name: selectedAsset.data.name,
+                                    },
+                              );
                             }}
                           >
                             删除资产
@@ -1546,6 +1624,7 @@ export default function AssetLibrary() {
                               type: ENTITY_TYPE.ASSET,
                               id: selectedAsset.data.id,
                               name: selectedAsset.data.name,
+                              assetKind: getAssetKind(selectedAsset.data),
                             })
                           }
                         >
