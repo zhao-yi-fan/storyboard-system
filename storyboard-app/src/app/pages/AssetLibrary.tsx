@@ -16,7 +16,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
@@ -38,7 +38,6 @@ import {
   getAssetKind,
   getAssetKindLabel,
   getAssetTab,
-  isPropAsset,
 } from "../components/assets/AssetCollection";
 import {
   AI_PREVIEW_ACTION,
@@ -46,14 +45,8 @@ import {
   type AIPreviewDialogState,
 } from "../components/assets/dialogs/AIGenerationPreviewDialog";
 import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
-import {
-  CreateAssetDialog,
-  type CreateAssetMode,
-} from "../components/assets/dialogs/CreateAssetDialog";
-import {
-  DeleteAssetDialog,
-  type DeleteAssetTarget,
-} from "../components/assets/dialogs/DeleteAssetDialog";
+import { CreateAssetDialog } from "../components/assets/dialogs/CreateAssetDialog";
+import { DeleteAssetDialog } from "../components/assets/dialogs/DeleteAssetDialog";
 import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
 import { Badge } from "../components/ui/badge";
@@ -78,44 +71,24 @@ import {
   ENTITY_TYPE,
   GENERATION_STATUS,
 } from "../constants/domain";
+import type {
+  AIPreviewDialogInput,
+  CreateMode,
+  DeleteTarget,
+  SelectedAsset,
+} from "./AssetLibrary.helpers";
+import {
+  CHARACTER_GENERATION_COPY,
+  getAssetOriginalSrc,
+  getCharacterDesignSheetPreviewSrc,
+  getCharacterPreviewSrc,
+  getCharacterReferenceSrc,
+  getCharacterVoiceReferenceSrc,
+  hasCharacterVoiceReference,
+} from "./AssetLibrary.helpers";
 import styles from "./AssetLibrary.module.scss";
-
-type SelectedAsset =
-  | { type: typeof ENTITY_TYPE.CHARACTER; data: Character }
-  | { type: typeof ENTITY_TYPE.ASSET; data: Asset }
-  | null;
-
-type CreateMode = CreateAssetMode;
-
-type DeleteTarget = DeleteAssetTarget;
-
-type AIPreviewDialogInput = Omit<AIPreviewDialogState, "promptDraft">;
-
-const getCharacterPreviewSrc = (character: Character | null | undefined) =>
-  character?.design_sheet_url ?? "";
-
-const getCharacterDesignSheetPreviewSrc = (character: Character | null | undefined) =>
-  character?.design_sheet_url ?? "";
-
-const getCharacterReferenceSrc = (character: Character | null | undefined) =>
-  character?.avatar_url ?? "";
-
-const getCharacterVoiceReferenceSrc = (character: Character | null | undefined) =>
-  character?.voice_reference_url ?? "";
-
-const hasCharacterVoiceReference = (character: Character | null | undefined) =>
-  Boolean(character?.voice_reference_url);
-
-const CHARACTER_GENERATION_COPY = {
-  DESIGN_SHEET_MODEL_LABEL: "Seedream 4.5 图生图",
-  VOICE_REFERENCE_TEXT: "今天风很轻，我们慢慢把事情说清楚。",
-  VOICE_REFERENCE_DURATION_HINT:
-    "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。",
-  VOICE_REFERENCE_TEXT_HINT:
-    "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。",
-} as const;
-
-const getAssetOriginalSrc = (asset: Asset | null | undefined) => asset?.file_url ?? "";
+import { useAssetLibraryFilters } from "./useAssetLibraryFilters";
+import { useResizableDetailSidebar } from "./useAssetLibrarySidebar";
 
 export default function AssetLibrary() {
   const navigate = useNavigate();
@@ -177,76 +150,18 @@ export default function AssetLibrary() {
   } | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
-  const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
-  const [isResizingDetailSidebar, setIsResizingDetailSidebar] = useState(false);
+  const { detailSidebarWidth, handleDetailSidebarMouseDown } = useResizableDetailSidebar();
   const selectedCharacterReferenceInputRef = useRef<HTMLInputElement | null>(null);
   const selectedCharacterVoiceReferenceInputRef = useRef<HTMLInputElement | null>(null);
   const selectedAssetFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const MIN_DETAIL_SIDEBAR_WIDTH = 320;
-  const MAX_DETAIL_SIDEBAR_WIDTH = 560;
-
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!isResizingDetailSidebar) return;
-      const newWidth = window.innerWidth - event.clientX;
-      if (newWidth >= MIN_DETAIL_SIDEBAR_WIDTH && newWidth <= MAX_DETAIL_SIDEBAR_WIDTH) {
-        setDetailSidebarWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizingDetailSidebar(false);
-    };
-
-    if (isResizingDetailSidebar) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizingDetailSidebar]);
-
-  const handleDetailSidebarMouseDown = () => {
-    setIsResizingDetailSidebar(true);
-  };
-
-  const filteredCharacters = useMemo(() => {
-    return characters.filter(
-      (char) =>
-        char.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        char.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-  }, [characters, searchQuery]);
-
-  const filteredAssets = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    return assets.filter(
-      (asset) =>
-        asset.name.toLowerCase().includes(normalizedQuery) ||
-        asset.meta?.toLowerCase().includes(normalizedQuery),
-    );
-  }, [assets, searchQuery]);
-  const filteredSceneAssets = useMemo(
-    () => filteredAssets.filter((asset) => !isPropAsset(asset)),
-    [filteredAssets],
-  );
-  const filteredPropAssets = useMemo(
-    () => filteredAssets.filter((asset) => isPropAsset(asset)),
-    [filteredAssets],
-  );
-  const sceneAssetCount = useMemo(
-    () => assets.filter((asset) => !isPropAsset(asset)).length,
-    [assets],
-  );
-  const propAssetCount = assets.length - sceneAssetCount;
+  const {
+    filteredCharacters,
+    filteredSceneAssets,
+    filteredPropAssets,
+    sceneAssetCount,
+    propAssetCount,
+  } = useAssetLibraryFilters(characters, assets, searchQuery);
   const selectedAssetType = selectedAsset?.type;
   const selectedAssetId = selectedAsset?.data.id;
 
