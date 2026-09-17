@@ -17,6 +17,9 @@ NODE_BACKEND_SERVICE="storyboard-backend-node.service"
 NODE_BACKEND_UNIT_SOURCE="$ROOT_DIR/scripts/systemd/$NODE_BACKEND_SERVICE"
 NODE_BACKEND_UNIT_TARGET="/etc/systemd/system/$NODE_BACKEND_SERVICE"
 NODE_API_HEALTH_URL="http://127.0.0.1:8083/api/health"
+NGINX_CONFIG_SOURCE="$ROOT_DIR/scripts/nginx/nginx.conf"
+NGINX_CONFIG_TARGET="/etc/nginx/nginx.conf"
+NGINX_CONFIG_CANDIDATE="/etc/nginx/nginx.conf.storyboard-candidate"
 
 log() {
   printf '[deploy] %s\n' "$1"
@@ -42,6 +45,7 @@ require_command ss
 require_command sudo
 require_command ffmpeg
 require_command systemctl
+require_command nginx
 
 cd "$ROOT_DIR"
 
@@ -60,6 +64,11 @@ run "build frontend" bash -lc "cd '$FRONTEND_DIR' && npm run build"
 run "install backend-node dependencies" bash -lc "cd '$NODE_BACKEND_DIR' && npm install"
 run "typecheck backend-node" bash -lc "cd '$NODE_BACKEND_DIR' && npm run typecheck"
 run "build backend-node dist" bash -lc "cd '$NODE_BACKEND_DIR' && npm run build"
+
+run "stage nginx configuration" sudo install -m 0644 "$NGINX_CONFIG_SOURCE" "$NGINX_CONFIG_CANDIDATE"
+run "validate nginx configuration" sudo nginx -t -c "$NGINX_CONFIG_CANDIDATE"
+run "install nginx configuration" sudo install -m 0644 "$NGINX_CONFIG_SOURCE" "$NGINX_CONFIG_TARGET"
+run "reload nginx" sudo systemctl reload nginx
 
 if ! sudo systemctl is-active --quiet "$NODE_BACKEND_SERVICE"; then
   log "stopping legacy daemonized backend-node process if present"

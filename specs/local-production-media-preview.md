@@ -14,12 +14,14 @@
 2. 开发者通过团队认可的密码管理器或其他安全渠道配置本地 OSS、Seedream 等凭据；仓库不提供从生产服务器复制凭据的脚本。
 3. 本地 `ALIYUN_OSS_ENDPOINT` 必须使用公网端点，不得使用仅 ECS 可达的 `*-internal.aliyuncs.com` 地址。
 4. 重启 `backend-node`，API 将数据库中的 `/generated/**` 对象键转换成可访问的 OSS 签名 URL。
-5. 无 OSS 配置时，Node 直接从 `GENERATED_ASSET_DIR` 提供 `/generated/**`，Vite 将同路径代理到 Node。
+5. 生产 Nginx 将历史 `/generated/**` 请求代理到 Node 的媒体跳转入口；该入口校验对象键后跳转到新的 OSS 签名 URL，而不从 ECS 本地目录读取生产媒体。
+6. 无 OSS 配置时，Node 直接从 `GENERATED_ASSET_DIR` 提供 `/generated/**`，Vite 将同路径代理到 Node。
 
 ## API Changes
 
-- 不新增业务 API。
+- 不新增业务 API；媒体跳转入口仅用于兼容静态媒体路径。
 - 本地开发服务器新增 `/generated/**` 代理。
+- 生产新增内部媒体跳转入口 `/_media/redirect/:objectKey`，用于兼容直接访问的稳定媒体路径。
 
 ## Persistence / Async Tasks
 
@@ -35,6 +37,7 @@
 ## Acceptance Criteria
 
 - 生产可见的 `/generated/**` 图片和视频在本地 API 中返回有效签名 URL。
+- 生产环境访问历史 `/generated/**` 图片和视频时，响应会跳转到有效的 OSS 签名 URL；对象不存在或路径非法时返回 404。
 - 本地 `storage/` 文件可通过 Vite 的 `/generated/**` 地址读取。
 - 本地生成文件可通过公网 OSS 端点上传；生产服务器仍可继续使用 OSS 内网端点。
 - Git 状态和历史中不包含 OSS AccessKey、Secret、Seedream API Key、生产 IP、SSH 用户或生产环境文件路径。

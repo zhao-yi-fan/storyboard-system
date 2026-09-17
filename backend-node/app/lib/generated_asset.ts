@@ -84,7 +84,11 @@ function generatedObjectKey(app: App, raw: unknown): string {
     throw new Error(`not a generated path: ${raw}`);
   }
 
-  const relative = path.posix.normalize(`/${value.slice(base.length + 1)}`).replace(/^\/+/, '');
+  const rawRelative = value.slice(base.length + 1);
+  if (rawRelative.split('/').some((segment) => segment === '..')) {
+    throw new Error(`invalid generated path: ${raw}`);
+  }
+  const relative = path.posix.normalize(`/${rawRelative}`).replace(/^\/+/, '');
   if (!relative || relative.startsWith('..')) {
     throw new Error(`invalid generated path: ${raw}`);
   }
