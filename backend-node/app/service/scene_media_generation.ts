@@ -3,30 +3,31 @@
 const Service = require('egg').Service;
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const { serializeMediaGenerationMeta } = require('../lib/media_generation_meta');
+import type { DbRow, SceneMediaGenerationEntity } from '../lib/entity';
 
 class SceneMediaGenerationService extends Service {
   get pool() {
     return this.app.mysqlPool;
   }
 
-  map(row: any) {
+  map(row: DbRow): SceneMediaGenerationEntity {
     const baseUrl = this.app.config.storyboard.publicAppBaseUrl || '';
     return {
       id: Number(row.id),
       scene_id: Number(row.scene_id),
       legacy_storyboard_id: row.legacy_storyboard_id ? Number(row.legacy_storyboard_id) : null,
-      media_type: row.media_type,
-      model: row.model,
-      status: row.status,
-      result_url: resolveUrl(this.app, row.result_url || '', baseUrl),
-      preview_url: resolveUrl(this.app, row.preview_url || '', baseUrl),
-      poster_url: resolveUrl(this.app, row.poster_url || '', baseUrl),
-      source_url: resolveUrl(this.app, row.source_url || '', baseUrl),
-      error_message: row.error_message || '',
+      media_type: row.media_type as string,
+      model: row.model as string,
+      status: row.status as string,
+      result_url: resolveUrl(this.app, String(row.result_url || ''), baseUrl),
+      preview_url: resolveUrl(this.app, String(row.preview_url || ''), baseUrl),
+      poster_url: resolveUrl(this.app, String(row.poster_url || ''), baseUrl),
+      source_url: resolveUrl(this.app, String(row.source_url || ''), baseUrl),
+      error_message: String(row.error_message || ''),
       is_current: Boolean(row.is_current),
       meta_json: serializeMediaGenerationMeta(row.meta_json),
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
+      updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
     };
   }
 
@@ -39,7 +40,7 @@ class SceneMediaGenerationService extends Service {
        ORDER BY created_at DESC, id DESC`,
       [sceneId],
     );
-    return rows.map((row: any) => this.map(row));
+    return rows.map((row: DbRow) => this.map(row));
   }
 
   async findById(id: number) {
@@ -54,7 +55,7 @@ class SceneMediaGenerationService extends Service {
   }
 
   async create(payload: Record<string, unknown>) {
-    const mediaReference = (value: any) =>
+    const mediaReference = (value: unknown) =>
       value ? normalizeGeneratedAssetReference(this.app, value) : null;
     const [result] = await this.pool.execute(
       `INSERT INTO scene_media_generations

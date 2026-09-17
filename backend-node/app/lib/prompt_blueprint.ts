@@ -152,7 +152,7 @@ function mergeSection(
 }
 
 function includesAny(text: string, patterns: string[]): boolean {
-  return patterns.some((pattern: any) => text.includes(pattern));
+  return patterns.some((pattern) => text.includes(pattern));
 }
 
 export function normalizeTextList(values: unknown[]): string[] {
@@ -304,9 +304,9 @@ export function summarizeVideoContent(content: string): string {
     const headline = text
       .replace(/【[\s\S]*?】/g, ' ')
       .split(/[。；;\n]/)
-      .map((item: any) => item.trim())
+      .map((item) => item.trim())
       .filter(Boolean)
-      .find((item: any) => !/(首段|中段|尾段|开场|高潮|收束)\s*[:：]/.test(item));
+      .find((item) => !/(首段|中段|尾段|开场|高潮|收束)\s*[:：]/.test(item));
     return headline || '按分段分镜脚本推进完整动作和情绪变化';
   }
   return text;
@@ -407,7 +407,7 @@ export function renderPromptBlueprint(blueprint: PromptBlueprint): string {
     sections.push(
       sentence(
         '节奏分段',
-        blueprint.timeline.map((item: any) => `${item.label}：${item.description}`),
+        blueprint.timeline.map((item) => `${item.label}：${item.description}`),
       ),
     );
   }

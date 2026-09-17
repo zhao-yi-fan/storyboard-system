@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+import type { SceneMediaGenerationEntity } from '../lib/entity';
 const { GENERATION_STATUS, MEDIA_TYPE } = require('../lib/domain_constants');
 const path = require('node:path');
 const {
@@ -28,7 +29,7 @@ class SceneVideoPosterService extends Service {
     return posterUrl;
   }
 
-  async ensureForGeneration(generation: any, localPath: string = '') {
+  async ensureForGeneration(generation: SceneMediaGenerationEntity, localPath: string = '') {
     if (!generation || generation.media_type !== MEDIA_TYPE.VIDEO) {
       throw new Error('video generation is required');
     }
@@ -54,7 +55,7 @@ class SceneVideoPosterService extends Service {
     return posterUrl;
   }
 
-  async ensureBestEffort(generation: any, localPath: string = '') {
+  async ensureBestEffort(generation: SceneMediaGenerationEntity, localPath: string = '') {
     try {
       return await this.ensureForGeneration(generation, localPath);
     } catch (error) {
@@ -62,7 +63,7 @@ class SceneVideoPosterService extends Service {
         '[video-poster] scene=%s generation=%s extraction failed: %s',
         generation?.scene_id || '',
         generation?.id || '',
-        (error as any)?.message || error,
+        (error as Error)?.message || error,
       );
       return '';
     }

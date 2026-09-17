@@ -35,7 +35,7 @@ export function buildPromptDisplayBlocks(blueprint: PromptBlueprint): PromptDisp
 
   const timelineItems = Array.isArray(blueprint.timeline)
     ? blueprint.timeline
-        .map((item: any) => {
+        .map((item) => {
           const label = String(item?.label || '').trim();
           const description = String(item?.description || '').trim();
           if (!label || !description) {
@@ -80,7 +80,7 @@ export function buildPromptDisplayTokens(options: {
   const finalPrompt = String(options.finalPrompt || '').trim();
   const characters = uniqueParts(Array.isArray(options.characters) ? options.characters : []);
   const timelineLabels = Array.isArray(options.timeline)
-    ? options.timeline.map((item: any) => String(item?.label || '').trim()).filter(Boolean)
+    ? options.timeline.map((item) => String(item?.label || '').trim()).filter(Boolean)
     : [];
 
   if (options.useFirstFrame) {

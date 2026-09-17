@@ -84,7 +84,7 @@ export function resolveTimeoutMs(
 }
 
 export async function wait(ms: number) {
-  await new Promise((resolve: any) => setTimeout(resolve, ms));
+  await new Promise((resolve: (value?: unknown) => void) => setTimeout(resolve, ms));
 }
 
 export function findFirstMessage(value: unknown): string {

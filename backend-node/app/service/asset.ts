@@ -11,6 +11,7 @@ const {
 } = require('../lib/media');
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const { buildAssetCoverPrompt } = require('../lib/prompt_library');
+import type { AssetEntity, DbRow } from '../lib/entity';
 const {
   ASSET_KIND,
   ENTITY_TYPE,
@@ -22,7 +23,7 @@ class AssetService extends Service {
     return this.app.mysqlPool;
   }
 
-  isAudioAsset(asset: any) {
+  isAudioAsset(asset: AssetEntity) {
     const type = String(asset?.type || '').trim();
     const source = String(asset?.file_url || '').split(/[?#]/)[0];
     const extension = source.includes('.')
@@ -34,18 +35,20 @@ class AssetService extends Service {
     );
   }
 
-  normalizeMetaForApi(meta: any) {
+  normalizeMetaForApi(meta: unknown) {
     if (meta === null || meta === undefined || meta === '') return '';
     if (typeof meta === 'object') {
-      return String(meta.description || meta.text || meta.prompt || '').trim();
+      const record = meta as Record<string, unknown>;
+      return String(record.description || record.text || record.prompt || '').trim();
     }
     const text = String(meta).trim();
     if (!text) return '';
     try {
-      const parsed = JSON.parse(text);
+      const parsed: unknown = JSON.parse(text);
       if (typeof parsed === 'string') return parsed;
       if (parsed && typeof parsed === 'object') {
-        return String(parsed.description || parsed.text || parsed.prompt || '').trim();
+        const record = parsed as Record<string, unknown>;
+        return String(record.description || record.text || record.prompt || '').trim();
       }
     } catch {
       return text;
@@ -53,7 +56,7 @@ class AssetService extends Service {
     return text;
   }
 
-  serializeMeta(meta: any) {
+  serializeMeta(meta: unknown) {
     const description = this.normalizeMetaForApi(meta);
     return description ? JSON.stringify({ description }) : null;
   }
@@ -66,35 +69,35 @@ class AssetService extends Service {
    * service.map({ id: 5, project_id: 30, name: "CG背景", type: "scene", file_url: "/generated/assets/a.png" })
    * // => { id: 5, project_id: 30, name: "CG背景", type: "scene", file_url: "https://..." }
    */
-  map(row: Record<string, any>) {
+  map(row: DbRow): AssetEntity {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
       character_id: row.character_id === null || row.character_id === undefined ? undefined : Number(row.character_id),
-      name: row.name,
-      type: row.type,
+      name: row.name as string,
+      type: row.type as string,
       file_url: resolveUrl(
         this.app,
-        row.file_url || '',
+        String(row.file_url || ''),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       cover_url: resolveUrl(
         this.app,
-        row.cover_url || '',
+        String(row.cover_url || ''),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       cover_status:
         row.cover_status ||
         (row.cover_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
-      cover_error: row.cover_error || '',
+      cover_error: String(row.cover_error || ''),
       thumbnail_url: resolveUrl(
         this.app,
-        row.thumbnail_url || '',
+        String(row.thumbnail_url || ''),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       meta: this.normalizeMetaForApi(row.meta),
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
+      updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
     };
   }
 
@@ -146,7 +149,7 @@ class AssetService extends Service {
        FROM assets WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [projectId],
     );
-    return rows.map((row: any) => this.map(row));
+    return rows.map((row: DbRow) => this.map(row));
   }
 
   /**
@@ -163,7 +166,7 @@ class AssetService extends Service {
        FROM assets WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [characterId],
     );
-    return rows.map((row: any) => this.map(row));
+    return rows.map((row: DbRow) => this.map(row));
   }
 
   /**
@@ -300,7 +303,7 @@ class AssetService extends Service {
    * await service.ensurePreview({ id: 5, file_url: "https://example.com/a.png" })
    * // => void
    */
-  async ensurePreview(asset: any) {
+  async ensurePreview(asset: AssetEntity) {
     if (!asset || asset.thumbnail_url || this.isAudioAsset(asset)) {
       return;
     }
@@ -354,7 +357,7 @@ class AssetService extends Service {
    * service.buildCoverPrompt({ name: "CG背景", type: "scene", meta: "便利店外景" })
    * // => "..."
    */
-  buildCoverPrompt(asset: any) {
+  buildCoverPrompt(asset: AssetEntity) {
     return buildAssetCoverPrompt(asset).prompt;
   }
 

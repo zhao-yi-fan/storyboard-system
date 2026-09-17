@@ -24,6 +24,13 @@ type App = {
   config: { storyboard: StoryboardConfig };
 };
 
+export type OssClient = {
+  signatureUrl: (objectKey: string, options?: Record<string, unknown>) => string;
+  put: (...args: unknown[]) => Promise<unknown>;
+  get: (...args: unknown[]) => Promise<{ res?: { status?: number } }>;
+  delete: (...args: unknown[]) => Promise<unknown>;
+};
+
 function storyboardConfig(app: App): StoryboardConfig {
   return app.config.storyboard || {};
 }
@@ -126,7 +133,7 @@ function isOssEnabled(app: App): boolean {
   );
 }
 
-function createOssClient(app: App, usePublicEndpoint = false): any {
+function createOssClient(app: App, usePublicEndpoint = false): OssClient {
   const cfg = storyboardConfig(app);
   if (!isOssEnabled(app)) {
     throw new Error('OSS not configured');
@@ -204,10 +211,10 @@ function isManagedOssHost(app: App, host: string): boolean {
     buildOssEndpoint(cfg.aliyunOssPublicEndpoint),
     derivePublicOssEndpoint(cfg.aliyunOssEndpoint),
   ]
-    .map((item: any) => item.toLowerCase())
+    .map((item) => item.toLowerCase())
     .filter(Boolean);
   return hosts.some(
-    (candidate: any) => value === candidate || (bucket && value === `${bucket}.${candidate}`),
+    (candidate) => value === candidate || (bucket && value === `${bucket}.${candidate}`),
   );
 }
 
@@ -284,7 +291,7 @@ async function downloadGeneratedToFile(app: App, generatedPath: string, localPat
   }
   const client = createOssClient(app, false);
   const result = await client.get(generatedObjectKey(app, generatedPath), localPath);
-  if (!result || !result.res || result.res.status >= 300) {
+  if (!result || !result.res || (result.res.status || 0) >= 300) {
     throw new Error('download generated asset from OSS failed');
   }
 }

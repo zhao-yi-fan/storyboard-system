@@ -1,6 +1,13 @@
 'use strict';
 
 const Service = require('egg').Service;
+import type {
+  CharacterEntity,
+  DbConnection,
+  DbPool,
+  DbRow,
+  RequirementEntity,
+} from '../lib/entity';
 const { resolveUrl, normalizeGeneratedAssetReference } = require('../lib/generated_asset');
 const {
   mapPersonalAsset,
@@ -30,15 +37,15 @@ class AssetWorkspaceService extends Service {
     if (!rows.length) throw new Error('无权访问该项目');
   }
 
-  mapPersonal(row: any) {
+  mapPersonal(row: DbRow) {
     return mapPersonalAsset(this.app, row);
   }
 
-  mapVersion(row: any) {
+  mapVersion(row: DbRow) {
     return mapAssetVersion(this.app, row);
   }
 
-  mapVoiceVersion(row: any) {
+  mapVoiceVersion(row: DbRow) {
     return mapCharacterVoiceVersion(this.app, row);
   }
 
@@ -46,7 +53,7 @@ class AssetWorkspaceService extends Service {
     return deriveAssetRequirementStatus(currentStatus, hasMedia);
   }
 
-  async queryRequirements(projectId: number, chapterId: number | null) {
+  async queryRequirements(projectId: number, chapterId: number | null): Promise<RequirementEntity[]> {
     const params = [projectId];
     let chapterFilter = '';
     if (chapterId) {
@@ -75,7 +82,7 @@ class AssetWorkspaceService extends Service {
     return rows;
   }
 
-  async insertLegacyVersion(conn: any, project: any, entityType: string, entityId: number, fileUrl: string, previewUrl: string) {
+  async insertLegacyVersion(conn: DbPool | DbConnection, project: { id: number; user_id?: unknown }, entityType: string, entityId: number, fileUrl: string, previewUrl: string) {
     if (!project.user_id || !fileUrl) return;
     const [versions] = await conn.query(
       `SELECT id FROM asset_versions
@@ -256,7 +263,7 @@ class AssetWorkspaceService extends Service {
         chapterId ? [projectId, chapterId] : [projectId],
       );
       const propExpectedKeys = new Set();
-      const appendProp = (row: any, sourceCount: any) => {
+      const appendProp = (row: DbRow, sourceCount: unknown) => {
         const key = `${row.chapter_id}:${row.id}`;
         if (propExpectedKeys.has(key)) return;
         propExpectedKeys.add(key);
@@ -276,7 +283,7 @@ class AssetWorkspaceService extends Service {
         if (/(prop|道具)/i.test(String(prop.type || ''))) appendProp(prop, prop.source_count);
       }
 
-      for (const requirement of existingRequirements.filter((item: any) => item.kind === ASSET_KIND.PROP)) {
+      for (const requirement of existingRequirements.filter((item: RequirementEntity) => item.kind === ASSET_KIND.PROP)) {
         let [assets] = await conn.query(
           `SELECT id, name, type, meta, file_url, cover_url, thumbnail_url
            FROM assets WHERE id = ? AND project_id = ? AND deleted_at IS NULL`,
@@ -337,7 +344,7 @@ class AssetWorkspaceService extends Service {
         ].filter(
           (candidate, index, rows) =>
             !retainedIds.has(Number(candidate.id)) &&
-            rows.findIndex((row: any) => Number(row.id) === Number(candidate.id)) === index,
+            rows.findIndex((row: DbRow) => Number(row.id) === Number(candidate.id)) === index,
         );
         const current = candidates[0];
         const hasMedia = Boolean(item.fileUrl);
@@ -384,8 +391,8 @@ class AssetWorkspaceService extends Service {
       }
 
       const retiredIds = existingRequirements
-        .filter((item: any) => !retainedIds.has(Number(item.id)))
-        .map((item: any) => Number(item.id));
+        .filter((item: DbRow) => !retainedIds.has(Number(item.id)))
+        .map((item: DbRow) => Number(item.id));
       if (retiredIds.length) {
         await conn.query(
           `UPDATE asset_requirements SET deleted_at = NOW() WHERE id IN (${retiredIds.map(() => '?').join(',')})`,
@@ -406,7 +413,7 @@ class AssetWorkspaceService extends Service {
     await this.syncAssetRequirements(projectId, chapterId);
     const rows = await this.queryRequirements(projectId, chapterId);
     const base = this.app.config.storyboard.publicAppBaseUrl || '';
-    return rows.map((row: any) => {
+    return rows.map((row: RequirementEntity) => {
       const isCharacter = row.linked_entity_type === ENTITY_TYPE.CHARACTER;
       const canGenerate = !isCharacter || Boolean(row.character_avatar_url);
       return {
@@ -432,7 +439,7 @@ class AssetWorkspaceService extends Service {
        ORDER BY updated_at DESC`,
       params,
     );
-    return rows.map((row: any) => this.mapPersonal(row));
+    return rows.map((row: DbRow) => this.mapPersonal(row));
   }
 
   async savePersonal(userId: number, payload: Record<string, unknown>) {
@@ -639,7 +646,7 @@ class AssetWorkspaceService extends Service {
     }
   }
 
-  async recordCharacterDesignSheetVersion(character: any, fileUrl: string, prompt: string) {
+  async recordCharacterDesignSheetVersion(character: CharacterEntity, fileUrl: string, prompt: string) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       character.project_id,
     ]);
@@ -709,10 +716,10 @@ class AssetWorkspaceService extends Service {
        WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [entityType, entityId],
     );
-    return rows.map((row: any) => this.mapVersion(row));
+    return rows.map((row: DbRow) => this.mapVersion(row));
   }
 
-  async recordVoiceVersion(character: any, details: any) {
+  async recordVoiceVersion(character: CharacterEntity, details: Record<string, unknown>) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       character.project_id,
     ]);
@@ -754,7 +761,7 @@ class AssetWorkspaceService extends Service {
        WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [characterId],
     );
-    return rows.map((row: any) => this.mapVoiceVersion(row));
+    return rows.map((row: DbRow) => this.mapVoiceVersion(row));
   }
 
   async setCurrentVoiceVersion(characterId: number, versionId: number, userId: number) {
@@ -848,12 +855,12 @@ class AssetWorkspaceService extends Service {
       [id],
     );
     return (await this.listRequirements(rows[0].project_id, rows[0].chapter_id)).find(
-      (item: any) => item.id === Number(id),
+      (item) => item.id === Number(id),
     );
   }
 
   async generateRequirements(projectId: number, chapterId: number | null, requirementId: number | null) {
-    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item: any) =>
+    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item) =>
       requirementId
         ? item.id === Number(requirementId) && item.status !== GENERATION_STATUS.GENERATING
         : item.status === GENERATION_STATUS.PENDING || item.status === GENERATION_STATUS.FAILED,
@@ -893,7 +900,7 @@ class AssetWorkspaceService extends Service {
           item.id,
           item.linked_entity_type,
           item.linked_entity_id,
-          (error as any)?.stack || (error as any)?.message || error,
+          (error as Error)?.stack || (error as Error)?.message || error,
         );
         await this.pool.execute(
           "UPDATE asset_requirements SET status = 'failed', error_message = ? WHERE id = ?",

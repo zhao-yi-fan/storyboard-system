@@ -18,6 +18,7 @@ const {
   generateCharacterVoiceReference,
 } = require('../lib/ai_clients');
 const { buildCharacterDesignPrompt } = require('../lib/prompt_library');
+import type { CharacterEntity, DbRow } from '../lib/entity';
 const { ASSET_SOURCE_TYPE, GENERATION_STATUS } = require('../lib/domain_constants');
 
 const CHARACTER_DESIGN_SPEC = Object.freeze({
@@ -46,25 +47,25 @@ class CharacterService extends Service {
    * service.map({ id: 8, project_id: 30, name: "林婉", avatar_url: "/generated/assets/ref.png" })
    * // => { id: 8, project_id: 30, name: "林婉", avatar_url: "https://..." }
    */
-  map(row: any) {
+  map(row: DbRow): CharacterEntity {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
-      name: row.name,
-      description: row.description || '',
+      name: row.name as string,
+      description: String(row.description || ''),
       avatar_url: resolveUrl(
         this.app,
-        normalizeGeneratedAssetReference(this.app, row.avatar_url || ''),
+        normalizeGeneratedAssetReference(this.app, String(row.avatar_url || '')),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       design_sheet_url: resolveUrl(
         this.app,
-        normalizeGeneratedAssetReference(this.app, row.design_sheet_url || ''),
+        normalizeGeneratedAssetReference(this.app, String(row.design_sheet_url || '')),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       voice_reference_url: resolveUrl(
         this.app,
-        normalizeGeneratedAssetReference(this.app, row.voice_reference_url || ''),
+        normalizeGeneratedAssetReference(this.app, String(row.voice_reference_url || '')),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       voice_reference_duration:
@@ -72,16 +73,16 @@ class CharacterService extends Service {
       design_sheet_status:
         row.design_sheet_status ||
         (row.design_sheet_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
-      design_sheet_error: row.design_sheet_error || '',
+      design_sheet_error: String(row.design_sheet_error || ''),
       voice_reference_status:
         row.voice_reference_status ||
         (row.voice_reference_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
-      voice_reference_error: row.voice_reference_error || '',
-      voice_reference_text: row.voice_reference_text || '',
-      voice_name: row.voice_name || '',
-      voice_prompt: row.voice_prompt || '',
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      voice_reference_error: String(row.voice_reference_error || ''),
+      voice_reference_text: String(row.voice_reference_text || ''),
+      voice_name: String(row.voice_name || ''),
+      voice_prompt: String(row.voice_prompt || ''),
+      created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
+      updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
     };
   }
 
@@ -118,7 +119,7 @@ class CharacterService extends Service {
        FROM characters WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
       [projectId],
     );
-    return rows.map((row: any) => this.map(row));
+    return rows.map((row: DbRow) => this.map(row));
   }
 
   /**
@@ -254,11 +255,11 @@ class CharacterService extends Service {
    * service.buildDesignPrompt({ name: "林婉", description: "温婉端庄" })
    * // => "..."
    */
-  buildDesignPrompt(character: any) {
+  buildDesignPrompt(character: CharacterEntity) {
     return buildCharacterDesignPrompt(character).prompt;
   }
 
-  resolveDesignPrompt(character: any, promptOverride: string | undefined | null) {
+  resolveDesignPrompt(character: CharacterEntity, promptOverride: string | undefined | null) {
     if (promptOverride === undefined || promptOverride === null) {
       return this.buildDesignPrompt(character);
     }
@@ -278,7 +279,7 @@ class CharacterService extends Service {
    * service.collectDesignReferenceImages({ name: "林婉", avatar_url: "https://example.com/ref.png" })
    * // => { references: [{ type: "character-reference", url: "https://example.com/ref.png" }], missing: [] }
    */
-  collectDesignReferenceImages(character: any) {
+  collectDesignReferenceImages(character: CharacterEntity) {
     const references = [];
     const missing = [];
     const avatarUrl = resolveUrl(
@@ -336,7 +337,7 @@ class CharacterService extends Service {
         '这次固定走 Seedream 图生图。',
         '角色参考图只用于生成主设定图，不参与其他展示和分镜参考链路。',
         '设定板版式由默认 Prompt 描述，确认前可编辑最终 Prompt；不会传入其他角色的版式示例图。',
-        ...missing.map((item: any) => `缺少参考项：${item}`),
+        ...missing.map((item: string) => `缺少参考项：${item}`),
       ],
     };
   }
@@ -421,11 +422,11 @@ class CharacterService extends Service {
     }
   }
 
-  async generateVoiceReferenceAudio(character: any, voicePrompt: string, previewText: string) {
+  async generateVoiceReferenceAudio(character: CharacterEntity, voicePrompt: string, previewText: string) {
     return await generateCharacterVoiceReference(this.app, character, voicePrompt, previewText);
   }
 
-  async normalizeGeneratedVoiceReferenceAudio(audioBuffer: any, extension: string, outputExtension: string = extension) {
+  async normalizeGeneratedVoiceReferenceAudio(audioBuffer: Buffer, extension: string, outputExtension: string = extension) {
     return await normalizeAudioDuration(audioBuffer, {
       minSeconds: VOICE_REFERENCE_SPEC.MIN_SECONDS,
       maxSeconds: VOICE_REFERENCE_SPEC.MAX_SECONDS,
@@ -437,7 +438,7 @@ class CharacterService extends Service {
     });
   }
 
-  async storeGeneratedVoiceReferenceAudio(id: number, audioBuffer: any, extension: string) {
+  async storeGeneratedVoiceReferenceAudio(id: number, audioBuffer: Buffer, extension: string) {
     const filename = `${sanitizeFileName(`character-voice-reference-${id}`)}-${Date.now()}.${extension}`;
     return await storeBuffer(
       this.app,

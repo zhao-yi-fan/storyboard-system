@@ -9,6 +9,8 @@ const {
   isOssEnabled,
 } = require('../lib/generated_asset');
 
+import type { OssClient } from '../lib/generated_asset';
+
 type AsyncIterableBuffer = AsyncIterable<Buffer | Uint8Array>;
 
 class OssService extends Service {
@@ -19,7 +21,7 @@ class OssService extends Service {
    * service.buildClient()
    * // => OSS client
    */
-  buildClient(): any {
+  buildClient(): OssClient {
     return createOssClient(this.app, false);
   }
 
@@ -30,7 +32,7 @@ class OssService extends Service {
    * service.buildPublicClient()
    * // => OSS client
    */
-  buildPublicClient(): any {
+  buildPublicClient(): OssClient {
     return createOssClient(this.app, true);
   }
 

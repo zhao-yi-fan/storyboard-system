@@ -1,6 +1,4 @@
 'use strict';
-import { buildPromptBlueprint, normalizeTextList, PROMPT_TEMPLATE, renderPromptBlueprint,selectPromptTemplate } from './prompt_blueprint';
-
 /**
  * 构建角色主设定图 prompt。
  * @param {Record<string, unknown>} character 角色字段。
@@ -9,7 +7,10 @@ import { buildPromptBlueprint, normalizeTextList, PROMPT_TEMPLATE, renderPromptB
  * buildCharacterDesignPrompt({ name: "林婉", description: "温婉端庄，外柔内刚" })
  * // => { template: "mythic-awakening", blueprint: {...}, prompt: "..." }
  */
-export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
+import type { CharacterEntity } from './entity';
+import { buildPromptBlueprint, normalizeTextList, PROMPT_TEMPLATE, renderPromptBlueprint,selectPromptTemplate } from './prompt_blueprint';
+
+export function buildCharacterDesignPrompt(character: Pick<CharacterEntity, 'name' | 'description'>) {
   const template = PROMPT_TEMPLATE.DEFAULT;
   const blueprint = buildPromptBlueprint({
     template,
@@ -71,7 +72,7 @@ export function buildCharacterDesignPrompt(character: Record<string, unknown>) {
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
 export function buildCharacterVoicePromptText(
-  character: Record<string, unknown>,
+  character: CharacterEntity,
   userDirection = '',
 ) {
   const template = selectPromptTemplate([character.description]);

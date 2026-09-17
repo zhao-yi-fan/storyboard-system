@@ -37,7 +37,7 @@ class OssController extends ApiController {
         String(stream.mimeType || stream.mime || ''),
       );
       response.success(this.ctx, result);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (stream && !stream.readableEnded) {
         stream.resume();
       }

@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+import type { DbRow } from '../lib/entity';
 const { ASSET_KIND } = require('../lib/domain_constants');
 const { parseScriptWithDeepSeek } = require('../lib/deepseek');
 const {
@@ -85,7 +86,7 @@ class ScriptImportService extends Service {
         [projectId],
       );
       const characterIds = new Map(
-        characterRows.map((row: any) => [String(row.name).trim(), Number(row.id)]),
+        characterRows.map((row: DbRow) => [String(row.name).trim(), Number(row.id)]),
       );
 
       const result = {
@@ -98,7 +99,7 @@ class ScriptImportService extends Service {
 
       const parsedCharacters = new Set();
 
-      const upsertAsset = async (name: string, type: string, meta: any) => {
+      const upsertAsset = async (name: string, type: string, meta: unknown) => {
         const serializedMeta = meta ? JSON.stringify({ description: String(meta) }) : null;
         const [rows] = await conn.query(
           `SELECT id FROM assets
@@ -165,7 +166,7 @@ class ScriptImportService extends Service {
         for (let sceneIndex = 0; sceneIndex < chapter.scenes.length; sceneIndex++) {
           const scene = chapter.scenes[sceneIndex];
           const prompt = (scene.storyboards || [])
-            .map((storyboard: any, shotIndex: any) => {
+            .map((storyboard: DbRow, shotIndex: number) => {
               const fields = [
                 `镜号：${shotIndex + 1}`,
                 storyboard.duration ? `[0-${storyboard.duration}s]` : '',

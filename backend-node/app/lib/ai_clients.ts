@@ -27,8 +27,9 @@ const {
   wait,
 } = require('./ai_client_http');
 const { buildCharacterVoicePromptText } = require('./prompt_library');
+import type { CharacterEntity, LibApp, StoryboardAppConfig } from './entity';
 
-function getConfig(app: any) {
+function getConfig(app: LibApp): StoryboardAppConfig {
   return app.config.storyboard || {};
 }
 
@@ -43,9 +44,10 @@ function getConfig(app: any) {
  * await generateSeedreamImage(app, "生成高细节角色主设定板", ["https://role-ref.png"], { size: "1600x2304" })
  * // => "https://..."
  */
-async function generateSeedreamImage(app: any, prompt: any, imageUrls: any, options: { size?: string } = {}) {
+async function generateSeedreamImage(app: LibApp, prompt: string, imageUrls: string[], options: { size?: string } = {}) {
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
+  const seedreamImageApiKey = String(cfg.seedreamImageApiKey || '');
   const baseUrl = normalizeBaseUrl(
     cfg.seedreamImageBaseUrl,
     DEFAULT_PROVIDER_BASE_URL.ARK,
@@ -79,7 +81,7 @@ async function generateSeedreamImage(app: any, prompt: any, imageUrls: any, opti
   }
   const data = await postJson(
     `${baseUrl}/images/generations`,
-    cfg.seedreamImageApiKey,
+    seedreamImageApiKey,
     payload,
     timeoutMs,
   );
@@ -104,11 +106,11 @@ async function generateSeedreamImage(app: any, prompt: any, imageUrls: any, opti
  * // => "https://..."
  */
 async function generateWanxVideo(
-  app: any,
-  prompt: any,
-  imageUrl: any,
-  model: any,
-  duration: any,
+  app: LibApp,
+  prompt: string,
+  imageUrl: string,
+  model: string,
+  duration: number,
   useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
 ) {
   const cfg = getConfig(app);
@@ -291,10 +293,10 @@ function buildSeedanceVideoPayload({
 }
 
 async function generateSeedanceVideo(
-  app: any,
-  prompt: any,
-  imageUrl: any,
-  duration: any,
+  app: LibApp,
+  prompt: string,
+  imageUrl: string,
+  duration: number,
   useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
   referenceImageUrls = [],
   referenceAudioUrls = [],
@@ -367,7 +369,7 @@ async function generateSeedanceVideo(
         timeoutMs,
       );
     } catch (error) {
-      if (Number((error as any).status) >= 400 && Number((error as any).status) < 500) throw error;
+      if (Number((error as { status?: unknown }).status) >= 400 && Number((error as { status?: unknown }).status) < 500) throw error;
       app.logger?.warn?.(`[Seedance] task ${taskId} poll failed, retrying: ${(error as Error).message}`);
       continue;
     }
@@ -400,7 +402,7 @@ async function generateSeedanceVideo(
  * await createCharacterVoicePreview(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
  * // => { voicePrompt: "...", previewText: "今晚你先走。", targetModel: "qwen3-tts-vd-2026-01-26" }
  */
-async function createCharacterVoicePreview(app: any, character: any, customPrompt: any, _customText: any) {
+async function createCharacterVoicePreview(app: LibApp, character: CharacterEntity, customPrompt: string, _customText: string) {
   const cfg = getConfig(app);
   const voicePrompt = withVoiceDurationInstruction(
     buildCharacterVoicePromptText(character, String(customPrompt || '').trim()).prompt,
@@ -432,7 +434,7 @@ async function createCharacterVoicePreview(app: any, character: any, customPromp
  * await generateCharacterVoiceReference(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
  * // => { audioBuffer: <Buffer ...>, voiceName: "...", voicePrompt: "..." }
  */
-async function generateCharacterVoiceReference(app: any, character: any, customPrompt: any, customText: any) {
+async function generateCharacterVoiceReference(app: LibApp, character: CharacterEntity, customPrompt: string, customText: string) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '角色主语音参考生成未配置：缺少 DASHSCOPE_API_KEY');
   const preview = await createCharacterVoicePreview(app, character, customPrompt, customText);
@@ -480,7 +482,7 @@ async function generateCharacterVoiceReference(app: any, character: any, customP
   };
 }
 
-function preferredVoiceName(character: any) {
+function preferredVoiceName(character: CharacterEntity) {
   const token =
     String(character?.name || AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK)
       .toLowerCase()
@@ -491,7 +493,7 @@ function preferredVoiceName(character: any) {
   return `${token}_${character.id}`;
 }
 
-function withVoiceDurationInstruction(prompt: any) {
+function withVoiceDurationInstruction(prompt: unknown) {
   const text = String(prompt || '').trim();
   if (!text) {
     return AI_VOICE_DEFAULT.DURATION_INSTRUCTION;
@@ -502,7 +504,7 @@ function withVoiceDurationInstruction(prompt: any) {
   return `${text}\n${AI_VOICE_DEFAULT.DURATION_INSTRUCTION}`;
 }
 
-function buildCharacterVoiceReferenceText(_character: any) {
+function buildCharacterVoiceReferenceText(_character: unknown) {
   return AI_VOICE_DEFAULT.REFERENCE_TEXT;
 }
 

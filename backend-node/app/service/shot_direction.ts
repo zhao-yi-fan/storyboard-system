@@ -5,8 +5,9 @@ const { buildShotDirectionGraph } = require('../lib/shot_direction_graph');
 const { GENERATION_STATUS } = require('../lib/domain_constants');
 
 const ANALYSIS_NOTE_MARKER = '镜头走向建议：';
+import type { DbRow, SceneEntity, ShotDirectionAnalysis, ShotDirectionEntity, StoryboardEntity } from '../lib/entity';
 
-function parseResultJson(value: any) {
+function parseResultJson(value: unknown): ShotDirectionAnalysis | null {
   if (!value) {
     return null;
   }
@@ -20,26 +21,26 @@ function parseResultJson(value: any) {
   }
 }
 
-function cleanString(value: any) {
+function cleanString(value: unknown) {
   return String(value || '').trim();
 }
 
-function buildAnalysisNotes(result: any) {
+function buildAnalysisNotes(result: ShotDirectionAnalysis | null) {
   const lines = [
     `${ANALYSIS_NOTE_MARKER}`,
-    result.narrative_role ? `- 叙事功能：${result.narrative_role}` : '',
-    result.emotional_shift ? `- 情绪推进：${result.emotional_shift}` : '',
-    result.continuity_from_previous ? `- 前镜承接：${result.continuity_from_previous}` : '',
-    result.continuity_to_next ? `- 后镜引出：${result.continuity_to_next}` : '',
+    result?.narrative_role ? `- 叙事功能：${result.narrative_role}` : '',
+    result?.emotional_shift ? `- 情绪推进：${result.emotional_shift}` : '',
+    result?.continuity_from_previous ? `- 前镜承接：${result.continuity_from_previous}` : '',
+    result?.continuity_to_next ? `- 后镜引出：${result.continuity_to_next}` : '',
   ].filter(Boolean);
-  const risks = Array.isArray(result.risk_flags) ? result.risk_flags.filter(Boolean) : [];
+  const risks = Array.isArray(result?.risk_flags) ? result.risk_flags.filter(Boolean) : [];
   if (risks.length) {
     lines.push(`- 风险提示：${risks.join('；')}`);
   }
   return lines.join('\n');
 }
 
-function mergeAnalysisNotes(currentNotes: any, result: any) {
+function mergeAnalysisNotes(currentNotes: unknown, result: ShotDirectionAnalysis | null) {
   const existing = cleanString(currentNotes);
   const markerIndex = existing.indexOf(ANALYSIS_NOTE_MARKER);
   const base = markerIndex >= 0 ? existing.slice(0, markerIndex).trim() : existing;
@@ -51,17 +52,17 @@ class ShotDirectionService extends Service {
     return this.app.mysqlPool;
   }
 
-  map(row: any) {
+  map(row: DbRow): ShotDirectionEntity {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
       scene_id: Number(row.scene_id),
       storyboard_id: Number(row.storyboard_id),
-      status: row.status,
+      status: row.status as string,
       result_json: parseResultJson(row.result_json),
-      error_message: row.error_message || '',
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      error_message: String(row.error_message || ''),
+      created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
+      updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
     };
   }
 
@@ -81,7 +82,7 @@ class ShotDirectionService extends Service {
        ORDER BY sb.sort_order ASC, sb.id ASC, sda.id ASC`,
       [sceneId, sceneId],
     );
-    return rows.map((row: any) => this.map(row));
+    return rows.map((row: DbRow) => this.map(row));
   }
 
   async findLatestByStoryboardId(storyboardId: number) {
@@ -96,7 +97,7 @@ class ShotDirectionService extends Service {
     return rows.length ? this.map(rows[0]) : null;
   }
 
-  async replaceWithAnalyzingRows(scene: any, storyboards: any[]) {
+  async replaceWithAnalyzingRows(scene: SceneEntity, storyboards: StoryboardEntity[]) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -121,7 +122,7 @@ class ShotDirectionService extends Service {
     }
   }
 
-  async persistSucceeded(sceneId: number, analyses: any[]) {
+  async persistSucceeded(sceneId: number, analyses: ShotDirectionAnalysis[]) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -173,7 +174,7 @@ class ShotDirectionService extends Service {
     await this.replaceWithAnalyzingRows(scene, storyboards);
     const graph = buildShotDirectionGraph({
       config: this.app.config.storyboard || {},
-      persistResults: async (analyses: any) => {
+      persistResults: async (analyses: ShotDirectionAnalysis[]) => {
         await this.persistSucceeded(scene.id, analyses);
       },
     });

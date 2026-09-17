@@ -71,14 +71,14 @@ export function buildSceneCoverPrompt(
   scene: Record<string, unknown>,
   storyboards: Array<Record<string, unknown>>,
 ) {
-  const backgrounds = uniqueParts(storyboards.map((item: any) => item.background)).slice(0, 3);
+  const backgrounds = uniqueParts(storyboards.map((item) => item.background)).slice(0, 3);
   const characters = uniqueParts(
-    storyboards.flatMap((item: any) =>
+    storyboards.flatMap((item) =>
       Array.isArray(item.character_names) ? item.character_names : [],
     ),
   ).slice(0, 5);
-  const moods = uniqueParts(storyboards.map((item: any) => item.mood)).slice(0, 4);
-  const content = uniqueParts(storyboards.map((item: any) => item.content)).slice(0, 4);
+  const moods = uniqueParts(storyboards.map((item) => item.mood)).slice(0, 4);
+  const content = uniqueParts(storyboards.map((item) => item.content)).slice(0, 4);
   const stylePresetPrompt = resolveStylePresetPrompt(scene.style_preset);
   const template = selectImageCoverTemplate(scene.style_preset, [
     scene.style_notes,
@@ -153,7 +153,9 @@ export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
  * buildAssetCoverPrompt({ name: "CG背景", type: "scene", meta: "便利店外景" })
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
-export function buildAssetCoverPrompt(asset: Record<string, unknown>) {
+import type { AssetEntity } from './entity';
+
+export function buildAssetCoverPrompt(asset: AssetEntity) {
   const template = selectPromptTemplate([asset.type, asset.meta, asset.name]);
   const blueprint = buildPromptBlueprint({
     template,

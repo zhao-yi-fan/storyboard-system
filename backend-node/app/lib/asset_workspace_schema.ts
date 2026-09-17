@@ -1,6 +1,8 @@
 'use strict';
 
-async function columnExists(pool: any, tableName: string, columnName: string) {
+import type { DbConnection, DbPool } from './entity';
+
+async function columnExists(pool: DbPool, tableName: string, columnName: string) {
   const [rows] = await pool.query(
     `SELECT 1 FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`,
@@ -9,13 +11,13 @@ async function columnExists(pool: any, tableName: string, columnName: string) {
   return rows.length > 0;
 }
 
-async function addColumnIfMissing(pool: any, tableName: string, columnName: string, definition: string) {
+async function addColumnIfMissing(pool: DbPool, tableName: string, columnName: string, definition: string) {
   if (!(await columnExists(pool, tableName, columnName))) {
     await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`);
   }
 }
 
-async function indexExists(pool: any, tableName: string, indexName: string) {
+async function indexExists(pool: DbPool, tableName: string, indexName: string) {
   const [rows] = await pool.query(
     `SELECT 1 FROM information_schema.STATISTICS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1`,
@@ -24,7 +26,7 @@ async function indexExists(pool: any, tableName: string, indexName: string) {
   return rows.length > 0;
 }
 
-async function ensureProjectNameConstraint(pool: any) {
+async function ensureProjectNameConstraint(pool: DbPool) {
   await addColumnIfMissing(
     pool,
     'projects',
@@ -42,8 +44,8 @@ async function ensureProjectNameConstraint(pool: any) {
   }
 }
 
-export async function ensureAssetWorkspaceSchema(pool: any) {
-  const connection = await pool.getConnection();
+export async function ensureAssetWorkspaceSchema(pool: DbPool) {
+  const connection: DbConnection = await pool.getConnection();
   try {
     const [locks] = await connection.query(
       "SELECT GET_LOCK('storyboard_asset_workspace_schema', 30) AS acquired",

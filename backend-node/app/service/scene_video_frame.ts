@@ -10,6 +10,7 @@ const {
   uploadBuffer,
 } = require('../lib/generated_asset');
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
+import type { DbRow, SceneEntity, SceneMediaGenerationEntity, SceneVideoFrameEntity } from '../lib/entity';
 
 const FRAME_UPLOAD_SPEC = Object.freeze({
   ALLOWED_IMAGE_TYPES: Object.freeze(['image/webp', 'image/jpeg', 'image/png']),
@@ -21,19 +22,19 @@ class SceneVideoFrameService extends Service {
     return this.app.mysqlPool;
   }
 
-  map(row: any, targets: any[] = []) {
+  map(row: DbRow, targets: DbRow[] = []): SceneVideoFrameEntity {
     const baseUrl = this.app.config.storyboard.publicAppBaseUrl || '';
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
       source_scene_id: Number(row.source_scene_id),
       source_generation_id: Number(row.source_generation_id),
-      source_scene_title: row.source_scene_title || '',
+      source_scene_title: String(row.source_scene_title || ''),
       timestamp_ms: Number(row.timestamp_ms),
-      file_url: resolveUrl(this.app, row.file_url || '', baseUrl),
-      preview_url: resolveUrl(this.app, row.preview_url || row.file_url || '', baseUrl),
+      file_url: resolveUrl(this.app, String(row.file_url || ''), baseUrl),
+      preview_url: resolveUrl(this.app, row.preview_url || String(row.file_url || ''), baseUrl),
       target_scenes: targets,
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
+      created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
     };
   }
 
@@ -49,8 +50,8 @@ class SceneVideoFrameService extends Service {
     return await this.attachTargets(rows);
   }
 
-  async listByGenerationIds(generationIds: any[]) {
-    const ids = [...new Set(generationIds.map(Number).filter((id: any) => id > 0))];
+  async listByGenerationIds(generationIds: number[]) {
+    const ids = [...new Set(generationIds.map(Number).filter((id) => id > 0))];
     if (!ids.length) return [];
     const placeholders = ids.map(() => '?').join(',');
     const [rows] = await this.pool.query(
@@ -69,8 +70,8 @@ class SceneVideoFrameService extends Service {
     return grouped.get(Number(sceneId)) || [];
   }
 
-  async listByTargetScenes(sceneIds: any[]) {
-    const ids = [...new Set(sceneIds.map(Number).filter((id: any) => id > 0))];
+  async listByTargetScenes(sceneIds: number[]) {
+    const ids = [...new Set(sceneIds.map(Number).filter((id) => id > 0))];
     if (!ids.length) return new Map();
     const [rows] = await this.pool.query(
       `SELECT f.*, source.title AS source_scene_title
@@ -86,7 +87,7 @@ class SceneVideoFrameService extends Service {
     );
     const attached = await this.attachTargets(rows);
     const grouped = new Map();
-    attached.forEach((frame: any, index: any) => {
+    attached.forEach((frame, index) => {
       const targetSceneId = Number(rows[index].target_scene_id);
       const items = grouped.get(targetSceneId) || [];
       items.push(frame);
@@ -95,9 +96,9 @@ class SceneVideoFrameService extends Service {
     return grouped;
   }
 
-  async attachTargets(rows: any[]) {
+  async attachTargets(rows: DbRow[]) {
     if (!rows.length) return [];
-    const ids = rows.map((row: any) => Number(row.id));
+    const ids = rows.map((row) => Number(row.id));
     const [usageRows] = await this.pool.query(
       `SELECT u.frame_id, u.usage_type, s.id, s.title
        FROM scene_video_frame_usages u
@@ -116,18 +117,18 @@ class SceneVideoFrameService extends Service {
       });
       targetsByFrame.set(Number(usage.frame_id), targets);
     }
-    return rows.map((row: any) => this.map(row, targetsByFrame.get(Number(row.id)) || []));
+    return rows.map((row) => this.map(row, targetsByFrame.get(Number(row.id)) || []));
   }
 
-  async attachToGenerations(generations: any[]) {
-    const frames = await this.listByGenerationIds(generations.map((item: any) => item.id));
+  async attachToGenerations(generations: SceneMediaGenerationEntity[]) {
+    const frames = await this.listByGenerationIds(generations.map((item) => item.id));
     const byGeneration = new Map();
     for (const frame of frames) {
       const items = byGeneration.get(frame.source_generation_id) || [];
       items.push(frame);
       byGeneration.set(frame.source_generation_id, items);
     }
-    return generations.map((item: any) => ({
+    return generations.map((item) => ({
       ...item,
       extracted_frames: byGeneration.get(Number(item.id)) || [],
     }));
@@ -150,7 +151,7 @@ class SceneVideoFrameService extends Service {
     return { scene, generation };
   }
 
-  resolveDurationSeconds(scene: any, generation: any) {
+  resolveDurationSeconds(scene: SceneEntity, generation: SceneMediaGenerationEntity) {
     const meta = parseMediaGenerationMeta(generation.meta_json);
     return Number(meta.duration || scene.video_duration || scene.generation_duration || 0);
   }
@@ -201,7 +202,7 @@ class SceneVideoFrameService extends Service {
       );
       await this.bind(existingRows[0].id, targetScene.id);
       return (await this.listByGeneration(sceneId, generationId)).find(
-        (item: any) => item.id === Number(existingRows[0].id),
+        (item) => item.id === Number(existingRows[0].id),
       );
     }
 
@@ -239,12 +240,12 @@ class SceneVideoFrameService extends Service {
       );
       await connection.commit();
       return (await this.listByGeneration(sceneId, generationId)).find(
-        (item: any) => item.id === frameId,
+        (item) => item.id === frameId,
       );
     } catch (error) {
       if (connection) await connection.rollback();
       await deleteGeneratedAsset(this.app, publicPath).catch(() => null);
-      if ((error as any)?.code === 'ER_DUP_ENTRY') {
+      if ((error as { code?: unknown })?.code === 'ER_DUP_ENTRY') {
         const [duplicateRows] = await this.pool.query(
           `SELECT id FROM scene_video_frames
            WHERE source_generation_id = ? AND timestamp_ms = ? AND deleted_at IS NULL LIMIT 1`,
@@ -253,7 +254,7 @@ class SceneVideoFrameService extends Service {
         if (duplicateRows.length) {
           await this.bind(duplicateRows[0].id, targetScene.id);
           return (await this.listByGeneration(sceneId, generationId)).find(
-            (item: any) => item.id === Number(duplicateRows[0].id),
+            (item) => item.id === Number(duplicateRows[0].id),
           );
         }
       }
@@ -292,7 +293,7 @@ class SceneVideoFrameService extends Service {
     } finally {
       connection.release();
     }
-    await deleteGeneratedAsset(this.app, rows[0].file_url).catch((error: any) =>
+    await deleteGeneratedAsset(this.app, rows[0].file_url).catch((error: unknown) =>
       this.ctx.logger.warn('delete video frame asset failed: %s', (error as Error).message),
     );
     return { success: true };

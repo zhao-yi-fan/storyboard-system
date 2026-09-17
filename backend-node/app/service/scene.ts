@@ -26,6 +26,18 @@ const {
 const { optimizeStoryboardPrompt } = require('../lib/prompt_optimizer');
 const { optimizeSceneDescription } = require('../lib/scene_description_optimizer');
 const { SceneRepository } = require('../repository/scene_repository');
+import type {
+  AssetEntity,
+  CharacterEntity,
+  DbRow,
+  ImageReferenceItem,
+  ReferenceMapping,
+  SceneEntity,
+  SceneMediaGenerationEntity,
+  SceneVideoFrameEntity,
+  SceneVideoPreview,
+  VideoFrameReferenceItem,
+} from '../lib/entity';
 const {
   GENERATION_STATUS,
   MEDIA_TYPE,
@@ -69,7 +81,7 @@ class SceneService extends Service {
 
     const rows = await this.repository.findByChapterId(chapterId);
 
-    const items = rows.map((row: any) => mapScene(this.app, row));
+    const items: SceneEntity[] = rows.map((row: DbRow) => mapScene(this.app, row));
     await this.attachCharacters(items);
     await this.attachAssets(items);
     await this.attachVideoFrameReferences(items);
@@ -94,11 +106,11 @@ class SceneService extends Service {
     return item;
   }
 
-  async attachVideoFrameReferences(items: any[]) {
+  async attachVideoFrameReferences(items: SceneEntity[]) {
     const grouped = await this.ctx.service.sceneVideoFrame.listByTargetScenes(
-      items.map((item: any) => item.id),
+      items.map((item) => item.id),
     );
-    items.forEach((item: any) => {
+    items.forEach((item) => {
       item.video_frame_references = grouped.get(Number(item.id)) || [];
     });
   }
@@ -306,9 +318,9 @@ class SceneService extends Service {
     await this.pool.execute('UPDATE scenes SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
-  async attachCharacters(items: any[]) {
+  async attachCharacters(items: SceneEntity[]) {
     if (!items.length) return;
-    const ids = items.map((item: any) => item.id);
+    const ids = items.map((item) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
       `SELECT sc.scene_id, c.id, c.project_id, c.name, c.description, c.avatar_url,
@@ -320,9 +332,9 @@ class SceneService extends Service {
        ORDER BY sc.scene_id ASC, c.id ASC`,
       ids,
     );
-    const byScene = new Map(items.map((item: any) => [item.id, item]));
+    const byScene = new Map(items.map((item) => [item.id, item]));
     for (const row of rows) {
-      const target: any = byScene.get(Number(row.scene_id));
+      const target = byScene.get(Number(row.scene_id));
       if (!target) continue;
       const character = this.ctx.service.character.map(row);
       target.characters.push(character);
@@ -330,9 +342,9 @@ class SceneService extends Service {
     }
   }
 
-  async attachAssets(items: any[]) {
+  async attachAssets(items: SceneEntity[]) {
     if (!items.length) return;
-    const ids = items.map((item: any) => item.id);
+    const ids = items.map((item) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
       `SELECT DISTINCT sau.scene_id, a.id, a.project_id, a.character_id, a.name, a.type,
@@ -343,9 +355,9 @@ class SceneService extends Service {
        ORDER BY sau.scene_id ASC, a.id ASC`,
       ids,
     );
-    const byScene = new Map(items.map((item: any) => [item.id, item]));
+    const byScene = new Map(items.map((item) => [item.id, item]));
     for (const row of rows) {
-      const target: any = byScene.get(Number(row.scene_id));
+      const target = byScene.get(Number(row.scene_id));
       if (!target) continue;
       const asset = this.ctx.service.asset.map(row);
       target.assets.push(asset);
@@ -417,13 +429,13 @@ class SceneService extends Service {
    * service.buildCoverPrompt({ title: "便利店门口" }, [{ content: "李明抬头" }])
    * // => "..."
    */
-  buildCoverPrompt(scene: any) {
+  buildCoverPrompt(scene: SceneEntity) {
     const prompt = assertCompositePromptLength(scene.prompt || scene.description || '');
     if (!prompt) throw new Error('片段 Prompt 不能为空');
     return extractFirstShotCoverPrompt(prompt);
   }
 
-  buildGenerationReferenceState(scene: any, references: any[], missing: any[], projectReferenceNames: string[] = []) {
+  buildGenerationReferenceState(scene: SceneEntity, references: Array<ImageReferenceItem | VideoFrameReferenceItem>, missing: string[], projectReferenceNames: string[] = []) {
     const prompt = String(scene.prompt || scene.description || '');
     const boundNames = new Set(
       [
@@ -431,7 +443,7 @@ class SceneService extends Service {
         ...(Array.isArray(scene.assets) ? scene.assets : []),
         ...(Array.isArray(scene.video_frame_references) ? scene.video_frame_references : []),
       ]
-        .map((item: any) => String(item.name || '').trim())
+        .map((item) => String('name' in item && item.name ? item.name : '').trim())
         .filter(Boolean),
     );
     const typeLabels: Record<string, string> = {
@@ -442,7 +454,7 @@ class SceneService extends Service {
       asset: '图片参考',
       video_frame: '视频抽帧',
     };
-    const mappings = references.map((reference: any, index: any) => {
+    const mappings: ReferenceMapping[] = references.map((reference, index) => {
       const name = String(reference.name || '').trim();
       const mention = name ? `@${name}` : '';
       const isMentioned = !!mention && prompt.includes(mention);
@@ -460,13 +472,13 @@ class SceneService extends Service {
       };
     });
     const boundWithoutMentions = mappings
-      .filter((mapping: any) => !mapping.is_mentioned)
-      .map((mapping: any) => mapping.name);
+      .filter((mapping) => !mapping.is_mentioned)
+      .map((mapping) => mapping.name);
     const knownNames = Array.from(
-      new Set(projectReferenceNames.map((name: any) => String(name || '').trim()).filter(Boolean)),
+      new Set(projectReferenceNames.map((name) => String(name || '').trim()).filter(Boolean)),
     );
     const unboundMentions = knownNames.filter(
-      (name: any) => prompt.includes(`@${name}`) && !boundNames.has(name),
+      (name) => prompt.includes(`@${name}`) && !boundNames.has(name),
     );
 
     return {
@@ -475,13 +487,13 @@ class SceneService extends Service {
       mappings,
       bound_without_mentions: boundWithoutMentions,
       unbound_mentions: unboundMentions,
-      recognized_bound_mentions: Array.from(boundNames).filter((name: any) =>
+      recognized_bound_mentions: Array.from(boundNames).filter((name) =>
         prompt.includes(`@${name}`),
       ),
     };
   }
 
-  async generationReferencesForScene(scene: any) {
+  async generationReferencesForScene(scene: SceneEntity) {
     const [{ references, missing }, characters, assets] = await Promise.all([
       this.ctx.service.storyboard.selectReferenceImages(scene, scene),
       this.ctx.service.character.findByProjectId(scene.project_id),
@@ -492,12 +504,12 @@ class SceneService extends Service {
       scene,
       [...references, ...frameReferences],
       missing,
-      [...characters, ...assets].map((item: any) => item.name),
+      [...(characters as CharacterEntity[]), ...(assets as AssetEntity[])].map((item) => item.name),
     );
   }
 
-  buildVideoFrameReferences(frames: any[]) {
-    return frames.map((frame: any) => {
+  buildVideoFrameReferences(frames: SceneVideoFrameEntity[]): VideoFrameReferenceItem[] {
+    return frames.map((frame) => {
       const seconds = (Number(frame.timestamp_ms || 0) / 1000).toFixed(1);
       const sceneTitle = String(frame.source_scene_title || `片段${frame.source_scene_id}`);
       return {
@@ -516,9 +528,9 @@ class SceneService extends Service {
     return await this.generationReferencesForScene(scene);
   }
 
-  buildReferenceMappedPrompt(prompt: string, mappings: any[]) {
+  buildReferenceMappedPrompt(prompt: string, mappings: ReferenceMapping[]) {
     if (!mappings.length) return prompt;
-    return `【参考图对应关系】\n${mappings.map((mapping: any) => mapping.prompt_text).join('\n')}\n\n${prompt}`;
+    return `【参考图对应关系】\n${mappings.map((mapping) => mapping.prompt_text).join('\n')}\n\n${prompt}`;
   }
 
   /**
@@ -588,7 +600,7 @@ class SceneService extends Service {
       const imageUrl = await generateSeedreamImage(
         this.app,
         preview.final_prompt,
-        useTextOnly ? [] : preview.reference_images.map((item: any) => item.url),
+        useTextOnly ? [] : preview.reference_images.map((item) => item.url),
       );
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.png`;
       stored = await downloadAndStore(this.app, imageUrl, 'scene-covers', filename, 'image/png');
@@ -650,7 +662,7 @@ class SceneService extends Service {
     return await this.ctx.service.sceneMediaLibrary.list(id);
   }
 
-  async applyMediaGeneration(id: number, generation: any) {
+  async applyMediaGeneration(id: number, generation: SceneMediaGenerationEntity) {
     if (!generation || Number(generation.scene_id) !== Number(id)) {
       throw new Error('scene media generation not found');
     }
@@ -790,6 +802,7 @@ class SceneService extends Service {
     );
     if (preview.blocking_reasons.length) throw new Error(preview.blocking_reasons.join('；'));
     const current = await this.findById(id);
+    if (!current) throw new Error('scene not found');
     if (current.video_status === GENERATION_STATUS.GENERATING) {
       return { scene_id: id, scene: current };
     }
@@ -815,18 +828,20 @@ class SceneService extends Service {
       video_status: GENERATION_STATUS.GENERATING,
       video_error: '',
     });
-    void this.generateVideoAsync(id, preview, generation.id).catch((error: any) =>
+    void this.generateVideoAsync(id, preview, generation.id).catch((error: unknown) =>
       this.ctx.logger.error(error),
     );
     return { scene_id: id, scene: await this.findById(id) };
   }
 
-  async generateVideoAsync(id: number, preview: any, generationId: number) {
+  async generateVideoAsync(id: number, preview: SceneVideoPreview, generationId: number) {
     let scene = await this.findById(id);
+    if (!scene) throw new Error('scene not found');
     try {
       if (preview.use_first_frame && !scene.cover_url) {
         await this.generateCover(id, '', false);
         scene = await this.findById(id);
+        if (!scene) throw new Error('scene not found');
       }
       const imageInput = preview.use_first_frame ? resolveMediaUrl(this.app, scene.cover_url) : '';
       if (preview.use_first_frame && !imageInput) {
@@ -839,13 +854,13 @@ class SceneService extends Service {
             imageInput,
             preview.duration,
             preview.use_first_frame,
-            preview.reference_images.map((item: any) => item.url),
-            preview.audio_reference_assets.map((item: any) => item.url),
+            preview.reference_images.map((item) => item.url),
+            preview.audio_reference_assets.map((item) => item.url),
             preview.resolution,
             preview.aspect_ratio,
             preview.audio,
             {
-              onTaskCreated: async (taskId: any) => {
+              onTaskCreated: async (taskId: string) => {
                 const currentGeneration =
                   await this.ctx.service.sceneMediaGeneration.findById(generationId);
                 await this.ctx.service.sceneMediaGeneration.update(generationId, {
@@ -944,7 +959,7 @@ class SceneService extends Service {
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(
         this.app,
-        inputs.map((item: any) => item.source),
+        inputs.map((item: { source: string }) => item.source),
         'scene-videos',
         filename,
       );

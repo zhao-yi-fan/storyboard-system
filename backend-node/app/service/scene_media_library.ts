@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+import type { SceneMediaGenerationEntity } from '../lib/entity';
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
 const {
   ASSET_SOURCE_TYPE,
@@ -15,7 +16,7 @@ class SceneMediaLibraryService extends Service {
     return await this.ctx.service.sceneVideoFrame.attachToGenerations(generations);
   }
 
-  async apply(sceneId: number, generation: any) {
+  async apply(sceneId: number, generation: SceneMediaGenerationEntity) {
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
       throw new Error('scene media generation not found');
     }
@@ -64,7 +65,7 @@ class SceneMediaLibraryService extends Service {
     const remaining = await this.list(sceneId);
     if (generation.is_current) {
       const replacement = remaining.find(
-        (item: any) =>
+        (item: SceneMediaGenerationEntity) =>
           item.media_type === generation.media_type &&
           item.status === GENERATION_STATUS.SUCCEEDED &&
           item.result_url,

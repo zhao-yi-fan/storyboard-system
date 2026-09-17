@@ -31,7 +31,7 @@ export function extractPromptMentions(prompt: string) {
     new Set(
       Array.from(
         String(prompt || '').matchAll(/@([^\s@|，。；：,;()[\]{}"'“”]+)/g),
-        (match: any) => match[1],
+        (match) => match[1],
       ),
     ),
   );
@@ -42,18 +42,18 @@ export function assertPromptMentionsPreserved(originalPrompt: string, optimizedP
   const optimizedMentionList = extractPromptMentions(optimizedPrompt);
   const originalMentionSet = new Set(originalMentions);
   const optimizedMentions = new Set(optimizedMentionList);
-  const missingMentions = originalMentions.filter((mention: any) => !optimizedMentions.has(mention));
+  const missingMentions = originalMentions.filter((mention) => !optimizedMentions.has(mention));
   if (missingMentions.length) {
     throw new Error(
-      `AI 优化结果遗漏资产引用：${missingMentions.map((name: any) => `@${name}`).join('、')}`,
+      `AI 优化结果遗漏资产引用：${missingMentions.map((name) => `@${name}`).join('、')}`,
     );
   }
   const unexpectedMentions = optimizedMentionList.filter(
-    (mention: any) => !originalMentionSet.has(mention),
+    (mention) => !originalMentionSet.has(mention),
   );
   if (unexpectedMentions.length) {
     throw new Error(
-      `AI 优化结果新增了未知资产引用：${unexpectedMentions.map((name: any) => `@${name}`).join('、')}`,
+      `AI 优化结果新增了未知资产引用：${unexpectedMentions.map((name) => `@${name}`).join('、')}`,
     );
   }
 }

@@ -1,6 +1,4 @@
 'use strict';
-import { buildPromptBlueprint, buildVideoTimeline, expandCameraDirection, expandCameraMotion, expandShotType, normalizeTextList, renderPromptBlueprint,selectPromptTemplate, summarizeVideoContent, VIDEO_NEGATIVE } from './prompt_blueprint';
-
 /**
  * 构建镜头视频生成 prompt。
  * @param {Record<string, unknown>} storyboard 镜头字段。
@@ -11,9 +9,12 @@ import { buildPromptBlueprint, buildVideoTimeline, expandCameraDirection, expand
  * buildStoryboardVideoPrompt({ content: "李明抬头", camera_motion: "缓推" }, { title: "便利店门口" }, 5)
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
+import type { CharacterEntity, SceneEntity, StoryboardEntity } from './entity';
+import { buildPromptBlueprint, buildVideoTimeline, expandCameraDirection, expandCameraMotion, expandShotType, normalizeTextList, renderPromptBlueprint,selectPromptTemplate, summarizeVideoContent, VIDEO_NEGATIVE } from './prompt_blueprint';
+
 export function buildStoryboardVideoPrompt(
-  storyboard: Record<string, unknown>,
-  scene: Record<string, unknown>,
+  storyboard: Partial<StoryboardEntity>,
+  scene: Partial<SceneEntity>,
   duration: number,
   options: { audio?: boolean; useFirstFrame?: boolean } = {},
 ) {
@@ -24,7 +25,7 @@ export function buildStoryboardVideoPrompt(
       ? storyboard.character_names
       : Array.isArray(storyboard.characters)
         ? storyboard.characters
-            .map((item: Record<string, unknown>) => String(item?.name || '').trim())
+            .map((item: CharacterEntity) => String(item?.name || '').trim())
             .filter(Boolean)
         : [];
   const template = selectPromptTemplate([

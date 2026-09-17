@@ -60,9 +60,16 @@ class ProjectService extends Service {
     return projects;
   }
 
-  async backfillMissingPosters(projects: any[]) {
+  async backfillMissingPosters(
+    projects: Array<{
+      video_status: string;
+      video_url: string;
+      video_poster_url?: string | null;
+      [key: string]: unknown;
+    }>,
+  ) {
     const missingPosterRows = projects.filter(
-      (project: any) =>
+      (project) =>
         project.video_status === GENERATION_STATUS.SUCCEEDED &&
         project.video_url &&
         !project.video_poster_url,
@@ -71,7 +78,7 @@ class ProjectService extends Service {
     for (let index = 0; index < missingPosterRows.length; index += posterConcurrency) {
       const batch = missingPosterRows.slice(index, index + posterConcurrency);
       await Promise.all(
-        batch.map((project: any) => this.ctx.service.projectVideoPoster.ensureBestEffort(project)),
+        batch.map((project) => this.ctx.service.projectVideoPoster.ensureBestEffort(project)),
       );
     }
   }
@@ -175,7 +182,7 @@ class ProjectService extends Service {
         [userId, name, String(payload.description || ''), ''],
       );
     } catch (error) {
-      if ((error as any)?.code === 'ER_DUP_ENTRY') {
+      if ((error as { code?: unknown })?.code === 'ER_DUP_ENTRY') {
         throw new Error('当前账号下已存在同名项目，请更换名称');
       }
       throw error;
@@ -348,7 +355,7 @@ class ProjectService extends Service {
         ],
       );
       return await this.findById(id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await this.pool.execute(
         'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
         ['', '', '', GENERATION_STATUS.FAILED, (error as Error).message, 0, id],

@@ -3,6 +3,7 @@
 import { END, START, StateGraph, StateSchema } from '@langchain/langgraph';
 import { z } from 'zod';
 
+import type { DbRow } from './entity';
 import { LLM_JSON_PROTOCOL } from './llm_json_protocol';
 
 const SYSTEM_PROMPT = [
@@ -165,20 +166,21 @@ export function normalizeShotDirectionAnalyses(
   raw: unknown,
   storyboards: Array<Record<string, unknown>>,
 ) {
-  const rawItems = Array.isArray((raw as any)?.analyses)
-    ? (raw as any).analyses
+  const analysesField = (raw as { analyses?: unknown }).analyses;
+  const rawItems: DbRow[] = Array.isArray(analysesField)
+    ? analysesField as DbRow[]
     : Array.isArray(raw)
-      ? raw
+      ? raw as DbRow[]
       : [];
   const byStoryboardId = new Map<number, Record<string, unknown>>();
   for (const item of rawItems) {
-    const storyboardId = Number((item)?.storyboard_id || (item)?.id || 0);
+    const storyboardId = Number(item.storyboard_id || item.id || 0);
     if (storyboardId > 0 && !byStoryboardId.has(storyboardId)) {
-      byStoryboardId.set(storyboardId, item as Record<string, unknown>);
+      byStoryboardId.set(storyboardId, item);
     }
   }
 
-  return storyboards.map((storyboard: any, index: any) => {
+  return storyboards.map((storyboard, index) => {
     const fallback = buildFallbackAnalysis(storyboard, index, storyboards.length);
     const item = byStoryboardId.get(Number(storyboard.id)) || {};
     return {
@@ -241,14 +243,14 @@ export function buildShotDirectionGraph(options: {
   persistResults: (analyses: Array<Record<string, unknown>>) => Promise<void>;
 }) {
   return new StateGraph(ShotDirectionState)
-    .addNode('load_context', async (state: any) => ({
+    .addNode('load_context', async (state) => ({
       scene: state.scene,
       storyboards: [...state.storyboards].sort(
-        (a: any, b: any) =>
+        (a, b) =>
           Number(a.sort_order || a.shot_number || 0) - Number(b.sort_order || b.shot_number || 0),
       ),
     }))
-    .addNode('analyze_shots', async (state: any) => {
+    .addNode('analyze_shots', async (state) => {
       if (!state.storyboards.length) {
         return { analyses: [], raw_output: '' };
       }
@@ -259,10 +261,10 @@ export function buildShotDirectionGraph(options: {
       );
       return { analyses: result.parsed, raw_output: result.raw };
     })
-    .addNode('validate_results', async (state: any) => ({
+    .addNode('validate_results', async (state) => ({
       analyses: normalizeShotDirectionAnalyses(state.analyses, state.storyboards),
     }))
-    .addNode('persist_results', async (state: any) => {
+    .addNode('persist_results', async (state) => {
       await options.persistResults(state.analyses);
       return {};
     })

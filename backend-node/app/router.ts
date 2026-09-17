@@ -1,6 +1,13 @@
 'use strict';
 
-module.exports = (app: any) => {
+type EggRouter = {
+  get: (...args: unknown[]) => void;
+  post: (...args: unknown[]) => void;
+  put: (...args: unknown[]) => void;
+  delete: (...args: unknown[]) => void;
+};
+
+module.exports = (app: { router: EggRouter; controller: Record<string, Record<string, unknown>> }) => {
   const { router, controller } = app;
 
   router.get('/api/health', controller.health.index);

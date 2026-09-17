@@ -3,6 +3,7 @@
 const Service = require('egg').Service;
 const { resolveUrl } = require('../lib/generated_asset');
 const { serializeMediaGenerationMeta } = require('../lib/media_generation_meta');
+import type { DbRow, StoryboardMediaGenerationEntity } from '../lib/entity';
 
 class MediaGenerationService extends Service {
   get pool() {
@@ -17,33 +18,33 @@ class MediaGenerationService extends Service {
    * service.map({ id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" })
    * // => { id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" }
    */
-  map(row: any) {
+  map(row: DbRow): StoryboardMediaGenerationEntity {
     return {
       id: Number(row.id),
       storyboard_id: Number(row.storyboard_id),
-      media_type: row.media_type,
-      model: row.model,
-      status: row.status,
+      media_type: row.media_type as string,
+      model: row.model as string,
+      status: row.status as string,
       result_url: resolveUrl(
         this.app,
-        row.result_url || '',
+        String(row.result_url || ''),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       preview_url: resolveUrl(
         this.app,
-        row.preview_url || '',
+        String(row.preview_url || ''),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       source_url: resolveUrl(
         this.app,
-        row.source_url || '',
+        String(row.source_url || ''),
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
-      error_message: row.error_message || '',
+      error_message: String(row.error_message || ''),
       is_current: Boolean(row.is_current),
       meta_json: serializeMediaGenerationMeta(row.meta_json),
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
+      updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
     };
   }
 
@@ -63,7 +64,7 @@ class MediaGenerationService extends Service {
        ORDER BY created_at DESC, id DESC`,
       [storyboardId],
     );
-    return rows.map((row: any) => this.map(row));
+    return rows.map((row: DbRow) => this.map(row));
   }
 
   /**
