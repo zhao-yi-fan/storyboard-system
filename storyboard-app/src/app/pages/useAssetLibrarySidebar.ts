@@ -39,5 +39,5 @@ export function useResizableDetailSidebar() {
     setIsResizingDetailSidebar(true);
   };
 
-  return { detailSidebarWidth, handleDetailSidebarMouseDown };
+  return { detailSidebarWidth, isResizingDetailSidebar, handleDetailSidebarMouseDown };
 }

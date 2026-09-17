@@ -150,7 +150,8 @@ export default function AssetLibrary() {
   } | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
   const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
-  const { detailSidebarWidth, handleDetailSidebarMouseDown } = useResizableDetailSidebar();
+  const { detailSidebarWidth, isResizingDetailSidebar, handleDetailSidebarMouseDown } =
+    useResizableDetailSidebar();
   const selectedCharacterReferenceInputRef = useRef<HTMLInputElement | null>(null);
   const selectedCharacterVoiceReferenceInputRef = useRef<HTMLInputElement | null>(null);
   const selectedAssetFileInputRef = useRef<HTMLInputElement | null>(null);
