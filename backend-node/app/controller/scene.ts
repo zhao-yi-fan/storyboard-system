@@ -287,7 +287,7 @@ class SceneController extends ApiController {
       );
     } catch (err) {
       if (stream && !stream.readableEnded) stream.resume();
-      response.error(this.ctx, err.message);
+      response.error(this.ctx, (err as Error).message);
     }
   }
 

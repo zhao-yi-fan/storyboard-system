@@ -28,7 +28,7 @@ const {
 } = require('./ai_client_http');
 const { buildCharacterVoicePromptText } = require('./prompt_library');
 
-function getConfig(app) {
+function getConfig(app: any) {
   return app.config.storyboard || {};
 }
 
@@ -43,7 +43,7 @@ function getConfig(app) {
  * await generateSeedreamImage(app, "生成高细节角色主设定板", ["https://role-ref.png"], { size: "1600x2304" })
  * // => "https://..."
  */
-async function generateSeedreamImage(app, prompt, imageUrls, options: { size?: string } = {}) {
+async function generateSeedreamImage(app: any, prompt: any, imageUrls: any, options: { size?: string } = {}) {
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
   const baseUrl = normalizeBaseUrl(
@@ -104,11 +104,11 @@ async function generateSeedreamImage(app, prompt, imageUrls, options: { size?: s
  * // => "https://..."
  */
 async function generateWanxVideo(
-  app,
-  prompt,
-  imageUrl,
-  model,
-  duration,
+  app: any,
+  prompt: any,
+  imageUrl: any,
+  model: any,
+  duration: any,
   useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
 ) {
   const cfg = getConfig(app);
@@ -233,6 +233,17 @@ function buildSeedanceVideoPayload({
   resolution = AI_VIDEO_DEFAULT.SEEDANCE_RESOLUTION,
   aspectRatio = AI_VIDEO_DEFAULT.ASPECT_RATIO,
   generateAudio = AI_VIDEO_DEFAULT.GENERATE_AUDIO,
+}: {
+  model: string;
+  prompt: string;
+  imageUrl?: string;
+  duration?: number;
+  useFirstFrame?: boolean;
+  referenceImageUrls?: string[];
+  referenceAudioUrls?: string[];
+  resolution?: string;
+  aspectRatio?: string;
+  generateAudio?: boolean;
 }) {
   const normalizedReferenceImages = referenceImageUrls.filter(Boolean);
   const normalizedReferenceAudio = generateAudio ? referenceAudioUrls.filter(Boolean) : [];
@@ -250,7 +261,7 @@ function buildSeedanceVideoPayload({
     content.push({
       type: SEEDANCE_CONTENT.IMAGE_URL,
       role: SEEDANCE_CONTENT.FIRST_FRAME,
-      image_url: { url: imageUrl },
+      image_url: { url: imageUrl as string },
     });
   }
   for (const url of normalizedReferenceImages) {
@@ -280,10 +291,10 @@ function buildSeedanceVideoPayload({
 }
 
 async function generateSeedanceVideo(
-  app,
-  prompt,
-  imageUrl,
-  duration,
+  app: any,
+  prompt: any,
+  imageUrl: any,
+  duration: any,
   useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
   referenceImageUrls = [],
   referenceAudioUrls = [],
@@ -339,7 +350,7 @@ async function generateSeedanceVideo(
     try {
       await options.onTaskCreated(taskId);
     } catch (error) {
-      app.logger?.error?.(`[Seedance] persist task id failed: ${error.message}`);
+      app.logger?.error?.(`[Seedance] persist task id failed: ${(error as Error).message}`);
     }
   }
   const pollIntervalMs = Number.isFinite(Number(options.pollIntervalMs))
@@ -356,8 +367,8 @@ async function generateSeedanceVideo(
         timeoutMs,
       );
     } catch (error) {
-      if (Number(error.status) >= 400 && Number(error.status) < 500) throw error;
-      app.logger?.warn?.(`[Seedance] task ${taskId} poll failed, retrying: ${error.message}`);
+      if (Number((error as any).status) >= 400 && Number((error as any).status) < 500) throw error;
+      app.logger?.warn?.(`[Seedance] task ${taskId} poll failed, retrying: ${(error as Error).message}`);
       continue;
     }
     const status = String(taskData?.status || '').toLowerCase();
@@ -389,7 +400,7 @@ async function generateSeedanceVideo(
  * await createCharacterVoicePreview(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
  * // => { voicePrompt: "...", previewText: "今晚你先走。", targetModel: "qwen3-tts-vd-2026-01-26" }
  */
-async function createCharacterVoicePreview(app, character, customPrompt, _customText) {
+async function createCharacterVoicePreview(app: any, character: any, customPrompt: any, _customText: any) {
   const cfg = getConfig(app);
   const voicePrompt = withVoiceDurationInstruction(
     buildCharacterVoicePromptText(character, String(customPrompt || '').trim()).prompt,
@@ -421,7 +432,7 @@ async function createCharacterVoicePreview(app, character, customPrompt, _custom
  * await generateCharacterVoiceReference(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
  * // => { audioBuffer: <Buffer ...>, voiceName: "...", voicePrompt: "..." }
  */
-async function generateCharacterVoiceReference(app, character, customPrompt, customText) {
+async function generateCharacterVoiceReference(app: any, character: any, customPrompt: any, customText: any) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '角色主语音参考生成未配置：缺少 DASHSCOPE_API_KEY');
   const preview = await createCharacterVoicePreview(app, character, customPrompt, customText);
@@ -469,7 +480,7 @@ async function generateCharacterVoiceReference(app, character, customPrompt, cus
   };
 }
 
-function preferredVoiceName(character) {
+function preferredVoiceName(character: any) {
   const token =
     String(character?.name || AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK)
       .toLowerCase()
@@ -480,7 +491,7 @@ function preferredVoiceName(character) {
   return `${token}_${character.id}`;
 }
 
-function withVoiceDurationInstruction(prompt) {
+function withVoiceDurationInstruction(prompt: any) {
   const text = String(prompt || '').trim();
   if (!text) {
     return AI_VOICE_DEFAULT.DURATION_INSTRUCTION;
@@ -491,7 +502,7 @@ function withVoiceDurationInstruction(prompt) {
   return `${text}\n${AI_VOICE_DEFAULT.DURATION_INSTRUCTION}`;
 }
 
-function buildCharacterVoiceReferenceText(_character) {
+function buildCharacterVoiceReferenceText(_character: any) {
   return AI_VOICE_DEFAULT.REFERENCE_TEXT;
 }
 

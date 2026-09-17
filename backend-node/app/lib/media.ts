@@ -58,7 +58,7 @@ async function run(cmd: string, args: string[]): Promise<{ stdout: string; stder
     return await execFileAsync(cmd, args, { maxBuffer: 20 * 1024 * 1024 });
   } catch (error: any) {
     const stderr = String(error.stderr || '').trim();
-    throw new Error(stderr || error.message);
+    throw new Error(stderr || (error as Error).message);
   }
 }
 
@@ -382,7 +382,7 @@ async function composeVideos(app: App, sources: unknown[], subdir: string, filen
     }
 
     const concatFile = path.join(workDir, 'inputs.txt');
-    const concatBody = `${inputPaths.map((item) => `file '${item.replaceAll("'", "'\\''")}'`).join('\n')}\n`;
+    const concatBody = `${inputPaths.map((item: any) => `file '${item.replaceAll("'", "'\\''")}'`).join('\n')}\n`;
     await fsp.writeFile(concatFile, concatBody);
 
     const finalPath = path.join(workDir, filename);

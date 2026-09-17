@@ -46,7 +46,7 @@ class CharacterService extends Service {
    * service.map({ id: 8, project_id: 30, name: "林婉", avatar_url: "/generated/assets/ref.png" })
    * // => { id: 8, project_id: 30, name: "林婉", avatar_url: "https://..." }
    */
-  map(row) {
+  map(row: any) {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
@@ -93,7 +93,7 @@ class CharacterService extends Service {
    * await service.ensureProjectExists(30)
    * // => void
    */
-  async ensureProjectExists(projectId) {
+  async ensureProjectExists(projectId: number) {
     const [rows] = await this.pool.query(
       'SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL',
       [projectId],
@@ -109,7 +109,7 @@ class CharacterService extends Service {
    * await service.findByProjectId(30)
    * // => [{ id: 8, name: "林婉", design_sheet_url: "https://..." }]
    */
-  async findByProjectId(projectId) {
+  async findByProjectId(projectId: number) {
     await this.ensureProjectExists(projectId);
     const [rows] = await this.pool.query(
       `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
@@ -118,7 +118,7 @@ class CharacterService extends Service {
        FROM characters WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
       [projectId],
     );
-    return rows.map((row) => this.map(row));
+    return rows.map((row: any) => this.map(row));
   }
 
   /**
@@ -129,7 +129,7 @@ class CharacterService extends Service {
    * await service.findById(8)
    * // => { id: 8, name: "林婉", avatar_url: "https://..." }
    */
-  async findById(id) {
+  async findById(id: number) {
     const [rows] = await this.pool.query(
       `SELECT id, project_id, name, description, avatar_url, design_sheet_url,
               design_sheet_status, design_sheet_error, voice_reference_url, voice_reference_duration,
@@ -149,7 +149,7 @@ class CharacterService extends Service {
    * await service.create(30, { name: "林婉", description: "温婉端庄" })
    * // => { id: 8, project_id: 30, name: "林婉" }
    */
-  async create(projectId, payload) {
+  async create(projectId: number, payload: Record<string, unknown>) {
     await this.ensureProjectExists(projectId);
     const name = String(payload.name || '').trim();
     if (!name) throw new Error('name is required');
@@ -187,7 +187,7 @@ class CharacterService extends Service {
    * await service.update(8, { description: "外柔内刚" })
    * // => { id: 8, description: "外柔内刚" }
    */
-  async update(id, payload) {
+  async update(id: number, payload: Record<string, unknown>) {
     const current = await this.findById(id);
     if (!current) throw new Error('character not found');
     const name = Object.prototype.hasOwnProperty.call(payload, 'name')
@@ -230,7 +230,7 @@ class CharacterService extends Service {
    * await service.softDelete(8)
    * // => void
    */
-  async softDelete(id) {
+  async softDelete(id: number) {
     const [rows] = await this.pool.query(
       `SELECT
         (SELECT COUNT(*) FROM scene_characters sc JOIN scenes s ON s.id = sc.scene_id
@@ -254,11 +254,11 @@ class CharacterService extends Service {
    * service.buildDesignPrompt({ name: "林婉", description: "温婉端庄" })
    * // => "..."
    */
-  buildDesignPrompt(character) {
+  buildDesignPrompt(character: any) {
     return buildCharacterDesignPrompt(character).prompt;
   }
 
-  resolveDesignPrompt(character, promptOverride) {
+  resolveDesignPrompt(character: any, promptOverride: string | undefined | null) {
     if (promptOverride === undefined || promptOverride === null) {
       return this.buildDesignPrompt(character);
     }
@@ -278,7 +278,7 @@ class CharacterService extends Service {
    * service.collectDesignReferenceImages({ name: "林婉", avatar_url: "https://example.com/ref.png" })
    * // => { references: [{ type: "character-reference", url: "https://example.com/ref.png" }], missing: [] }
    */
-  collectDesignReferenceImages(character) {
+  collectDesignReferenceImages(character: any) {
     const references = [];
     const missing = [];
     const avatarUrl = resolveUrl(
@@ -308,7 +308,7 @@ class CharacterService extends Service {
    * await service.previewDesignSheetGeneration(8)
    * // => { action: "character-design-sheet", model: "seedream-4.5", final_prompt: "..." }
    */
-  async previewDesignSheetGeneration(id) {
+  async previewDesignSheetGeneration(id: number) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
     const { references, missing, avatarUrl } = this.collectDesignReferenceImages(character);
@@ -336,7 +336,7 @@ class CharacterService extends Service {
         '这次固定走 Seedream 图生图。',
         '角色参考图只用于生成主设定图，不参与其他展示和分镜参考链路。',
         '设定板版式由默认 Prompt 描述，确认前可编辑最终 Prompt；不会传入其他角色的版式示例图。',
-        ...missing.map((item) => `缺少参考项：${item}`),
+        ...missing.map((item: any) => `缺少参考项：${item}`),
       ],
     };
   }
@@ -351,7 +351,7 @@ class CharacterService extends Service {
    * await service.previewVoiceReferenceGeneration(8, "年轻女性，温柔克制", "今晚你先走。")
    * // => { action: "character-voice-reference", final_prompt: "..." }
    */
-  async previewVoiceReferenceGeneration(id, voicePrompt, previewText) {
+  async previewVoiceReferenceGeneration(id: number, voicePrompt: string, previewText: string) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
     const preview = await createCharacterVoicePreview(
@@ -388,7 +388,7 @@ class CharacterService extends Service {
    * await service.generateDesignSheet(8)
    * // => { id: 8, design_sheet_url: "/generated/characters/character-design-sheet-8-....png" }
    */
-  async generateDesignSheet(id, promptOverride) {
+  async generateDesignSheet(id: number, promptOverride?: string) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
     const { avatarUrl } = this.collectDesignReferenceImages(character);
@@ -415,17 +415,17 @@ class CharacterService extends Service {
     } catch (error) {
       await this.pool.execute(
         "UPDATE characters SET design_sheet_status = 'failed', design_sheet_error = ? WHERE id = ?",
-        [error.message || '主设定图生成失败', id],
+        [(error as Error).message || '主设定图生成失败', id],
       );
       throw error;
     }
   }
 
-  async generateVoiceReferenceAudio(character, voicePrompt, previewText) {
+  async generateVoiceReferenceAudio(character: any, voicePrompt: string, previewText: string) {
     return await generateCharacterVoiceReference(this.app, character, voicePrompt, previewText);
   }
 
-  async normalizeGeneratedVoiceReferenceAudio(audioBuffer, extension, outputExtension = extension) {
+  async normalizeGeneratedVoiceReferenceAudio(audioBuffer: any, extension: string, outputExtension: string = extension) {
     return await normalizeAudioDuration(audioBuffer, {
       minSeconds: VOICE_REFERENCE_SPEC.MIN_SECONDS,
       maxSeconds: VOICE_REFERENCE_SPEC.MAX_SECONDS,
@@ -437,7 +437,7 @@ class CharacterService extends Service {
     });
   }
 
-  async storeGeneratedVoiceReferenceAudio(id, audioBuffer, extension) {
+  async storeGeneratedVoiceReferenceAudio(id: number, audioBuffer: any, extension: string) {
     const filename = `${sanitizeFileName(`character-voice-reference-${id}`)}-${Date.now()}.${extension}`;
     return await storeBuffer(
       this.app,
@@ -458,7 +458,7 @@ class CharacterService extends Service {
    * await service.generateVoiceReference(8, "年轻女性，温柔克制", "今晚你先走。")
    * // => { id: 8, voice_reference_url: "/generated/characters/character-voice-reference-8-....wav" }
    */
-  async generateVoiceReference(id, voicePrompt, previewText) {
+  async generateVoiceReference(id: number, voicePrompt: string, previewText: string) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
     await this.pool.execute(
@@ -487,13 +487,13 @@ class CharacterService extends Service {
     } catch (error) {
       await this.pool.execute(
         "UPDATE characters SET voice_reference_status = 'failed', voice_reference_error = ? WHERE id = ?",
-        [error.message || '主语音参考生成失败', id],
+        [(error as Error).message || '主语音参考生成失败', id],
       );
       throw error;
     }
   }
 
-  async uploadVoiceReference(id, voiceReferenceUrl) {
+  async uploadVoiceReference(id: number, voiceReferenceUrl: string) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
     const normalizedUrl = normalizeGeneratedAssetReference(
@@ -533,6 +533,7 @@ class CharacterService extends Service {
         [stored.publicPath, normalized.duration, ASSET_SOURCE_TYPE.MANUAL_UPLOAD, id],
       );
       const updated = await this.findById(id);
+      if (!updated) throw new Error('角色不存在');
       await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
         userPrompt: updated.voice_prompt || '',
         effectivePrompt: '',
@@ -541,7 +542,7 @@ class CharacterService extends Service {
     } catch (error) {
       await this.pool.execute(
         "UPDATE characters SET voice_reference_status = 'failed', voice_reference_error = ? WHERE id = ?",
-        [error.message || '上传主语音参考失败', id],
+        [(error as Error).message || '上传主语音参考失败', id],
       );
       throw error;
     } finally {

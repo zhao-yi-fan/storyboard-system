@@ -43,7 +43,7 @@ const CHARACTER_BLOCKLIST = [
 ];
 
 function filterNonEmptyStrings(values: unknown[]): string[] {
-  return values.map((value) => String(value || '').trim()).filter(Boolean);
+  return values.map((value: any) => String(value || '').trim()).filter(Boolean);
 }
 
 export function uniqueNonEmpty(values: unknown[]): string[] {
@@ -55,7 +55,7 @@ function prefixIfNotEmpty(prefix: string, value: unknown): string {
 }
 
 function containsAnyKeyword(value: string, keywords: string[]): boolean {
-  return keywords.some((keyword) => value.includes(keyword));
+  return keywords.some((keyword: any) => value.includes(keyword));
 }
 
 function isLikelyCharacterName(name: unknown): boolean {
@@ -169,11 +169,11 @@ export function normalizeLLMStoryboardDocument(document: Record<string, any>) {
         location: String(scene.location || '').trim(),
         timeOfDay: String(scene.time_of_day || '').trim(),
         props: (Array.isArray(scene.props) ? scene.props : [])
-          .map((prop) => ({
+          .map((prop: any) => ({
             name: String(prop?.name || '').trim(),
             description: String(prop?.description || '').trim(),
           }))
-          .filter((prop) => prop.name),
+          .filter((prop: any) => prop.name),
         sortOrder: normalizedPositiveOrder(scene.order, sceneIndex + 1),
         storyboards: [] as any[],
       };

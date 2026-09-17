@@ -204,10 +204,10 @@ function isManagedOssHost(app: App, host: string): boolean {
     buildOssEndpoint(cfg.aliyunOssPublicEndpoint),
     derivePublicOssEndpoint(cfg.aliyunOssEndpoint),
   ]
-    .map((item) => item.toLowerCase())
+    .map((item: any) => item.toLowerCase())
     .filter(Boolean);
   return hosts.some(
-    (candidate) => value === candidate || (bucket && value === `${bucket}.${candidate}`),
+    (candidate: any) => value === candidate || (bucket && value === `${bucket}.${candidate}`),
   );
 }
 

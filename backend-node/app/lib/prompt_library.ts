@@ -151,7 +151,7 @@ function mergeSection(
 }
 
 function includesAny(text: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => text.includes(pattern));
+  return patterns.some((pattern: any) => text.includes(pattern));
 }
 
 function normalizeTextList(values: unknown[]): string[] {
@@ -303,9 +303,9 @@ function summarizeVideoContent(content: string): string {
     const headline = text
       .replace(/【[\s\S]*?】/g, ' ')
       .split(/[。；;\n]/)
-      .map((item) => item.trim())
+      .map((item: any) => item.trim())
       .filter(Boolean)
-      .find((item) => !/(首段|中段|尾段|开场|高潮|收束)\s*[:：]/.test(item));
+      .find((item: any) => !/(首段|中段|尾段|开场|高潮|收束)\s*[:：]/.test(item));
     return headline || '按分段分镜脚本推进完整动作和情绪变化';
   }
   return text;
@@ -406,7 +406,7 @@ export function renderPromptBlueprint(blueprint: PromptBlueprint): string {
     sections.push(
       sentence(
         '节奏分段',
-        blueprint.timeline.map((item) => `${item.label}：${item.description}`),
+        blueprint.timeline.map((item: any) => `${item.label}：${item.description}`),
       ),
     );
   }
@@ -446,7 +446,7 @@ export function buildPromptDisplayBlocks(blueprint: PromptBlueprint): PromptDisp
 
   const timelineItems = Array.isArray(blueprint.timeline)
     ? blueprint.timeline
-        .map((item) => {
+        .map((item: any) => {
           const label = String(item?.label || '').trim();
           const description = String(item?.description || '').trim();
           if (!label || !description) {
@@ -491,7 +491,7 @@ export function buildPromptDisplayTokens(options: {
   const finalPrompt = String(options.finalPrompt || '').trim();
   const characters = uniqueParts(Array.isArray(options.characters) ? options.characters : []);
   const timelineLabels = Array.isArray(options.timeline)
-    ? options.timeline.map((item) => String(item?.label || '').trim()).filter(Boolean)
+    ? options.timeline.map((item: any) => String(item?.label || '').trim()).filter(Boolean)
     : [];
 
   if (options.useFirstFrame) {
@@ -687,14 +687,14 @@ export function buildSceneCoverPrompt(
   scene: Record<string, unknown>,
   storyboards: Array<Record<string, unknown>>,
 ) {
-  const backgrounds = uniqueParts(storyboards.map((item) => item.background)).slice(0, 3);
+  const backgrounds = uniqueParts(storyboards.map((item: any) => item.background)).slice(0, 3);
   const characters = uniqueParts(
-    storyboards.flatMap((item) =>
+    storyboards.flatMap((item: any) =>
       Array.isArray(item.character_names) ? item.character_names : [],
     ),
   ).slice(0, 5);
-  const moods = uniqueParts(storyboards.map((item) => item.mood)).slice(0, 4);
-  const content = uniqueParts(storyboards.map((item) => item.content)).slice(0, 4);
+  const moods = uniqueParts(storyboards.map((item: any) => item.mood)).slice(0, 4);
+  const content = uniqueParts(storyboards.map((item: any) => item.content)).slice(0, 4);
   const stylePresetPrompt = resolveStylePresetPrompt(scene.style_preset);
   const template = selectImageCoverTemplate(scene.style_preset, [
     scene.style_notes,

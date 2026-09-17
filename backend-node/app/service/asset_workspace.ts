@@ -22,7 +22,7 @@ class AssetWorkspaceService extends Service {
     return this.app.mysqlPool;
   }
 
-  async ensureOwnedProject(projectId, userId) {
+  async ensureOwnedProject(projectId: number, userId: number) {
     const [rows] = await this.pool.query(
       'SELECT id FROM projects WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
       [projectId, userId],
@@ -30,23 +30,23 @@ class AssetWorkspaceService extends Service {
     if (!rows.length) throw new Error('无权访问该项目');
   }
 
-  mapPersonal(row) {
+  mapPersonal(row: any) {
     return mapPersonalAsset(this.app, row);
   }
 
-  mapVersion(row) {
+  mapVersion(row: any) {
     return mapAssetVersion(this.app, row);
   }
 
-  mapVoiceVersion(row) {
+  mapVoiceVersion(row: any) {
     return mapCharacterVoiceVersion(this.app, row);
   }
 
-  deriveRequirementStatus(currentStatus, hasMedia) {
+  deriveRequirementStatus(currentStatus: string, hasMedia: boolean) {
     return deriveAssetRequirementStatus(currentStatus, hasMedia);
   }
 
-  async queryRequirements(projectId, chapterId) {
+  async queryRequirements(projectId: number, chapterId: number | null) {
     const params = [projectId];
     let chapterFilter = '';
     if (chapterId) {
@@ -75,7 +75,7 @@ class AssetWorkspaceService extends Service {
     return rows;
   }
 
-  async insertLegacyVersion(conn, project, entityType, entityId, fileUrl, previewUrl) {
+  async insertLegacyVersion(conn: any, project: any, entityType: string, entityId: number, fileUrl: string, previewUrl: string) {
     if (!project.user_id || !fileUrl) return;
     const [versions] = await conn.query(
       `SELECT id FROM asset_versions
@@ -92,7 +92,7 @@ class AssetWorkspaceService extends Service {
     );
   }
 
-  async syncAssetRequirements(projectId, chapterId = null) {
+  async syncAssetRequirements(projectId: number, chapterId: number | null = null) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -256,7 +256,7 @@ class AssetWorkspaceService extends Service {
         chapterId ? [projectId, chapterId] : [projectId],
       );
       const propExpectedKeys = new Set();
-      const appendProp = (row, sourceCount) => {
+      const appendProp = (row: any, sourceCount: any) => {
         const key = `${row.chapter_id}:${row.id}`;
         if (propExpectedKeys.has(key)) return;
         propExpectedKeys.add(key);
@@ -276,7 +276,7 @@ class AssetWorkspaceService extends Service {
         if (/(prop|道具)/i.test(String(prop.type || ''))) appendProp(prop, prop.source_count);
       }
 
-      for (const requirement of existingRequirements.filter((item) => item.kind === ASSET_KIND.PROP)) {
+      for (const requirement of existingRequirements.filter((item: any) => item.kind === ASSET_KIND.PROP)) {
         let [assets] = await conn.query(
           `SELECT id, name, type, meta, file_url, cover_url, thumbnail_url
            FROM assets WHERE id = ? AND project_id = ? AND deleted_at IS NULL`,
@@ -337,7 +337,7 @@ class AssetWorkspaceService extends Service {
         ].filter(
           (candidate, index, rows) =>
             !retainedIds.has(Number(candidate.id)) &&
-            rows.findIndex((row) => Number(row.id) === Number(candidate.id)) === index,
+            rows.findIndex((row: any) => Number(row.id) === Number(candidate.id)) === index,
         );
         const current = candidates[0];
         const hasMedia = Boolean(item.fileUrl);
@@ -384,8 +384,8 @@ class AssetWorkspaceService extends Service {
       }
 
       const retiredIds = existingRequirements
-        .filter((item) => !retainedIds.has(Number(item.id)))
-        .map((item) => Number(item.id));
+        .filter((item: any) => !retainedIds.has(Number(item.id)))
+        .map((item: any) => Number(item.id));
       if (retiredIds.length) {
         await conn.query(
           `UPDATE asset_requirements SET deleted_at = NOW() WHERE id IN (${retiredIds.map(() => '?').join(',')})`,
@@ -402,11 +402,11 @@ class AssetWorkspaceService extends Service {
     }
   }
 
-  async listRequirements(projectId, chapterId) {
+  async listRequirements(projectId: number, chapterId: number | null) {
     await this.syncAssetRequirements(projectId, chapterId);
     const rows = await this.queryRequirements(projectId, chapterId);
     const base = this.app.config.storyboard.publicAppBaseUrl || '';
-    return rows.map((row) => {
+    return rows.map((row: any) => {
       const isCharacter = row.linked_entity_type === ENTITY_TYPE.CHARACTER;
       const canGenerate = !isCharacter || Boolean(row.character_avatar_url);
       return {
@@ -423,8 +423,8 @@ class AssetWorkspaceService extends Service {
     });
   }
 
-  async listPersonal(userId, kind) {
-    const params = [userId];
+  async listPersonal(userId: number, kind: string) {
+    const params: (number | string)[] = [userId];
     const kindFilter = kind ? ' AND kind = ?' : '';
     if (kind) params.push(kind);
     const [rows] = await this.pool.query(
@@ -432,10 +432,10 @@ class AssetWorkspaceService extends Service {
        ORDER BY updated_at DESC`,
       params,
     );
-    return rows.map((row) => this.mapPersonal(row));
+    return rows.map((row: any) => this.mapPersonal(row));
   }
 
-  async savePersonal(userId, payload) {
+  async savePersonal(userId: number, payload: Record<string, unknown>) {
     const kind = String(payload.kind || '').trim();
     const name = String(payload.name || '').trim();
     if (!VALID_KINDS.has(kind)) throw new Error('不支持的个人资产类型');
@@ -490,7 +490,7 @@ class AssetWorkspaceService extends Service {
     return this.mapPersonal(rows[0]);
   }
 
-  async saveCharacterToPersonal(characterId, userId) {
+  async saveCharacterToPersonal(characterId: number, userId: number) {
     const character = await this.ctx.service.character.findById(characterId);
     if (!character) throw new Error('character not found');
     await this.ensureOwnedProject(character.project_id, userId);
@@ -506,7 +506,7 @@ class AssetWorkspaceService extends Service {
     });
   }
 
-  async saveAssetToPersonal(assetId, userId) {
+  async saveAssetToPersonal(assetId: number, userId: number) {
     const asset = await this.ctx.service.asset.findById(assetId);
     if (!asset) throw new Error('asset not found');
     await this.ensureOwnedProject(asset.project_id, userId);
@@ -522,7 +522,7 @@ class AssetWorkspaceService extends Service {
     });
   }
 
-  async importPersonal(personalAssetId, projectId, userId, requirementId) {
+  async importPersonal(personalAssetId: number, projectId: number, userId: number, requirementId: number) {
     await this.ensureOwnedProject(projectId, userId);
     const [rows] = await this.pool.query(
       'SELECT * FROM personal_assets WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
@@ -590,13 +590,13 @@ class AssetWorkspaceService extends Service {
   }
 
   async recordVersion(
-    entityType,
-    entityId,
-    projectId,
-    fileUrl,
-    previewUrl,
-    prompt,
-    sourceType = ASSET_SOURCE_TYPE.GENERATED,
+    entityType: string,
+    entityId: number,
+    projectId: number,
+    fileUrl: string,
+    previewUrl: string,
+    prompt: string,
+    sourceType: string = ASSET_SOURCE_TYPE.GENERATED,
   ) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       projectId,
@@ -639,7 +639,7 @@ class AssetWorkspaceService extends Service {
     }
   }
 
-  async recordCharacterDesignSheetVersion(character, fileUrl, prompt) {
+  async recordCharacterDesignSheetVersion(character: any, fileUrl: string, prompt: string) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       character.project_id,
     ]);
@@ -703,16 +703,16 @@ class AssetWorkspaceService extends Service {
     }
   }
 
-  async listVersions(entityType, entityId) {
+  async listVersions(entityType: string, entityId: number) {
     const [rows] = await this.pool.query(
       `SELECT * FROM asset_versions
        WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [entityType, entityId],
     );
-    return rows.map((row) => this.mapVersion(row));
+    return rows.map((row: any) => this.mapVersion(row));
   }
 
-  async recordVoiceVersion(character, details) {
+  async recordVoiceVersion(character: any, details: any) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       character.project_id,
     ]);
@@ -748,16 +748,16 @@ class AssetWorkspaceService extends Service {
     }
   }
 
-  async listVoiceVersions(characterId) {
+  async listVoiceVersions(characterId: number) {
     const [rows] = await this.pool.query(
       `SELECT * FROM character_voice_versions
        WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [characterId],
     );
-    return rows.map((row) => this.mapVoiceVersion(row));
+    return rows.map((row: any) => this.mapVoiceVersion(row));
   }
 
-  async setCurrentVoiceVersion(characterId, versionId, userId) {
+  async setCurrentVoiceVersion(characterId: number, versionId: number, userId: number) {
     const [rows] = await this.pool.query(
       `SELECT cv.*, p.user_id FROM character_voice_versions cv
        JOIN characters c ON c.id = cv.character_id
@@ -796,7 +796,7 @@ class AssetWorkspaceService extends Service {
     return await this.listVoiceVersions(characterId);
   }
 
-  async setCurrentVersion(entityType, entityId, versionId, userId) {
+  async setCurrentVersion(entityType: string, entityId: number, versionId: number, userId: number) {
     const [versions] = await this.pool.query(
       `SELECT av.*, p.user_id FROM asset_versions av
        JOIN ${entityType === ENTITY_TYPE.CHARACTER ? 'characters' : 'assets'} e ON e.id = av.entity_id
@@ -836,7 +836,7 @@ class AssetWorkspaceService extends Service {
     return await this.listVersions(entityType, entityId);
   }
 
-  async confirmRequirement(id) {
+  async confirmRequirement(id: number) {
     const [rows] = await this.pool.query(
       'SELECT * FROM asset_requirements WHERE id = ? AND deleted_at IS NULL',
       [id],
@@ -848,12 +848,12 @@ class AssetWorkspaceService extends Service {
       [id],
     );
     return (await this.listRequirements(rows[0].project_id, rows[0].chapter_id)).find(
-      (item) => item.id === Number(id),
+      (item: any) => item.id === Number(id),
     );
   }
 
-  async generateRequirements(projectId, chapterId, requirementId) {
-    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item) =>
+  async generateRequirements(projectId: number, chapterId: number | null, requirementId: number | null) {
+    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item: any) =>
       requirementId
         ? item.id === Number(requirementId) && item.status !== GENERATION_STATUS.GENERATING
         : item.status === GENERATION_STATUS.PENDING || item.status === GENERATION_STATUS.FAILED,
@@ -893,13 +893,13 @@ class AssetWorkspaceService extends Service {
           item.id,
           item.linked_entity_type,
           item.linked_entity_id,
-          error?.stack || error?.message || error,
+          (error as any)?.stack || (error as any)?.message || error,
         );
         await this.pool.execute(
           "UPDATE asset_requirements SET status = 'failed', error_message = ? WHERE id = ?",
-          [error.message || '生成失败', item.id],
+          [(error as Error).message || '生成失败', item.id],
         );
-        results.push({ id: item.id, status: GENERATION_STATUS.FAILED, error: error.message || '生成失败' });
+        results.push({ id: item.id, status: GENERATION_STATUS.FAILED, error: (error as Error).message || '生成失败' });
       }
     }
     return results;

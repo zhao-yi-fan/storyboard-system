@@ -22,12 +22,12 @@ class StoryboardReferenceService extends Service {
     return this.app.mysqlPool;
   }
 
-  getAssetFileExtension(asset) {
+  getAssetFileExtension(asset: any) {
     const source = String(asset?.file_url || '').split(/[?#]/)[0];
     return source.includes('.') ? source.slice(source.lastIndexOf('.') + 1).toLowerCase() : '';
   }
 
-  isAudioAsset(asset) {
+  isAudioAsset(asset: any) {
     const type = String(asset?.type || '').trim();
     const extension = this.getAssetFileExtension(asset);
     return (
@@ -36,7 +36,7 @@ class StoryboardReferenceService extends Service {
     );
   }
 
-  getAssetReferenceType(asset) {
+  getAssetReferenceType(asset: any) {
     const type = String(asset?.type || '').trim();
     if (/(scene|background|location|场景|背景|地点)/i.test(type)) {
       return REFERENCE_TYPE.SCENE;
@@ -47,7 +47,7 @@ class StoryboardReferenceService extends Service {
     return REFERENCE_TYPE.ASSET;
   }
 
-  async selectAssetReferenceImages(storyboard, _scene?) {
+  async selectAssetReferenceImages(storyboard: any, _scene?: any) {
     const references = [];
     const missing = [];
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
@@ -73,7 +73,7 @@ class StoryboardReferenceService extends Service {
     return { references, missing };
   }
 
-  async selectReferenceImages(storyboard, scene) {
+  async selectReferenceImages(storyboard: any, scene: any) {
     const { references, missing } = await this.selectAssetReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
       const url = resolveUrl(
@@ -96,7 +96,7 @@ class StoryboardReferenceService extends Service {
     return { references, missing };
   }
 
-  selectVideoCharacterReferenceImages(storyboard) {
+  selectVideoCharacterReferenceImages(storyboard: any) {
     const references = [];
     const missing = [];
     for (const character of storyboard.characters.slice(0, 2)) {
@@ -120,7 +120,7 @@ class StoryboardReferenceService extends Service {
     return { references, missing };
   }
 
-  async selectVideoReferenceImages(storyboard, scene) {
+  async selectVideoReferenceImages(storyboard: any, scene: any) {
     const { references: sceneReferences, missing: sceneMissing } =
       await this.selectAssetReferenceImages(storyboard, scene);
     const { references: characterReferences, missing: characterMissing } =
@@ -131,7 +131,7 @@ class StoryboardReferenceService extends Service {
     };
   }
 
-  async resolveVoiceReferenceDuration(character, url) {
+  async resolveVoiceReferenceDuration(character: any, url: string) {
     const storedDuration = Number(character.voice_reference_duration || 0) || 0;
     if (storedDuration > 0) {
       return storedDuration;
@@ -151,7 +151,7 @@ class StoryboardReferenceService extends Service {
       this.ctx.logger.warn(
         '[seedance] failed to probe voice reference duration character=%s: %s',
         character.id,
-        error.message,
+        (error as Error).message,
       );
       return 0;
     } finally {
@@ -161,7 +161,7 @@ class StoryboardReferenceService extends Service {
     }
   }
 
-  getAssetMetaDuration(asset) {
+  getAssetMetaDuration(asset: any) {
     const meta = asset?.meta;
     if (!meta) return 0;
     if (typeof meta === 'object') {
@@ -176,7 +176,7 @@ class StoryboardReferenceService extends Service {
     }
   }
 
-  async resolveAssetAudioDuration(asset, url) {
+  async resolveAssetAudioDuration(asset: any, url: string) {
     const metaDuration = this.getAssetMetaDuration(asset);
     if (metaDuration > 0) return metaDuration;
     let materialized;
@@ -187,7 +187,7 @@ class StoryboardReferenceService extends Service {
       this.ctx.logger.warn(
         '[seedance] failed to probe audio asset duration asset=%s: %s',
         asset.id,
-        error.message,
+        (error as Error).message,
       );
       return 0;
     } finally {
@@ -195,7 +195,7 @@ class StoryboardReferenceService extends Service {
     }
   }
 
-  async selectVideoAudioReferences(storyboard, hasVisualInput) {
+  async selectVideoAudioReferences(storyboard: any, hasVisualInput: boolean) {
     const references = [];
     const missing = [];
     const blockingReasons = [];
@@ -251,16 +251,16 @@ class StoryboardReferenceService extends Service {
       );
     }
     const invalidDurationReferences = references.filter(
-      (item) =>
+      (item: any) =>
         item.duration < StoryboardReferenceService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS ||
         item.duration > StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
     );
     if (invalidDurationReferences.length) {
       blockingReasons.push(
-        `以下角色主语音时长不在 2-15 秒范围内：${invalidDurationReferences.map((item) => `${item.name}${item.duration ? `(${item.duration.toFixed(1)}s)` : '(未知时长)'}`).join('、')}`,
+        `以下角色主语音时长不在 2-15 秒范围内：${invalidDurationReferences.map((item: any) => `${item.name}${item.duration ? `(${item.duration.toFixed(1)}s)` : '(未知时长)'}`).join('、')}`,
       );
     }
-    const totalDuration = references.reduce((sum, item) => sum + item.duration, 0);
+    const totalDuration = references.reduce((sum: any, item: any) => sum + item.duration, 0);
     if (totalDuration > StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS) {
       blockingReasons.push(
         `Seedance 2.0 参考音频总时长不能超过 15 秒，当前为 ${totalDuration.toFixed(1)} 秒`,

@@ -22,7 +22,7 @@ class AssetService extends Service {
     return this.app.mysqlPool;
   }
 
-  isAudioAsset(asset) {
+  isAudioAsset(asset: any) {
     const type = String(asset?.type || '').trim();
     const source = String(asset?.file_url || '').split(/[?#]/)[0];
     const extension = source.includes('.')
@@ -34,7 +34,7 @@ class AssetService extends Service {
     );
   }
 
-  normalizeMetaForApi(meta) {
+  normalizeMetaForApi(meta: any) {
     if (meta === null || meta === undefined || meta === '') return '';
     if (typeof meta === 'object') {
       return String(meta.description || meta.text || meta.prompt || '').trim();
@@ -53,7 +53,7 @@ class AssetService extends Service {
     return text;
   }
 
-  serializeMeta(meta) {
+  serializeMeta(meta: any) {
     const description = this.normalizeMetaForApi(meta);
     return description ? JSON.stringify({ description }) : null;
   }
@@ -66,7 +66,7 @@ class AssetService extends Service {
    * service.map({ id: 5, project_id: 30, name: "CG背景", type: "scene", file_url: "/generated/assets/a.png" })
    * // => { id: 5, project_id: 30, name: "CG背景", type: "scene", file_url: "https://..." }
    */
-  map(row) {
+  map(row: Record<string, any>) {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
@@ -106,7 +106,7 @@ class AssetService extends Service {
    * await service.ensureProjectExists(30)
    * // => void
    */
-  async ensureProjectExists(projectId) {
+  async ensureProjectExists(projectId: number) {
     const [rows] = await this.pool.query(
       'SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL',
       [projectId],
@@ -123,7 +123,7 @@ class AssetService extends Service {
    * await service.ensureCharacterInProject(8, 30)
    * // => void
    */
-  async ensureCharacterInProject(characterId, projectId) {
+  async ensureCharacterInProject(characterId: number, projectId: number) {
     const [rows] = await this.pool.query(
       'SELECT id FROM characters WHERE id = ? AND project_id = ? AND deleted_at IS NULL',
       [characterId, projectId],
@@ -139,14 +139,14 @@ class AssetService extends Service {
    * await service.findByProjectId(30)
    * // => [{ id: 5, name: "CG背景", type: "scene" }]
    */
-  async findByProjectId(projectId) {
+  async findByProjectId(projectId: number) {
     await this.ensureProjectExists(projectId);
     const [rows] = await this.pool.query(
       `SELECT id, project_id, character_id, name, type, file_url, cover_url, cover_status, cover_error, thumbnail_url, meta, created_at, updated_at
        FROM assets WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [projectId],
     );
-    return rows.map((row) => this.map(row));
+    return rows.map((row: any) => this.map(row));
   }
 
   /**
@@ -157,13 +157,13 @@ class AssetService extends Service {
    * await service.findByCharacterId(8)
    * // => [{ id: 15, character_id: 8, name: "发簪特写", type: "prop" }]
    */
-  async findByCharacterId(characterId) {
+  async findByCharacterId(characterId: number) {
     const [rows] = await this.pool.query(
       `SELECT id, project_id, character_id, name, type, file_url, cover_url, cover_status, cover_error, thumbnail_url, meta, created_at, updated_at
        FROM assets WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [characterId],
     );
-    return rows.map((row) => this.map(row));
+    return rows.map((row: any) => this.map(row));
   }
 
   /**
@@ -174,7 +174,7 @@ class AssetService extends Service {
    * await service.findById(5)
    * // => { id: 5, name: "CG背景", file_url: "https://..." }
    */
-  async findById(id) {
+  async findById(id: number) {
     const [rows] = await this.pool.query(
       `SELECT id, project_id, character_id, name, type, file_url, cover_url, cover_status, cover_error, thumbnail_url, meta, created_at, updated_at
        FROM assets WHERE id = ? AND deleted_at IS NULL`,
@@ -195,7 +195,7 @@ class AssetService extends Service {
    * await service.create(30, { name: "CG背景", type: "scene", file_url: "/generated/assets/a.png" })
    * // => { id: 5, project_id: 30, name: "CG背景", type: "scene" }
    */
-  async create(projectId, payload) {
+  async create(projectId: number, payload: Record<string, unknown>) {
     await this.ensureProjectExists(projectId);
     const name = String(payload.name || '').trim();
     const type = String(payload.type || '').trim();
@@ -227,7 +227,7 @@ class AssetService extends Service {
    * await service.update(5, { meta: "便利店外景背景" })
    * // => { id: 5, meta: "便利店外景背景" }
    */
-  async update(id, payload) {
+  async update(id: number, payload: Record<string, unknown>) {
     const current = await this.findById(id);
     if (!current) throw new Error('asset not found');
     const characterId = payload.character_id === null || payload.character_id === undefined ? null : Number(payload.character_id);
@@ -273,7 +273,7 @@ class AssetService extends Service {
    * await service.softDelete(5)
    * // => void
    */
-  async softDelete(id) {
+  async softDelete(id: number) {
     const [rows] = await this.pool.query(
       `
       SELECT
@@ -300,7 +300,7 @@ class AssetService extends Service {
    * await service.ensurePreview({ id: 5, file_url: "https://example.com/a.png" })
    * // => void
    */
-  async ensurePreview(asset) {
+  async ensurePreview(asset: any) {
     if (!asset || asset.thumbnail_url || this.isAudioAsset(asset)) {
       return;
     }
@@ -334,7 +334,7 @@ class AssetService extends Service {
    * service.canGenerateSceneAssetCover("scene")
    * // => true
    */
-  canGenerateSceneAssetCover(assetType) {
+  canGenerateSceneAssetCover(assetType: string) {
     const value = String(assetType || '')
       .trim()
       .toLowerCase();
@@ -354,7 +354,7 @@ class AssetService extends Service {
    * service.buildCoverPrompt({ name: "CG背景", type: "scene", meta: "便利店外景" })
    * // => "..."
    */
-  buildCoverPrompt(asset) {
+  buildCoverPrompt(asset: any) {
     return buildAssetCoverPrompt(asset).prompt;
   }
 
@@ -366,7 +366,7 @@ class AssetService extends Service {
    * await service.previewCoverGeneration(5)
    * // => { action: "asset-cover", model: "seedream-4.5", final_prompt: "..." }
    */
-  async previewCoverGeneration(id) {
+  async previewCoverGeneration(id: number) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
     if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== ASSET_KIND.PROP) {
@@ -397,7 +397,7 @@ class AssetService extends Service {
    * await service.generateCover(5)
    * // => { id: 5, cover_url: "/generated/assets/asset-cover-5-....png" }
    */
-  async generateCover(id) {
+  async generateCover(id: number) {
     const asset = await this.findById(id);
     if (!asset) throw new Error('asset not found');
     if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== ASSET_KIND.PROP) {
@@ -421,6 +421,7 @@ class AssetService extends Service {
         [stored.publicPath, previewPath, id],
       );
       const updated = await this.findById(id);
+      if (!updated) throw new Error('资产不存在');
       await this.ctx.service.assetWorkspace.recordVersion(
         ENTITY_TYPE.ASSET,
         id,
@@ -433,7 +434,7 @@ class AssetService extends Service {
     } catch (error) {
       await this.pool.execute(
         "UPDATE assets SET cover_status = 'failed', cover_error = ? WHERE id = ?",
-        [error.message || '资产封面生成失败', id],
+        [(error as Error).message || '资产封面生成失败', id],
       );
       throw error;
     }

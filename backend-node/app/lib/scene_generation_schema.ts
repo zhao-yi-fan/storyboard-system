@@ -2,7 +2,7 @@
 
 const { MEDIA_TYPE } = require('./domain_constants');
 
-async function columnExists(pool, tableName, columnName) {
+async function columnExists(pool: any, tableName: string, columnName: string) {
   const [rows] = await pool.query(
     `SELECT 1 FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`,
@@ -11,13 +11,13 @@ async function columnExists(pool, tableName, columnName) {
   return rows.length > 0;
 }
 
-async function addColumnIfMissing(pool, tableName, columnName, definition) {
+async function addColumnIfMissing(pool: any, tableName: string, columnName: string, definition: string) {
   if (!(await columnExists(pool, tableName, columnName))) {
     await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`);
   }
 }
 
-async function indexExists(pool, tableName, indexName) {
+async function indexExists(pool: any, tableName: string, indexName: string) {
   const [rows] = await pool.query(
     `SELECT 1 FROM information_schema.STATISTICS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1`,
@@ -26,21 +26,21 @@ async function indexExists(pool, tableName, indexName) {
   return rows.length > 0;
 }
 
-function hasCompleteLegacySceneMapping(storyboards, scenes) {
+function hasCompleteLegacySceneMapping(storyboards: any, scenes: any) {
   if (storyboards.length !== scenes.length) return false;
-  const expectedIds = new Set(storyboards.map((item) => Number(item.id)));
+  const expectedIds = new Set(storyboards.map((item: any) => Number(item.id)));
   const mappedIds = new Set(
-    scenes.map((item) => Number(item.legacy_storyboard_id)).filter(Boolean),
+    scenes.map((item: any) => Number(item.legacy_storyboard_id)).filter(Boolean),
   );
-  return expectedIds.size === mappedIds.size && [...expectedIds].every((id) => mappedIds.has(id));
+  return expectedIds.size === mappedIds.size && [...expectedIds].every((id: any) => mappedIds.has(id));
 }
 
-function _mergeLegacyPrompts(storyboards) {
-  const prompts = storyboards.map((item) => String(item.content || '').trim()).filter(Boolean);
+function _mergeLegacyPrompts(storyboards: any) {
+  const prompts = storyboards.map((item: any) => String(item.content || '').trim()).filter(Boolean);
   if (prompts.length <= 1) return prompts[0] || '';
   let nextShotNumber = 1;
   return prompts
-    .map((prompt) => {
+    .map((prompt: any) => {
       const hasShotMarker = /(?:^|\n)\s*镜号\s*[：:]/m.test(prompt);
       if (hasShotMarker) {
         return prompt.replace(/镜号\s*[：:]\s*\d+/g, () => `镜号：${nextShotNumber++}`);
@@ -50,7 +50,7 @@ function _mergeLegacyPrompts(storyboards) {
     .join('\n\n');
 }
 
-async function _migrateLegacySceneData(connection) {
+async function _migrateLegacySceneData(connection: any) {
   const [scenes] = await connection.query(
     `SELECT id, prompt, cover_url, cover_preview_url, video_url, video_preview_url,
             video_status, video_error, video_duration
@@ -186,7 +186,7 @@ async function _migrateLegacySceneData(connection) {
   }
 }
 
-async function selectCurrentSceneMedia(connection, sceneId, mediaType, storyboardId, preserveNew) {
+async function selectCurrentSceneMedia(connection: any, sceneId: number, mediaType: string, storyboardId: number, preserveNew: any) {
   if (preserveNew) {
     const [newRows] = await connection.query(
       `SELECT id, result_url, preview_url, status, error_message
@@ -212,7 +212,7 @@ async function selectCurrentSceneMedia(connection, sceneId, mediaType, storyboar
   return legacyRows[0] || null;
 }
 
-async function migrateLegacyStoryboardsToScenes(connection) {
+async function migrateLegacyStoryboardsToScenes(connection: any) {
   const [chapters] = await connection.query(
     `SELECT c.id
      FROM chapters c
@@ -257,7 +257,7 @@ async function migrateLegacyStoryboardsToScenes(connection) {
           [source.id, source.id],
         );
         if (hasCompleteLegacySceneMapping(storyboards, alreadySplit)) {
-          orderedSceneIds.push(...alreadySplit.map((item) => Number(item.id)));
+          orderedSceneIds.push(...alreadySplit.map((item: any) => Number(item.id)));
           continue;
         }
       }
@@ -380,7 +380,8 @@ async function migrateLegacyStoryboardsToScenes(connection) {
         );
 
         const preserveNew = index === 0;
-        for (const mediaType of Object.values(MEDIA_TYPE)) {
+        for (const rawMediaType of Object.values(MEDIA_TYPE)) {
+          const mediaType = String(rawMediaType);
           const current = await selectCurrentSceneMedia(
             connection,
             targetSceneId,
@@ -437,7 +438,7 @@ async function migrateLegacyStoryboardsToScenes(connection) {
   }
 }
 
-export async function ensureSceneGenerationSchema(pool) {
+export async function ensureSceneGenerationSchema(pool: any) {
   const connection = await pool.getConnection();
   try {
     const [locks] = await connection.query(

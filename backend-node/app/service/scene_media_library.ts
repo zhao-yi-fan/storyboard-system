@@ -9,13 +9,13 @@ const {
 } = require('../lib/domain_constants');
 
 class SceneMediaLibraryService extends Service {
-  async list(sceneId) {
+  async list(sceneId: number) {
     if (!(await this.ctx.service.scene.findById(sceneId))) throw new Error('scene not found');
     const generations = await this.ctx.service.sceneMediaGeneration.listBySceneId(sceneId);
     return await this.ctx.service.sceneVideoFrame.attachToGenerations(generations);
   }
 
-  async apply(sceneId, generation) {
+  async apply(sceneId: number, generation: any) {
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
       throw new Error('scene media generation not found');
     }
@@ -38,7 +38,7 @@ class SceneMediaLibraryService extends Service {
     throw new Error('unsupported media type');
   }
 
-  async setCurrent(sceneId, generationId) {
+  async setCurrent(sceneId: number, generationId: number) {
     const generation = await this.ctx.service.sceneMediaGeneration.findById(generationId);
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
       throw new Error('scene media generation not found');
@@ -55,7 +55,7 @@ class SceneMediaLibraryService extends Service {
     return { scene, media_generations: await this.list(sceneId) };
   }
 
-  async remove(sceneId, generationId) {
+  async remove(sceneId: number, generationId: number) {
     const generation = await this.ctx.service.sceneMediaGeneration.findById(generationId);
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
       throw new Error('scene media generation not found');
@@ -64,7 +64,7 @@ class SceneMediaLibraryService extends Service {
     const remaining = await this.list(sceneId);
     if (generation.is_current) {
       const replacement = remaining.find(
-        (item) =>
+        (item: any) =>
           item.media_type === generation.media_type &&
           item.status === GENERATION_STATUS.SUCCEEDED &&
           item.result_url,
@@ -97,7 +97,7 @@ class SceneMediaLibraryService extends Service {
     };
   }
 
-  async uploadCover(sceneId, coverUrl) {
+  async uploadCover(sceneId: number, coverUrl: string) {
     if (!(await this.ctx.service.scene.findById(sceneId))) throw new Error('scene not found');
     const normalized = normalizeGeneratedAssetReference(
       this.app,

@@ -24,13 +24,13 @@ const {
 
 class SceneVideoService extends Service {
   async previewVideoGeneration(
-    id,
-    selectedModel,
-    duration,
-    useFirstFrameRaw,
-    resolutionRaw,
-    aspectRatioRaw,
-    generateAudioRaw,
+    id: number,
+    selectedModel: string,
+    duration: any,
+    useFirstFrameRaw: any,
+    resolutionRaw: string,
+    aspectRatioRaw: string,
+    generateAudioRaw: any,
   ) {
     const scene = await this.ctx.service.scene.findById(id);
     if (!scene) throw new Error('scene not found');
@@ -116,7 +116,7 @@ class SceneVideoService extends Service {
     };
   }
 
-  async generateVideo(id, model, duration, useFirstFrame, resolution, aspectRatio, generateAudio) {
+  async generateVideo(id: number, model: string, duration: any, useFirstFrame: any, resolution: string, aspectRatio: string, generateAudio: any) {
     const preview = await this.previewVideoGeneration(
       id,
       model,
@@ -153,13 +153,13 @@ class SceneVideoService extends Service {
       video_status: GENERATION_STATUS.GENERATING,
       video_error: '',
     });
-    void this.generateVideoAsync(id, preview, generation.id).catch((error) =>
+    void this.generateVideoAsync(id, preview, generation.id).catch((error: any) =>
       this.ctx.logger.error(error),
     );
     return { scene_id: id, scene: await this.ctx.service.scene.findById(id) };
   }
 
-  async generateVideoAsync(id, preview, generationId) {
+  async generateVideoAsync(id: number, preview: any, generationId: number) {
     let scene = await this.ctx.service.scene.findById(id);
     try {
       if (preview.use_first_frame && !scene.cover_url) {
@@ -177,13 +177,13 @@ class SceneVideoService extends Service {
             imageInput,
             preview.duration,
             preview.use_first_frame,
-            preview.reference_images.map((item) => item.url),
-            preview.audio_reference_assets.map((item) => item.url),
+            preview.reference_images.map((item: any) => item.url),
+            preview.audio_reference_assets.map((item: any) => item.url),
             preview.resolution,
             preview.aspect_ratio,
             preview.audio,
             {
-              onTaskCreated: async (taskId) => {
+              onTaskCreated: async (taskId: any) => {
                 const currentGeneration =
                   await this.ctx.service.sceneMediaGeneration.findById(generationId);
                 await this.ctx.service.sceneMediaGeneration.update(generationId, {
@@ -246,17 +246,17 @@ class SceneVideoService extends Service {
         video_preview_url: '',
         video_poster_url: '',
         video_status: GENERATION_STATUS.FAILED,
-        video_error: error.message,
+        video_error: (error as Error).message,
       });
       await this.ctx.service.sceneMediaGeneration.update(generationId, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
       throw error;
     }
   }
 
-  async composeVideo(id, regenerate) {
+  async composeVideo(id: number, regenerate: boolean) {
     const scene = await this.ctx.service.scene.findById(id);
     if (!scene) {
       throw new Error('scene not found');
@@ -273,7 +273,7 @@ class SceneVideoService extends Service {
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(
         this.app,
-        inputs.map((item) => item.source),
+        inputs.map((item: any) => item.source),
         'scene-videos',
         filename,
       );
@@ -304,7 +304,7 @@ class SceneVideoService extends Service {
     } catch (error) {
       await this.ctx.service.scene.update(id, {
         video_status: GENERATION_STATUS.FAILED,
-        video_error: error.message,
+        video_error: (error as Error).message,
       });
       throw error;
     }

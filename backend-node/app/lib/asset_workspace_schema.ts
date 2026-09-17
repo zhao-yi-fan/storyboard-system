@@ -1,6 +1,6 @@
 'use strict';
 
-async function columnExists(pool, tableName, columnName) {
+async function columnExists(pool: any, tableName: string, columnName: string) {
   const [rows] = await pool.query(
     `SELECT 1 FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`,
@@ -9,13 +9,13 @@ async function columnExists(pool, tableName, columnName) {
   return rows.length > 0;
 }
 
-async function addColumnIfMissing(pool, tableName, columnName, definition) {
+async function addColumnIfMissing(pool: any, tableName: string, columnName: string, definition: string) {
   if (!(await columnExists(pool, tableName, columnName))) {
     await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`);
   }
 }
 
-async function indexExists(pool, tableName, indexName) {
+async function indexExists(pool: any, tableName: string, indexName: string) {
   const [rows] = await pool.query(
     `SELECT 1 FROM information_schema.STATISTICS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1`,
@@ -24,7 +24,7 @@ async function indexExists(pool, tableName, indexName) {
   return rows.length > 0;
 }
 
-async function ensureProjectNameConstraint(pool) {
+async function ensureProjectNameConstraint(pool: any) {
   await addColumnIfMissing(
     pool,
     'projects',
@@ -42,7 +42,7 @@ async function ensureProjectNameConstraint(pool) {
   }
 }
 
-export async function ensureAssetWorkspaceSchema(pool) {
+export async function ensureAssetWorkspaceSchema(pool: any) {
   const connection = await pool.getConnection();
   try {
     const [locks] = await connection.query(

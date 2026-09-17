@@ -17,7 +17,7 @@ class MediaGenerationService extends Service {
    * service.map({ id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" })
    * // => { id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" }
    */
-  map(row) {
+  map(row: any) {
     return {
       id: Number(row.id),
       storyboard_id: Number(row.storyboard_id),
@@ -55,7 +55,7 @@ class MediaGenerationService extends Service {
    * await service.listByStoryboardId(146)
    * // => [{ id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" }]
    */
-  async listByStoryboardId(storyboardId) {
+  async listByStoryboardId(storyboardId: number) {
     const [rows] = await this.pool.query(
       `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
        FROM storyboard_media_generations
@@ -63,7 +63,7 @@ class MediaGenerationService extends Service {
        ORDER BY created_at DESC, id DESC`,
       [storyboardId],
     );
-    return rows.map((row) => this.map(row));
+    return rows.map((row: any) => this.map(row));
   }
 
   /**
@@ -74,7 +74,7 @@ class MediaGenerationService extends Service {
    * await service.findById(29)
    * // => { id: 29, storyboard_id: 146, media_type: "video", status: "succeeded" }
    */
-  async findById(id) {
+  async findById(id: number) {
     const [rows] = await this.pool.query(
       `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
        FROM storyboard_media_generations
@@ -94,7 +94,7 @@ class MediaGenerationService extends Service {
    * await service.markCurrent(146, "video", 29)
    * // => void
    */
-  async markCurrent(storyboardId, mediaType, generationId) {
+  async markCurrent(storyboardId: number, mediaType: string, generationId: number) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -123,7 +123,7 @@ class MediaGenerationService extends Service {
    * await service.softDelete(29)
    * // => void
    */
-  async softDelete(id) {
+  async softDelete(id: number) {
     await this.pool.execute(
       `UPDATE storyboard_media_generations SET deleted_at = NOW(), is_current = 0 WHERE id = ? AND deleted_at IS NULL`,
       [id],
@@ -138,7 +138,7 @@ class MediaGenerationService extends Service {
    * await service.create({ storyboard_id: 146, media_type: "video", status: "pending" })
    * // => { id: 31, storyboard_id: 146, media_type: "video", status: "pending" }
    */
-  async create(payload) {
+  async create(payload: Record<string, unknown>) {
     const [result] = await this.pool.execute(
       `INSERT INTO storyboard_media_generations
         (storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json)
@@ -168,7 +168,7 @@ class MediaGenerationService extends Service {
    * await service.update(29, { status: "failed", error_message: "timeout" })
    * // => { id: 29, status: "failed", error_message: "timeout" }
    */
-  async update(id, payload) {
+  async update(id: number, payload: Record<string, unknown>) {
     const current = await this.findById(id);
     if (!current) {
       throw new Error('media generation not found');
@@ -230,7 +230,7 @@ class MediaGenerationService extends Service {
    * await service.findLatestSucceeded(146, "cover", 29)
    * // => { id: 25, media_type: "cover", status: "succeeded" }
    */
-  async findLatestSucceeded(storyboardId, mediaType, excludeId = 0) {
+  async findLatestSucceeded(storyboardId: number, mediaType: string, excludeId: number = 0) {
     const [rows] = await this.pool.query(
       `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
        FROM storyboard_media_generations

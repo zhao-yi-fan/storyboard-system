@@ -49,7 +49,7 @@ class SceneService extends Service {
    * await service.findChapterById(11)
    * // => { id: 11, project_id: 19 }
    */
-  async findChapterById(id) {
+  async findChapterById(id: number) {
     return await this.repository.findChapterById(id);
   }
 
@@ -61,7 +61,7 @@ class SceneService extends Service {
    * await service.findByChapterId(11)
    * // => [{ id: 21, chapter_id: 11, title: "便利店门口", sort_order: 1 }]
    */
-  async findByChapterId(chapterId) {
+  async findByChapterId(chapterId: number) {
     const chapter = await this.findChapterById(chapterId);
     if (!chapter) {
       throw new Error('chapter not found');
@@ -69,7 +69,7 @@ class SceneService extends Service {
 
     const rows = await this.repository.findByChapterId(chapterId);
 
-    const items = rows.map((row) => mapScene(this.app, row));
+    const items = rows.map((row: any) => mapScene(this.app, row));
     await this.attachCharacters(items);
     await this.attachAssets(items);
     await this.attachVideoFrameReferences(items);
@@ -84,7 +84,7 @@ class SceneService extends Service {
    * await service.findById(21)
    * // => { id: 21, title: "便利店门口", chapter_id: 11, project_id: 19 }
    */
-  async findById(id) {
+  async findById(id: number) {
     const row = await this.repository.findById(id);
     if (!row) return null;
     const item = mapScene(this.app, row);
@@ -94,11 +94,11 @@ class SceneService extends Service {
     return item;
   }
 
-  async attachVideoFrameReferences(items) {
+  async attachVideoFrameReferences(items: any[]) {
     const grouped = await this.ctx.service.sceneVideoFrame.listByTargetScenes(
-      items.map((item) => item.id),
+      items.map((item: any) => item.id),
     );
-    items.forEach((item) => {
+    items.forEach((item: any) => {
       item.video_frame_references = grouped.get(Number(item.id)) || [];
     });
   }
@@ -111,7 +111,7 @@ class SceneService extends Service {
    * await service.getMaxSortOrder(11)
    * // => 4
    */
-  async getMaxSortOrder(chapterId) {
+  async getMaxSortOrder(chapterId: number) {
     return await this.repository.getMaxSortOrder(chapterId);
   }
 
@@ -124,7 +124,7 @@ class SceneService extends Service {
    * await service.create(11, { title: "便利店门口", location: "街角" })
    * // => { id: 21, chapter_id: 11, title: "便利店门口", sort_order: 1 }
    */
-  async create(chapterId, payload) {
+  async create(chapterId: number, payload: Record<string, unknown>) {
     const chapter = await this.findChapterById(chapterId);
     if (!chapter) {
       throw new Error('chapter not found');
@@ -196,7 +196,7 @@ class SceneService extends Service {
    * await service.update(21, { title: "便利店门口（夜）" })
    * // => { id: 21, title: "便利店门口（夜）" }
    */
-  async update(id, payload) {
+  async update(id: number, payload: Record<string, unknown>) {
     const current = await this.findById(id);
     if (!current) {
       throw new Error('scene not found');
@@ -278,7 +278,7 @@ class SceneService extends Service {
     return await this.findById(id);
   }
 
-  async optimizePrompt(id, payload) {
+  async optimizePrompt(id: number, payload: Record<string, unknown>) {
     const scene = await this.findById(id);
     if (!scene) {
       throw new Error('scene not found');
@@ -290,7 +290,7 @@ class SceneService extends Service {
     });
   }
 
-  async optimizeDescription(payload) {
+  async optimizeDescription(payload: Record<string, unknown>) {
     return await optimizeSceneDescription(this.config.storyboard, payload);
   }
 
@@ -302,13 +302,13 @@ class SceneService extends Service {
    * await service.softDelete(21)
    * // => void
    */
-  async softDelete(id) {
+  async softDelete(id: number) {
     await this.pool.execute('UPDATE scenes SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
-  async attachCharacters(items) {
+  async attachCharacters(items: any[]) {
     if (!items.length) return;
-    const ids = items.map((item) => item.id);
+    const ids = items.map((item: any) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
       `SELECT sc.scene_id, c.id, c.project_id, c.name, c.description, c.avatar_url,
@@ -320,7 +320,7 @@ class SceneService extends Service {
        ORDER BY sc.scene_id ASC, c.id ASC`,
       ids,
     );
-    const byScene = new Map(items.map((item) => [item.id, item]));
+    const byScene = new Map(items.map((item: any) => [item.id, item]));
     for (const row of rows) {
       const target: any = byScene.get(Number(row.scene_id));
       if (!target) continue;
@@ -330,9 +330,9 @@ class SceneService extends Service {
     }
   }
 
-  async attachAssets(items) {
+  async attachAssets(items: any[]) {
     if (!items.length) return;
-    const ids = items.map((item) => item.id);
+    const ids = items.map((item: any) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
       `SELECT DISTINCT sau.scene_id, a.id, a.project_id, a.character_id, a.name, a.type,
@@ -343,7 +343,7 @@ class SceneService extends Service {
        ORDER BY sau.scene_id ASC, a.id ASC`,
       ids,
     );
-    const byScene = new Map(items.map((item) => [item.id, item]));
+    const byScene = new Map(items.map((item: any) => [item.id, item]));
     for (const row of rows) {
       const target: any = byScene.get(Number(row.scene_id));
       if (!target) continue;
@@ -353,7 +353,7 @@ class SceneService extends Service {
     }
   }
 
-  async addCharacter(sceneId, characterId) {
+  async addCharacter(sceneId: number, characterId: number) {
     const scene = await this.findById(sceneId);
     const character = await this.ctx.service.character.findById(characterId);
     if (!scene) throw new Error('scene not found');
@@ -369,7 +369,7 @@ class SceneService extends Service {
     return await this.findById(sceneId);
   }
 
-  async removeCharacter(sceneId, characterId) {
+  async removeCharacter(sceneId: number, characterId: number) {
     const scene = await this.findById(sceneId);
     if (!scene) throw new Error('scene not found');
     await this.pool.execute(
@@ -380,7 +380,7 @@ class SceneService extends Service {
     return await this.findById(sceneId);
   }
 
-  async addAsset(sceneId, assetId) {
+  async addAsset(sceneId: number, assetId: number) {
     const scene = await this.findById(sceneId);
     const asset = await this.ctx.service.asset.findById(assetId);
     if (!scene) throw new Error('scene not found');
@@ -397,7 +397,7 @@ class SceneService extends Service {
     return await this.findById(sceneId);
   }
 
-  async removeAsset(sceneId, assetId) {
+  async removeAsset(sceneId: number, assetId: number) {
     const scene = await this.findById(sceneId);
     if (!scene) throw new Error('scene not found');
     await this.pool.execute('DELETE FROM scene_asset_usages WHERE scene_id = ? AND asset_id = ?', [
@@ -417,13 +417,13 @@ class SceneService extends Service {
    * service.buildCoverPrompt({ title: "便利店门口" }, [{ content: "李明抬头" }])
    * // => "..."
    */
-  buildCoverPrompt(scene) {
+  buildCoverPrompt(scene: any) {
     const prompt = assertCompositePromptLength(scene.prompt || scene.description || '');
     if (!prompt) throw new Error('片段 Prompt 不能为空');
     return extractFirstShotCoverPrompt(prompt);
   }
 
-  buildGenerationReferenceState(scene, references, missing, projectReferenceNames = []) {
+  buildGenerationReferenceState(scene: any, references: any[], missing: any[], projectReferenceNames: string[] = []) {
     const prompt = String(scene.prompt || scene.description || '');
     const boundNames = new Set(
       [
@@ -431,10 +431,10 @@ class SceneService extends Service {
         ...(Array.isArray(scene.assets) ? scene.assets : []),
         ...(Array.isArray(scene.video_frame_references) ? scene.video_frame_references : []),
       ]
-        .map((item) => String(item.name || '').trim())
+        .map((item: any) => String(item.name || '').trim())
         .filter(Boolean),
     );
-    const typeLabels = {
+    const typeLabels: Record<string, string> = {
       character: '角色主设定图',
       scene: '场景参考图',
       prop: '道具参考图',
@@ -442,7 +442,7 @@ class SceneService extends Service {
       asset: '图片参考',
       video_frame: '视频抽帧',
     };
-    const mappings = references.map((reference, index) => {
+    const mappings = references.map((reference: any, index: any) => {
       const name = String(reference.name || '').trim();
       const mention = name ? `@${name}` : '';
       const isMentioned = !!mention && prompt.includes(mention);
@@ -460,13 +460,13 @@ class SceneService extends Service {
       };
     });
     const boundWithoutMentions = mappings
-      .filter((mapping) => !mapping.is_mentioned)
-      .map((mapping) => mapping.name);
+      .filter((mapping: any) => !mapping.is_mentioned)
+      .map((mapping: any) => mapping.name);
     const knownNames = Array.from(
-      new Set(projectReferenceNames.map((name) => String(name || '').trim()).filter(Boolean)),
+      new Set(projectReferenceNames.map((name: any) => String(name || '').trim()).filter(Boolean)),
     );
     const unboundMentions = knownNames.filter(
-      (name) => prompt.includes(`@${name}`) && !boundNames.has(name),
+      (name: any) => prompt.includes(`@${name}`) && !boundNames.has(name),
     );
 
     return {
@@ -475,13 +475,13 @@ class SceneService extends Service {
       mappings,
       bound_without_mentions: boundWithoutMentions,
       unbound_mentions: unboundMentions,
-      recognized_bound_mentions: Array.from(boundNames).filter((name) =>
+      recognized_bound_mentions: Array.from(boundNames).filter((name: any) =>
         prompt.includes(`@${name}`),
       ),
     };
   }
 
-  async generationReferencesForScene(scene) {
+  async generationReferencesForScene(scene: any) {
     const [{ references, missing }, characters, assets] = await Promise.all([
       this.ctx.service.storyboard.selectReferenceImages(scene, scene),
       this.ctx.service.character.findByProjectId(scene.project_id),
@@ -492,12 +492,12 @@ class SceneService extends Service {
       scene,
       [...references, ...frameReferences],
       missing,
-      [...characters, ...assets].map((item) => item.name),
+      [...characters, ...assets].map((item: any) => item.name),
     );
   }
 
-  buildVideoFrameReferences(frames) {
-    return frames.map((frame) => {
+  buildVideoFrameReferences(frames: any[]) {
+    return frames.map((frame: any) => {
       const seconds = (Number(frame.timestamp_ms || 0) / 1000).toFixed(1);
       const sceneTitle = String(frame.source_scene_title || `片段${frame.source_scene_id}`);
       return {
@@ -510,15 +510,15 @@ class SceneService extends Service {
     });
   }
 
-  async generationReferences(id) {
+  async generationReferences(id: number) {
     const scene = await this.findById(id);
     if (!scene) throw new Error('scene not found');
     return await this.generationReferencesForScene(scene);
   }
 
-  buildReferenceMappedPrompt(prompt, mappings) {
+  buildReferenceMappedPrompt(prompt: string, mappings: any[]) {
     if (!mappings.length) return prompt;
-    return `【参考图对应关系】\n${mappings.map((mapping) => mapping.prompt_text).join('\n')}\n\n${prompt}`;
+    return `【参考图对应关系】\n${mappings.map((mapping: any) => mapping.prompt_text).join('\n')}\n\n${prompt}`;
   }
 
   /**
@@ -529,7 +529,7 @@ class SceneService extends Service {
    * await service.previewCoverGeneration(21)
    * // => { action: "scene-cover", model: "seedream-4.5", final_prompt: "..." }
    */
-  async previewCoverGeneration(id, _selectedModel = '') {
+  async previewCoverGeneration(id: number, _selectedModel: string = '') {
     const scene = await this.findById(id);
     if (!scene) {
       throw new Error('scene not found');
@@ -564,7 +564,7 @@ class SceneService extends Service {
    * await service.generateCover(21)
    * // => { id: 21, cover_url: "/generated/scene-covers/scene-21-....png" }
    */
-  async generateCover(id, selectedModel = '', useTextOnly = false) {
+  async generateCover(id: number, selectedModel: string = '', useTextOnly: boolean = false) {
     const scene = await this.findById(id);
     if (!scene) {
       throw new Error('scene not found');
@@ -588,7 +588,7 @@ class SceneService extends Service {
       const imageUrl = await generateSeedreamImage(
         this.app,
         preview.final_prompt,
-        useTextOnly ? [] : preview.reference_images.map((item) => item.url),
+        useTextOnly ? [] : preview.reference_images.map((item: any) => item.url),
       );
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.png`;
       stored = await downloadAndStore(this.app, imageUrl, 'scene-covers', filename, 'image/png');
@@ -612,7 +612,7 @@ class SceneService extends Service {
     } catch (error) {
       await this.ctx.service.sceneMediaGeneration.update(generation.id, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
       throw error;
     }
@@ -626,7 +626,7 @@ class SceneService extends Service {
    * await service.generateStoryboardCovers(21)
    * // => { generated_count: 8, failed: [] }
    */
-  async generateStoryboardCovers(id) {
+  async generateStoryboardCovers(id: number) {
     const storyboards = await this.ctx.service.storyboard.findBySceneId(id);
     const failed = [];
     let generatedCount = 0;
@@ -635,7 +635,7 @@ class SceneService extends Service {
         await this.ctx.service.storyboard.generateCover(storyboard.id, '', false);
         generatedCount++;
       } catch (error) {
-        failed.push({ storyboard_id: storyboard.id, error: error.message });
+        failed.push({ storyboard_id: storyboard.id, error: (error as Error).message });
       }
     }
     return {
@@ -646,11 +646,11 @@ class SceneService extends Service {
     };
   }
 
-  async listMediaGenerations(id) {
+  async listMediaGenerations(id: number) {
     return await this.ctx.service.sceneMediaLibrary.list(id);
   }
 
-  async applyMediaGeneration(id, generation) {
+  async applyMediaGeneration(id: number, generation: any) {
     if (!generation || Number(generation.scene_id) !== Number(id)) {
       throw new Error('scene media generation not found');
     }
@@ -673,26 +673,26 @@ class SceneService extends Service {
     throw new Error('unsupported media type');
   }
 
-  async setMediaGenerationCurrent(id, generationId) {
+  async setMediaGenerationCurrent(id: number, generationId: number) {
     return await this.ctx.service.sceneMediaLibrary.setCurrent(id, generationId);
   }
 
-  async deleteMediaGeneration(id, generationId) {
+  async deleteMediaGeneration(id: number, generationId: number) {
     return await this.ctx.service.sceneMediaLibrary.remove(id, generationId);
   }
 
-  async uploadCover(id, coverUrl) {
+  async uploadCover(id: number, coverUrl: string) {
     return await this.ctx.service.sceneMediaLibrary.uploadCover(id, coverUrl);
   }
 
   async previewVideoGeneration(
-    id,
-    selectedModel,
-    duration,
-    useFirstFrameRaw,
-    resolutionRaw,
-    aspectRatioRaw,
-    generateAudioRaw,
+    id: number,
+    selectedModel: string,
+    duration: number | null,
+    useFirstFrameRaw: boolean,
+    resolutionRaw: string,
+    aspectRatioRaw: string,
+    generateAudioRaw: boolean,
   ) {
     const scene = await this.findById(id);
     if (!scene) throw new Error('scene not found');
@@ -778,7 +778,7 @@ class SceneService extends Service {
     };
   }
 
-  async generateVideo(id, model, duration, useFirstFrame, resolution, aspectRatio, generateAudio) {
+  async generateVideo(id: number, model: string, duration: number, useFirstFrame: boolean, resolution: string, aspectRatio: string, generateAudio: boolean) {
     const preview = await this.previewVideoGeneration(
       id,
       model,
@@ -815,13 +815,13 @@ class SceneService extends Service {
       video_status: GENERATION_STATUS.GENERATING,
       video_error: '',
     });
-    void this.generateVideoAsync(id, preview, generation.id).catch((error) =>
+    void this.generateVideoAsync(id, preview, generation.id).catch((error: any) =>
       this.ctx.logger.error(error),
     );
     return { scene_id: id, scene: await this.findById(id) };
   }
 
-  async generateVideoAsync(id, preview, generationId) {
+  async generateVideoAsync(id: number, preview: any, generationId: number) {
     let scene = await this.findById(id);
     try {
       if (preview.use_first_frame && !scene.cover_url) {
@@ -839,13 +839,13 @@ class SceneService extends Service {
             imageInput,
             preview.duration,
             preview.use_first_frame,
-            preview.reference_images.map((item) => item.url),
-            preview.audio_reference_assets.map((item) => item.url),
+            preview.reference_images.map((item: any) => item.url),
+            preview.audio_reference_assets.map((item: any) => item.url),
             preview.resolution,
             preview.aspect_ratio,
             preview.audio,
             {
-              onTaskCreated: async (taskId) => {
+              onTaskCreated: async (taskId: any) => {
                 const currentGeneration =
                   await this.ctx.service.sceneMediaGeneration.findById(generationId);
                 await this.ctx.service.sceneMediaGeneration.update(generationId, {
@@ -908,11 +908,11 @@ class SceneService extends Service {
         video_preview_url: '',
         video_poster_url: '',
         video_status: GENERATION_STATUS.FAILED,
-        video_error: error.message,
+        video_error: (error as Error).message,
       });
       await this.ctx.service.sceneMediaGeneration.update(generationId, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
       throw error;
     }
@@ -927,7 +927,7 @@ class SceneService extends Service {
    * await service.composeVideo(21, true)
    * // => { id: 21, video_url: "/generated/scene-videos/scene-21-....mp4", video_status: "succeeded" }
    */
-  async composeVideo(id, regenerate) {
+  async composeVideo(id: number, regenerate: boolean) {
     const scene = await this.findById(id);
     if (!scene) {
       throw new Error('scene not found');
@@ -944,7 +944,7 @@ class SceneService extends Service {
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(
         this.app,
-        inputs.map((item) => item.source),
+        inputs.map((item: any) => item.source),
         'scene-videos',
         filename,
       );
@@ -975,7 +975,7 @@ class SceneService extends Service {
     } catch (error) {
       await this.update(id, {
         video_status: GENERATION_STATUS.FAILED,
-        video_error: error.message,
+        video_error: (error as Error).message,
       });
       throw error;
     }

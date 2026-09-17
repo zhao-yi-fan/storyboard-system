@@ -63,11 +63,11 @@ class StoryboardService extends Service {
     return new StoryboardRepository(this.pool);
   }
 
-  async findSceneById(id) {
+  async findSceneById(id: number) {
     return await this.repository.findSceneById(id);
   }
 
-  async findBySceneId(sceneId) {
+  async findBySceneId(sceneId: number) {
     const scene = await this.findSceneById(sceneId);
     if (!scene) {
       throw new Error('scene not found');
@@ -75,13 +75,13 @@ class StoryboardService extends Service {
 
     const rows = await this.repository.findBySceneId(sceneId);
 
-    const items = rows.map((row) => mapStoryboard(this.app, row));
+    const items = rows.map((row: any) => mapStoryboard(this.app, row));
     await this.attachCharacters(items);
     await this.attachAssets(items);
     return items;
   }
 
-  async findById(id) {
+  async findById(id: number) {
     const row = await this.repository.findById(id);
     if (!row) {
       return null;
@@ -92,11 +92,11 @@ class StoryboardService extends Service {
     return item;
   }
 
-  async getMaxSortOrder(sceneId) {
+  async getMaxSortOrder(sceneId: number) {
     return await this.repository.getMaxSortOrder(sceneId);
   }
 
-  async create(sceneId, payload) {
+  async create(sceneId: number, payload: Record<string, unknown>) {
     const scene = await this.findSceneById(sceneId);
     if (!scene) {
       throw new Error('scene not found');
@@ -141,7 +141,7 @@ class StoryboardService extends Service {
     return await this.findById(result.insertId);
   }
 
-  async update(id, payload) {
+  async update(id: number, payload: Record<string, unknown>) {
     const current = await this.findById(id);
     if (!current) {
       throw new Error('storyboard not found');
@@ -233,7 +233,7 @@ class StoryboardService extends Service {
     return await this.findById(id);
   }
 
-  async softDelete(id) {
+  async softDelete(id: number) {
     await this.pool.execute('UPDATE storyboards SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
@@ -246,7 +246,7 @@ class StoryboardService extends Service {
     if (!items.length) {
       return;
     }
-    const ids = items.map((item) => item.id);
+    const ids = items.map((item: any) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
       `SELECT sc.storyboard_id, c.id, c.project_id, c.name, c.description, c.avatar_url,
@@ -258,7 +258,7 @@ class StoryboardService extends Service {
        ORDER BY sc.storyboard_id ASC, c.id ASC`,
       ids,
     );
-    const byStoryboard = new Map(items.map((item) => [item.id, item]));
+    const byStoryboard = new Map(items.map((item: any) => [item.id, item]));
     for (const row of rows) {
       const target = byStoryboard.get(Number(row.storyboard_id));
       if (!target) {
@@ -279,7 +279,7 @@ class StoryboardService extends Service {
     if (!items.length) {
       return;
     }
-    const ids = items.map((item) => item.id);
+    const ids = items.map((item: any) => item.id);
     const placeholders = ids.map(() => '?').join(', ');
     const [rows] = await this.pool.query(
       `SELECT DISTINCT sau.storyboard_id, a.id, a.project_id, a.character_id, a.name, a.type, a.file_url, a.cover_url, a.thumbnail_url, a.meta, a.created_at, a.updated_at
@@ -289,7 +289,7 @@ class StoryboardService extends Service {
        ORDER BY sau.storyboard_id ASC, a.id ASC`,
       ids,
     );
-    const byStoryboard = new Map(items.map((item) => [item.id, item]));
+    const byStoryboard = new Map(items.map((item: any) => [item.id, item]));
     for (const row of rows) {
       const target = byStoryboard.get(Number(row.storyboard_id));
       if (!target) {
@@ -311,19 +311,19 @@ class StoryboardService extends Service {
     return new Set([VIDEO_MODEL.WAN_2_7_I2V, StoryboardService.SEEDANCE_VIDEO_MODEL]);
   }
 
-  isSeedanceVideoModel(model) {
+  isSeedanceVideoModel(model: string) {
     return String(model || '').trim() === StoryboardService.SEEDANCE_VIDEO_MODEL;
   }
 
-  resolveStoryboardStylePreset(scene, storyboard) {
+  resolveStoryboardStylePreset(scene: any, storyboard: any) {
     return String(storyboard.style_preset || scene.style_preset || '').trim();
   }
 
-  resolveStoryboardStyleNotes(scene, storyboard) {
+  resolveStoryboardStyleNotes(scene: any, storyboard: any) {
     return String(storyboard.style_notes || scene.style_notes || '').trim();
   }
 
-  parseBooleanFlag(value, defaultValue = true) {
+  parseBooleanFlag(value: any, defaultValue: boolean = true) {
     if (typeof value === 'boolean') {
       return value;
     }
@@ -333,15 +333,15 @@ class StoryboardService extends Service {
     return normalized !== 'false' && normalized !== '0' && normalized !== 'off';
   }
 
-  parseUseFirstFrame(value) {
+  parseUseFirstFrame(value: any) {
     return this.parseBooleanFlag(value, true);
   }
 
-  parseGenerateAudio(value) {
+  parseGenerateAudio(value: any) {
     return this.parseBooleanFlag(value, true);
   }
 
-  normalizeVideoAspectRatio(_model, value) {
+  normalizeVideoAspectRatio(_model: string, value: string) {
     const aspectRatio = String(value || StoryboardService.VIDEO_ASPECT_RATIO_9_16).trim();
     if (aspectRatio !== StoryboardService.VIDEO_ASPECT_RATIO_9_16) {
       throw new Error('当前仅支持 9:16 竖屏输出');
@@ -349,7 +349,7 @@ class StoryboardService extends Service {
     return aspectRatio;
   }
 
-  normalizeVideoResolution(model, value) {
+  normalizeVideoResolution(model: string, value: string) {
     const isSeedance = this.isSeedanceVideoModel(model);
     const resolution = String(
       value || (isSeedance ? VIDEO_RESOLUTION.SD : VIDEO_RESOLUTION.HD),
@@ -365,7 +365,7 @@ class StoryboardService extends Service {
     return resolution;
   }
 
-  normalizeVideoDuration(model, value) {
+  normalizeVideoDuration(model: string, value: any) {
     const duration = Number(value === null || value === undefined || value === '' ? 5 : value);
     if (!Number.isInteger(duration)) {
       throw new Error('视频时长必须为整数秒');
@@ -382,12 +382,12 @@ class StoryboardService extends Service {
     return duration;
   }
 
-  getAssetFileExtension(asset) {
+  getAssetFileExtension(asset: any) {
     const source = String(asset?.file_url || '').split(/[?#]/)[0];
     return source.includes('.') ? source.slice(source.lastIndexOf('.') + 1).toLowerCase() : '';
   }
 
-  isAudioAsset(asset) {
+  isAudioAsset(asset: any) {
     const type = String(asset?.type || '').trim();
     const extension = this.getAssetFileExtension(asset);
     return (
@@ -396,7 +396,7 @@ class StoryboardService extends Service {
     );
   }
 
-  getAssetReferenceType(asset) {
+  getAssetReferenceType(asset: any) {
     const type = String(asset?.type || '').trim();
     if (/(scene|background|location|场景|背景|地点)/i.test(type)) {
       return REFERENCE_TYPE.SCENE;
@@ -407,7 +407,7 @@ class StoryboardService extends Service {
     return REFERENCE_TYPE.ASSET;
   }
 
-  async selectAssetReferenceImages(storyboard, _scene?) {
+  async selectAssetReferenceImages(storyboard: any, _scene?: any) {
     const references = [];
     const missing = [];
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
@@ -433,7 +433,7 @@ class StoryboardService extends Service {
     return { references, missing };
   }
 
-  async selectReferenceImages(storyboard, scene) {
+  async selectReferenceImages(storyboard: any, scene: any) {
     const { references, missing } = await this.selectAssetReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
       const url = resolveUrl(
@@ -456,7 +456,7 @@ class StoryboardService extends Service {
     return { references, missing };
   }
 
-  selectVideoCharacterReferenceImages(storyboard) {
+  selectVideoCharacterReferenceImages(storyboard: any) {
     const references = [];
     const missing = [];
     for (const character of storyboard.characters.slice(0, 2)) {
@@ -480,7 +480,7 @@ class StoryboardService extends Service {
     return { references, missing };
   }
 
-  async selectVideoReferenceImages(storyboard, scene) {
+  async selectVideoReferenceImages(storyboard: any, scene: any) {
     const { references: sceneReferences, missing: sceneMissing } =
       await this.selectAssetReferenceImages(storyboard, scene);
     const { references: characterReferences, missing: characterMissing } =
@@ -491,7 +491,7 @@ class StoryboardService extends Service {
     };
   }
 
-  async resolveVoiceReferenceDuration(character, url) {
+  async resolveVoiceReferenceDuration(character: any, url: string) {
     const storedDuration = Number(character.voice_reference_duration || 0) || 0;
     if (storedDuration > 0) {
       return storedDuration;
@@ -511,7 +511,7 @@ class StoryboardService extends Service {
       this.ctx.logger.warn(
         '[seedance] failed to probe voice reference duration character=%s: %s',
         character.id,
-        error.message,
+        (error as Error).message,
       );
       return 0;
     } finally {
@@ -521,7 +521,7 @@ class StoryboardService extends Service {
     }
   }
 
-  getAssetMetaDuration(asset) {
+  getAssetMetaDuration(asset: any) {
     const meta = asset?.meta;
     if (!meta) return 0;
     if (typeof meta === 'object') {
@@ -536,7 +536,7 @@ class StoryboardService extends Service {
     }
   }
 
-  async resolveAssetAudioDuration(asset, url) {
+  async resolveAssetAudioDuration(asset: any, url: string) {
     const metaDuration = this.getAssetMetaDuration(asset);
     if (metaDuration > 0) return metaDuration;
     let materialized;
@@ -547,7 +547,7 @@ class StoryboardService extends Service {
       this.ctx.logger.warn(
         '[seedance] failed to probe audio asset duration asset=%s: %s',
         asset.id,
-        error.message,
+        (error as Error).message,
       );
       return 0;
     } finally {
@@ -555,7 +555,7 @@ class StoryboardService extends Service {
     }
   }
 
-  async selectVideoAudioReferences(storyboard, hasVisualInput) {
+  async selectVideoAudioReferences(storyboard: any, hasVisualInput: boolean) {
     const references = [];
     const missing = [];
     const blockingReasons = [];
@@ -611,16 +611,16 @@ class StoryboardService extends Service {
       );
     }
     const invalidDurationReferences = references.filter(
-      (item) =>
+      (item: any) =>
         item.duration < StoryboardService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS ||
         item.duration > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
     );
     if (invalidDurationReferences.length) {
       blockingReasons.push(
-        `以下角色主语音时长不在 2-15 秒范围内：${invalidDurationReferences.map((item) => `${item.name}${item.duration ? `(${item.duration.toFixed(1)}s)` : '(未知时长)'}`).join('、')}`,
+        `以下角色主语音时长不在 2-15 秒范围内：${invalidDurationReferences.map((item: any) => `${item.name}${item.duration ? `(${item.duration.toFixed(1)}s)` : '(未知时长)'}`).join('、')}`,
       );
     }
-    const totalDuration = references.reduce((sum, item) => sum + item.duration, 0);
+    const totalDuration = references.reduce((sum: any, item: any) => sum + item.duration, 0);
     if (totalDuration > StoryboardService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS) {
       blockingReasons.push(
         `Seedance 2.0 参考音频总时长不能超过 15 秒，当前为 ${totalDuration.toFixed(1)} 秒`,
@@ -644,7 +644,7 @@ class StoryboardService extends Service {
     };
   }
 
-  async addCharacter(storyboardId, characterId) {
+  async addCharacter(storyboardId: number, characterId: number) {
     const storyboard = await this.findById(storyboardId);
     if (!storyboard) {
       throw new Error('storyboard not found');
@@ -669,7 +669,7 @@ class StoryboardService extends Service {
     return await this.findById(storyboardId);
   }
 
-  async removeCharacter(storyboardId, characterId) {
+  async removeCharacter(storyboardId: number, characterId: number) {
     const storyboard = await this.findById(storyboardId);
     if (!storyboard) {
       throw new Error('storyboard not found');
@@ -685,7 +685,7 @@ class StoryboardService extends Service {
     return await this.findById(storyboardId);
   }
 
-  async addAsset(storyboardId, assetId) {
+  async addAsset(storyboardId: number, assetId: number) {
     const storyboard = await this.findById(storyboardId);
     if (!storyboard) {
       throw new Error('storyboard not found');
@@ -713,7 +713,7 @@ class StoryboardService extends Service {
     return await this.findById(storyboardId);
   }
 
-  async removeAsset(storyboardId, assetId) {
+  async removeAsset(storyboardId: number, assetId: number) {
     const storyboard = await this.findById(storyboardId);
     if (!storyboard) {
       throw new Error('storyboard not found');
@@ -729,7 +729,7 @@ class StoryboardService extends Service {
     return await this.findById(storyboardId);
   }
 
-  async previewCoverGeneration(id, selectedModel) {
+  async previewCoverGeneration(id: number, selectedModel: string) {
     if (!this.supportedCoverModels().has(String(selectedModel || '').trim())) {
       throw new Error('unsupported cover model');
     }
@@ -771,7 +771,7 @@ class StoryboardService extends Service {
       prompt_mode: composite ? 'composite' : 'legacy',
       mode,
       model,
-      reference_images: references.map((item) => ({
+      reference_images: references.map((item: any) => ({
         type: item.type,
         name: item.name,
         url: item.url,
@@ -786,7 +786,7 @@ class StoryboardService extends Service {
     };
   }
 
-  async generateCover(id, selectedModel, useTextOnly) {
+  async generateCover(id: number, selectedModel: string, useTextOnly: boolean) {
     const preview = await this.previewCoverGeneration(id, selectedModel);
     const generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,
@@ -799,7 +799,7 @@ class StoryboardService extends Service {
         preview_format: 'webp',
         preview_width: 480,
         reference_count: preview.reference_images.length,
-        reference_types: preview.reference_images.map((item) => item.type),
+        reference_types: preview.reference_images.map((item: any) => item.type),
         generation_mode: useTextOnly ? 'text-only' : preview.mode,
       }),
     });
@@ -808,7 +808,7 @@ class StoryboardService extends Service {
       const imageUrl = await generateSeedreamImage(
         this.app,
         preview.final_prompt,
-        useTextOnly ? [] : preview.reference_images.map((item) => item.url),
+        useTextOnly ? [] : preview.reference_images.map((item: any) => item.url),
       );
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.png`;
       const stored = await downloadAndStore(this.app, imageUrl, 'covers', filename, 'image/png');
@@ -844,13 +844,13 @@ class StoryboardService extends Service {
     } catch (error) {
       await this.ctx.service.mediaGeneration.update(generation.id, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
       throw error;
     }
   }
 
-  async uploadCover(id, thumbnailUrl) {
+  async uploadCover(id: number, thumbnailUrl: string) {
     const storyboard = await this.findById(id);
     if (!storyboard) {
       throw new Error('storyboard not found');
@@ -883,12 +883,12 @@ class StoryboardService extends Service {
   }
 
   async previewVideoGeneration(
-    id,
-    selectedModel,
-    duration,
-    useFirstFrameRaw,
-    resolutionRaw,
-    generateAudioRaw,
+    id: number,
+    selectedModel: string,
+    duration: any,
+    useFirstFrameRaw: any,
+    resolutionRaw: string,
+    generateAudioRaw: any,
   ) {
     const storyboard = await this.findById(id);
     if (!storyboard) {
@@ -972,20 +972,20 @@ class StoryboardService extends Service {
           ? 'existing-cover'
           : 'will-generate-cover',
       will_generate_cover: useFirstFrame && !sourceImageUrl,
-      reference_images: referenceImages.map((item) => ({
+      reference_images: referenceImages.map((item: any) => ({
         type: item.type,
         name: item.name,
         url: item.url,
         source: item.source,
       })),
-      omitted_reference_images: omittedReferenceImages.map((item) => ({
+      omitted_reference_images: omittedReferenceImages.map((item: any) => ({
         type: item.type,
         name: item.name,
         url: item.url,
         source: item.source,
       })),
       missing_references: missingReferences,
-      audio_reference_assets: audioReferenceSummary.references.map((item) => ({
+      audio_reference_assets: audioReferenceSummary.references.map((item: any) => ({
         reference_id: item.reference_id,
         character_id: item.character_id,
         asset_id: item.asset_id,
@@ -1041,12 +1041,12 @@ class StoryboardService extends Service {
   }
 
   async generateVideo(
-    id,
-    selectedModel,
-    duration,
-    useFirstFrameRaw,
-    resolutionRaw,
-    generateAudioRaw,
+    id: number,
+    selectedModel: string,
+    duration: any,
+    useFirstFrameRaw: any,
+    resolutionRaw: string,
+    generateAudioRaw: any,
   ) {
     const preview = await this.previewVideoGeneration(
       id,
@@ -1083,7 +1083,7 @@ class StoryboardService extends Service {
         first_frame_status: preview.source_image_status,
         reference_image_count: preview.reference_images?.length || 0,
         audio_reference_count: preview.audio_reference_assets?.length || 0,
-        audio_reference_characters: (preview.audio_reference_assets || []).map((item) => item.name),
+        audio_reference_characters: (preview.audio_reference_assets || []).map((item: any) => item.name),
         audio_reference_total_duration: preview.audio_reference_total_duration || 0,
       }),
     });
@@ -1093,7 +1093,7 @@ class StoryboardService extends Service {
       video_error: '',
     });
 
-    void this.generateVideoAsync(id, preview, generation.id).catch((err) =>
+    void this.generateVideoAsync(id, preview, generation.id).catch((err: any) =>
       this.ctx.logger.error(err),
     );
     const refreshed = await this.findById(id);
@@ -1105,7 +1105,7 @@ class StoryboardService extends Service {
     };
   }
 
-  async generateVideoAsync(id, preview, generationId) {
+  async generateVideoAsync(id: number, preview: any, generationId: number) {
     const generation = await this.ctx.service.mediaGeneration.findById(generationId);
     let storyboard = await this.findById(id);
     try {
@@ -1127,12 +1127,12 @@ class StoryboardService extends Service {
             imageInput,
             preview.duration,
             preview.use_first_frame,
-            (preview.reference_images || []).map((item) => item.url),
-            (preview.audio_reference_assets || []).map((item) => item.url),
+            (preview.reference_images || []).map((item: any) => item.url),
+            (preview.audio_reference_assets || []).map((item: any) => item.url),
             preview.resolution,
             preview.audio,
             {
-              onTaskCreated: async (taskId) => {
+              onTaskCreated: async (taskId: any) => {
                 const currentGeneration = await this.ctx.service.mediaGeneration.findById(
                   generationId,
                 );
@@ -1185,7 +1185,7 @@ class StoryboardService extends Service {
           reference_image_count: preview.reference_images?.length || 0,
           audio_reference_count: preview.audio_reference_assets?.length || 0,
           audio_reference_characters: (preview.audio_reference_assets || []).map(
-            (item) => item.name,
+            (item: any) => item.name,
           ),
           audio_reference_total_duration: preview.audio_reference_total_duration || 0,
           provider_task_id: result.taskId || undefined,
@@ -1197,16 +1197,16 @@ class StoryboardService extends Service {
         video_url: '',
         video_preview_url: '',
         video_status: GENERATION_STATUS.FAILED,
-        video_error: error.message,
+        video_error: (error as Error).message,
       });
       await this.ctx.service.mediaGeneration.update(generation.id, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
     }
   }
 
-  async applyMediaGeneration(storyboardId, generation) {
+  async applyMediaGeneration(storyboardId: number, generation: any) {
     if (!generation) {
       return await this.findById(storyboardId);
     }
@@ -1228,7 +1228,7 @@ class StoryboardService extends Service {
     return await this.findById(storyboardId);
   }
 
-  async clearMedia(storyboardId, mediaType) {
+  async clearMedia(storyboardId: number, mediaType: string) {
     if (mediaType === MEDIA_TYPE.COVER) {
       await this.update(storyboardId, { thumbnail_url: '', thumbnail_preview_url: '' });
     } else if (mediaType === MEDIA_TYPE.VIDEO) {
@@ -1243,12 +1243,12 @@ class StoryboardService extends Service {
     return await this.findById(storyboardId);
   }
 
-  async listSceneVideoInputs(sceneId) {
+  async listSceneVideoInputs(sceneId: number) {
     const items = await this.findBySceneId(sceneId);
     return items
-      .filter((item) => item.video_status === GENERATION_STATUS.SUCCEEDED && item.video_url)
-      .sort((a, b) => a.sort_order - b.sort_order || a.shot_number - b.shot_number)
-      .map((item) => ({
+      .filter((item: any) => item.video_status === GENERATION_STATUS.SUCCEEDED && item.video_url)
+      .sort((a: any, b: any) => a.sort_order - b.sort_order || a.shot_number - b.shot_number)
+      .map((item: any) => ({
         source: item.video_url,
         duration: item.video_duration || item.duration || 5,
       }));

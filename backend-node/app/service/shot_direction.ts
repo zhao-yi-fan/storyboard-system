@@ -6,7 +6,7 @@ const { GENERATION_STATUS } = require('../lib/domain_constants');
 
 const ANALYSIS_NOTE_MARKER = '镜头走向建议：';
 
-function parseResultJson(value) {
+function parseResultJson(value: any) {
   if (!value) {
     return null;
   }
@@ -20,11 +20,11 @@ function parseResultJson(value) {
   }
 }
 
-function cleanString(value) {
+function cleanString(value: any) {
   return String(value || '').trim();
 }
 
-function buildAnalysisNotes(result) {
+function buildAnalysisNotes(result: any) {
   const lines = [
     `${ANALYSIS_NOTE_MARKER}`,
     result.narrative_role ? `- 叙事功能：${result.narrative_role}` : '',
@@ -39,7 +39,7 @@ function buildAnalysisNotes(result) {
   return lines.join('\n');
 }
 
-function mergeAnalysisNotes(currentNotes, result) {
+function mergeAnalysisNotes(currentNotes: any, result: any) {
   const existing = cleanString(currentNotes);
   const markerIndex = existing.indexOf(ANALYSIS_NOTE_MARKER);
   const base = markerIndex >= 0 ? existing.slice(0, markerIndex).trim() : existing;
@@ -51,7 +51,7 @@ class ShotDirectionService extends Service {
     return this.app.mysqlPool;
   }
 
-  map(row) {
+  map(row: any) {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
@@ -65,7 +65,7 @@ class ShotDirectionService extends Service {
     };
   }
 
-  async listBySceneId(sceneId) {
+  async listBySceneId(sceneId: number) {
     const [rows] = await this.pool.query(
       `SELECT sda.id, sda.project_id, sda.scene_id, sda.storyboard_id, sda.status, sda.result_json,
               sda.error_message, sda.created_at, sda.updated_at
@@ -81,10 +81,10 @@ class ShotDirectionService extends Service {
        ORDER BY sb.sort_order ASC, sb.id ASC, sda.id ASC`,
       [sceneId, sceneId],
     );
-    return rows.map((row) => this.map(row));
+    return rows.map((row: any) => this.map(row));
   }
 
-  async findLatestByStoryboardId(storyboardId) {
+  async findLatestByStoryboardId(storyboardId: number) {
     const [rows] = await this.pool.query(
       `SELECT id, project_id, scene_id, storyboard_id, status, result_json, error_message, created_at, updated_at
        FROM storyboard_direction_analyses
@@ -96,7 +96,7 @@ class ShotDirectionService extends Service {
     return rows.length ? this.map(rows[0]) : null;
   }
 
-  async replaceWithAnalyzingRows(scene, storyboards) {
+  async replaceWithAnalyzingRows(scene: any, storyboards: any[]) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -121,7 +121,7 @@ class ShotDirectionService extends Service {
     }
   }
 
-  async persistSucceeded(sceneId, analyses) {
+  async persistSucceeded(sceneId: number, analyses: any[]) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -142,7 +142,7 @@ class ShotDirectionService extends Service {
     }
   }
 
-  async markSceneFailed(sceneId, message) {
+  async markSceneFailed(sceneId: number, message: string) {
     await this.pool.execute(
       `UPDATE storyboard_direction_analyses
        SET status = 'failed', error_message = ?
@@ -151,14 +151,14 @@ class ShotDirectionService extends Service {
     );
   }
 
-  async clearScene(sceneId) {
+  async clearScene(sceneId: number) {
     await this.pool.execute(
       'UPDATE storyboard_direction_analyses SET deleted_at = NOW() WHERE scene_id = ? AND deleted_at IS NULL',
       [Number(sceneId)],
     );
   }
 
-  async analyzeScene(sceneId) {
+  async analyzeScene(sceneId: number) {
     const scene = await this.ctx.service.scene.findById(sceneId);
     if (!scene) {
       throw new Error('scene not found');
@@ -173,7 +173,7 @@ class ShotDirectionService extends Service {
     await this.replaceWithAnalyzingRows(scene, storyboards);
     const graph = buildShotDirectionGraph({
       config: this.app.config.storyboard || {},
-      persistResults: async (analyses) => {
+      persistResults: async (analyses: any) => {
         await this.persistSucceeded(scene.id, analyses);
       },
     });
@@ -188,12 +188,12 @@ class ShotDirectionService extends Service {
       });
       return await this.listBySceneId(scene.id);
     } catch (error) {
-      await this.markSceneFailed(scene.id, error.message);
+      await this.markSceneFailed(scene.id, (error as Error).message);
       throw error;
     }
   }
 
-  async applySuggestion(storyboardId, payload: Record<string, unknown> = {}) {
+  async applySuggestion(storyboardId: number, payload: Record<string, unknown> = {}) {
     const storyboard = await this.ctx.service.storyboard.findById(storyboardId);
     if (!storyboard) {
       throw new Error('storyboard not found');

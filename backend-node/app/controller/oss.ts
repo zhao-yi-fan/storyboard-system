@@ -41,7 +41,7 @@ class OssController extends ApiController {
       if (stream && !stream.readableEnded) {
         stream.resume();
       }
-      response.error(this.ctx, err.message);
+      response.error(this.ctx, (err as Error).message);
     }
   }
 }

@@ -187,8 +187,9 @@ class PersonalAssetService extends Service {
     }
     if (item.kind === ASSET_KIND.CHARACTER) {
       if (requirement && requirement.kind !== ASSET_KIND.CHARACTER) throw new Error('个人资产类型与需求不匹配');
-      const character = requirement?.linked_entity_type === ENTITY_TYPE.CHARACTER && requirement.linked_entity_id
-        ? await (this.ctx).service.character.update(requirement.linked_entity_id, {
+      const characterLinkedEntityId = requirement?.linked_entity_id;
+      const character = requirement?.linked_entity_type === ENTITY_TYPE.CHARACTER && characterLinkedEntityId
+        ? await (this.ctx).service.character.update(characterLinkedEntityId, {
             name: item.name, description: item.description,
             avatar_url: item.preview_url || item.file_url, design_sheet_url: item.file_url,
           })
@@ -212,8 +213,9 @@ class PersonalAssetService extends Service {
       };
     }
     if (requirement && requirement.kind !== item.kind) throw new Error('个人资产类型与需求不匹配');
-    const asset = requirement?.linked_entity_type === ENTITY_TYPE.ASSET && requirement.linked_entity_id
-      ? await (this.ctx).service.asset.update(requirement.linked_entity_id, {
+    const assetLinkedEntityId = requirement?.linked_entity_id;
+    const asset = requirement?.linked_entity_type === ENTITY_TYPE.ASSET && assetLinkedEntityId
+      ? await (this.ctx).service.asset.update(assetLinkedEntityId, {
           name: item.name, type: item.kind === ASSET_KIND.PROP ? ASSET_KIND.PROP : ASSET_KIND.SCENE,
           file_url: item.file_url, meta: item.description,
         })

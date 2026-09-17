@@ -10,22 +10,22 @@ class AssetVersioningService extends Service {
     return this.app.mysqlPool;
   }
 
-  mapVersion(row) {
+  mapVersion(row: any) {
     return mapAssetVersion(this.app, row);
   }
 
-  mapVoiceVersion(row) {
+  mapVoiceVersion(row: any) {
     return mapCharacterVoiceVersion(this.app, row);
   }
 
   async recordVersion(
-    entityType,
-    entityId,
-    projectId,
-    fileUrl,
-    previewUrl,
-    prompt,
-    sourceType = ASSET_SOURCE_TYPE.GENERATED,
+    entityType: string,
+    entityId: number,
+    projectId: number,
+    fileUrl: string,
+    previewUrl: string,
+    prompt: string,
+    sourceType: string = ASSET_SOURCE_TYPE.GENERATED,
   ) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       projectId,
@@ -68,7 +68,7 @@ class AssetVersioningService extends Service {
     }
   }
 
-  async recordCharacterDesignSheetVersion(character, fileUrl, prompt) {
+  async recordCharacterDesignSheetVersion(character: any, fileUrl: string, prompt: string) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       character.project_id,
     ]);
@@ -132,16 +132,16 @@ class AssetVersioningService extends Service {
     }
   }
 
-  async listVersions(entityType, entityId) {
+  async listVersions(entityType: string, entityId: number) {
     const [rows] = await this.pool.query(
       `SELECT * FROM asset_versions
        WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [entityType, entityId],
     );
-    return rows.map((row) => this.mapVersion(row));
+    return rows.map((row: any) => this.mapVersion(row));
   }
 
-  async setCurrentVersion(entityType, entityId, versionId, userId) {
+  async setCurrentVersion(entityType: string, entityId: number, versionId: number, userId: number) {
     const [versions] = await this.pool.query(
       `SELECT av.*, p.user_id FROM asset_versions av
        JOIN ${entityType === ENTITY_TYPE.CHARACTER ? 'characters' : 'assets'} e ON e.id = av.entity_id
@@ -181,7 +181,7 @@ class AssetVersioningService extends Service {
     return await this.listVersions(entityType, entityId);
   }
 
-  async recordVoiceVersion(character, details) {
+  async recordVoiceVersion(character: any, details: any) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       character.project_id,
     ]);
@@ -217,16 +217,16 @@ class AssetVersioningService extends Service {
     }
   }
 
-  async listVoiceVersions(characterId) {
+  async listVoiceVersions(characterId: number) {
     const [rows] = await this.pool.query(
       `SELECT * FROM character_voice_versions
        WHERE character_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
       [characterId],
     );
-    return rows.map((row) => this.mapVoiceVersion(row));
+    return rows.map((row: any) => this.mapVoiceVersion(row));
   }
 
-  async setCurrentVoiceVersion(characterId, versionId, userId) {
+  async setCurrentVoiceVersion(characterId: number, versionId: number, userId: number) {
     const [rows] = await this.pool.query(
       `SELECT cv.*, p.user_id FROM character_voice_versions cv
        JOIN characters c ON c.id = cv.character_id

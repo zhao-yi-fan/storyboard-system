@@ -42,19 +42,19 @@ class StoryboardVideoService extends Service {
     return new Set([VIDEO_MODEL.WAN_2_7_I2V, StoryboardVideoService.SEEDANCE_VIDEO_MODEL]);
   }
 
-  isSeedanceVideoModel(model) {
+  isSeedanceVideoModel(model: string) {
     return String(model || '').trim() === StoryboardVideoService.SEEDANCE_VIDEO_MODEL;
   }
 
-  resolveStoryboardStylePreset(scene, storyboard) {
+  resolveStoryboardStylePreset(scene: any, storyboard: any) {
     return String(storyboard.style_preset || scene.style_preset || '').trim();
   }
 
-  resolveStoryboardStyleNotes(scene, storyboard) {
+  resolveStoryboardStyleNotes(scene: any, storyboard: any) {
     return String(storyboard.style_notes || scene.style_notes || '').trim();
   }
 
-  parseBooleanFlag(value, defaultValue = true) {
+  parseBooleanFlag(value: any, defaultValue: boolean = true) {
     if (typeof value === 'boolean') {
       return value;
     }
@@ -64,15 +64,15 @@ class StoryboardVideoService extends Service {
     return normalized !== 'false' && normalized !== '0' && normalized !== 'off';
   }
 
-  parseUseFirstFrame(value) {
+  parseUseFirstFrame(value: any) {
     return this.parseBooleanFlag(value, true);
   }
 
-  parseGenerateAudio(value) {
+  parseGenerateAudio(value: any) {
     return this.parseBooleanFlag(value, true);
   }
 
-  normalizeVideoAspectRatio(_model, value) {
+  normalizeVideoAspectRatio(_model: string, value: string) {
     const aspectRatio = String(value || StoryboardVideoService.VIDEO_ASPECT_RATIO_9_16).trim();
     if (aspectRatio !== StoryboardVideoService.VIDEO_ASPECT_RATIO_9_16) {
       throw new Error('当前仅支持 9:16 竖屏输出');
@@ -80,7 +80,7 @@ class StoryboardVideoService extends Service {
     return aspectRatio;
   }
 
-  normalizeVideoResolution(model, value) {
+  normalizeVideoResolution(model: string, value: string) {
     const isSeedance = this.isSeedanceVideoModel(model);
     const resolution = String(
       value || (isSeedance ? VIDEO_RESOLUTION.SD : VIDEO_RESOLUTION.HD),
@@ -96,7 +96,7 @@ class StoryboardVideoService extends Service {
     return resolution;
   }
 
-  normalizeVideoDuration(model, value) {
+  normalizeVideoDuration(model: string, value: any) {
     const duration = Number(value === null || value === undefined || value === '' ? 5 : value);
     if (!Number.isInteger(duration)) {
       throw new Error('视频时长必须为整数秒');
@@ -114,12 +114,12 @@ class StoryboardVideoService extends Service {
   }
 
   async previewVideoGeneration(
-    id,
-    selectedModel,
-    duration,
-    useFirstFrameRaw,
-    resolutionRaw,
-    generateAudioRaw,
+    id: number,
+    selectedModel: string,
+    duration: any,
+    useFirstFrameRaw: any,
+    resolutionRaw: string,
+    generateAudioRaw: any,
   ) {
     const storyboard = await this.ctx.service.storyboard.findById(id);
     if (!storyboard) {
@@ -203,20 +203,20 @@ class StoryboardVideoService extends Service {
           ? 'existing-cover'
           : 'will-generate-cover',
       will_generate_cover: useFirstFrame && !sourceImageUrl,
-      reference_images: referenceImages.map((item) => ({
+      reference_images: referenceImages.map((item: any) => ({
         type: item.type,
         name: item.name,
         url: item.url,
         source: item.source,
       })),
-      omitted_reference_images: omittedReferenceImages.map((item) => ({
+      omitted_reference_images: omittedReferenceImages.map((item: any) => ({
         type: item.type,
         name: item.name,
         url: item.url,
         source: item.source,
       })),
       missing_references: missingReferences,
-      audio_reference_assets: audioReferenceSummary.references.map((item) => ({
+      audio_reference_assets: audioReferenceSummary.references.map((item: any) => ({
         reference_id: item.reference_id,
         character_id: item.character_id,
         asset_id: item.asset_id,
@@ -272,12 +272,12 @@ class StoryboardVideoService extends Service {
   }
 
   async generateVideo(
-    id,
-    selectedModel,
-    duration,
-    useFirstFrameRaw,
-    resolutionRaw,
-    generateAudioRaw,
+    id: number,
+    selectedModel: string,
+    duration: any,
+    useFirstFrameRaw: any,
+    resolutionRaw: string,
+    generateAudioRaw: any,
   ) {
     const preview = await this.previewVideoGeneration(
       id,
@@ -314,7 +314,7 @@ class StoryboardVideoService extends Service {
         first_frame_status: preview.source_image_status,
         reference_image_count: preview.reference_images?.length || 0,
         audio_reference_count: preview.audio_reference_assets?.length || 0,
-        audio_reference_characters: (preview.audio_reference_assets || []).map((item) => item.name),
+        audio_reference_characters: (preview.audio_reference_assets || []).map((item: any) => item.name),
         audio_reference_total_duration: preview.audio_reference_total_duration || 0,
       }),
     });
@@ -324,7 +324,7 @@ class StoryboardVideoService extends Service {
       video_error: '',
     });
 
-    void this.generateVideoAsync(id, preview, generation.id).catch((err) =>
+    void this.generateVideoAsync(id, preview, generation.id).catch((err: any) =>
       this.ctx.logger.error(err),
     );
     const refreshed = await this.ctx.service.storyboard.findById(id);
@@ -336,7 +336,7 @@ class StoryboardVideoService extends Service {
     };
   }
 
-  async generateVideoAsync(id, preview, generationId) {
+  async generateVideoAsync(id: number, preview: any, generationId: number) {
     const generation = await this.ctx.service.mediaGeneration.findById(generationId);
     let storyboard = await this.ctx.service.storyboard.findById(id);
     try {
@@ -358,12 +358,12 @@ class StoryboardVideoService extends Service {
             imageInput,
             preview.duration,
             preview.use_first_frame,
-            (preview.reference_images || []).map((item) => item.url),
-            (preview.audio_reference_assets || []).map((item) => item.url),
+            (preview.reference_images || []).map((item: any) => item.url),
+            (preview.audio_reference_assets || []).map((item: any) => item.url),
             preview.resolution,
             preview.audio,
             {
-              onTaskCreated: async (taskId) => {
+              onTaskCreated: async (taskId: any) => {
                 const currentGeneration = await this.ctx.service.mediaGeneration.findById(
                   generationId,
                 );
@@ -416,7 +416,7 @@ class StoryboardVideoService extends Service {
           reference_image_count: preview.reference_images?.length || 0,
           audio_reference_count: preview.audio_reference_assets?.length || 0,
           audio_reference_characters: (preview.audio_reference_assets || []).map(
-            (item) => item.name,
+            (item: any) => item.name,
           ),
           audio_reference_total_duration: preview.audio_reference_total_duration || 0,
           provider_task_id: result.taskId || undefined,
@@ -428,21 +428,21 @@ class StoryboardVideoService extends Service {
         video_url: '',
         video_preview_url: '',
         video_status: GENERATION_STATUS.FAILED,
-        video_error: error.message,
+        video_error: (error as Error).message,
       });
       await this.ctx.service.mediaGeneration.update(generation.id, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
     }
   }
 
-  async listSceneVideoInputs(sceneId) {
+  async listSceneVideoInputs(sceneId: number) {
     const items = await this.ctx.service.storyboard.findBySceneId(sceneId);
     return items
-      .filter((item) => item.video_status === GENERATION_STATUS.SUCCEEDED && item.video_url)
-      .sort((a, b) => a.sort_order - b.sort_order || a.shot_number - b.shot_number)
-      .map((item) => ({
+      .filter((item: any) => item.video_status === GENERATION_STATUS.SUCCEEDED && item.video_url)
+      .sort((a: any, b: any) => a.sort_order - b.sort_order || a.shot_number - b.shot_number)
+      .map((item: any) => ({
         source: item.video_url,
         duration: item.video_duration || item.duration || 5,
       }));

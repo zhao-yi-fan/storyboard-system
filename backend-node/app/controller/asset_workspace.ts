@@ -99,13 +99,13 @@ class AssetWorkspaceController extends ApiController {
     );
   }
 
-  async versions(entityType) {
+  async versions(entityType: string) {
     await this.respond(() =>
       this.ctx.service.assetWorkspace.listVersions(entityType, Number(this.ctx.params.id)),
     );
   }
 
-  async setVersion(entityType) {
+  async setVersion(entityType: string) {
     await this.respond(() =>
       this.ctx.service.assetWorkspace.setCurrentVersion(
         entityType,

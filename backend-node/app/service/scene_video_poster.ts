@@ -10,11 +10,11 @@ const {
 } = require('../lib/media');
 
 class SceneVideoPosterService extends Service {
-  buildFilename(sceneId, generationId) {
+  buildFilename(sceneId: number, generationId: number) {
     return `scene-${Number(sceneId)}-video-${Number(generationId)}-poster.webp`;
   }
 
-  async extractFromLocalPath(sceneId, generationId, localPath) {
+  async extractFromLocalPath(sceneId: number, generationId: number, localPath: string) {
     const posterUrl = await createPreviewFromLocalPath(
       this.app,
       localPath,
@@ -28,7 +28,7 @@ class SceneVideoPosterService extends Service {
     return posterUrl;
   }
 
-  async ensureForGeneration(generation, localPath = '') {
+  async ensureForGeneration(generation: any, localPath: string = '') {
     if (!generation || generation.media_type !== MEDIA_TYPE.VIDEO) {
       throw new Error('video generation is required');
     }
@@ -54,7 +54,7 @@ class SceneVideoPosterService extends Service {
     return posterUrl;
   }
 
-  async ensureBestEffort(generation, localPath = '') {
+  async ensureBestEffort(generation: any, localPath: string = '') {
     try {
       return await this.ensureForGeneration(generation, localPath);
     } catch (error) {
@@ -62,7 +62,7 @@ class SceneVideoPosterService extends Service {
         '[video-poster] scene=%s generation=%s extraction failed: %s',
         generation?.scene_id || '',
         generation?.id || '',
-        error?.message || error,
+        (error as any)?.message || error,
       );
       return '';
     }

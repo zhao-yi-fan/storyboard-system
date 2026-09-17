@@ -14,11 +14,11 @@ class AssetRequirementService extends Service {
     return this.app.mysqlPool;
   }
 
-  deriveRequirementStatus(currentStatus, hasMedia) {
+  deriveRequirementStatus(currentStatus: any, hasMedia: boolean) {
     return deriveAssetRequirementStatus(currentStatus, hasMedia);
   }
 
-  async queryRequirements(projectId, chapterId) {
+  async queryRequirements(projectId: number, chapterId?: number) {
     const params = [projectId];
     let chapterFilter = '';
     if (chapterId) {
@@ -47,7 +47,7 @@ class AssetRequirementService extends Service {
     return rows;
   }
 
-  async insertLegacyVersion(conn, project, entityType, entityId, fileUrl, previewUrl) {
+  async insertLegacyVersion(conn: any, project: any, entityType: string, entityId: number, fileUrl: string, previewUrl: string) {
     if (!project.user_id || !fileUrl) return;
     const [versions] = await conn.query(
       `SELECT id FROM asset_versions
@@ -64,7 +64,7 @@ class AssetRequirementService extends Service {
     );
   }
 
-  async syncAssetRequirements(projectId, chapterId = null) {
+  async syncAssetRequirements(projectId: number, chapterId: number | null = null) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -228,7 +228,7 @@ class AssetRequirementService extends Service {
         chapterId ? [projectId, chapterId] : [projectId],
       );
       const propExpectedKeys = new Set();
-      const appendProp = (row, sourceCount) => {
+      const appendProp = (row: any, sourceCount: any) => {
         const key = `${row.chapter_id}:${row.id}`;
         if (propExpectedKeys.has(key)) return;
         propExpectedKeys.add(key);
@@ -248,7 +248,7 @@ class AssetRequirementService extends Service {
         if (/(prop|道具)/i.test(String(prop.type || ''))) appendProp(prop, prop.source_count);
       }
 
-      for (const requirement of existingRequirements.filter((item) => item.kind === ASSET_KIND.PROP)) {
+      for (const requirement of existingRequirements.filter((item: any) => item.kind === ASSET_KIND.PROP)) {
         let [assets] = await conn.query(
           `SELECT id, name, type, meta, file_url, cover_url, thumbnail_url
            FROM assets WHERE id = ? AND project_id = ? AND deleted_at IS NULL`,
@@ -309,7 +309,7 @@ class AssetRequirementService extends Service {
         ].filter(
           (candidate, index, rows) =>
             !retainedIds.has(Number(candidate.id)) &&
-            rows.findIndex((row) => Number(row.id) === Number(candidate.id)) === index,
+            rows.findIndex((row: any) => Number(row.id) === Number(candidate.id)) === index,
         );
         const current = candidates[0];
         const hasMedia = Boolean(item.fileUrl);
@@ -356,8 +356,8 @@ class AssetRequirementService extends Service {
       }
 
       const retiredIds = existingRequirements
-        .filter((item) => !retainedIds.has(Number(item.id)))
-        .map((item) => Number(item.id));
+        .filter((item: any) => !retainedIds.has(Number(item.id)))
+        .map((item: any) => Number(item.id));
       if (retiredIds.length) {
         await conn.query(
           `UPDATE asset_requirements SET deleted_at = NOW() WHERE id IN (${retiredIds.map(() => '?').join(',')})`,
@@ -374,11 +374,11 @@ class AssetRequirementService extends Service {
     }
   }
 
-  async listRequirements(projectId, chapterId) {
+  async listRequirements(projectId: number, chapterId?: number) {
     await this.syncAssetRequirements(projectId, chapterId);
     const rows = await this.queryRequirements(projectId, chapterId);
     const base = this.app.config.storyboard.publicAppBaseUrl || '';
-    return rows.map((row) => {
+    return rows.map((row: any) => {
       const isCharacter = row.linked_entity_type === ENTITY_TYPE.CHARACTER;
       const canGenerate = !isCharacter || Boolean(row.character_avatar_url);
       return {
@@ -395,7 +395,7 @@ class AssetRequirementService extends Service {
     });
   }
 
-  async confirmRequirement(id) {
+  async confirmRequirement(id: number) {
     const [rows] = await this.pool.query(
       'SELECT * FROM asset_requirements WHERE id = ? AND deleted_at IS NULL',
       [id],
@@ -407,12 +407,12 @@ class AssetRequirementService extends Service {
       [id],
     );
     return (await this.listRequirements(rows[0].project_id, rows[0].chapter_id)).find(
-      (item) => item.id === Number(id),
+      (item: any) => item.id === Number(id),
     );
   }
 
-  async generateRequirements(projectId, chapterId, requirementId) {
-    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item) =>
+  async generateRequirements(projectId: number, chapterId?: number, requirementId?: number) {
+    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item: any) =>
       requirementId
         ? item.id === Number(requirementId) && item.status !== GENERATION_STATUS.GENERATING
         : item.status === GENERATION_STATUS.PENDING || item.status === GENERATION_STATUS.FAILED,
@@ -452,13 +452,13 @@ class AssetRequirementService extends Service {
           item.id,
           item.linked_entity_type,
           item.linked_entity_id,
-          error?.stack || error?.message || error,
+          (error as any)?.stack || (error as any)?.message || error,
         );
         await this.pool.execute(
           "UPDATE asset_requirements SET status = 'failed', error_message = ? WHERE id = ?",
-          [error.message || '生成失败', item.id],
+          [(error as Error).message || '生成失败', item.id],
         );
-        results.push({ id: item.id, status: GENERATION_STATUS.FAILED, error: error.message || '生成失败' });
+        results.push({ id: item.id, status: GENERATION_STATUS.FAILED, error: (error as Error).message || '生成失败' });
       }
     }
     return results;

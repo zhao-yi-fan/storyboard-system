@@ -178,7 +178,7 @@ export function normalizeShotDirectionAnalyses(
     }
   }
 
-  return storyboards.map((storyboard, index) => {
+  return storyboards.map((storyboard: any, index: any) => {
     const fallback = buildFallbackAnalysis(storyboard, index, storyboards.length);
     const item = byStoryboardId.get(Number(storyboard.id)) || {};
     return {
@@ -241,14 +241,14 @@ export function buildShotDirectionGraph(options: {
   persistResults: (analyses: Array<Record<string, unknown>>) => Promise<void>;
 }) {
   return new StateGraph(ShotDirectionState)
-    .addNode('load_context', async (state) => ({
+    .addNode('load_context', async (state: any) => ({
       scene: state.scene,
       storyboards: [...state.storyboards].sort(
-        (a, b) =>
+        (a: any, b: any) =>
           Number(a.sort_order || a.shot_number || 0) - Number(b.sort_order || b.shot_number || 0),
       ),
     }))
-    .addNode('analyze_shots', async (state) => {
+    .addNode('analyze_shots', async (state: any) => {
       if (!state.storyboards.length) {
         return { analyses: [], raw_output: '' };
       }
@@ -259,10 +259,10 @@ export function buildShotDirectionGraph(options: {
       );
       return { analyses: result.parsed, raw_output: result.raw };
     })
-    .addNode('validate_results', async (state) => ({
+    .addNode('validate_results', async (state: any) => ({
       analyses: normalizeShotDirectionAnalyses(state.analyses, state.storyboards),
     }))
-    .addNode('persist_results', async (state) => {
+    .addNode('persist_results', async (state: any) => {
       await options.persistResults(state.analyses);
       return {};
     })

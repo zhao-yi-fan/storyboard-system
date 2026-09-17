@@ -19,13 +19,13 @@ const {
 } = require('../lib/domain_constants');
 
 class SceneCoverService extends Service {
-  buildCoverPrompt(scene) {
+  buildCoverPrompt(scene: any) {
     const prompt = assertCompositePromptLength(scene.prompt || scene.description || '');
     if (!prompt) throw new Error('片段 Prompt 不能为空');
     return extractFirstShotCoverPrompt(prompt);
   }
 
-  buildGenerationReferenceState(scene, references, missing, projectReferenceNames = []) {
+  buildGenerationReferenceState(scene: any, references: any[], missing: any[], projectReferenceNames: any[] = []) {
     const prompt = String(scene.prompt || scene.description || '');
     const boundNames = new Set(
       [
@@ -33,10 +33,10 @@ class SceneCoverService extends Service {
         ...(Array.isArray(scene.assets) ? scene.assets : []),
         ...(Array.isArray(scene.video_frame_references) ? scene.video_frame_references : []),
       ]
-        .map((item) => String(item.name || '').trim())
+        .map((item: any) => String(item.name || '').trim())
         .filter(Boolean),
     );
-    const typeLabels = {
+    const typeLabels: Record<string, string> = {
       character: '角色主设定图',
       scene: '场景参考图',
       prop: '道具参考图',
@@ -44,7 +44,7 @@ class SceneCoverService extends Service {
       asset: '图片参考',
       video_frame: '视频抽帧',
     };
-    const mappings = references.map((reference, index) => {
+    const mappings = references.map((reference: any, index: any) => {
       const name = String(reference.name || '').trim();
       const mention = name ? `@${name}` : '';
       const isMentioned = !!mention && prompt.includes(mention);
@@ -62,13 +62,13 @@ class SceneCoverService extends Service {
       };
     });
     const boundWithoutMentions = mappings
-      .filter((mapping) => !mapping.is_mentioned)
-      .map((mapping) => mapping.name);
+      .filter((mapping: any) => !mapping.is_mentioned)
+      .map((mapping: any) => mapping.name);
     const knownNames = Array.from(
-      new Set(projectReferenceNames.map((name) => String(name || '').trim()).filter(Boolean)),
+      new Set(projectReferenceNames.map((name: any) => String(name || '').trim()).filter(Boolean)),
     );
     const unboundMentions = knownNames.filter(
-      (name) => prompt.includes(`@${name}`) && !boundNames.has(name),
+      (name: any) => prompt.includes(`@${name}`) && !boundNames.has(name),
     );
 
     return {
@@ -77,13 +77,13 @@ class SceneCoverService extends Service {
       mappings,
       bound_without_mentions: boundWithoutMentions,
       unbound_mentions: unboundMentions,
-      recognized_bound_mentions: Array.from(boundNames).filter((name) =>
+      recognized_bound_mentions: Array.from(boundNames).filter((name: any) =>
         prompt.includes(`@${name}`),
       ),
     };
   }
 
-  async generationReferencesForScene(scene) {
+  async generationReferencesForScene(scene: any) {
     const [{ references, missing }, characters, assets] = await Promise.all([
       this.ctx.service.storyboard.selectReferenceImages(scene, scene),
       this.ctx.service.character.findByProjectId(scene.project_id),
@@ -94,12 +94,12 @@ class SceneCoverService extends Service {
       scene,
       [...references, ...frameReferences],
       missing,
-      [...characters, ...assets].map((item) => item.name),
+      [...characters, ...assets].map((item: any) => item.name),
     );
   }
 
-  buildVideoFrameReferences(frames) {
-    return frames.map((frame) => {
+  buildVideoFrameReferences(frames: any[]) {
+    return frames.map((frame: any) => {
       const seconds = (Number(frame.timestamp_ms || 0) / 1000).toFixed(1);
       const sceneTitle = String(frame.source_scene_title || `片段${frame.source_scene_id}`);
       return {
@@ -112,18 +112,18 @@ class SceneCoverService extends Service {
     });
   }
 
-  async generationReferences(id) {
+  async generationReferences(id: number) {
     const scene = await this.ctx.service.scene.findById(id);
     if (!scene) throw new Error('scene not found');
     return await this.generationReferencesForScene(scene);
   }
 
-  buildReferenceMappedPrompt(prompt, mappings) {
+  buildReferenceMappedPrompt(prompt: string, mappings: any[]) {
     if (!mappings.length) return prompt;
-    return `【参考图对应关系】\n${mappings.map((mapping) => mapping.prompt_text).join('\n')}\n\n${prompt}`;
+    return `【参考图对应关系】\n${mappings.map((mapping: any) => mapping.prompt_text).join('\n')}\n\n${prompt}`;
   }
 
-  async previewCoverGeneration(id, _selectedModel = '') {
+  async previewCoverGeneration(id: number, _selectedModel: string = '') {
     const scene = await this.ctx.service.scene.findById(id);
     if (!scene) {
       throw new Error('scene not found');
@@ -150,7 +150,7 @@ class SceneCoverService extends Service {
     };
   }
 
-  async generateCover(id, selectedModel = '', useTextOnly = false) {
+  async generateCover(id: number, selectedModel: string = '', useTextOnly: boolean = false) {
     const scene = await this.ctx.service.scene.findById(id);
     if (!scene) {
       throw new Error('scene not found');
@@ -174,7 +174,7 @@ class SceneCoverService extends Service {
       const imageUrl = await generateSeedreamImage(
         this.app,
         preview.final_prompt,
-        useTextOnly ? [] : preview.reference_images.map((item) => item.url),
+        useTextOnly ? [] : preview.reference_images.map((item: any) => item.url),
       );
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.png`;
       stored = await downloadAndStore(this.app, imageUrl, 'scene-covers', filename, 'image/png');
@@ -198,13 +198,13 @@ class SceneCoverService extends Service {
     } catch (error) {
       await this.ctx.service.sceneMediaGeneration.update(generation.id, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
       throw error;
     }
   }
 
-  async generateStoryboardCovers(id) {
+  async generateStoryboardCovers(id: number) {
     const storyboards = await this.ctx.service.storyboard.findBySceneId(id);
     const failed = [];
     let generatedCount = 0;
@@ -213,7 +213,7 @@ class SceneCoverService extends Service {
         await this.ctx.service.storyboard.generateCover(storyboard.id, '', false);
         generatedCount++;
       } catch (error) {
-        failed.push({ storyboard_id: storyboard.id, error: error.message });
+        failed.push({ storyboard_id: storyboard.id, error: (error as Error).message });
       }
     }
     return {

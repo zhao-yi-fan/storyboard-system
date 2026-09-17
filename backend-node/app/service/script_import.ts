@@ -23,7 +23,7 @@ class ScriptImportService extends Service {
    * await service.parseAndImport(19, "李明推开便利店门。")
    * // => { project_id: 19, chapter_count: 1, scene_count: 1, storyboard_count: 3, character_count: 2 }
    */
-  async parseAndImport(projectId, scriptText) {
+  async parseAndImport(projectId: number, scriptText: string) {
     const project = await this.ctx.service.project.findById(projectId);
     if (!project) {
       throw new Error('project not found');
@@ -85,7 +85,7 @@ class ScriptImportService extends Service {
         [projectId],
       );
       const characterIds = new Map(
-        characterRows.map((row) => [String(row.name).trim(), Number(row.id)]),
+        characterRows.map((row: any) => [String(row.name).trim(), Number(row.id)]),
       );
 
       const result = {
@@ -98,7 +98,7 @@ class ScriptImportService extends Service {
 
       const parsedCharacters = new Set();
 
-      const upsertAsset = async (name, type, meta) => {
+      const upsertAsset = async (name: string, type: string, meta: any) => {
         const serializedMeta = meta ? JSON.stringify({ description: String(meta) }) : null;
         const [rows] = await conn.query(
           `SELECT id FROM assets
@@ -120,7 +120,7 @@ class ScriptImportService extends Service {
         return Number(insert.insertId);
       };
 
-      const upsertCharacter = async (name) => {
+      const upsertCharacter = async (name: string) => {
         const detail = normalizedCharacters.get(name) || {
           description: '',
           appearance: '',
@@ -143,9 +143,9 @@ class ScriptImportService extends Service {
 
       for (let chapterIndex = 0; chapterIndex < parsed.chapters.length; chapterIndex++) {
         const chapter = parsed.chapters[chapterIndex];
-        const chapterCharacters = new Set();
+        const chapterCharacters = new Set<string>();
         const chapterAssetRequirements = new Map();
-        const collectAssetRequirement = (kind, name, description, entityId) => {
+        const collectAssetRequirement = (kind: string, name: string, description: string, entityId: number) => {
           const key = `${kind}:${name}`;
           const current = chapterAssetRequirements.get(key);
           chapterAssetRequirements.set(key, {
@@ -165,7 +165,7 @@ class ScriptImportService extends Service {
         for (let sceneIndex = 0; sceneIndex < chapter.scenes.length; sceneIndex++) {
           const scene = chapter.scenes[sceneIndex];
           const prompt = (scene.storyboards || [])
-            .map((storyboard, shotIndex) => {
+            .map((storyboard: any, shotIndex: any) => {
               const fields = [
                 `镜号：${shotIndex + 1}`,
                 storyboard.duration ? `[0-${storyboard.duration}s]` : '',

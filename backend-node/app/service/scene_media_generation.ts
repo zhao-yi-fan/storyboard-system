@@ -9,7 +9,7 @@ class SceneMediaGenerationService extends Service {
     return this.app.mysqlPool;
   }
 
-  map(row) {
+  map(row: any) {
     const baseUrl = this.app.config.storyboard.publicAppBaseUrl || '';
     return {
       id: Number(row.id),
@@ -30,7 +30,7 @@ class SceneMediaGenerationService extends Service {
     };
   }
 
-  async listBySceneId(sceneId) {
+  async listBySceneId(sceneId: number) {
     const [rows] = await this.pool.query(
       `SELECT id, scene_id, legacy_storyboard_id, media_type, model, status, result_url,
               preview_url, poster_url, source_url, error_message, is_current, meta_json, created_at, updated_at
@@ -39,10 +39,10 @@ class SceneMediaGenerationService extends Service {
        ORDER BY created_at DESC, id DESC`,
       [sceneId],
     );
-    return rows.map((row) => this.map(row));
+    return rows.map((row: any) => this.map(row));
   }
 
-  async findById(id) {
+  async findById(id: number) {
     const [rows] = await this.pool.query(
       `SELECT id, scene_id, legacy_storyboard_id, media_type, model, status, result_url,
               preview_url, poster_url, source_url, error_message, is_current, meta_json, created_at, updated_at
@@ -53,8 +53,8 @@ class SceneMediaGenerationService extends Service {
     return rows.length ? this.map(rows[0]) : null;
   }
 
-  async create(payload) {
-    const mediaReference = (value) =>
+  async create(payload: Record<string, unknown>) {
+    const mediaReference = (value: any) =>
       value ? normalizeGeneratedAssetReference(this.app, value) : null;
     const [result] = await this.pool.execute(
       `INSERT INTO scene_media_generations
@@ -78,12 +78,12 @@ class SceneMediaGenerationService extends Service {
     return await this.findById(result.insertId);
   }
 
-  async update(id, payload) {
+  async update(id: number, payload: Record<string, unknown>) {
     const current = await this.findById(id);
     if (!current) throw new Error('scene media generation not found');
-    const value = (key) =>
-      Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : current[key];
-    const mediaReference = (key) => {
+    const value = (key: string) =>
+      Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : (current as Record<string, any>)[key];
+    const mediaReference = (key: string) => {
       const reference = value(key);
       return reference ? normalizeGeneratedAssetReference(this.app, reference) : null;
     };
@@ -108,7 +108,7 @@ class SceneMediaGenerationService extends Service {
     return await this.findById(id);
   }
 
-  async markCurrent(sceneId, mediaType, generationId) {
+  async markCurrent(sceneId: number, mediaType: string, generationId: number) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -130,7 +130,7 @@ class SceneMediaGenerationService extends Service {
     }
   }
 
-  async softDelete(id) {
+  async softDelete(id: number) {
     await this.pool.execute(
       `UPDATE scene_media_generations
        SET deleted_at = NOW(), is_current = 0

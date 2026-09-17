@@ -10,7 +10,7 @@ const { trimVideo } = require('../lib/media');
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 
 class SceneVideoClipService extends Service {
-  normalizeRange(scene, generation, startMsRaw, endMsRaw) {
+  normalizeRange(scene: any, generation: any, startMsRaw: any, endMsRaw: any) {
     const startMs = Math.round(Number(startMsRaw) / 100) * 100;
     const endMs = Math.round(Number(endMsRaw) / 100) * 100;
     const meta = parseMediaGenerationMeta(generation.meta_json);
@@ -25,7 +25,7 @@ class SceneVideoClipService extends Service {
     return { startMs, endMs, durationMs };
   }
 
-  async create(sceneId, generationId, payload) {
+  async create(sceneId: number, generationId: number, payload: Record<string, unknown>) {
     const { scene, generation } = await this.ctx.service.sceneVideoFrame.validateSource(
       sceneId,
       generationId,

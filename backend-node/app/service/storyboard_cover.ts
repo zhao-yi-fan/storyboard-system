@@ -36,15 +36,15 @@ class StoryboardCoverService extends Service {
     );
   }
 
-  resolveStoryboardStylePreset(scene, storyboard) {
+  resolveStoryboardStylePreset(scene: any, storyboard: any) {
     return String(storyboard.style_preset || scene.style_preset || '').trim();
   }
 
-  resolveStoryboardStyleNotes(scene, storyboard) {
+  resolveStoryboardStyleNotes(scene: any, storyboard: any) {
     return String(storyboard.style_notes || scene.style_notes || '').trim();
   }
 
-  async previewCoverGeneration(id, selectedModel) {
+  async previewCoverGeneration(id: number, selectedModel: string) {
     if (!this.supportedCoverModels().has(String(selectedModel || '').trim())) {
       throw new Error('unsupported cover model');
     }
@@ -86,7 +86,7 @@ class StoryboardCoverService extends Service {
       prompt_mode: composite ? 'composite' : 'legacy',
       mode,
       model,
-      reference_images: references.map((item) => ({
+      reference_images: references.map((item: any) => ({
         type: item.type,
         name: item.name,
         url: item.url,
@@ -101,7 +101,7 @@ class StoryboardCoverService extends Service {
     };
   }
 
-  async generateCover(id, selectedModel, useTextOnly) {
+  async generateCover(id: number, selectedModel: string, useTextOnly: boolean) {
     const preview = await this.previewCoverGeneration(id, selectedModel);
     const generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,
@@ -114,7 +114,7 @@ class StoryboardCoverService extends Service {
         preview_format: 'webp',
         preview_width: 480,
         reference_count: preview.reference_images.length,
-        reference_types: preview.reference_images.map((item) => item.type),
+        reference_types: preview.reference_images.map((item: any) => item.type),
         generation_mode: useTextOnly ? 'text-only' : preview.mode,
       }),
     });
@@ -123,7 +123,7 @@ class StoryboardCoverService extends Service {
       const imageUrl = await generateSeedreamImage(
         this.app,
         preview.final_prompt,
-        useTextOnly ? [] : preview.reference_images.map((item) => item.url),
+        useTextOnly ? [] : preview.reference_images.map((item: any) => item.url),
       );
       const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.png`;
       const stored = await downloadAndStore(this.app, imageUrl, 'covers', filename, 'image/png');
@@ -159,13 +159,13 @@ class StoryboardCoverService extends Service {
     } catch (error) {
       await this.ctx.service.mediaGeneration.update(generation.id, {
         status: GENERATION_STATUS.FAILED,
-        error_message: error.message,
+        error_message: (error as Error).message,
       });
       throw error;
     }
   }
 
-  async uploadCover(id, thumbnailUrl) {
+  async uploadCover(id: number, thumbnailUrl: string) {
     const storyboard = await this.ctx.service.storyboard.findById(id);
     if (!storyboard) {
       throw new Error('storyboard not found');

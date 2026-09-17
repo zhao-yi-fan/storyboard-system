@@ -14,7 +14,7 @@ export const SCENE_DESCRIPTION_SYSTEM_PROMPT = `你是专业的短剧片段描�
 5. 不要输出时间区间、景别、机位、运镜、模型参数、生成约束、负面提示词、@资产引用或其他视频生成 Prompt 内容。
 6. 输出总长度不得超过 10000 个字符。`;
 
-function normalizeDescription(value) {
+function normalizeDescription(value: any) {
   const description = String(value || '').trim();
   if (!description) {
     throw new Error('片段描述不能为空');
@@ -25,13 +25,13 @@ function normalizeDescription(value) {
   return description;
 }
 
-export function buildSceneDescriptionUserMessage(title, description) {
+export function buildSceneDescriptionUserMessage(title: any, description: any) {
   return [title ? `片段标题：${String(title).trim()}` : '', '请优化以下片段描述：', description]
     .filter(Boolean)
     .join('\n\n');
 }
 
-export async function optimizeSceneDescription(config, payload) {
+export async function optimizeSceneDescription(config: any, payload: any) {
   const originalDescription = normalizeDescription(payload?.description);
   const rawOptimizedDescription = await requestDeepSeekText(config, {
     systemPrompt: SCENE_DESCRIPTION_SYSTEM_PROMPT,
