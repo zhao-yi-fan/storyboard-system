@@ -54,7 +54,7 @@ log "branch: $(git rev-parse --abbrev-ref HEAD)"
 log "commit before pull: $(git rev-parse --short HEAD)"
 
 run "fetch latest main from origin" git fetch origin main
-run "fast-forward local main" git pull --ff-only origin main
+run "fast-forward local main" git merge --ff-only origin/main
 
 log "commit after pull: $(git rev-parse --short HEAD)"
 
