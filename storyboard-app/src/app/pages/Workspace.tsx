@@ -301,7 +301,6 @@ function SceneInsertDivider({
 export default function Workspace() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [, setProjects] = useState<Project[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [storyboards, setStoryboards] = useState<Storyboard[]>([]);
@@ -317,9 +316,7 @@ export default function Workspace() {
   const [isEpisodeRailCollapsed, setIsEpisodeRailCollapsed] = useState(false);
   const [isSavingShot, setIsSavingShot] = useState(false);
   const [generatingCoverId, setGeneratingCoverId] = useState<number | null>(null);
-  const [, setUploadingCoverId] = useState<number | null>(null);
   const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
-  const [, setPendingGeneratedShotId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<{
     src: string;
     alt: string;
@@ -350,7 +347,7 @@ export default function Workspace() {
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
-  const [sceneCoverGenerationPreview, _setSceneCoverGenerationPreview] =
+  const [sceneCoverGenerationPreview] =
     useState<AIGenerationPreview | null>(null);
   const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
   const [isSceneVideoConfirmOpen, setIsSceneVideoConfirmOpen] = useState(false);
@@ -480,9 +477,6 @@ export default function Workspace() {
   };
 
   const applyProjectUpdate = (nextProject: Project) => {
-    setProjects((prev) =>
-      prev.map((project) => (project.id === nextProject.id ? nextProject : project)),
-    );
     setSelectedProject((prev) => (prev?.id === nextProject.id ? nextProject : prev));
   };
 
@@ -627,7 +621,6 @@ export default function Workspace() {
     setLoading(true);
     try {
       const data = await projectApi.getProjects();
-      setProjects(data);
       const projectId = resolveProjectId();
       if (projectId) {
         await applyProjectSelection(projectId, data);
@@ -800,7 +793,6 @@ export default function Workspace() {
     }
 
     setGeneratingCoverId(selectedShot.id);
-    setPendingGeneratedShotId(selectedShot.id);
     setCoverGenerationError("");
     try {
       const result = await sceneApi.generateSceneClipCover(selectedShot.id, {
@@ -818,7 +810,6 @@ export default function Workspace() {
       toast.error(message);
     } finally {
       setGeneratingCoverId(null);
-      setPendingGeneratedShotId(null);
       setCoverGenerationPreview(null);
     }
   };
@@ -971,7 +962,6 @@ export default function Workspace() {
     if (!selectedShot) {
       return;
     }
-    setUploadingCoverId(selectedShot.id);
     try {
       const uploadedUrl = await ossApi.uploadFileToOss(file);
       const result = await sceneApi.uploadSceneCover(selectedShot.id, uploadedUrl);
@@ -981,7 +971,6 @@ export default function Workspace() {
       console.error("Failed to upload storyboard cover:", error);
       toast.error(error instanceof Error ? error.message : "首帧上传失败");
     } finally {
-      setUploadingCoverId(null);
       if (shotCoverInputRef.current) {
         shotCoverInputRef.current.value = "";
       }
