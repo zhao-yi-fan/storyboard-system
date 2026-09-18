@@ -40,6 +40,7 @@ import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsD
 import { CreateAssetDialog } from "../components/assets/dialogs/CreateAssetDialog";
 import { DeleteAssetDialog } from "../components/assets/dialogs/DeleteAssetDialog";
 import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
+import { VersionImageCard } from "../components/assets/VersionImageCard";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -80,78 +81,6 @@ import { useAssetEditing } from "./useAssetEditing";
 import { useAssetLibraryFilters } from "./useAssetLibraryFilters";
 import { useResizableDetailSidebar } from "./useAssetLibrarySidebar";
 import { useAssetVersions } from "./useAssetVersions";
-
-type VersionImageCardProps = {
-  version: AssetVersion;
-  src: string;
-  alt: string;
-  label: string;
-  aspectClassName: string;
-  switching: boolean;
-  onPreview: () => void;
-  onSetCurrent: () => void;
-};
-
-function VersionImageCard({
-  version,
-  src,
-  alt,
-  label,
-  aspectClassName,
-  switching,
-  onPreview,
-  onSetCurrent,
-}: VersionImageCardProps) {
-  return (
-    <div className={version.is_current ? styles.versionCardCurrent : styles.versionCard}>
-      <button
-        type="button"
-        className={styles.versionPreviewButton}
-        onClick={onPreview}
-        aria-label={`预览${label}`}
-      >
-        <div className={`${styles.containedImage} ${aspectClassName} ${styles.fullWidth}`}>
-          <img
-            src={src}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className={styles.containedImageBackdrop}
-          />
-          <img
-            src={src}
-            alt={alt}
-            loading="lazy"
-            decoding="async"
-            className={styles.containedImageSource}
-          />
-        </div>
-      </button>
-      <div className={styles.versionLabel}>{version.is_current ? "当前版本" : label}</div>
-      {!version.is_current ? (
-        <Button
-          type="button"
-          size="sm"
-          disabled={switching}
-          aria-label="设为当前版本"
-          title="设为当前版本"
-          className={styles.setCurrentButton}
-          onClick={onSetCurrent}
-        >
-          {switching ? (
-            <>
-              <Loader2 className={styles.switchingIcon} />
-              切换中
-            </>
-          ) : (
-            "设为当前"
-          )}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
 
 export default function AssetLibrary() {
   const navigate = useNavigate();
