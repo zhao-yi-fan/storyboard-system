@@ -125,35 +125,6 @@ export function buildSceneCoverPrompt(
 }
 
 /**
- * 构建角色封面图 prompt。
- * @param {Record<string, unknown>} character 角色字段。
- * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
- * @example
- * buildCharacterCoverPrompt({ name: "林婉", description: "温婉端庄" })
- * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
- */
-export function buildCharacterCoverPrompt(character: Record<string, unknown>) {
-  const template = selectPromptTemplate([character.description]);
-  const blueprint = buildPromptBlueprint({
-    template,
-    intro: '为漫剧分镜系统生成一张角色封面头像',
-    subject: normalizeTextList([
-      character.name ? `角色名称为${character.name}` : '',
-      character.description ? `角色描述为${character.description}` : '',
-    ]),
-    action: ['突出人物识别度和角色气质，不引入剧情性大动作'],
-    camera: ['单人角色肖像构图', '画面聚焦头肩或半身，背景简洁'],
-    style: ['适合在资产库中展示', '不要夸张漫画化脸部比例'],
-    output: ['单人角色头像或半身封面', '构图干净'],
-  });
-  return {
-    template,
-    blueprint,
-    prompt: renderPromptBlueprint(blueprint),
-  };
-}
-
-/**
  * 构建场景资产封面 prompt。
  * @param {Record<string, unknown>} asset 资产字段。
  * @returns {{template: string, blueprint: PromptBlueprint, prompt: string}} 模板、blueprint 和最终 prompt。
