@@ -27,7 +27,6 @@ import {
   assetWorkspaceApi,
   type Character,
   characterApi,
-  type CharacterVoiceVersion,
   ossApi,
   type Project,
   projectApi,
@@ -45,7 +44,7 @@ import {
   type AIPreviewDialogState,
 } from "../components/assets/dialogs/AIGenerationPreviewDialog";
 import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
-import { CreateAssetDialog, type NewAssetDraft } from "../components/assets/dialogs/CreateAssetDialog";
+import { CreateAssetDialog } from "../components/assets/dialogs/CreateAssetDialog";
 import { DeleteAssetDialog } from "../components/assets/dialogs/DeleteAssetDialog";
 import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
@@ -73,8 +72,6 @@ import {
 } from "../constants/domain";
 import type {
   AIPreviewDialogInput,
-  CreateMode,
-  DeleteTarget,
   SelectedAsset,
 } from "./AssetLibrary.helpers";
 import {
@@ -87,8 +84,11 @@ import {
   hasCharacterVoiceReference,
 } from "./AssetLibrary.helpers";
 import styles from "./AssetLibrary.module.scss";
+import { useAssetCreate } from "./useAssetCreate";
+import { useAssetDeletion } from "./useAssetDeletion";
 import { useAssetLibraryFilters } from "./useAssetLibraryFilters";
 import { useResizableDetailSidebar } from "./useAssetLibrarySidebar";
+import { useAssetVersions } from "./useAssetVersions";
 
 type VersionImageCardProps = {
   version: AssetVersion;
@@ -178,30 +178,10 @@ export default function AssetLibrary() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [createMode, setCreateMode] = useState<CreateMode>(ASSET_KIND.CHARACTER);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [aiPreviewDialog, setAiPreviewDialog] = useState<AIPreviewDialogState | null>(null);
-  const [versions, setVersions] = useState<AssetVersion[]>([]);
-  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
-  const [switchingVersionId, setSwitchingVersionId] = useState<number | null>(null);
-  const [showVersions, setShowVersions] = useState(false);
-  const [voiceVersions, setVoiceVersions] = useState<CharacterVoiceVersion[]>([]);
-  const [showVoiceVersions, setShowVoiceVersions] = useState(false);
-  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isLoadingAIPreview, setIsLoadingAIPreview] = useState(false);
 
-  const [newCharacter, setNewCharacter] = useState({ name: "", description: "", avatar_url: "" });
-  const [newAsset, setNewAsset] = useState<NewAssetDraft>({
-    name: "",
-    type: ASSET_KIND.SCENE,
-    meta: "",
-    file_url: "",
-  });
-  const [createCharacterFile, setCreateCharacterFile] = useState<File | null>(null);
-  const [createAssetFile, setCreateAssetFile] = useState<File | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const [isSavingCharacter, setIsSavingCharacter] = useState(false);
   const [isSavingAsset, setIsSavingAsset] = useState(false);
   const [uploadingCharacterReferenceId, setUploadingCharacterReferenceId] = useState<number | null>(
@@ -221,7 +201,6 @@ export default function AssetLibrary() {
     message: string;
   } | null>(null);
   const [generatingAssetCoverId, setGeneratingAssetCoverId] = useState<number | null>(null);
-  const [deleteActionKey, setDeleteActionKey] = useState<string | null>(null);
   const { detailSidebarWidth, isResizingDetailSidebar, handleDetailSidebarMouseDown } =
     useResizableDetailSidebar();
   const selectedCharacterReferenceInputRef = useRef<HTMLInputElement | null>(null);
@@ -263,6 +242,65 @@ export default function AssetLibrary() {
       console.error("Failed to load assets:", error);
     }
   };
+
+  const {
+    showCreateDialog,
+    setShowCreateDialog,
+    createMode,
+    newCharacter,
+    setNewCharacter,
+    newAsset,
+    setNewAsset,
+    createCharacterFile,
+    setCreateCharacterFile,
+    createAssetFile,
+    setCreateAssetFile,
+    isCreating,
+    resetCreateState,
+    handleCreate,
+    openCreateDialog,
+    selectCreateMode,
+  } = useAssetCreate({
+    currentProjectId,
+    activeTab,
+    loadCharacters,
+    loadAssets,
+    setActiveTab,
+    setSelectedAsset,
+  });
+
+  const {
+    versions,
+    setVersions,
+    isLoadingVersions,
+    setIsLoadingVersions,
+    switchingVersionId,
+    showVersions,
+    setShowVersions,
+    voiceVersions,
+    showVoiceVersions,
+    setShowVoiceVersions,
+    isSavingPersonal,
+    openSelectedVersions,
+    chooseSelectedVersion,
+    saveSelectedToPersonal,
+    openVoiceVersions,
+    chooseVoiceVersion,
+  } = useAssetVersions({
+    selectedAsset,
+    setSelectedAsset,
+    setCharacters,
+    loadCharacters,
+    loadAssets,
+    setLoadError,
+  });
+
+  const { deleteTarget, setDeleteTarget, deleteActionKey, confirmDelete } = useAssetDeletion({
+    selectedAsset,
+    setSelectedAsset,
+    loadCharacters,
+    loadAssets,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -331,65 +369,8 @@ export default function AssetLibrary() {
     return () => {
       cancelled = true;
     };
-  }, [selectedAssetId, selectedAssetType]);
+  }, [selectedAssetId, selectedAssetType, setIsLoadingVersions, setVersions]);
 
-  const resetCreateState = () => {
-    setNewCharacter({ name: "", description: "", avatar_url: "" });
-    setNewAsset({ name: "", type: ASSET_KIND.SCENE, meta: "", file_url: "" });
-    setCreateCharacterFile(null);
-    setCreateAssetFile(null);
-  };
-
-  const handleCreate = async () => {
-    if (!currentProjectId) return;
-    setIsCreating(true);
-    try {
-      if (createMode === ASSET_KIND.CHARACTER) {
-        if (!newCharacter.name.trim()) {
-          toast.error("请输入角色名称");
-          return;
-        }
-        let avatarURL = newCharacter.avatar_url.trim();
-        if (createCharacterFile) {
-          avatarURL = await ossApi.uploadFileToOss(createCharacterFile);
-        }
-        const created = await characterApi.createCharacter(currentProjectId, {
-          name: newCharacter.name.trim(),
-          description: newCharacter.description.trim(),
-          avatar_url: avatarURL || undefined,
-        });
-        await loadCharacters();
-        setActiveTab(ASSET_LIBRARY_TAB.CHARACTERS);
-        setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: created });
-      } else {
-        if (!newAsset.name.trim() || !newAsset.type.trim()) {
-          toast.error(
-            `请填写完整的${createMode === ASSET_KIND.PROP ? "道具" : "场景"}资产信息`,
-          );
-          return;
-        }
-        let fileURL = newAsset.file_url.trim();
-        if (createAssetFile) {
-          fileURL = await ossApi.uploadFileToOss(createAssetFile);
-        }
-        const created = await assetApi.createAsset(currentProjectId, {
-          name: newAsset.name.trim(),
-          type: newAsset.type.trim(),
-          meta: newAsset.meta.trim(),
-          file_url: fileURL,
-        });
-        await loadAssets();
-        setActiveTab(getAssetTab(created));
-        setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: created });
-      }
-      resetCreateState();
-      setShowCreateDialog(false);
-    } catch (error) {
-      console.error("Failed to create asset:", error);
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   const saveSelectedCharacter = async () => {
     if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
@@ -650,115 +631,6 @@ export default function AssetLibrary() {
     }
   };
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    const actionKey = `${deleteTarget.type}:${deleteTarget.id}`;
-    setDeleteActionKey(actionKey);
-    try {
-      if (deleteTarget.type === ENTITY_TYPE.CHARACTER) {
-        await characterApi.deleteCharacter(deleteTarget.id);
-        await loadCharacters();
-      } else {
-        await assetApi.deleteAsset(deleteTarget.id);
-        await loadAssets();
-      }
-      if (selectedAsset?.data.id === deleteTarget.id && selectedAsset?.type === deleteTarget.type) {
-        setSelectedAsset(null);
-      }
-      setDeleteTarget(null);
-    } catch (error) {
-      console.error("Failed to delete item:", error);
-    } finally {
-      setDeleteActionKey(null);
-    }
-  };
-
-  const openSelectedVersions = async () => {
-    if (!selectedAsset) return;
-    setShowVersions(true);
-    setVersions([]);
-    try {
-      setVersions(await assetWorkspaceApi.getVersions(selectedAsset.type, selectedAsset.data.id));
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "版本加载失败");
-    }
-  };
-
-  const chooseSelectedVersion = async (version: AssetVersion) => {
-    if (!selectedAsset) return;
-    const type = selectedAsset.type;
-    const id = selectedAsset.data.id;
-    setSwitchingVersionId(version.id);
-    try {
-      setVersions(await assetWorkspaceApi.setCurrentVersion(type, id, version.id));
-      if (type === ENTITY_TYPE.CHARACTER) await loadCharacters();
-      else await loadAssets();
-      const refreshed =
-        type === ENTITY_TYPE.CHARACTER ? await characterApi.getCharacter(id) : await assetApi.getAsset(id);
-      if (refreshed) setSelectedAsset({ type, data: refreshed } as SelectedAsset);
-      toast.success(type === ENTITY_TYPE.CHARACTER ? "已切换主设定图版本" : "已切换资产版本");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "切换版本失败");
-    } finally {
-      setSwitchingVersionId(null);
-    }
-  };
-
-  const saveSelectedToPersonal = async () => {
-    if (!selectedAsset) return;
-    setIsSavingPersonal(true);
-    try {
-      if (selectedAsset.type === ENTITY_TYPE.CHARACTER) {
-        await assetWorkspaceApi.saveCharacterToPersonal(selectedAsset.data.id);
-      } else {
-        await assetWorkspaceApi.saveAssetToPersonal(selectedAsset.data.id);
-      }
-      toast.success("已同步到个人空间");
-    } finally {
-      setIsSavingPersonal(false);
-    }
-  };
-
-  const openVoiceVersions = async () => {
-    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
-    setShowVoiceVersions(true);
-    setVoiceVersions([]);
-    try {
-      setVoiceVersions(await assetWorkspaceApi.getCharacterVoiceVersions(selectedAsset.data.id));
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "语音版本加载失败");
-    }
-  };
-
-  const chooseVoiceVersion = async (version: CharacterVoiceVersion) => {
-    if (!selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
-    const id = selectedAsset.data.id;
-    setVoiceVersions(await assetWorkspaceApi.setCurrentCharacterVoiceVersion(id, version.id));
-    const refreshed = await characterApi.getCharacter(id);
-    setCharacters((prev) => prev.map((item) => (item.id === id ? refreshed : item)));
-    setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: refreshed });
-  };
-
-  const openCreateDialog = () => {
-    const nextMode: CreateMode =
-      activeTab === ASSET_LIBRARY_TAB.PROPS
-        ? ASSET_KIND.PROP
-        : activeTab === ASSET_LIBRARY_TAB.SCENES
-          ? ASSET_KIND.SCENE
-          : ASSET_KIND.CHARACTER;
-    setCreateMode(nextMode);
-    if (nextMode !== ASSET_KIND.CHARACTER) {
-      setNewAsset((prev) => ({ ...prev, type: nextMode }));
-    }
-    setShowCreateDialog(true);
-  };
-
-  const selectCreateMode = (mode: CreateMode) => {
-    setCreateMode(mode);
-    if (mode !== ASSET_KIND.CHARACTER) {
-      setNewAsset((prev) => ({ ...prev, type: mode }));
-    }
-  };
   return (
     <div className={`storyboard-product-shell dark ${styles.page}`}>
       <header className={styles.pageHeader}>
