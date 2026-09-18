@@ -1,55 +1,17 @@
-import {
-  Camera,
-  Film,
-  Loader2,
-  Maximize2,
-  MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Play,
-  Plus,
-  Save,
-  Scissors,
-  Trash2,
-  X,
-} from "lucide-react";
+
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { type AIGenerationPreview, ossApi, sceneApi, type StoryboardMediaGeneration } from "../api";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
-import { Switch } from "../components/ui/switch";
-import {
-  CoverReferencePanel,
-  PromptReferenceStatus,
-} from "../components/workspace/CoverReferencePanel";
 import {
   type VideoPreview,
 } from "../components/workspace/dialogs/VideoPreviewDialog";
 import {
-  PromptOptimizeButton,
-} from "../components/workspace/PromptOptimizationDialog";
-import {
   PROMPT_MENTION_CATEGORY,
   type PromptMentionOption,
-  RichPromptEditor,
 } from "../components/workspace/RichPromptEditor";
-import { VideoGenerationSettings } from "../components/workspace/VideoGenerationSettings";
 import { WorkspaceHeader } from "../components/workspace/WorkspaceHeader";
 import { ENTITY_TYPE, GENERATION_STATUS, MEDIA_TYPE } from "../constants/domain";
 import { useShotDraft } from "./useShotDraft";
@@ -63,15 +25,8 @@ import type { ShotFormState } from "./Workspace.helpers";
 import {
   buildShotFormState,
   emptyShotForm,
-  FIXED_VIDEO_ASPECT_RATIO,
-  formatShotNumber,
   getAssetMentionPresentation,
-  getGenerationPreviewSrc,
   getProjectVideoPreviewSrc,
-  getSceneNavigatorThumbnailSrc,
-  getStoryboardPreviewSrc,
-  getStoryboardVideoPreviewSrc,
-  VIDEO_MODEL_OPTIONS,
 } from "./Workspace.helpers";
 import styles from "./Workspace.module.scss";
 import {
@@ -80,33 +35,10 @@ import {
   PreviewDialogs,
   PromptDialogs,
 } from "./WorkspaceDialogs";
+import { WorkspacePreviewStage } from "./WorkspacePreviewStage";
+import { WorkspaceSceneRail } from "./WorkspaceSceneRail";
+import { WorkspaceSettingsPanel } from "./WorkspaceSettingsPanel";
 
-function SceneInsertDivider({
-  position,
-  disabled,
-  revealed = false,
-  onInsert,
-}: {
-  position: number;
-  disabled?: boolean;
-  revealed?: boolean;
-  onInsert: (position: number) => void;
-}) {
-  return (
-    <div className={styles.insertDivider} aria-label={`在第 ${position} 个位置插入片段`}>
-      <button
-        type="button"
-        disabled={disabled}
-        className={revealed ? styles.insertButtonRevealed : styles.insertButton}
-        onClick={() => onInsert(position)}
-        title={`在片段 ${position} 插入新片段`}
-      >
-        <Plus className={styles.insertIcon} />
-      </button>
-      <span className={revealed ? styles.insertLineRevealed : styles.insertLine} />
-    </div>
-  );
-}
 
 export default function Workspace() {
   const navigate = useNavigate();
@@ -267,8 +199,6 @@ export default function Workspace() {
     return selectedScene?.generation_duration ?? activeVideoDuration;
   };
 
-  const countPromptShots = (prompt?: string) =>
-    Math.max(1, (String(prompt ?? "").match(/(?:^|\n)\s*镜号\s*[：:]/g) ?? []).length);
 
   const {
     generatingCoverId,
@@ -504,492 +434,78 @@ export default function Workspace() {
       />
 
       <div className={styles.workspaceBody}>
-        <div
-          className={
-            isEpisodeRailCollapsed
-              ? `storyboard-glass-panel ${styles.sceneRailCollapsed}`
-              : `storyboard-glass-panel ${styles.sceneRail}`
-          }
-        >
-          {!isEpisodeRailCollapsed ? (
-            <aside className={styles.chapterRail}>
-              <div className={styles.chapterRailTitle}>选集</div>
-              <div className={styles.chapterList}>
-                {chapters.map((chapter, index) => {
-                  const active = selectedChapter?.id === chapter.id;
-                  return (
-                    <button
-                      key={chapter.id}
-                      type="button"
-                      title={chapter.title}
-                      aria-label={`第 ${index + 1} 集：${chapter.title}`}
-                      className={active ? styles.chapterButtonActive : styles.chapterButton}
-                      onClick={() => {
-                        if (!active) void toggleChapter(chapter.id);
-                      }}
-                    >
-                      {index + 1}
-                    </button>
-                  );
-                })}
-              </div>
-            </aside>
-          ) : null}
+        <WorkspaceSceneRail
+          loading={loading}
+          chapters={chapters}
+          scenes={scenes}
+          selectedChapter={selectedChapter}
+          selectedScene={selectedScene}
+          selectedProject={selectedProject}
+          isEpisodeRailCollapsed={isEpisodeRailCollapsed}
+          setIsEpisodeRailCollapsed={setIsEpisodeRailCollapsed}
+          hoveredSceneIndex={hoveredSceneIndex}
+          setHoveredSceneIndex={setHoveredSceneIndex}
+          activeChapterForSceneCreation={activeChapterForSceneCreation}
+          toggleChapter={toggleChapter}
+          selectScene={selectScene}
+          openCreateSceneDialog={openCreateSceneDialog}
+          handleRequestDeleteScene={handleRequestDeleteScene}
+        />
+        <WorkspacePreviewStage
+          selectedShot={selectedShot}
+          isEpisodeRailCollapsed={isEpisodeRailCollapsed}
+          currentVideoGeneration={currentVideoGeneration}
+          setFrameExtractionGeneration={setFrameExtractionGeneration}
+          videoGenerations={videoGenerations}
+          activeMediaActionKey={activeMediaActionKey}
+          handleSetCurrentGeneration={(generation) => void handleSetCurrentGeneration(generation)}
+          handleRequestDeleteGeneration={handleRequestDeleteGeneration}
+        />
 
-          <aside className={styles.sceneNavigator}>
-            <div className={styles.sceneNavigatorHeader}>
-              <div className={styles.sceneNavigatorTitleRow}>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className={styles.railToggle}
-                  onClick={() => setIsEpisodeRailCollapsed((collapsed) => !collapsed)}
-                  aria-label={isEpisodeRailCollapsed ? "展开选集" : "收起选集"}
-                  title={isEpisodeRailCollapsed ? "展开选集" : "收起选集"}
-                >
-                  {isEpisodeRailCollapsed ? (
-                    <PanelLeftOpen className={styles.icon} />
-                  ) : (
-                    <PanelLeftClose className={styles.icon} />
-                  )}
-                </Button>
-                <div className={styles.sceneNavigatorTitleWrap}>
-                  <div className={styles.sceneNavigatorTitle}>
-                    {selectedChapter?.title ?? "请选择章节"}
-                  </div>
-                  <div className={styles.sceneCount}>{scenes.length} 个片段</div>
-                </div>
-              </div>
-              <div className={styles.sceneNavigatorActions}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className={styles.sceneMenuTrigger}>
-                    <MoreHorizontal className={styles.icon} />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className={styles.dropdownContent}>
-                    <DropdownMenuItem
-                      onClick={() => openCreateSceneDialog(scenes.length + 1)}
-                      disabled={!activeChapterForSceneCreation}
-                    >
-                      <Plus className={styles.icon} />
-                      新建片段
-                    </DropdownMenuItem>
-                    {selectedScene ? (
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => handleRequestDeleteScene(selectedScene)}
-                      >
-                        <Trash2 className={styles.icon} />
-                        删除当前片段
-                      </DropdownMenuItem>
-                    ) : null}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            <div className={styles.sceneListScroll}>
-              {loading ? (
-                <div className={styles.loadingState}>
-                  <Loader2 className={styles.loadingIcon} />
-                  正在加载
-                </div>
-              ) : !selectedProject ? (
-                <div className={styles.noProject}>请从项目列表进入工作台</div>
-              ) : (
-                <div className={styles.sceneList}>
-                  {!scenes.length ? (
-                    <SceneInsertDivider
-                      position={1}
-                      disabled={!selectedProject}
-                      onInsert={openCreateSceneDialog}
-                    />
-                  ) : null}
-                  {scenes.map((scene, sceneIndex) => {
-                    const activeScene = selectedScene?.id === scene.id;
-                    return (
-                      <div key={scene.id}>
-                        <SceneInsertDivider
-                          position={sceneIndex + 1}
-                          disabled={!selectedProject}
-                          revealed={
-                            hoveredSceneIndex === sceneIndex || hoveredSceneIndex === sceneIndex - 1
-                          }
-                          onInsert={openCreateSceneDialog}
-                        />
-                        <section
-                          className={styles.sceneItem}
-                          onMouseEnter={() => setHoveredSceneIndex(sceneIndex)}
-                          onMouseLeave={() => setHoveredSceneIndex(null)}
-                        >
-                          <button
-                            type="button"
-                            className={activeScene ? styles.sceneButtonActive : styles.sceneButton}
-                            onClick={() => void selectScene(scene)}
-                          >
-                            <span
-                              className={
-                                activeScene ? styles.sceneMarkerActive : styles.sceneMarker
-                              }
-                            />
-                            <span className={styles.sceneThumbnail}>
-                              {getSceneNavigatorThumbnailSrc(scene) ? (
-                                <img
-                                  src={getSceneNavigatorThumbnailSrc(scene)}
-                                  alt={`${scene.title}片段封面`}
-                                  loading="lazy"
-                                  decoding="async"
-                                  className={styles.sceneThumbnailImage}
-                                />
-                              ) : (
-                                <Film className={styles.scenePlaceholderIcon} aria-hidden="true" />
-                              )}
-                            </span>
-                            <span className={styles.sceneText}>
-                              <span
-                                className={
-                                  activeScene ? styles.sceneIndexActive : styles.sceneIndex
-                                }
-                              >
-                                片段-{sceneIndex + 1}
-                              </span>
-                              <span
-                                className={
-                                  activeScene ? styles.sceneTitleActive : styles.sceneTitle
-                                }
-                              >
-                                {scene.title}
-                              </span>
-                            </span>
-                            <Badge className={styles.shotCountBadge}>
-                              {countPromptShots(scene.prompt)} 镜号
-                            </Badge>
-                          </button>
-                        </section>
-                        {sceneIndex === scenes.length - 1 ? (
-                          <SceneInsertDivider
-                            position={scenes.length + 1}
-                            disabled={!selectedProject}
-                            revealed={hoveredSceneIndex === sceneIndex}
-                            onInsert={openCreateSceneDialog}
-                          />
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </aside>
-        </div>
-
-        <main
-          className={
-            isEpisodeRailCollapsed
-              ? `storyboard-center-stage ${styles.centerStageCollapsed}`
-              : `storyboard-center-stage ${styles.centerStage}`
-          }
-        >
-          <div className={styles.previewStage}>
-            {selectedShot ? (
-              <div className={styles.previewContainer}>
-                {selectedShot.video_status === GENERATION_STATUS.GENERATING ? (
-                  <div className={`storyboard-media-frame ${styles.generatingPreview}`}>
-                    <Loader2 className={styles.previewLoadingIcon} />
-                    <span className={styles.generatingText}>视频生成中，状态会自动刷新</span>
-                  </div>
-                ) : getStoryboardVideoPreviewSrc(selectedShot) ? (
-                  <div className={`storyboard-media-frame ${styles.videoPreview}`}>
-                    <video
-                      key={getStoryboardVideoPreviewSrc(selectedShot)}
-                      src={getStoryboardVideoPreviewSrc(selectedShot)}
-                      controls
-                      playsInline
-                      className={styles.video}
-                    />
-                    {currentVideoGeneration ? (
-                      <button
-                        type="button"
-                        className={styles.extractButton}
-                        onClick={() => setFrameExtractionGeneration(currentVideoGeneration)}
-                      >
-                        <Scissors className={styles.actionIcon} /> 截取
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className={`storyboard-media-frame ${styles.emptyVideoPreview}`}>
-                    {getStoryboardPreviewSrc(selectedShot) ? (
-                      <img
-                        src={getStoryboardPreviewSrc(selectedShot)}
-                        alt=""
-                        className={styles.coverBackdrop}
-                      />
-                    ) : null}
-                    <div className={styles.playPlaceholder}>
-                      <Play className={styles.playPlaceholderIcon} />
-                    </div>
-                    <span className={styles.emptyVideoText}>点击右侧“生视频”开始生成</span>
-                  </div>
-                )}
-
-                {selectedShot.video_status === GENERATION_STATUS.FAILED &&
-                selectedShot.video_error ? (
-                  <div className={styles.videoError}>
-                    <div className={styles.videoErrorTitle}>视频生成失败</div>
-                    <div className={styles.videoErrorMessage}>{selectedShot.video_error}</div>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className={styles.emptySelection}>
-                <Camera className={styles.emptySelectionIcon} />
-                <p className={styles.emptySelectionText}>从左侧选择一个片段</p>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.history}>
-            <div className={styles.historyTitle}>History</div>
-            <div className={styles.historyList}>
-              {videoGenerations.map((generation, index) => (
-                <div
-                  key={generation.id}
-                  className={generation.is_current ? styles.historyItemCurrent : styles.historyItem}
-                >
-                  {getGenerationPreviewSrc(generation) ? (
-                    <video
-                      src={getGenerationPreviewSrc(generation)}
-                      muted
-                      className={styles.historyVideo}
-                    />
-                  ) : (
-                    <div className={styles.historyStatus}>{generation.status}</div>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.historyVersionButton}
-                    onClick={() => void handleSetCurrentGeneration(generation)}
-                    disabled={
-                      generation.is_current ||
-                      generation.status !== GENERATION_STATUS.SUCCEEDED ||
-                      !generation.result_url ||
-                      activeMediaActionKey === "set-current:" + generation.id
-                    }
-                    title={
-                      generation.status !== GENERATION_STATUS.SUCCEEDED || !generation.result_url
-                        ? "该版本未生成成功，不能切换"
-                        : generation.is_current
-                          ? "当前版本"
-                          : "设为当前版本"
-                    }
-                  >
-                    {generation.status === GENERATION_STATUS.SUCCEEDED
-                      ? `v${videoGenerations.length - index}`
-                      : generation.status === GENERATION_STATUS.FAILED
-                        ? "失败"
-                        : "生成中"}
-                  </button>
-                  {generation.status === GENERATION_STATUS.SUCCEEDED && generation.result_url ? (
-                    <button
-                      type="button"
-                      className={styles.historyExtractButton}
-                      onClick={() => setFrameExtractionGeneration(generation)}
-                      aria-label="从该视频版本截取图片或视频"
-                      title="截取图片或视频"
-                    >
-                      <Scissors className={styles.historyIcon} />
-                    </button>
-                  ) : null}
-                  {generation.extracted_frames?.length ? (
-                    <span className={styles.extractedFrameCount}>
-                      {generation.extracted_frames.length} 帧
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={styles.historyDeleteButton}
-                    onClick={() => handleRequestDeleteGeneration(generation)}
-                    aria-label="删除历史版本"
-                  >
-                    <X className={styles.historyIcon} />
-                  </button>
-                </div>
-              ))}
-              {!videoGenerations.length ? (
-                <div className={styles.historyEmpty}>还没有视频历史版本</div>
-              ) : null}
-            </div>
-          </div>
-        </main>
-
-        <aside className={`storyboard-glass-panel ${styles.settingsPanel}`}>
-          {selectedShot ? (
-            <>
-              <div className={styles.settingsScroll}>
-                <CoverReferencePanel
-                  key={selectedShot.id}
-                  currentCoverUrl={getStoryboardPreviewSrc(selectedShot)}
-                  references={liveGenerationReferences}
-                  isLoadingReferences={isLoadingGenerationReferences}
-                  referenceError={generationReferenceError}
-                  generationError={coverGenerationError}
-                  isGenerating={
-                    generatingCoverId === selectedShot.id || isLoadingCoverPreview || isSavingShot
-                  }
-                  history={coverGenerations.map((generation, index) => ({
-                    id: generation.id,
-                    src: getGenerationPreviewSrc(generation),
-                    label: `v${coverGenerations.length - index}`,
-                    isCurrent: !!generation.is_current,
-                    status: generation.status,
-                  }))}
-                  onGenerate={() => void handleGenerateCover()}
-                  onUpload={handleRequestUploadShotCover}
-                  onManageCharacters={() => void handleOpenManageCharacters()}
-                  onManageAssets={() => void handleOpenManageAssets()}
-                  onPreviewCurrent={() => {
-                    const src = selectedShot.thumbnail_url || getStoryboardPreviewSrc(selectedShot);
-                    if (src) setPreviewImage({ src, alt: "当前首帧" });
-                  }}
-                  onPreviewReference={openGenerationReferencePreview}
-                  onPreviewHistory={(generationId) => {
-                    const generation = coverGenerations.find((item) => item.id === generationId);
-                    if (generation) openCoverHistoryPreview(generation);
-                  }}
-                  onDismissError={() => {
-                    setCoverGenerationError("");
-                    setGenerationReferenceError("");
-                  }}
-                />
-
-                <section className={styles.promptSection}>
-                  <div className={styles.promptHeader}>
-                    <div className={styles.promptTitleRow}>
-                      <span className={styles.promptTitle}>提示词</span>
-                      <span className={styles.shotNumber}>
-                        #{formatShotNumber(selectedShot.shot_number)}
-                      </span>
-                    </div>
-                    <div className={styles.promptActions}>
-                      <PromptOptimizeButton
-                        compact
-                        loading={isOptimizingPrompt}
-                        disabled={!shotForm.content.trim()}
-                        onClick={() => void requestPromptOptimization()}
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className={styles.fullscreenButton}
-                        onClick={() => setIsPromptFullscreenOpen(true)}
-                        aria-label="全屏编辑提示词"
-                      >
-                        <Maximize2 className={styles.fullscreenIcon} />
-                      </Button>
-                    </div>
-                  </div>
-                  <PromptReferenceStatus references={liveGenerationReferences} />
-                  <RichPromptEditor
-                    key={"inline-prompt-" + selectedShot.id}
-                    value={shotForm.content}
-                    options={promptMentionOptions}
-                    onChange={(value) => updateShotForm("content", value)}
-                    onSelectMention={handleSelectPromptMention}
-                    onRemoveMentions={handleRemovePromptMentions}
-                  />
-                  <div className={styles.mentionHint}>输入 @ 引用资产</div>
-                </section>
-
-                <section className={styles.firstFrameSection}>
-                  <div className={styles.firstFrameSetting}>
-                    <div>
-                      <div className={styles.firstFrameTitle}>指定首帧控制开场</div>
-                      <div className={styles.firstFrameDescription}>
-                        关闭时使用角色和场景参考素材生成视频
-                      </div>
-                    </div>
-                    <Switch
-                      checked={useFirstFrameForVideo}
-                      onCheckedChange={setUseFirstFrameForVideo}
-                    />
-                  </div>
-                </section>
-              </div>
-
-              <div className={styles.generateFooter}>
-                <div className={styles.generationSettings}>
-                  <Select value={selectedVideoModel} onValueChange={handleVideoModelChange}>
-                    <SelectTrigger className={styles.modelSelect}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className={styles.selectContent}>
-                      {VIDEO_MODEL_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <VideoGenerationSettings
-                    model={selectedVideoModel}
-                    aspectRatio={FIXED_VIDEO_ASPECT_RATIO}
-                    resolution={activeVideoResolution}
-                    duration={activeVideoDuration}
-                    generateAudio={activeVideoAudio}
-                    onResolutionChange={setSelectedVideoResolution}
-                    onDurationChange={setSelectedVideoDuration}
-                    onGenerateAudioChange={setGenerateVideoAudio}
-                  />
-                </div>
-                <div className={styles.generateActions}>
-                  <Button
-                    className={styles.generateVideoButton}
-                    onClick={() => void handleGenerateVideo()}
-                    disabled={
-                      generatingVideoId === selectedShot.id || isLoadingVideoPreview || isSavingShot
-                    }
-                  >
-                    {generatingVideoId === selectedShot.id || isLoadingVideoPreview ? (
-                      <Loader2 className={styles.generateActionIcon} />
-                    ) : (
-                      <Play className={styles.generateActionIcon} />
-                    )}
-                    生视频
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className={styles.generateMenuTrigger}>
-                      <MoreHorizontal className={styles.actionIcon} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className={styles.selectContent}>
-                      <DropdownMenuItem
-                        onClick={() => void handleSaveShot()}
-                        disabled={isSavingShot}
-                      >
-                        <Save className={styles.actionIcon} />
-                        保存片段 Prompt
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => selectedScene && handleRequestDeleteScene(selectedScene)}
-                      >
-                        <Trash2 className={styles.actionIcon} />
-                        删除片段
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className={styles.settingsEmpty}>
-              <div>
-                <Camera className={styles.settingsEmptyIcon} />
-                <p className={styles.emptySelectionText}>选择片段后编辑生成参数</p>
-              </div>
-            </div>
-          )}
-        </aside>
+        <WorkspaceSettingsPanel
+          selectedShot={selectedShot}
+          selectedScene={selectedScene}
+          shotForm={shotForm}
+          updateShotForm={updateShotForm}
+          promptMentionOptions={promptMentionOptions}
+          handleSelectPromptMention={handleSelectPromptMention}
+          handleRemovePromptMentions={handleRemovePromptMentions}
+          isOptimizingPrompt={isOptimizingPrompt}
+          requestPromptOptimization={requestPromptOptimization}
+          setIsPromptFullscreenOpen={setIsPromptFullscreenOpen}
+          useFirstFrameForVideo={useFirstFrameForVideo}
+          setUseFirstFrameForVideo={setUseFirstFrameForVideo}
+          selectedVideoModel={selectedVideoModel}
+          handleVideoModelChange={handleVideoModelChange}
+          activeVideoResolution={activeVideoResolution}
+          activeVideoDuration={activeVideoDuration}
+          activeVideoAudio={activeVideoAudio}
+          setSelectedVideoResolution={setSelectedVideoResolution}
+          setSelectedVideoDuration={setSelectedVideoDuration}
+          setGenerateVideoAudio={setGenerateVideoAudio}
+          generatingVideoId={generatingVideoId}
+          isLoadingVideoPreview={isLoadingVideoPreview}
+          isSavingShot={isSavingShot}
+          handleGenerateVideo={handleGenerateVideo}
+          handleSaveShot={handleSaveShot}
+          handleRequestDeleteScene={handleRequestDeleteScene}
+          coverGenerations={coverGenerations}
+          liveGenerationReferences={liveGenerationReferences}
+          isLoadingGenerationReferences={isLoadingGenerationReferences}
+          generationReferenceError={generationReferenceError}
+          coverGenerationError={coverGenerationError}
+          generatingCoverId={generatingCoverId}
+          isLoadingCoverPreview={isLoadingCoverPreview}
+          handleGenerateCover={handleGenerateCover}
+          handleRequestUploadShotCover={handleRequestUploadShotCover}
+          handleOpenManageCharacters={handleOpenManageCharacters}
+          handleOpenManageAssets={handleOpenManageAssets}
+          openGenerationReferencePreview={openGenerationReferencePreview}
+          openCoverHistoryPreview={openCoverHistoryPreview}
+          setPreviewImage={setPreviewImage}
+        setCoverGenerationError={setCoverGenerationError}
+        setGenerationReferenceError={setGenerationReferenceError}
+      />
       </div>
 
       <input

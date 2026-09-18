@@ -173,6 +173,9 @@ export const buildCoverPreviewItems = (generations: StoryboardMediaGeneration[])
 
 export const formatShotNumber = (num?: number) => String(num ?? 0).padStart(3, "0");
 
+export const countPromptShots = (prompt?: string) =>
+  Math.max(1, (String(prompt ?? "").match(/(?:^|\n)\s*镜号\s*[：:]/g) ?? []).length);
+
 export const formatShanghaiDateTime = (dateStr?: string) => {
   if (!dateStr) return "";
   return new Intl.DateTimeFormat("zh-CN", {
