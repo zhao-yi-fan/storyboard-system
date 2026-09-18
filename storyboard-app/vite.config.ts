@@ -40,9 +40,9 @@ export default defineConfig({
     },
   },
   build: {
-    assetsInlineLimit(filePath) {
-      return filePath.endsWith("login_bg_video.mp4") ? true : undefined;
-    },
+    // NOTE: keep default assetsInlineLimit (4KB). Large media (e.g. the login
+    // background video) must stay as separate files: base64-inlining them
+    // bloats the JS chunk by ~33% and blocks parsing/streaming.
     rollupOptions: {
       output: {
         manualChunks(id) {
