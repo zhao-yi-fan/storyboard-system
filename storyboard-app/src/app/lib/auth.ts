@@ -33,10 +33,6 @@ export function getAuthSession(): AuthSession | null {
   }
 }
 
-export function isAuthenticated() {
-  return Boolean(getAuthSession());
-}
-
 export function saveAuthSession(session: AuthSession) {
   if (!isBrowser()) return;
   window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));

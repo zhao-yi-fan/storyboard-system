@@ -6,10 +6,6 @@ export function toNullableString(value: unknown): string {
   return value === null || value === undefined ? EMPTY_STRING : String(value);
 }
 
-export function toTrimmedString(value: unknown): string {
-  return toNullableString(value).trim();
-}
-
 export function toNullableNumber(value: unknown): number {
   return value === null || value === undefined ? 0 : Number(value);
 }
