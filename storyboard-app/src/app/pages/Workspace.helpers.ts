@@ -171,6 +171,8 @@ export const buildCoverPreviewItems = (generations: StoryboardMediaGeneration[])
       alt: `首帧历史 ${generation.id}`,
     }));
 
+export const formatShotNumber = (num?: number) => String(num ?? 0).padStart(3, "0");
+
 export const formatShanghaiDateTime = (dateStr?: string) => {
   if (!dateStr) return "";
   return new Intl.DateTimeFormat("zh-CN", {
