@@ -1,8 +1,8 @@
-import type { VirtualElement } from "@popperjs/core";
+import type { VirtualElement } from "@floating-ui/react-dom";
+import { autoUpdate, flip, offset, shift, useFloating } from "@floating-ui/react-dom";
 import { Box, Check, Image as ImageIcon, MapPin, Music2, UserRound, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { usePopper } from "react-popper";
 
 import type { EntityType } from "../../constants/domain";
 import styles from "./RichPromptEditor.module.scss";
@@ -242,25 +242,21 @@ export function RichPromptEditor({
   const [query, setQuery] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const {
-    styles: popperStyles,
-    attributes: popperAttributes,
-    update: updatePopper,
-  } = usePopper(query !== null ? virtualCaretRef.current : null, popperElement, {
+  const { refs, floatingStyles, update: updateFloatingPosition } = useFloating({
     placement: "bottom-start",
     strategy: "fixed",
-    modifiers: [
-      { name: "offset", options: { offset: [0, 8] } },
-      {
-        name: "flip",
-        options: { fallbackPlacements: ["top-start", "right-start", "left-start"] },
-      },
-      {
-        name: "preventOverflow",
-        options: { boundary: "viewport" as unknown as Element, padding: 8 },
-      },
+    middleware: [
+      offset(8),
+      flip({ fallbackPlacements: ["top-start", "right-start", "left-start"] }),
+      shift({ padding: 8 }),
     ],
+    whileElementsMounted: autoUpdate,
   });
+
+  useEffect(() => {
+    refs.setReference(query !== null ? virtualCaretRef.current : null);
+    refs.setFloating(popperElement);
+  }, [query, popperElement, refs]);
 
   const normalizedQuery = query?.trim().toLowerCase() ?? "";
   const filteredOptions = CATEGORY_CONFIG.flatMap(({ category }) =>
@@ -281,18 +277,8 @@ export function RichPromptEditor({
 
   useEffect(() => {
     if (query === null) return;
-    const updatePosition = () => void updatePopper?.();
-    const editor = editorRef.current;
-    updatePosition();
-    editor?.addEventListener("scroll", updatePosition, { passive: true });
-    document.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      editor?.removeEventListener("scroll", updatePosition);
-      document.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [query, updatePopper]);
+    updateFloatingPosition();
+  }, [query, updateFloatingPosition]);
 
   useEffect(() => {
     if (activeIndex < filteredOptions.length) return;
@@ -327,7 +313,7 @@ export function RichPromptEditor({
       const selection = window.getSelection();
       if (selection?.rangeCount) caretRangeRef.current = selection.getRangeAt(0).cloneRange();
       virtualCaretRef.current.contextElement = editor;
-      window.requestAnimationFrame(() => void updatePopper?.());
+      window.requestAnimationFrame(() => void updateFloatingPosition());
     } else {
       caretRangeRef.current = null;
     }
@@ -461,8 +447,7 @@ export function RichPromptEditor({
               ref={setPopperElement}
               id="prompt-mention-listbox"
               role="listbox"
-              style={popperStyles.popper}
-              {...popperAttributes.popper}
+              style={floatingStyles}
               className={styles.mentionMenu}
             >
               {CATEGORY_CONFIG.map(({ category, label: categoryLabel, icon: CategoryIcon }) => {
