@@ -393,7 +393,7 @@ async function generateSeedanceVideo(
  */
 async function createCharacterVoicePreview(
   app: LibApp,
-  character: CharacterEntity,
+  character: Pick<CharacterEntity, 'description' | 'id' | 'name'>,
   customPrompt: string,
   _customText: string,
 ) {
@@ -428,7 +428,7 @@ async function createCharacterVoicePreview(
  */
 async function generateCharacterVoiceReference(
   app: LibApp,
-  character: CharacterEntity,
+  character: Pick<CharacterEntity, 'description' | 'id' | 'name'>,
   customPrompt: string,
   customText: string,
 ) {
@@ -476,7 +476,7 @@ async function generateCharacterVoiceReference(
   };
 }
 
-function preferredVoiceName(character: CharacterEntity) {
+function preferredVoiceName(character: Pick<CharacterEntity, 'id' | 'name'>) {
   const token =
     String(character?.name || AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK)
       .toLowerCase()

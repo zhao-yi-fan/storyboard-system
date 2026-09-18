@@ -266,6 +266,14 @@ export interface VideoFrameReferenceItem {
   frame_id: number;
 }
 
+/** Minimal reference shape for mention-binding (builders accept full items). */
+export interface ReferenceInputItem {
+  name: unknown;
+  type: unknown;
+  source: unknown;
+  url: unknown;
+}
+
 export interface ReferenceMapping {
   index: number;
   name: string;

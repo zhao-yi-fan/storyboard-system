@@ -30,7 +30,7 @@ import type {
   AssetEntity,
   CharacterEntity,
   DbRow,
-  ImageReferenceItem,
+  ReferenceInputItem,
   ReferenceMapping,
   SceneEntity,
   SceneMediaGenerationEntity,
@@ -435,7 +435,7 @@ class SceneService extends Service {
 
   buildGenerationReferenceState(
     scene: SceneEntity,
-    references: Array<ImageReferenceItem | VideoFrameReferenceItem>,
+    references: ReferenceInputItem[],
     missing: string[],
     projectReferenceNames: string[] = [],
   ) {
@@ -461,12 +461,12 @@ class SceneService extends Service {
       const name = String(reference.name || '').trim();
       const mention = name ? `@${name}` : '';
       const isMentioned = !!mention && prompt.includes(mention);
-      const subject = `${typeLabels[reference.type] || '图片参考'}「${name}」`;
+      const subject = `${typeLabels[String(reference.type || '')] || '图片参考'}「${name}」`;
       return {
         index: index + 1,
         name,
-        type: reference.type,
-        source: reference.source,
+        type: reference.type as string,
+        source: reference.source as string,
         mention,
         is_mentioned: isMentioned,
         prompt_text: isMentioned

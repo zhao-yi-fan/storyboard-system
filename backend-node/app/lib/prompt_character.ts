@@ -79,7 +79,10 @@ export function buildCharacterDesignPrompt(
  * buildCharacterVoicePromptText({ name: "林婉", description: "温婉端庄" })
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
-export function buildCharacterVoicePromptText(character: CharacterEntity, userDirection = '') {
+export function buildCharacterVoicePromptText(
+  character: Pick<CharacterEntity, 'description' | 'name'>,
+  userDirection = '',
+) {
   const template = selectPromptTemplate([character.description]);
   const blueprint = buildPromptBlueprint({
     template,

@@ -41,8 +41,8 @@ describe('test/voice_reference_text.test.ts', () => {
 
   it('should send the fixed short reference text to DashScope', async () => {
     const originalFetch = globalThis.fetch;
-    let requestBody: any = null;
-    (globalThis as any).fetch = async (_url: string, options: any) => {
+    let requestBody: { input?: { preview_text?: unknown } } | null = null;
+    const mockFetch = async (_url: string, options: RequestInit) => {
       requestBody = JSON.parse(String(options.body || '{}'));
       return {
         ok: true,
@@ -55,6 +55,7 @@ describe('test/voice_reference_text.test.ts', () => {
           }),
       };
     };
+    Object.assign(globalThis, { fetch: mockFetch });
 
     try {
       const result = await generateCharacterVoiceReference(

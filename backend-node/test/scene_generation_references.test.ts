@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import { REFERENCE_TYPE } from '../app/lib/domain_constants';
 import * as SceneServiceNamespace from '../app/service/scene';
+import type { ReferenceMapping } from '../app/lib/entity';
 
 const SceneService: any =
   (SceneServiceNamespace as { default?: { prototype: object } }).default || SceneServiceNamespace;
@@ -34,7 +35,7 @@ describe('scene generation reference mapping', () => {
     );
 
     assert.deepEqual(
-      state.mappings.map((item: any) => [item.index, item.name, item.is_mentioned]),
+      state.mappings.map((item: ReferenceMapping) => [item.index, item.name, item.is_mentioned]),
       [
         [1, '神殿', true],
         [2, '女神', true],
