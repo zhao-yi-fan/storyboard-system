@@ -14,14 +14,14 @@ npm run dev            # http://localhost:5173，/api 代理到 backend-node
 
 ## 常用命令
 
-| 命令            | 说明                                   |
-| --------------- | -------------------------------------- |
-| `npm run dev`   | 本地开发                               |
-| `npm run build` | 生产构建（含 chunk 拆分，见 vite.config） |
-| `npm run test`  | Vitest 单测（`src/**/*.test.*`）        |
-| `npm run typecheck` | `tsc --noEmit`（CI 门禁）            |
-| `npm run lint` / `lint:fix` | ESLint，0 warning 通过          |
-| `npm run format` / `format:check` | Prettier                     |
+| 命令                              | 说明                                      |
+| --------------------------------- | ----------------------------------------- |
+| `npm run dev`                     | 本地开发                                  |
+| `npm run build`                   | 生产构建（含 chunk 拆分，见 vite.config） |
+| `npm run test`                    | Vitest 单测（`src/**/*.test.*`）          |
+| `npm run typecheck`               | `tsc --noEmit`（CI 门禁）                 |
+| `npm run lint` / `lint:fix`       | ESLint，0 warning 通过                    |
+| `npm run format` / `format:check` | Prettier                                  |
 
 ## 路由（`src/app/routes.tsx`）
 

@@ -4,13 +4,13 @@ AI 分镜与短剧生成系统：输入小说文本 → 解析结构化分镜 �
 
 ## 仓库结构
 
-| 目录 | 说明 |
-| ---- | ---- |
-| `storyboard-app/` | React 19 + Vite 8 前端，详见其 README |
-| `backend-node/` | Egg.js（Node 22）业务后端，唯一在维护的后端，MySQL 持久化 |
-| `backend/` | Go + Gin 旧后端，**已冻结，不要改** |
-| `specs/` | 产品与工作流规格（新功能先查/先写 spec） |
-| `scripts/` | 部署与自检脚本 |
+| 目录                 | 说明                                                                  |
+| -------------------- | --------------------------------------------------------------------- |
+| `storyboard-app/`    | React 19 + Vite 8 前端，详见其 README                                 |
+| `backend-node/`      | Egg.js（Node 22）业务后端，唯一在维护的后端，MySQL 持久化             |
+| `backend/`           | Go + Gin 旧后端，**已冻结，不要改**                                   |
+| `specs/`             | 产品与工作流规格（新功能先查/先写 spec）                              |
+| `scripts/`           | 部署与自检脚本                                                        |
 | `.github/workflows/` | `checks.yml`（typecheck + lint + test + build）与 `deploy.yml`（ECS） |
 
 ## 本地启动
