@@ -34,13 +34,7 @@ import {
   getAssetKind,
   getAssetKindLabel,
 } from "../components/assets/AssetCollection";
-import { AIGenerationPreviewDialog } from "../components/assets/dialogs/AIGenerationPreviewDialog";
-import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
-import { CreateAssetDialog } from "../components/assets/dialogs/CreateAssetDialog";
-import { DeleteAssetDialog } from "../components/assets/dialogs/DeleteAssetDialog";
-import { VoiceVersionsDialog } from "../components/assets/dialogs/VoiceVersionsDialog";
 import { VersionImageCard } from "../components/assets/VersionImageCard";
-import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -74,6 +68,7 @@ import {
   hasCharacterVoiceReference,
 } from "./AssetLibrary.helpers";
 import styles from "./AssetLibrary.module.scss";
+import { AssetLibraryDialogs } from "./AssetLibraryDialogs";
 import { useAssetCreate } from "./useAssetCreate";
 import { useAssetDeletion } from "./useAssetDeletion";
 import { useAssetEditing } from "./useAssetEditing";
@@ -1199,68 +1194,42 @@ export default function AssetLibrary() {
         ) : null}
       </div>
 
-      <AIGenerationPreviewDialog
-        state={aiPreviewDialog}
-        loading={isLoadingAIPreview}
-        onClose={() => setAiPreviewDialog(null)}
-        onPromptChange={(promptDraft) =>
-          setAiPreviewDialog((current) => (current ? { ...current, promptDraft } : current))
-        }
-        onPreviewReference={(src, alt) => setPreviewImage({ src, alt })}
-        onConfirm={() => void confirmAIPreviewGeneration()}
-      />
-
-      <AssetVersionsDialog
-        open={showVersions}
+      <AssetLibraryDialogs
+        aiPreviewDialog={aiPreviewDialog}
+        setAiPreviewDialog={setAiPreviewDialog}
+        isLoadingAIPreview={isLoadingAIPreview}
+        setPreviewImage={setPreviewImage}
+        confirmAIPreviewGeneration={confirmAIPreviewGeneration}
+        showVersions={showVersions}
+        setShowVersions={setShowVersions}
         versions={versions}
-        isCharacter={selectedAsset?.type === ENTITY_TYPE.CHARACTER}
+        selectedAsset={selectedAsset}
         switchingVersionId={switchingVersionId}
-        onOpenChange={setShowVersions}
-        onPreview={(src, alt) => setPreviewImage({ src, alt })}
-        onSetCurrent={(version) => void chooseSelectedVersion(version)}
-      />
-
-      <VoiceVersionsDialog
-        open={showVoiceVersions}
-        versions={voiceVersions}
-        onOpenChange={setShowVoiceVersions}
-        onSetCurrent={(version) => void chooseVoiceVersion(version)}
-      />
-
-      <CreateAssetDialog
-        open={showCreateDialog}
-        mode={createMode}
-        character={newCharacter}
-        asset={newAsset}
-        hasCharacterFile={Boolean(createCharacterFile)}
-        hasAssetFile={Boolean(createAssetFile)}
-        creating={isCreating}
-        onOpenChange={(open) => {
-          setShowCreateDialog(open);
-          if (!open) resetCreateState();
-        }}
-        onModeChange={selectCreateMode}
-        onCharacterChange={setNewCharacter}
-        onAssetChange={setNewAsset}
-        onCharacterFileChange={setCreateCharacterFile}
-        onAssetFileChange={setCreateAssetFile}
-        onCreate={() => void handleCreate()}
-      />
-
-      <DeleteAssetDialog
-        target={deleteTarget}
-        deleting={deleteActionKey === `${deleteTarget?.type}:${deleteTarget?.id}`}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => void confirmDelete()}
-      />
-
-      <ImagePreviewDialog
-        open={!!previewImage}
-        onOpenChange={(open) => {
-          if (!open) setPreviewImage(null);
-        }}
-        src={previewImage?.src ?? ""}
-        alt={previewImage?.alt ?? "资产预览图"}
+        chooseSelectedVersion={chooseSelectedVersion}
+        showVoiceVersions={showVoiceVersions}
+        setShowVoiceVersions={setShowVoiceVersions}
+        voiceVersions={voiceVersions}
+        chooseVoiceVersion={chooseVoiceVersion}
+        showCreateDialog={showCreateDialog}
+        setShowCreateDialog={setShowCreateDialog}
+        createMode={createMode}
+        newCharacter={newCharacter}
+        setNewCharacter={setNewCharacter}
+        newAsset={newAsset}
+        setNewAsset={setNewAsset}
+        createCharacterFile={createCharacterFile}
+        setCreateCharacterFile={setCreateCharacterFile}
+        createAssetFile={createAssetFile}
+        setCreateAssetFile={setCreateAssetFile}
+        isCreating={isCreating}
+        resetCreateState={resetCreateState}
+        selectCreateMode={selectCreateMode}
+        handleCreate={handleCreate}
+        deleteTarget={deleteTarget}
+        setDeleteTarget={setDeleteTarget}
+        deleteActionKey={deleteActionKey}
+        confirmDelete={confirmDelete}
+        previewImage={previewImage}
       />
     </div>
   );
