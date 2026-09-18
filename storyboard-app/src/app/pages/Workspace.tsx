@@ -74,7 +74,7 @@ import {
   GENERATION_STATUS,
   MEDIA_TYPE,
 } from "../constants/domain";
-import {COMPOSITE_PROMPT_SPEC } from "../lib/compositePrompt";
+import { useShotDraft } from "./useShotDraft";
 import { useWorkspaceCharacterAsset } from "./useWorkspaceCharacterAsset";
 import { useWorkspaceCover } from "./useWorkspaceCover";
 import { useWorkspaceData } from "./useWorkspaceData";
@@ -171,7 +171,6 @@ export default function Workspace() {
   } = useWorkspaceData();
   const [hoveredSceneIndex, setHoveredSceneIndex] = useState<number | null>(null);
   const [isEpisodeRailCollapsed, setIsEpisodeRailCollapsed] = useState(false);
-  const [isSavingShot, setIsSavingShot] = useState(false);
   const [previewImage, setPreviewImage] = useState<{
     src: string;
     alt: string;
@@ -245,44 +244,17 @@ export default function Workspace() {
   const activeChapterForSceneCreation = selectedChapter ?? chapters[0] ?? null;
 
 
-  const buildShotUpdatePayload = () => ({
-    content: shotForm.content,
+  const {
+    isSavingShot,
+    saveShotDraftBeforeGeneration,
+    handleSaveShot,
+  } = useShotDraft({
+    selectedShot,
+    selectedScene,
+    shotForm,
+    getActiveVideoDuration: () => activeVideoDuration,
+    applyClipSceneUpdate,
   });
-
-  const isShotDraftDirty = () => {
-    if (!selectedShot) return false;
-    const persisted = buildShotFormState(selectedShot, selectedScene);
-    return (Object.keys(shotForm) as Array<keyof ShotFormState>).some(
-      (key) => shotForm[key] !== persisted[key],
-    );
-  };
-
-  const saveShotDraft = async (onlyWhenDirty = false) => {
-    if (!selectedShot) return false;
-    if (onlyWhenDirty && !isShotDraftDirty()) return true;
-    if (shotForm.content.length > COMPOSITE_PROMPT_SPEC.MAX_LENGTH) {
-      toast.error(`提示词最多支持 ${COMPOSITE_PROMPT_SPEC.MAX_LENGTH} 个字符`);
-      return false;
-    }
-
-    setIsSavingShot(true);
-    try {
-      const nextScene = await sceneApi.updateScene(selectedShot.id, {
-        prompt: buildShotUpdatePayload().content,
-        generation_duration: activeVideoDuration,
-      });
-      applyClipSceneUpdate(nextScene);
-      return true;
-    } catch (error) {
-      console.error("Failed to save storyboard:", error);
-      toast.error(error instanceof Error ? error.message : "片段保存失败，已停止生成");
-      return false;
-    } finally {
-      setIsSavingShot(false);
-    }
-  };
-
-  const saveShotDraftBeforeGeneration = () => saveShotDraft(true);
 
   const {
     generatingVideoId,
@@ -309,11 +281,13 @@ export default function Workspace() {
   } = useWorkspaceVideoGeneration({
     selectedShot,
     isSavingShot,
+    // Lazily bound: declared below via useShotDraft; only invoked in event handlers.
     saveShotDraftBeforeGeneration,
     applyClipSceneUpdate,
     loadMediaGenerations,
     setMediaGenerations,
   });
+
 
   const calculateTotalDuration = () => {
     return selectedScene?.generation_duration ?? activeVideoDuration;
@@ -490,9 +464,6 @@ export default function Workspace() {
     loadStoryboards,
   });
 
-  const handleSaveShot = async () => {
-    await saveShotDraft();
-  };
 
   const videoGenerations = mediaGenerations.filter(
     (item) => item.media_type === MEDIA_TYPE.VIDEO,
