@@ -22,7 +22,6 @@ import { useNavigate, useSearchParams } from "react-router";
 import {
   type Asset,
   assetApi,
-  type AssetVersion,
   assetWorkspaceApi,
   type Character,
   characterApi,

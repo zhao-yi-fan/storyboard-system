@@ -172,7 +172,8 @@ export function useAssetEditing({
     setIsLoadingAIPreview(true);
     try {
       const saved = await saveSelectedCharacter();
-      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(saved!.id);
+      if (!saved) return;
+      const preview = await characterApi.getCharacterDesignSheetGenerationPreview(saved.id);
       openAIPreviewDialog({
         action: AI_PREVIEW_ACTION.CHARACTER_DESIGN_SHEET,
         title: "确认生成主设定图",
@@ -255,8 +256,9 @@ export function useAssetEditing({
     setIsLoadingAIPreview(true);
     try {
       const saved = await saveSelectedCharacter();
-      const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(saved!.id, {
-        voice_prompt: saved!.voice_prompt ?? "",
+      if (!saved) return;
+      const preview = await characterApi.getCharacterVoiceReferenceGenerationPreview(saved.id, {
+        voice_prompt: saved.voice_prompt ?? "",
       });
       openAIPreviewDialog({
         action: AI_PREVIEW_ACTION.CHARACTER_VOICE_REFERENCE,
@@ -278,11 +280,12 @@ export function useAssetEditing({
     setIsLoadingAIPreview(true);
     try {
       const saved = await saveSelectedAsset();
-      const preview = await assetApi.getAssetCoverGenerationPreview(saved!.id);
+      if (!saved) return;
+      const preview = await assetApi.getAssetCoverGenerationPreview(saved.id);
       openAIPreviewDialog({
         action: AI_PREVIEW_ACTION.ASSET_COVER,
-        title: `确认生成${getAssetKindLabel(saved!)}封面`,
-        description: `会为当前${getAssetKindLabel(saved!)}资产生成一张封面图，用于资产库预览。`,
+        title: `确认生成${getAssetKindLabel(saved)}封面`,
+        description: `会为当前${getAssetKindLabel(saved)}资产生成一张封面图，用于资产库预览。`,
         confirmLabel: "确认生成",
         preview,
       });
