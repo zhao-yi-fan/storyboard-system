@@ -4,11 +4,7 @@ import { toast } from "sonner";
 import { assetApi, characterApi, ossApi } from "../api";
 import { getAssetTab } from "../components/assets/AssetCollection";
 import type { NewAssetDraft } from "../components/assets/dialogs/CreateAssetDialog";
-import {
-  ASSET_KIND,
-  ASSET_LIBRARY_TAB,
-  ENTITY_TYPE,
-} from "../constants/domain";
+import { ASSET_KIND, ASSET_LIBRARY_TAB, ENTITY_TYPE } from "../constants/domain";
 import type { CreateMode, SelectedAsset } from "./AssetLibrary.helpers";
 
 type UseAssetCreateDeps = {
@@ -71,9 +67,7 @@ export function useAssetCreate({
         setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: created });
       } else {
         if (!newAsset.name.trim() || !newAsset.type.trim()) {
-          toast.error(
-            `请填写完整的${createMode === ASSET_KIND.PROP ? "道具" : "场景"}资产信息`,
-          );
+          toast.error(`请填写完整的${createMode === ASSET_KIND.PROP ? "道具" : "场景"}资产信息`);
           return;
         }
         let fileURL = newAsset.file_url.trim();

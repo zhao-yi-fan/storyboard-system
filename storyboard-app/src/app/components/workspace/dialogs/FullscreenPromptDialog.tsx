@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "../../ui/dialog";
 import { PromptOptimizeButton } from "../PromptOptimizationDialog";
-import { type PromptMentionOption,RichPromptEditor } from "../RichPromptEditor";
+import { type PromptMentionOption, RichPromptEditor } from "../RichPromptEditor";
 
 type FullscreenPromptDialogProps = {
   open: boolean;

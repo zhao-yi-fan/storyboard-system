@@ -1,5 +1,13 @@
 'use strict';
-import { buildPromptBlueprint, normalizeTextList, renderPromptBlueprint, resolveStylePresetPrompt, selectImageCoverTemplate, selectPromptTemplate, uniqueParts } from './prompt_blueprint';
+import {
+  buildPromptBlueprint,
+  normalizeTextList,
+  renderPromptBlueprint,
+  resolveStylePresetPrompt,
+  selectImageCoverTemplate,
+  selectPromptTemplate,
+  uniqueParts,
+} from './prompt_blueprint';
 
 /**
  * 构建镜头首帧生成 prompt。

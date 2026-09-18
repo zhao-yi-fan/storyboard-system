@@ -5,7 +5,13 @@ const { buildShotDirectionGraph } = require('../lib/shot_direction_graph');
 const { GENERATION_STATUS } = require('../lib/domain_constants');
 
 const ANALYSIS_NOTE_MARKER = '镜头走向建议：';
-import type { DbRow, SceneEntity, ShotDirectionAnalysis, ShotDirectionEntity, StoryboardEntity } from '../lib/entity';
+import type {
+  DbRow,
+  SceneEntity,
+  ShotDirectionAnalysis,
+  ShotDirectionEntity,
+  StoryboardEntity,
+} from '../lib/entity';
 
 function parseResultJson(value: unknown): ShotDirectionAnalysis | null {
   if (!value) {
@@ -201,11 +207,7 @@ class ShotDirectionService extends Service {
     }
 
     const analysis = await this.findLatestByStoryboardId(storyboardId);
-    if (
-      !analysis ||
-      analysis.status !== GENERATION_STATUS.SUCCEEDED ||
-      !analysis.result_json
-    ) {
+    if (!analysis || analysis.status !== GENERATION_STATUS.SUCCEEDED || !analysis.result_json) {
       throw new Error('no succeeded shot direction analysis found');
     }
 

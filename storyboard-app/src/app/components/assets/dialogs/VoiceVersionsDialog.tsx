@@ -45,8 +45,7 @@ export function VoiceVersionsDialog({
                     {version.source_type === ASSET_SOURCE_TYPE.MANUAL_UPLOAD
                       ? "手动上传"
                       : "AI 生成"}{" "}
-                    ·{" "}
-                    {version.duration.toFixed(1)}s
+                    · {version.duration.toFixed(1)}s
                   </span>
                   <Button
                     size="sm"

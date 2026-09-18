@@ -83,7 +83,9 @@ class SceneMediaGenerationService extends Service {
     const current = await this.findById(id);
     if (!current) throw new Error('scene media generation not found');
     const value = (key: string) =>
-      Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : (current as Record<string, any>)[key];
+      Object.prototype.hasOwnProperty.call(payload, key)
+        ? payload[key]
+        : (current as Record<string, any>)[key];
     const mediaReference = (key: string) => {
       const reference = value(key);
       return reference ? normalizeGeneratedAssetReference(this.app, reference) : null;

@@ -64,7 +64,9 @@ function mapAuthUser(row: AuthUserRow | undefined | null): AuthUser {
     display_name: String(row.display_name || ''),
     role_label: String(row.role_label || ''),
     is_active: Boolean(row.is_active),
-    last_login_at: row.last_login_at ? new Date(row.last_login_at as string | number).toISOString() : null,
+    last_login_at: row.last_login_at
+      ? new Date(row.last_login_at as string | number).toISOString()
+      : null,
     created_at: row.created_at ? new Date(row.created_at as string | number).toISOString() : null,
     updated_at: row.updated_at ? new Date(row.updated_at as string | number).toISOString() : null,
   };
@@ -72,11 +74,11 @@ function mapAuthUser(row: AuthUserRow | undefined | null): AuthUser {
 
 class AuthService extends Service {
   get pool(): MysqlPool {
-    return (this.app).mysqlPool;
+    return this.app.mysqlPool;
   }
 
   get authConfig(): AuthConfig {
-    return (this.app.config).auth || {};
+    return this.app.config.auth || {};
   }
 
   get sessionCookieName(): string {
@@ -119,7 +121,12 @@ class AuthService extends Service {
     return rows[0] || null;
   }
 
-  async createUser(payload: { account?: string; password?: string; display_name?: string; role_label?: string }): Promise<AuthUser> {
+  async createUser(payload: {
+    account?: string;
+    password?: string;
+    display_name?: string;
+    role_label?: string;
+  }): Promise<AuthUser> {
     const account = String(payload.account || '').trim();
     const password = String(payload.password || '').trim();
     const displayName = String(payload.display_name || '').trim() || account;
@@ -145,7 +152,11 @@ class AuthService extends Service {
     return mapAuthUser(created);
   }
 
-  async login(account: unknown, password: unknown, requestMeta: RequestMeta): Promise<{ user: AuthUser; session: SessionInfo; sessionToken: string; expiresAt: Date }> {
+  async login(
+    account: unknown,
+    password: unknown,
+    requestMeta: RequestMeta,
+  ): Promise<{ user: AuthUser; session: SessionInfo; sessionToken: string; expiresAt: Date }> {
     const normalizedAccount = String(account || '').trim();
     const normalizedPassword = String(password || '').trim();
     if (!normalizedAccount || !normalizedPassword) {
@@ -201,7 +212,9 @@ class AuthService extends Service {
     };
   }
 
-  async getCurrentUserByToken(token: unknown): Promise<{ user: AuthUser; session: SessionInfo } | null> {
+  async getCurrentUserByToken(
+    token: unknown,
+  ): Promise<{ user: AuthUser; session: SessionInfo } | null> {
     const sessionTokenHash = hashSessionToken(String(token || ''));
     const [rows] = await this.pool.query(
       `SELECT
@@ -239,8 +252,12 @@ class AuthService extends Service {
       session: {
         id: Number(row.session_id),
         user_id: Number(row.user_id),
-        expires_at: row.expires_at ? new Date(row.expires_at as string | number).toISOString() : null,
-        last_seen_at: row.last_seen_at ? new Date(row.last_seen_at as string | number).toISOString() : null,
+        expires_at: row.expires_at
+          ? new Date(row.expires_at as string | number).toISOString()
+          : null,
+        last_seen_at: row.last_seen_at
+          ? new Date(row.last_seen_at as string | number).toISOString()
+          : null,
       },
     };
   }

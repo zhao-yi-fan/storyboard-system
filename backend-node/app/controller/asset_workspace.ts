@@ -21,11 +21,7 @@ class AssetWorkspaceController extends ApiController {
     const chapterId = Number(this.ctx.request.body?.chapter_id || 0) || null;
     const requirementId = Number(this.ctx.request.body?.requirement_id || 0) || null;
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.generateRequirements(
-        projectId,
-        chapterId,
-        requirementId,
-      ),
+      this.ctx.service.assetWorkspace.generateRequirements(projectId, chapterId, requirementId),
     );
   }
 

@@ -146,7 +146,12 @@ class ScriptImportService extends Service {
         const chapter = parsed.chapters[chapterIndex];
         const chapterCharacters = new Set<string>();
         const chapterAssetRequirements = new Map();
-        const collectAssetRequirement = (kind: string, name: string, description: string, entityId: number) => {
+        const collectAssetRequirement = (
+          kind: string,
+          name: string,
+          description: string,
+          entityId: number,
+        ) => {
           const key = `${kind}:${name}`;
           const current = chapterAssetRequirements.get(key);
           chapterAssetRequirements.set(key, {
@@ -215,17 +220,8 @@ class ScriptImportService extends Service {
           }
 
           for (const prop of scene.props || []) {
-            const propAssetId = await upsertAsset(
-              prop.name,
-              ASSET_KIND.PROP,
-              prop.description,
-            );
-            collectAssetRequirement(
-              ASSET_KIND.PROP,
-              prop.name,
-              prop.description,
-              propAssetId,
-            );
+            const propAssetId = await upsertAsset(prop.name, ASSET_KIND.PROP, prop.description);
+            collectAssetRequirement(ASSET_KIND.PROP, prop.name, prop.description, propAssetId);
             await conn.execute(
               `INSERT IGNORE INTO scene_asset_usages (scene_id, asset_id, usage_type)
                VALUES (?, ?, 'reference_asset')`,

@@ -9,7 +9,7 @@ import {
   AI_PREVIEW_ACTION,
   type AIPreviewDialogState,
 } from "../components/assets/dialogs/AIGenerationPreviewDialog";
-import type { ASSET_LIBRARY_TAB} from "../constants/domain";
+import type { ASSET_LIBRARY_TAB } from "../constants/domain";
 import { ENTITY_TYPE } from "../constants/domain";
 import type { AIPreviewDialogInput, SelectedAsset } from "./AssetLibrary.helpers";
 import { CHARACTER_GENERATION_COPY } from "./AssetLibrary.helpers";

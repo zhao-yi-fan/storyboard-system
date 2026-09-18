@@ -10,7 +10,18 @@
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
 import type { CharacterEntity, SceneEntity, StoryboardEntity } from './entity';
-import { buildPromptBlueprint, buildVideoTimeline, expandCameraDirection, expandCameraMotion, expandShotType, normalizeTextList, renderPromptBlueprint,selectPromptTemplate, summarizeVideoContent, VIDEO_NEGATIVE } from './prompt_blueprint';
+import {
+  buildPromptBlueprint,
+  buildVideoTimeline,
+  expandCameraDirection,
+  expandCameraMotion,
+  expandShotType,
+  normalizeTextList,
+  renderPromptBlueprint,
+  selectPromptTemplate,
+  summarizeVideoContent,
+  VIDEO_NEGATIVE,
+} from './prompt_blueprint';
 
 export function buildStoryboardVideoPrompt(
   storyboard: Partial<StoryboardEntity>,

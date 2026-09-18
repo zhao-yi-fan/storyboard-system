@@ -38,11 +38,7 @@ import type {
   SceneVideoPreview,
   VideoFrameReferenceItem,
 } from '../lib/entity';
-const {
-  GENERATION_STATUS,
-  MEDIA_TYPE,
-  VIDEO_MODEL,
-} = require('../lib/domain_constants');
+const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = require('../lib/domain_constants');
 
 class SceneService extends Service {
   get pool() {
@@ -275,7 +271,9 @@ class SceneService extends Service {
           ? String(payload.video_error || '')
           : current.video_error,
         Object.prototype.hasOwnProperty.call(payload, 'video_duration')
-          ? payload.video_duration === null || payload.video_duration === undefined || payload.video_duration === ''
+          ? payload.video_duration === null ||
+            payload.video_duration === undefined ||
+            payload.video_duration === ''
             ? null
             : Number(payload.video_duration)
           : current.video_duration,
@@ -435,7 +433,12 @@ class SceneService extends Service {
     return extractFirstShotCoverPrompt(prompt);
   }
 
-  buildGenerationReferenceState(scene: SceneEntity, references: Array<ImageReferenceItem | VideoFrameReferenceItem>, missing: string[], projectReferenceNames: string[] = []) {
+  buildGenerationReferenceState(
+    scene: SceneEntity,
+    references: Array<ImageReferenceItem | VideoFrameReferenceItem>,
+    missing: string[],
+    projectReferenceNames: string[] = [],
+  ) {
     const prompt = String(scene.prompt || scene.description || '');
     const boundNames = new Set(
       [
@@ -790,7 +793,15 @@ class SceneService extends Service {
     };
   }
 
-  async generateVideo(id: number, model: string, duration: number, useFirstFrame: boolean, resolution: string, aspectRatio: string, generateAudio: boolean) {
+  async generateVideo(
+    id: number,
+    model: string,
+    duration: number,
+    useFirstFrame: boolean,
+    resolution: string,
+    aspectRatio: string,
+    generateAudio: boolean,
+  ) {
     const preview = await this.previewVideoGeneration(
       id,
       model,

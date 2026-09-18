@@ -4,7 +4,6 @@ const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
 class AssetController extends ApiController {
-
   async indexByProject() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');

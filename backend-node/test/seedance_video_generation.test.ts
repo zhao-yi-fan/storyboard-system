@@ -6,13 +6,8 @@ import { describe, it } from 'mocha';
 const cjsRequire = createRequire(import.meta.url);
 const { AI_VIDEO_DEFAULT } = cjsRequire('../app/lib/ai_client_constants');
 const { DEFAULT_PROVIDER_MODEL } = cjsRequire('../config/shared/constants');
-const {
-  ASSET_KIND,
-  REFERENCE_TYPE,
-  VIDEO_ASPECT_RATIO,
-  VIDEO_MODEL,
-  VIDEO_RESOLUTION,
-} = cjsRequire('../app/lib/domain_constants');
+const { ASSET_KIND, REFERENCE_TYPE, VIDEO_ASPECT_RATIO, VIDEO_MODEL, VIDEO_RESOLUTION } =
+  cjsRequire('../app/lib/domain_constants');
 const { buildSeedanceVideoPayload, generateSeedanceVideo } = cjsRequire('../app/lib/ai_clients');
 const StoryboardService = cjsRequire('../app/service/storyboard');
 const AssetService = cjsRequire('../app/service/asset');

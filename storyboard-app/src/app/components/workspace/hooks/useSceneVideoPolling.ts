@@ -30,27 +30,30 @@ export function useSceneVideoPolling(callbacks: SceneVideoPollingCallbacks) {
     }
   }, []);
 
-  const start = useCallback((sceneId: number) => {
-    stop();
-    setStatus("polling");
-    timerRef.current = window.setInterval(async () => {
-      try {
-        const latest = await sceneApi.getScene(sceneId);
-        callbacksRef.current.onScene(latest);
-        const generations = await sceneApi.getSceneMediaGenerations(sceneId);
-        callbacksRef.current.onGenerations(generations);
-        if (latest.video_status !== GENERATION_STATUS.GENERATING) {
+  const start = useCallback(
+    (sceneId: number) => {
+      stop();
+      setStatus("polling");
+      timerRef.current = window.setInterval(async () => {
+        try {
+          const latest = await sceneApi.getScene(sceneId);
+          callbacksRef.current.onScene(latest);
+          const generations = await sceneApi.getSceneMediaGenerations(sceneId);
+          callbacksRef.current.onGenerations(generations);
+          if (latest.video_status !== GENERATION_STATUS.GENERATING) {
+            stop();
+            setStatus(GENERATION_STATUS.SUCCEEDED);
+            callbacksRef.current.onTerminal(latest);
+          }
+        } catch (error) {
           stop();
-          setStatus(GENERATION_STATUS.SUCCEEDED);
-          callbacksRef.current.onTerminal(latest);
+          setStatus(GENERATION_STATUS.FAILED);
+          callbacksRef.current.onError(error);
         }
-      } catch (error) {
-        stop();
-        setStatus(GENERATION_STATUS.FAILED);
-        callbacksRef.current.onError(error);
-      }
-    }, 5000);
-  }, [stop]);
+      }, 5000);
+    },
+    [stop],
+  );
 
   useEffect(
     () => () => {

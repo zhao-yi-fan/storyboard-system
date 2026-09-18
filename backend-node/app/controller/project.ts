@@ -4,7 +4,6 @@ const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
 class ProjectController extends ApiController {
-
   async index() {
     await this.respond(() => this.ctx.service.project.findAll(this.ctx.state.currentUser.id));
   }

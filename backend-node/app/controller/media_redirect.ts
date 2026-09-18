@@ -2,11 +2,7 @@
 
 import { Controller } from 'egg';
 
-const {
-  generatedObjectKey,
-  isOssEnabled,
-  createOssClient,
-} = require('../lib/generated_asset');
+const { generatedObjectKey, isOssEnabled, createOssClient } = require('../lib/generated_asset');
 
 function decodeObjectKey(value: unknown): string {
   try {
@@ -38,7 +34,14 @@ class MediaRedirectController extends Controller {
       if (!isOssEnabled(this.app)) throw new Error('OSS is not configured');
       const options = this.ctx.get('range') ? { headers: { Range: this.ctx.get('range') } } : {};
       const result = await createOssClient(this.app).getStream(key, options);
-      for (const name of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified']) {
+      for (const name of [
+        'content-type',
+        'content-length',
+        'content-range',
+        'accept-ranges',
+        'etag',
+        'last-modified',
+      ]) {
         const value = result.res.headers[name];
         if (value) this.ctx.set(name, Array.isArray(value) ? value.join(', ') : value);
       }

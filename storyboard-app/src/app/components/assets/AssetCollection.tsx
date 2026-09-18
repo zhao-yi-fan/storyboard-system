@@ -51,9 +51,7 @@ export function isPropAsset(asset: Asset) {
 
 export const getAssetKind = (asset: Asset): Exclude<AssetKind, "character" | "voice"> =>
   isPropAsset(asset) ? ASSET_KIND.PROP : ASSET_KIND.SCENE;
-export const getAssetTab = (
-  asset: Asset,
-): Exclude<AssetLibraryTab, "characters"> =>
+export const getAssetTab = (asset: Asset): Exclude<AssetLibraryTab, "characters"> =>
   isPropAsset(asset) ? ASSET_LIBRARY_TAB.PROPS : ASSET_LIBRARY_TAB.SCENES;
 export const getAssetKindLabel = (asset: Asset) => (isPropAsset(asset) ? "道具" : "场景");
 

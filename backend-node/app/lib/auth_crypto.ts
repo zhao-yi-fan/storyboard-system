@@ -37,9 +37,7 @@ export async function verifyPassword(password: string, salt: string, passwordHas
 }
 
 export function generateSessionToken() {
-  return randomBytes(AUTH_CRYPTO_SPEC.SESSION_TOKEN_BYTES).toString(
-    AUTH_CRYPTO_SPEC.ENCODING,
-  );
+  return randomBytes(AUTH_CRYPTO_SPEC.SESSION_TOKEN_BYTES).toString(AUTH_CRYPTO_SPEC.ENCODING);
 }
 
 export function hashSessionToken(token: string) {

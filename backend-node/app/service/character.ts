@@ -3,7 +3,11 @@
 const Service = require('egg').Service;
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { normalizeGeneratedAssetReference, resolveSignedUrl, resolveUrl } = require('../lib/generated_asset');
+const {
+  normalizeGeneratedAssetReference,
+  resolveSignedUrl,
+  resolveUrl,
+} = require('../lib/generated_asset');
 const {
   downloadAndStore,
   materializeSourceToLocalFile,
@@ -69,7 +73,9 @@ class CharacterService extends Service {
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       voice_reference_duration:
-        row.voice_reference_duration === null || row.voice_reference_duration === undefined ? 0 : Number(row.voice_reference_duration),
+        row.voice_reference_duration === null || row.voice_reference_duration === undefined
+          ? 0
+          : Number(row.voice_reference_duration),
       design_sheet_status:
         row.design_sheet_status ||
         (row.design_sheet_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
@@ -406,7 +412,13 @@ class CharacterService extends Service {
         size: SEEDREAM_DESIGN_SHEET_SIZE,
       });
       const filename = `${sanitizeFileName(`character-design-sheet-${id}`)}-${Date.now()}.png`;
-      const stored = await downloadAndStore(this.app, imageUrl, 'characters', filename, 'image/png');
+      const stored = await downloadAndStore(
+        this.app,
+        imageUrl,
+        'characters',
+        filename,
+        'image/png',
+      );
       await this.ctx.service.assetWorkspace.recordCharacterDesignSheetVersion(
         character,
         stored.publicPath,
@@ -422,11 +434,19 @@ class CharacterService extends Service {
     }
   }
 
-  async generateVoiceReferenceAudio(character: CharacterEntity, voicePrompt: string, previewText: string) {
+  async generateVoiceReferenceAudio(
+    character: CharacterEntity,
+    voicePrompt: string,
+    previewText: string,
+  ) {
     return await generateCharacterVoiceReference(this.app, character, voicePrompt, previewText);
   }
 
-  async normalizeGeneratedVoiceReferenceAudio(audioBuffer: Buffer, extension: string, outputExtension: string = extension) {
+  async normalizeGeneratedVoiceReferenceAudio(
+    audioBuffer: Buffer,
+    extension: string,
+    outputExtension: string = extension,
+  ) {
     return await normalizeAudioDuration(audioBuffer, {
       minSeconds: VOICE_REFERENCE_SPEC.MIN_SECONDS,
       maxSeconds: VOICE_REFERENCE_SPEC.MAX_SECONDS,
@@ -469,14 +489,27 @@ class CharacterService extends Service {
     try {
       const result = await this.generateVoiceReferenceAudio(character, voicePrompt, previewText);
       const extension = String(result.extension || 'wav').replace(/^\./, '') || 'wav';
-      const normalized = await this.normalizeGeneratedVoiceReferenceAudio(result.audioBuffer, extension);
-      const stored = await this.storeGeneratedVoiceReferenceAudio(id, normalized.audioBuffer, extension);
+      const normalized = await this.normalizeGeneratedVoiceReferenceAudio(
+        result.audioBuffer,
+        extension,
+      );
+      const stored = await this.storeGeneratedVoiceReferenceAudio(
+        id,
+        normalized.audioBuffer,
+        extension,
+      );
       await this.pool.execute(
         `UPDATE characters SET voice_reference_url = ?, voice_reference_duration = ?,
          voice_reference_text = ?, voice_name = ?, voice_prompt = ?,
          voice_reference_status = 'succeeded', voice_reference_error = NULL WHERE id = ?`,
-        [stored.publicPath, normalized.duration, result.voiceReferenceText, result.voiceName,
-          String(voicePrompt || '').trim(), id],
+        [
+          stored.publicPath,
+          normalized.duration,
+          result.voiceReferenceText,
+          result.voiceName,
+          String(voicePrompt || '').trim(),
+          id,
+        ],
       );
       const updated = await this.findById(id);
       await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
@@ -510,7 +543,9 @@ class CharacterService extends Service {
     );
     let materialized;
     try {
-      const sourceExtension = path.extname(String(normalizedUrl).split(/[?#]/)[0]).replace(/^\./, '');
+      const sourceExtension = path
+        .extname(String(normalizedUrl).split(/[?#]/)[0])
+        .replace(/^\./, '');
       const extension = ['wav', 'mp3', 'm4a', 'aac', 'ogg', 'flac'].includes(sourceExtension)
         ? sourceExtension
         : 'wav';

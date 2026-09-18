@@ -2,8 +2,7 @@
 
 export const COMPOSITE_PROMPT_SPEC = Object.freeze({
   MAX_LENGTH: 10000,
-  SINGLE_FRAME_CONSTRAINT:
-    '只生成一张完整的单幅画面，禁止多格漫画、拼贴、分屏或同时展示多个镜头。',
+  SINGLE_FRAME_CONSTRAINT: '只生成一张完整的单幅画面，禁止多格漫画、拼贴、分屏或同时展示多个镜头。',
 });
 
 export function normalizeCompositePrompt(value: unknown) {
@@ -33,17 +32,13 @@ function extractPictureSection(prompt: string) {
 export function extractFirstShotCoverPrompt(value: unknown) {
   const prompt = assertCompositePromptLength(value);
   if (!isCompositeStoryboardPrompt(prompt)) {
-    return [prompt, COMPOSITE_PROMPT_SPEC.SINGLE_FRAME_CONSTRAINT]
-      .filter(Boolean)
-      .join('\n\n');
+    return [prompt, COMPOSITE_PROMPT_SPEC.SINGLE_FRAME_CONSTRAINT].filter(Boolean).join('\n\n');
   }
 
   const shotMatches = Array.from(prompt.matchAll(/(?:^|\n)\s*镜号[：:]/g));
   const firstShotIndex = shotMatches[0]?.index ?? -1;
   if (firstShotIndex < 0) {
-    return [prompt, COMPOSITE_PROMPT_SPEC.SINGLE_FRAME_CONSTRAINT]
-      .filter(Boolean)
-      .join('\n\n');
+    return [prompt, COMPOSITE_PROMPT_SPEC.SINGLE_FRAME_CONSTRAINT].filter(Boolean).join('\n\n');
   }
   const secondShotIndex = shotMatches[1]?.index ?? prompt.length;
   const pictureIndex = prompt.indexOf('[画面]', firstShotIndex);

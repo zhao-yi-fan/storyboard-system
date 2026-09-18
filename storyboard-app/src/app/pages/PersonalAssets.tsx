@@ -60,7 +60,7 @@ export default function PersonalAssets() {
             {items.map((item) => (
               <article key={item.id} className={styles.card}>
                 <div className={styles.preview}>
-                  {item.file_url ?? item.preview_url ? (
+                  {(item.file_url ?? item.preview_url) ? (
                     <img
                       src={item.file_url ?? item.preview_url}
                       alt={item.name}

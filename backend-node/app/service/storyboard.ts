@@ -141,7 +141,9 @@ class StoryboardService extends Service {
         String(payload.style_notes || ''),
         String(payload.camera_direction || ''),
         String(payload.camera_motion || ''),
-        payload.duration === null || payload.duration === undefined || payload.duration === '' ? null : Number(payload.duration),
+        payload.duration === null || payload.duration === undefined || payload.duration === ''
+          ? null
+          : Number(payload.duration),
         String(payload.background || ''),
         String(payload.thumbnail_url || ''),
         String(payload.thumbnail_preview_url || ''),
@@ -230,7 +232,9 @@ class StoryboardService extends Service {
           ? String(payload.video_error || '')
           : current.video_error,
         Object.prototype.hasOwnProperty.call(payload, 'video_duration')
-          ? payload.video_duration === null || payload.video_duration === undefined || payload.video_duration === ''
+          ? payload.video_duration === null ||
+            payload.video_duration === undefined ||
+            payload.video_duration === ''
             ? null
             : Number(payload.video_duration)
           : current.video_duration,
@@ -353,9 +357,7 @@ class StoryboardService extends Service {
 
   normalizeVideoResolution(model: string, value: string) {
     const isSeedance = this.isSeedanceVideoModel(model);
-    const resolution = String(
-      value || (isSeedance ? VIDEO_RESOLUTION.SD : VIDEO_RESOLUTION.HD),
-    )
+    const resolution = String(value || (isSeedance ? VIDEO_RESOLUTION.SD : VIDEO_RESOLUTION.HD))
       .trim()
       .toLowerCase();
     if (isSeedance && !StoryboardService.SEEDANCE_RESOLUTIONS.has(resolution)) {
@@ -1137,9 +1139,8 @@ class StoryboardService extends Service {
             preview.audio,
             {
               onTaskCreated: async (taskId: string) => {
-                const currentGeneration = await this.ctx.service.mediaGeneration.findById(
-                  generationId,
-                );
+                const currentGeneration =
+                  await this.ctx.service.mediaGeneration.findById(generationId);
                 await this.ctx.service.mediaGeneration.update(generationId, {
                   meta_json: {
                     ...parseMediaGenerationMeta(currentGeneration?.meta_json),

@@ -46,18 +46,16 @@ describe("character preview sources", () => {
 describe("hasCharacterVoiceReference", () => {
   it("is boolean", () => {
     expect(hasCharacterVoiceReference(character())).toBe(false);
-    expect(
-      hasCharacterVoiceReference(character({ voice_reference_url: "https://x/v.mp3" })),
-    ).toBe(true);
+    expect(hasCharacterVoiceReference(character({ voice_reference_url: "https://x/v.mp3" }))).toBe(
+      true,
+    );
     expect(hasCharacterVoiceReference(null)).toBe(false);
   });
 });
 
 describe("asset helpers", () => {
   it("getAssetOriginalSrc falls back to empty", () => {
-    expect(getAssetOriginalSrc({ file_url: "https://x/a.png" } as Asset)).toBe(
-      "https://x/a.png",
-    );
+    expect(getAssetOriginalSrc({ file_url: "https://x/a.png" } as Asset)).toBe("https://x/a.png");
     expect(getAssetOriginalSrc(null)).toBe("");
   });
 

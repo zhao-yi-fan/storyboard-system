@@ -4,7 +4,6 @@ const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
 class CharacterController extends ApiController {
-
   async indexByProject() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid project id');
@@ -133,11 +132,7 @@ class CharacterController extends ApiController {
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
     await this.respond(() =>
-      this.ctx.service.character.generateVoiceReference(
-        id,
-        body.voice_prompt,
-        body.preview_text,
-      ),
+      this.ctx.service.character.generateVoiceReference(id, body.voice_prompt, body.preview_text),
     );
   }
 

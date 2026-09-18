@@ -35,9 +35,7 @@ import {
   getAssetKind,
   getAssetKindLabel,
 } from "../components/assets/AssetCollection";
-import {
-  AIGenerationPreviewDialog,
-} from "../components/assets/dialogs/AIGenerationPreviewDialog";
+import { AIGenerationPreviewDialog } from "../components/assets/dialogs/AIGenerationPreviewDialog";
 import { AssetVersionsDialog } from "../components/assets/dialogs/AssetVersionsDialog";
 import { CreateAssetDialog } from "../components/assets/dialogs/CreateAssetDialog";
 import { DeleteAssetDialog } from "../components/assets/dialogs/DeleteAssetDialog";
@@ -65,9 +63,7 @@ import {
   ENTITY_TYPE,
   GENERATION_STATUS,
 } from "../constants/domain";
-import type {
-  SelectedAsset,
-} from "./AssetLibrary.helpers";
+import type { SelectedAsset } from "./AssetLibrary.helpers";
 import {
   CHARACTER_GENERATION_COPY,
   getAssetOriginalSrc,
@@ -163,9 +159,7 @@ export default function AssetLibrary() {
   const currentProjectId = Number(searchParams.get("project") ?? "0");
   const [project, setProject] = useState<Project | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [activeTab, setActiveTab] = useState<AssetLibraryTab>(
-    ASSET_LIBRARY_TAB.CHARACTERS,
-  );
+  const [activeTab, setActiveTab] = useState<AssetLibraryTab>(ASSET_LIBRARY_TAB.CHARACTERS);
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
   const [viewMode, setViewMode] = useState<AssetViewMode>(ASSET_VIEW_MODE.GRID);
   const [searchQuery, setSearchQuery] = useState("");
@@ -344,7 +338,6 @@ export default function AssetLibrary() {
     };
   }, [selectedAssetId, selectedAssetType, setIsLoadingVersions, setVersions]);
 
-
   const {
     isSavingCharacter,
     isSavingAsset,
@@ -387,7 +380,9 @@ export default function AssetLibrary() {
               size="sm"
               variant="ghost"
               onClick={() =>
-                void navigate(currentProjectId ? `/workspace?project=${currentProjectId}` : "/projects")
+                void navigate(
+                  currentProjectId ? `/workspace?project=${currentProjectId}` : "/projects",
+                )
               }
               className={styles.backButton}
             >
@@ -495,7 +490,9 @@ export default function AssetLibrary() {
                     {filteredCharacters.map((character) => (
                       <button
                         key={character.id}
-                        onClick={() => setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: character })}
+                        onClick={() =>
+                          setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: character })
+                        }
                         className={
                           selectedAsset?.type === ENTITY_TYPE.CHARACTER &&
                           selectedAsset.data.id === character.id
@@ -534,7 +531,9 @@ export default function AssetLibrary() {
                     {filteredCharacters.map((character) => (
                       <button
                         key={character.id}
-                        onClick={() => setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: character })}
+                        onClick={() =>
+                          setSelectedAsset({ type: ENTITY_TYPE.CHARACTER, data: character })
+                        }
                         className={
                           selectedAsset?.type === ENTITY_TYPE.CHARACTER &&
                           selectedAsset.data.id === character.id
@@ -571,8 +570,16 @@ export default function AssetLibrary() {
             </TabsContent>
 
             {[
-              { value: ASSET_LIBRARY_TAB.SCENES, items: filteredSceneAssets, emptyLabel: "暂无场景资产" },
-              { value: ASSET_LIBRARY_TAB.PROPS, items: filteredPropAssets, emptyLabel: "暂无道具资产" },
+              {
+                value: ASSET_LIBRARY_TAB.SCENES,
+                items: filteredSceneAssets,
+                emptyLabel: "暂无场景资产",
+              },
+              {
+                value: ASSET_LIBRARY_TAB.PROPS,
+                items: filteredPropAssets,
+                emptyLabel: "暂无道具资产",
+              },
             ].map((collection) => (
               <TabsContent
                 key={collection.value}
@@ -865,12 +872,14 @@ export default function AssetLibrary() {
                             className={styles.secondaryButton}
                             disabled={
                               generatingCharacterDesignSheetId === selectedAsset.data.id ||
-                              selectedAsset.data.design_sheet_status === GENERATION_STATUS.GENERATING
+                              selectedAsset.data.design_sheet_status ===
+                                GENERATION_STATUS.GENERATING
                             }
                             onClick={() => void handleGenerateCharacterDesignSheet()}
                           >
                             {generatingCharacterDesignSheetId === selectedAsset.data.id ||
-                            selectedAsset.data.design_sheet_status === GENERATION_STATUS.GENERATING ? (
+                            selectedAsset.data.design_sheet_status ===
+                              GENERATION_STATUS.GENERATING ? (
                               <>
                                 <Loader2 className={styles.buttonLoadingIcon} />
                                 正在生成主设定图
@@ -994,12 +1003,14 @@ export default function AssetLibrary() {
                           className={styles.secondaryButton}
                           disabled={
                             generatingCharacterVoiceReferenceId === selectedAsset.data.id ||
-                            selectedAsset.data.voice_reference_status === GENERATION_STATUS.GENERATING
+                            selectedAsset.data.voice_reference_status ===
+                              GENERATION_STATUS.GENERATING
                           }
                           onClick={() => void handleGenerateCharacterVoiceReference()}
                         >
                           {generatingCharacterVoiceReferenceId === selectedAsset.data.id ||
-                          selectedAsset.data.voice_reference_status === GENERATION_STATUS.GENERATING ? (
+                          selectedAsset.data.voice_reference_status ===
+                            GENERATION_STATUS.GENERATING ? (
                             <>
                               <Loader2 className={styles.buttonLoadingIcon} />
                               生成中

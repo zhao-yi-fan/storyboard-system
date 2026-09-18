@@ -5,7 +5,6 @@ const response = require('../lib/response');
 const { GENERATION_STATUS } = require('../lib/domain_constants');
 
 class StoryboardController extends ApiController {
-
   async indexByScene() {
     const sceneId = this.parseId();
     if (!sceneId) {
@@ -72,9 +71,7 @@ class StoryboardController extends ApiController {
       return;
     }
 
-    await this.respond(() =>
-      this.ctx.service.storyboard.update(id, this.ctx.request.body || {}),
-    );
+    await this.respond(() => this.ctx.service.storyboard.update(id, this.ctx.request.body || {}));
   }
 
   /**
@@ -274,10 +271,7 @@ class StoryboardController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.storyboard.uploadCover(
-        id,
-        (this.ctx.request.body || {}).thumbnail_url,
-      ),
+      this.ctx.service.storyboard.uploadCover(id, (this.ctx.request.body || {}).thumbnail_url),
     );
   }
 
@@ -332,9 +326,7 @@ class StoryboardController extends ApiController {
       response.error(this.ctx, 'invalid character id');
       return;
     }
-    await this.respond(() =>
-      this.ctx.service.storyboard.addCharacter(storyboardId, characterId),
-    );
+    await this.respond(() => this.ctx.service.storyboard.addCharacter(storyboardId, characterId));
   }
 
   /**

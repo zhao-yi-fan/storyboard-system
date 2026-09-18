@@ -52,9 +52,9 @@ describe("getAssetMentionPresentation", () => {
   });
 
   it("prefers scene over image", () => {
-    expect(
-      getAssetMentionPresentation(asset({ type: "场景", file_url: "a.png" })).category,
-    ).toBe("scene");
+    expect(getAssetMentionPresentation(asset({ type: "场景", file_url: "a.png" })).category).toBe(
+      "scene",
+    );
   });
 
   it("falls back to other", () => {

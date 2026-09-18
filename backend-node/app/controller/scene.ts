@@ -4,7 +4,6 @@ const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
 class SceneController extends ApiController {
-
   async indexByChapter() {
     const chapterId = this.parseId();
     if (!chapterId) {
@@ -295,12 +294,16 @@ class SceneController extends ApiController {
     const id = this.parseId();
     const generationId = Number(this.ctx.params.generationId);
     const frameId = Number(this.ctx.params.frameId);
-    if (!id || !Number.isInteger(generationId) || generationId <= 0 || !Number.isInteger(frameId) || frameId <= 0) {
+    if (
+      !id ||
+      !Number.isInteger(generationId) ||
+      generationId <= 0 ||
+      !Number.isInteger(frameId) ||
+      frameId <= 0
+    ) {
       return response.error(this.ctx, 'invalid id');
     }
-    await this.respond(() =>
-      this.ctx.service.sceneVideoFrame.remove(id, generationId, frameId),
-    );
+    await this.respond(() => this.ctx.service.sceneVideoFrame.remove(id, generationId, frameId));
   }
 
   async createVideoClip() {

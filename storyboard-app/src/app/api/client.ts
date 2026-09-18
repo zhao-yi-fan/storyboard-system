@@ -20,13 +20,7 @@ type RequestOptions = RequestInit & {
 export type ApiQueryValue = string | number | boolean | null | undefined;
 export type ApiQueryParams = Record<string, ApiQueryValue>;
 export type ApiRequestBody =
-  | Record<string, unknown>
-  | readonly unknown[]
-  | FormData
-  | string
-  | number
-  | boolean
-  | null;
+  Record<string, unknown> | readonly unknown[] | FormData | string | number | boolean | null;
 
 type ToastHandledError = Error & {
   __toastHandled?: boolean;

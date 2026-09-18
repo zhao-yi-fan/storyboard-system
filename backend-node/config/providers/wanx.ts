@@ -9,10 +9,7 @@ import { getNumberEnv, getStringEnv } from '../shared/env';
 
 export function buildWanxConfig() {
   return {
-    wanxVideoBaseUrl: getStringEnv(
-      'WANX_VIDEO_BASE_URL',
-      DEFAULT_PROVIDER_BASE_URL.DASHSCOPE,
-    ),
+    wanxVideoBaseUrl: getStringEnv('WANX_VIDEO_BASE_URL', DEFAULT_PROVIDER_BASE_URL.DASHSCOPE),
     wanxVideoModel: getStringEnv('WANX_VIDEO_MODEL', DEFAULT_PROVIDER_MODEL.WANX_VIDEO),
     wanxTextVideoModel: getStringEnv(
       'WANX_TEXT_VIDEO_MODEL',

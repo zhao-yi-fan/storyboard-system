@@ -108,9 +108,7 @@ export function deleteSceneMediaGeneration(id: number, generationId: number) {
 }
 
 export function getSceneVideoFrames(id: number, generationId: number) {
-  return apiClient.get<SceneVideoFrame[]>(
-    `/scenes/${id}/media-generations/${generationId}/frames`,
-  );
+  return apiClient.get<SceneVideoFrame[]>(`/scenes/${id}/media-generations/${generationId}/frames`);
 }
 
 export function createSceneVideoFrame(

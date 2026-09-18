@@ -1,4 +1,4 @@
-import { ArrowLeft,ChevronRight, FileText, Film, Loader2, Play } from "lucide-react";
+import { ArrowLeft, ChevronRight, FileText, Film, Loader2, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";

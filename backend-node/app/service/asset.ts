@@ -12,11 +12,7 @@ const {
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const { buildAssetCoverPrompt } = require('../lib/prompt_library');
 import type { AssetEntity, DbRow } from '../lib/entity';
-const {
-  ASSET_KIND,
-  ENTITY_TYPE,
-  GENERATION_STATUS,
-} = require('../lib/domain_constants');
+const { ASSET_KIND, ENTITY_TYPE, GENERATION_STATUS } = require('../lib/domain_constants');
 
 class AssetService extends Service {
   get pool() {
@@ -73,7 +69,10 @@ class AssetService extends Service {
     return {
       id: Number(row.id),
       project_id: Number(row.project_id),
-      character_id: row.character_id === null || row.character_id === undefined ? undefined : Number(row.character_id),
+      character_id:
+        row.character_id === null || row.character_id === undefined
+          ? undefined
+          : Number(row.character_id),
       name: row.name as string,
       type: row.type as string,
       file_url: resolveUrl(
@@ -87,8 +86,7 @@ class AssetService extends Service {
         this.app.config.storyboard.publicAppBaseUrl || '',
       ),
       cover_status:
-        row.cover_status ||
-        (row.cover_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
+        row.cover_status || (row.cover_url ? GENERATION_STATUS.SUCCEEDED : GENERATION_STATUS.IDLE),
       cover_error: String(row.cover_error || ''),
       thumbnail_url: resolveUrl(
         this.app,
@@ -204,7 +202,10 @@ class AssetService extends Service {
     const type = String(payload.type || '').trim();
     if (!name) throw new Error('name is required');
     if (!type) throw new Error('type is required');
-    const characterId = payload.character_id === null || payload.character_id === undefined ? null : Number(payload.character_id);
+    const characterId =
+      payload.character_id === null || payload.character_id === undefined
+        ? null
+        : Number(payload.character_id);
     if (characterId) await this.ensureCharacterInProject(characterId, projectId);
     const [result] = await this.pool.execute(
       `INSERT INTO assets (project_id, character_id, name, type, file_url, cover_url, thumbnail_url, meta)
@@ -233,7 +234,10 @@ class AssetService extends Service {
   async update(id: number, payload: Record<string, unknown>) {
     const current = await this.findById(id);
     if (!current) throw new Error('asset not found');
-    const characterId = payload.character_id === null || payload.character_id === undefined ? null : Number(payload.character_id);
+    const characterId =
+      payload.character_id === null || payload.character_id === undefined
+        ? null
+        : Number(payload.character_id);
     if (characterId) await this.ensureCharacterInProject(characterId, current.project_id);
     const nextFile = Object.prototype.hasOwnProperty.call(payload, 'file_url')
       ? normalizeGeneratedAssetReference(this.app, String(payload.file_url || '').trim())
@@ -407,7 +411,8 @@ class AssetService extends Service {
       throw new Error('当前资产类型不支持生成封面');
     }
     await this.pool.execute(
-      "UPDATE assets SET cover_status = 'generating', cover_error = NULL WHERE id = ?", [id],
+      "UPDATE assets SET cover_status = 'generating', cover_error = NULL WHERE id = ?",
+      [id],
     );
     try {
       const prompt = this.buildCoverPrompt(asset);
@@ -417,7 +422,11 @@ class AssetService extends Service {
       const stored = await downloadAndStore(this.app, imageUrl, 'assets', filename, 'image/png');
       const previewFilename = `${path.basename(filename, path.extname(filename))}.thumb.webp`;
       const previewPath = await createPreviewFromLocalPath(
-        this.app, stored.localPath, 'assets', previewFilename, assetPreviewSpec(),
+        this.app,
+        stored.localPath,
+        'assets',
+        previewFilename,
+        assetPreviewSpec(),
       );
       await this.pool.execute(
         "UPDATE assets SET cover_url = ?, thumbnail_url = ?, cover_status = 'succeeded', cover_error = NULL WHERE id = ?",

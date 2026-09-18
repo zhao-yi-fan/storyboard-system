@@ -17,12 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import {
-  type AIGenerationPreview,
-  ossApi,
-  sceneApi,
-  type StoryboardMediaGeneration,
-} from "../api";
+import { type AIGenerationPreview, ossApi, sceneApi, type StoryboardMediaGeneration } from "../api";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -65,15 +60,9 @@ import {
   RichPromptEditor,
 } from "../components/workspace/RichPromptEditor";
 import { VideoFrameExtractionDialog } from "../components/workspace/VideoFrameExtractionDialog";
-import {
-  VideoGenerationSettings,
-} from "../components/workspace/VideoGenerationSettings";
+import { VideoGenerationSettings } from "../components/workspace/VideoGenerationSettings";
 import { WorkspaceHeader } from "../components/workspace/WorkspaceHeader";
-import {
-  ENTITY_TYPE,
-  GENERATION_STATUS,
-  MEDIA_TYPE,
-} from "../constants/domain";
+import { ENTITY_TYPE, GENERATION_STATUS, MEDIA_TYPE } from "../constants/domain";
 import { useShotDraft } from "./useShotDraft";
 import { useWorkspaceCharacterAsset } from "./useWorkspaceCharacterAsset";
 import { useWorkspaceCover } from "./useWorkspaceCover";
@@ -179,8 +168,7 @@ export default function Workspace() {
   } | null>(null);
   const [frameExtractionGeneration, setFrameExtractionGeneration] =
     useState<StoryboardMediaGeneration | null>(null);
-  const [sceneCoverGenerationPreview] =
-    useState<AIGenerationPreview | null>(null);
+  const [sceneCoverGenerationPreview] = useState<AIGenerationPreview | null>(null);
   const [previewSceneVideo, setPreviewSceneVideo] = useState<VideoPreview | null>(null);
   const [previewProjectVideo, setPreviewProjectVideo] = useState<VideoPreview | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
@@ -201,7 +189,6 @@ export default function Workspace() {
     setShotForm(buildShotFormState(selectedShot, selectedScene));
   }, [selectedScene, selectedShot]);
 
-
   const filteredShots = selectedScene
     ? storyboards.filter((shot) => shot.scene_id === selectedScene.id)
     : [];
@@ -213,10 +200,10 @@ export default function Workspace() {
       id: character.id,
       kind: ENTITY_TYPE.CHARACTER,
       name: character.name,
-        imageUrl: character.design_sheet_url ?? character.avatar_url,
+      imageUrl: character.design_sheet_url ?? character.avatar_url,
       isBound: !!selectedShot?.characters?.some((item) => item.id === character.id),
       category: PROMPT_MENTION_CATEGORY.CHARACTER,
-        description: character.description ?? "人物资产",
+      description: character.description ?? "人物资产",
       media: [
         ...(character.design_sheet_url ? (["image"] as const) : []),
         ...(character.voice_reference_url ? (["audio"] as const) : []),
@@ -231,8 +218,8 @@ export default function Workspace() {
         name: asset.name,
         imageUrl:
           presentation.category === PROMPT_MENTION_CATEGORY.AUDIO
-            ? asset.thumbnail_url ?? asset.cover_url
-            : asset.cover_url ?? asset.file_url ?? asset.thumbnail_url,
+            ? (asset.thumbnail_url ?? asset.cover_url)
+            : (asset.cover_url ?? asset.file_url ?? asset.thumbnail_url),
         isBound: !!selectedShot?.assets?.some((item) => item.id === asset.id),
         category: presentation.category,
         description: asset.meta ?? asset.type ?? "项目资产",
@@ -243,12 +230,7 @@ export default function Workspace() {
   ];
   const activeChapterForSceneCreation = selectedChapter ?? chapters[0] ?? null;
 
-
-  const {
-    isSavingShot,
-    saveShotDraftBeforeGeneration,
-    handleSaveShot,
-  } = useShotDraft({
+  const { isSavingShot, saveShotDraftBeforeGeneration, handleSaveShot } = useShotDraft({
     selectedShot,
     selectedScene,
     shotForm,
@@ -288,7 +270,6 @@ export default function Workspace() {
     setMediaGenerations,
   });
 
-
   const calculateTotalDuration = () => {
     return selectedScene?.generation_duration ?? activeVideoDuration;
   };
@@ -326,8 +307,6 @@ export default function Workspace() {
     onManageCharacters: () => void handleOpenManageCharacters(),
     onManageAssets: () => void handleOpenManageAssets(),
   });
-
-
 
   const handleRequestUploadShotCover = () => {
     shotCoverInputRef.current?.click();
@@ -464,14 +443,10 @@ export default function Workspace() {
     loadStoryboards,
   });
 
-
-  const videoGenerations = mediaGenerations.filter(
-    (item) => item.media_type === MEDIA_TYPE.VIDEO,
-  );
+  const videoGenerations = mediaGenerations.filter((item) => item.media_type === MEDIA_TYPE.VIDEO);
   const currentVideoGeneration =
     videoGenerations.find(
-      (item) =>
-        item.is_current && item.status === GENERATION_STATUS.SUCCEEDED && item.result_url,
+      (item) => item.is_current && item.status === GENERATION_STATUS.SUCCEEDED && item.result_url,
     ) ?? null;
   const selectedSceneIndex = selectedScene
     ? scenes.findIndex((scene) => scene.id === selectedScene.id)
@@ -811,8 +786,7 @@ export default function Workspace() {
                       activeMediaActionKey === "set-current:" + generation.id
                     }
                     title={
-                      generation.status !== GENERATION_STATUS.SUCCEEDED ||
-                      !generation.result_url
+                      generation.status !== GENERATION_STATUS.SUCCEEDED || !generation.result_url
                         ? "该版本未生成成功，不能切换"
                         : generation.is_current
                           ? "当前版本"
@@ -825,8 +799,7 @@ export default function Workspace() {
                         ? "失败"
                         : "生成中"}
                   </button>
-                  {generation.status === GENERATION_STATUS.SUCCEEDED &&
-                  generation.result_url ? (
+                  {generation.status === GENERATION_STATUS.SUCCEEDED && generation.result_url ? (
                     <button
                       type="button"
                       className={styles.historyExtractButton}
@@ -998,7 +971,10 @@ export default function Workspace() {
                       <MoreHorizontal className={styles.actionIcon} />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className={styles.selectContent}>
-                      <DropdownMenuItem onClick={() => void handleSaveShot()} disabled={isSavingShot}>
+                      <DropdownMenuItem
+                        onClick={() => void handleSaveShot()}
+                        disabled={isSavingShot}
+                      >
                         <Save className={styles.actionIcon} />
                         保存片段 Prompt
                       </DropdownMenuItem>
@@ -1248,9 +1224,7 @@ export default function Workspace() {
         selectedModel={selectedVideoModel}
         activeDuration={activeVideoDuration}
         useFirstFrame={useFirstFrameForVideo}
-        shotNumberLabel={
-          selectedShot ? formatShotNumber(selectedShot.shot_number) : ""
-        }
+        shotNumberLabel={selectedShot ? formatShotNumber(selectedShot.shot_number) : ""}
         formattedPrompt={formatPromptForDisplay(videoGenerationPreview?.final_prompt)}
         onOpenChange={handleVideoConfirmOpenChange}
         onUseFirstFrameChange={setUseFirstFrameForVideo}
@@ -1264,8 +1238,7 @@ export default function Workspace() {
         items={[
           {
             label: "类型",
-            value:
-              deleteTargetGeneration?.media_type === MEDIA_TYPE.VIDEO ? "视频" : "首帧",
+            value: deleteTargetGeneration?.media_type === MEDIA_TYPE.VIDEO ? "视频" : "首帧",
           },
           { label: "模型", value: deleteTargetGeneration?.model ?? "-" },
           {

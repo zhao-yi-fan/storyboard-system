@@ -53,7 +53,9 @@ export function useAssetVersions({
       if (type === ENTITY_TYPE.CHARACTER) await loadCharacters();
       else await loadAssets();
       const refreshed =
-        type === ENTITY_TYPE.CHARACTER ? await characterApi.getCharacter(id) : await assetApi.getAsset(id);
+        type === ENTITY_TYPE.CHARACTER
+          ? await characterApi.getCharacter(id)
+          : await assetApi.getAsset(id);
       if (refreshed) setSelectedAsset({ type, data: refreshed } as SelectedAsset);
       toast.success(type === ENTITY_TYPE.CHARACTER ? "已切换主设定图版本" : "已切换资产版本");
     } catch (error) {

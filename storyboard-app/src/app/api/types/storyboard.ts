@@ -159,10 +159,7 @@ export type StoryboardVideoGenerationPreview = {
   aspect_ratio: VideoAspectRatio;
   audio: boolean;
   use_first_frame: boolean;
-  media_input_mode?: Extract<
-    GenerationInputMode,
-    "first_frame" | "reference_media" | "text"
-  >;
+  media_input_mode?: Extract<GenerationInputMode, "first_frame" | "reference_media" | "text">;
   source_image_url: string;
   source_image_status: SourceImageStatus | string;
   will_generate_cover: boolean;

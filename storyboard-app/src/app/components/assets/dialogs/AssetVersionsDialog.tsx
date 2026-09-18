@@ -44,7 +44,7 @@ export function AssetVersionsDialog({
             {versions.map((version, index) => {
               const src = isCharacter
                 ? version.file_url
-                : version.preview_url ?? version.file_url;
+                : (version.preview_url ?? version.file_url);
               const alt = `资产生成版本 ${versions.length - index}`;
               const label = `v${versions.length - index}`;
               return (

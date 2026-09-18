@@ -4,9 +4,7 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
-const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = cjsRequire(
-  '../app/lib/domain_constants',
-);
+const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = cjsRequire('../app/lib/domain_constants');
 const SceneService = cjsRequire('../app/service/scene');
 const SceneMediaGenerationService = cjsRequire('../app/service/scene_media_generation');
 const SceneVideoPosterService = cjsRequire('../app/service/scene_video_poster');

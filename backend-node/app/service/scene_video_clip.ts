@@ -11,7 +11,12 @@ const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 import type { SceneEntity, SceneMediaGenerationEntity } from '../lib/entity';
 
 class SceneVideoClipService extends Service {
-  normalizeRange(scene: SceneEntity, generation: SceneMediaGenerationEntity, startMsRaw: unknown, endMsRaw: unknown) {
+  normalizeRange(
+    scene: SceneEntity,
+    generation: SceneMediaGenerationEntity,
+    startMsRaw: unknown,
+    endMsRaw: unknown,
+  ) {
     const startMs = Math.round(Number(startMsRaw) / 100) * 100;
     const endMs = Math.round(Number(endMsRaw) / 100) * 100;
     const meta = parseMediaGenerationMeta(generation.meta_json);

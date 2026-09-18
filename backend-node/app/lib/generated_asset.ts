@@ -28,7 +28,10 @@ export type OssClient = {
   signatureUrl: (objectKey: string, options?: Record<string, unknown>) => string;
   put: (...args: unknown[]) => Promise<unknown>;
   get: (...args: unknown[]) => Promise<{ res?: { status?: number } }>;
-  getStream: (...args: unknown[]) => Promise<{ stream: NodeJS.ReadableStream; res: { status: number; headers: Record<string, string | string[] | undefined> } }>;
+  getStream: (...args: unknown[]) => Promise<{
+    stream: NodeJS.ReadableStream;
+    res: { status: number; headers: Record<string, string | string[] | undefined> };
+  }>;
   delete: (...args: unknown[]) => Promise<unknown>;
 };
 
@@ -78,7 +81,9 @@ function generatedObjectKey(app: App, raw: unknown): string {
     if (parsed.pathname) {
       value = parsed.pathname;
     }
-  } catch { /* intentionally ignored */ }
+  } catch {
+    /* intentionally ignored */
+  }
 
   const base = normalizedGeneratedBasePath(app);
   if (!value.startsWith(`${base}/`)) {
@@ -296,7 +301,11 @@ async function deleteGeneratedAsset(app: App, generatedPath: string): Promise<vo
   await client.delete(objectKey);
 }
 
-async function downloadGeneratedToFile(app: App, generatedPath: string, localPath: string): Promise<void> {
+async function downloadGeneratedToFile(
+  app: App,
+  generatedPath: string,
+  localPath: string,
+): Promise<void> {
   if (!isGeneratedAssetPath(app, generatedPath)) {
     throw new Error(`not a generated path: ${generatedPath}`);
   }

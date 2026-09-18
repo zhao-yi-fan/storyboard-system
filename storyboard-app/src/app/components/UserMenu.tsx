@@ -1,4 +1,4 @@
-import { ChevronDown,LogOut } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -84,7 +84,12 @@ export function UserMenu({ placement = "header" }: UserMenuProps) {
           </div>
 
           <div className={styles.actions}>
-            <MenuItem icon={<LogOut size={13} />} label="退出登录" onClick={() => void handleLogout()} subtle />
+            <MenuItem
+              icon={<LogOut size={13} />}
+              label="退出登录"
+              onClick={() => void handleLogout()}
+              subtle
+            />
           </div>
         </div>
       ) : null}

@@ -32,7 +32,10 @@ export function buildSceneDescriptionUserMessage(title: unknown, description: un
     .join('\n\n');
 }
 
-export async function optimizeSceneDescription(config: StoryboardAppConfig, payload: Record<string, unknown>) {
+export async function optimizeSceneDescription(
+  config: StoryboardAppConfig,
+  payload: Record<string, unknown>,
+) {
   const originalDescription = normalizeDescription(payload?.description);
   const rawOptimizedDescription = await requestDeepSeekText(config, {
     systemPrompt: SCENE_DESCRIPTION_SYSTEM_PROMPT,

@@ -168,9 +168,9 @@ export function normalizeShotDirectionAnalyses(
 ) {
   const analysesField = (raw as { analyses?: unknown }).analyses;
   const rawItems: DbRow[] = Array.isArray(analysesField)
-    ? analysesField as DbRow[]
+    ? (analysesField as DbRow[])
     : Array.isArray(raw)
-      ? raw as DbRow[]
+      ? (raw as DbRow[])
       : [];
   const byStoryboardId = new Map<number, Record<string, unknown>>();
   for (const item of rawItems) {

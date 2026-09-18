@@ -7,7 +7,10 @@ type EggRouter = {
   delete: (...args: unknown[]) => void;
 };
 
-module.exports = (app: { router: EggRouter; controller: Record<string, Record<string, unknown>> }) => {
+module.exports = (app: {
+  router: EggRouter;
+  controller: Record<string, Record<string, unknown>>;
+}) => {
   const { router, controller } = app;
 
   router.get('/_media/stream/:objectKey(.*)', controller.mediaRedirect.stream);

@@ -10,7 +10,12 @@ const {
   uploadBuffer,
 } = require('../lib/generated_asset');
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
-import type { DbRow, SceneEntity, SceneMediaGenerationEntity, SceneVideoFrameEntity } from '../lib/entity';
+import type {
+  DbRow,
+  SceneEntity,
+  SceneMediaGenerationEntity,
+  SceneVideoFrameEntity,
+} from '../lib/entity';
 
 const FRAME_UPLOAD_SPEC = Object.freeze({
   ALLOWED_IMAGE_TYPES: Object.freeze(['image/webp', 'image/jpeg', 'image/png']),
@@ -176,7 +181,12 @@ class SceneVideoFrameService extends Service {
     }
     const timestampMs = Math.round(Number(payload.timestamp_ms) / 100) * 100;
     const durationMs = Math.round(this.resolveDurationSeconds(scene, generation) * 1000);
-    if (!Number.isInteger(timestampMs) || timestampMs < 0 || durationMs <= 0 || timestampMs > durationMs) {
+    if (
+      !Number.isInteger(timestampMs) ||
+      timestampMs < 0 ||
+      durationMs <= 0 ||
+      timestampMs > durationMs
+    ) {
       throw new Error('抽帧时间点超出视频有效时长');
     }
     const contentType = String(payload.content_type || '').toLowerCase();
@@ -196,17 +206,17 @@ class SceneVideoFrameService extends Service {
       [generationId, timestampMs],
     );
     if (existingRows.length && !existingRows[0].deleted_at) {
-      await this.pool.execute(
-        'UPDATE scene_video_frames SET deleted_at = NULL WHERE id = ?',
-        [existingRows[0].id],
-      );
+      await this.pool.execute('UPDATE scene_video_frames SET deleted_at = NULL WHERE id = ?', [
+        existingRows[0].id,
+      ]);
       await this.bind(existingRows[0].id, targetScene.id);
       return (await this.listByGeneration(sceneId, generationId)).find(
         (item) => item.id === Number(existingRows[0].id),
       );
     }
 
-    const extension = contentType === 'image/png' ? '.png' : contentType === 'image/jpeg' ? '.jpg' : '.webp';
+    const extension =
+      contentType === 'image/png' ? '.png' : contentType === 'image/jpeg' ? '.jpg' : '.webp';
     const fileName = `scene-${sceneId}-video-${generationId}-${timestampMs}-${Date.now()}${extension}`;
     const publicPath = generatedPublicPath(this.app, 'video-frames', path.posix.basename(fileName));
     await uploadBuffer(this.app, buffer, publicPath);
@@ -284,8 +294,12 @@ class SceneVideoFrameService extends Service {
     const connection = await this.pool.getConnection();
     try {
       await connection.beginTransaction();
-      await connection.execute('DELETE FROM scene_video_frame_usages WHERE frame_id = ?', [frameId]);
-      await connection.execute('UPDATE scene_video_frames SET deleted_at = NOW() WHERE id = ?', [frameId]);
+      await connection.execute('DELETE FROM scene_video_frame_usages WHERE frame_id = ?', [
+        frameId,
+      ]);
+      await connection.execute('UPDATE scene_video_frames SET deleted_at = NOW() WHERE id = ?', [
+        frameId,
+      ]);
       await connection.commit();
     } catch (error) {
       await connection.rollback();

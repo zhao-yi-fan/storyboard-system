@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { type Project,projectApi } from "../api";
+import { type Project, projectApi } from "../api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -307,7 +307,10 @@ export default function ProjectDashboard() {
             <Film className={styles.icon} />
             AI 制剧
           </button>
-          <button className={styles.navigationButton} onClick={() => void navigate("/personal-assets")}>
+          <button
+            className={styles.navigationButton}
+            onClick={() => void navigate("/personal-assets")}
+          >
             <Package className={styles.icon} />
             个人空间
           </button>

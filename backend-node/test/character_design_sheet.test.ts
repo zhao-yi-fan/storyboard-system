@@ -2,10 +2,7 @@ import assert from 'node:assert/strict';
 
 import { describe, it } from 'mocha';
 
-import {
-  ENTITY_TYPE,
-  GENERATION_STATUS,
-} from '../app/lib/domain_constants';
+import { ENTITY_TYPE, GENERATION_STATUS } from '../app/lib/domain_constants';
 import { buildCharacterDesignPrompt } from '../app/lib/prompt_library';
 import * as AssetWorkspaceServiceNamespace from '../app/service/asset_workspace';
 import * as CharacterServiceNamespace from '../app/service/character';
@@ -135,8 +132,13 @@ describe('test/character_design_sheet.test.ts', () => {
     const statements = calls
       .filter((call) => call.kind === 'execute')
       .map((call) => String(call.sql).replace(/\s+/g, ' ').trim());
-    assert.equal(statements.filter((sql) => sql.startsWith('INSERT INTO asset_versions')).length, 2);
-    assert.ok(statements.some((sql) => sql.includes("source_type) VALUES (?, 'project', 'character'")));
+    assert.equal(
+      statements.filter((sql) => sql.startsWith('INSERT INTO asset_versions')).length,
+      2,
+    );
+    assert.ok(
+      statements.some((sql) => sql.includes("source_type) VALUES (?, 'project', 'character'")),
+    );
     assert.ok(statements.some((sql) => sql.startsWith('UPDATE characters SET design_sheet_url')));
     const versionInserts = calls.filter(
       (call) =>
@@ -156,8 +158,14 @@ describe('test/character_design_sheet.test.ts', () => {
       '/generated/characters/reference.png',
       '角色设定 prompt',
     ]);
-    assert.equal(calls.some((call) => call.kind === 'commit'), true);
-    assert.equal(calls.some((call) => call.kind === 'rollback'), false);
+    assert.equal(
+      calls.some((call) => call.kind === 'commit'),
+      true,
+    );
+    assert.equal(
+      calls.some((call) => call.kind === 'rollback'),
+      false,
+    );
   });
 
   it('restores a succeeded design-sheet version as the character current image', async () => {
@@ -201,12 +209,7 @@ describe('test/character_design_sheet.test.ts', () => {
       },
     };
 
-    const versions = await service.setCurrentVersion(
-      ENTITY_TYPE.CHARACTER,
-      8,
-      11,
-      7,
-    );
+    const versions = await service.setCurrentVersion(ENTITY_TYPE.CHARACTER, 8, 11, 7);
 
     assert.ok(
       writes.some(

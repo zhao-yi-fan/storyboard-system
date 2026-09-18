@@ -11,12 +11,7 @@ function buildAuthorizationHeaders(apiKey: string, includeContentType = false) {
   };
 }
 
-export async function postJson(
-  url: string,
-  apiKey: string,
-  payload: unknown,
-  timeoutMs: number,
-) {
+export async function postJson(url: string, apiKey: string, payload: unknown, timeoutMs: number) {
   const response = await fetch(url, {
     method: AI_HTTP.POST_METHOD,
     headers: buildAuthorizationHeaders(apiKey, true),
@@ -41,11 +36,7 @@ export async function postJson(
   return data;
 }
 
-export async function getJson(
-  url: string,
-  apiKey: string,
-  timeoutMs: number,
-) {
+export async function getJson(url: string, apiKey: string, timeoutMs: number) {
   const response = await fetch(url, {
     headers: buildAuthorizationHeaders(apiKey),
     signal: AbortSignal.timeout(timeoutMs),
@@ -119,8 +110,7 @@ export function findFirstVideoUrl(value: unknown): string {
     if (
       typeof child === 'string' &&
       AI_HTTP.HTTP_PROTOCOL_PATTERN.test(child) &&
-      (key.toLowerCase().includes('video') ||
-        child.toLowerCase().endsWith(AI_HTTP.MP4_SUFFIX))
+      (key.toLowerCase().includes('video') || child.toLowerCase().endsWith(AI_HTTP.MP4_SUFFIX))
     ) {
       return child;
     }

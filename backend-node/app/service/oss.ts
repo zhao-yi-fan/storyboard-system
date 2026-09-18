@@ -45,7 +45,10 @@ class OssService extends Service {
    * await service.signUploadURL("assets/demo.png", "image/png")
    * // => { upload_url: "https://...", public_url: "/generated/assets/demo.png", object_key: "assets/demo.png" }
    */
-  async signUploadURL(fileName: string, contentType: string): Promise<{ upload_url: string; public_url: string; object_key: string }> {
+  async signUploadURL(
+    fileName: string,
+    contentType: string,
+  ): Promise<{ upload_url: string; public_url: string; object_key: string }> {
     if (!fileName) {
       throw new Error('filename is required');
     }
@@ -73,7 +76,11 @@ class OssService extends Service {
    * await service.uploadStream(fileStream, "poster.png", "image/png")
    * // => { public_url: "/generated/assets/1710000000000-abcd.png", object_key: "assets/1710000000000-abcd.png" }
    */
-  async uploadStream(stream: AsyncIterableBuffer, fileName: string, contentType: string): Promise<{ public_url: string; object_key: string; file_name: string; content_type: string }> {
+  async uploadStream(
+    stream: AsyncIterableBuffer,
+    fileName: string,
+    contentType: string,
+  ): Promise<{ public_url: string; object_key: string; file_name: string; content_type: string }> {
     if (!isOssEnabled(this.app)) {
       throw new Error('当前未配置文件上传服务，请先配置 OSS 上传。');
     }

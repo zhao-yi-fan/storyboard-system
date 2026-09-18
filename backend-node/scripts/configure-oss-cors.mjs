@@ -51,7 +51,9 @@ if (publicBaseUrl) {
 
 const bucket = String(process.env.ALIYUN_OSS_BUCKET).trim();
 const client = new OSS({
-  endpoint: normalizeEndpoint(process.env.ALIYUN_OSS_PUBLIC_ENDPOINT || process.env.ALIYUN_OSS_ENDPOINT),
+  endpoint: normalizeEndpoint(
+    process.env.ALIYUN_OSS_PUBLIC_ENDPOINT || process.env.ALIYUN_OSS_ENDPOINT,
+  ),
   accessKeyId: String(process.env.ALIYUN_OSS_ACCESS_KEY_ID).trim(),
   accessKeySecret: String(process.env.ALIYUN_OSS_ACCESS_KEY_SECRET).trim(),
   bucket,

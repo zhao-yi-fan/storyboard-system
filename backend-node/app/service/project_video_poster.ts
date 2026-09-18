@@ -30,13 +30,13 @@ function sanitizeExtractionError(error: unknown): string {
 
 class ProjectVideoPosterService extends Service {
   get backfillState(): BackfillState {
-    if (!(this.app).projectVideoPosterBackfillState) {
-      (this.app).projectVideoPosterBackfillState = {
+    if (!this.app.projectVideoPosterBackfillState) {
+      this.app.projectVideoPosterBackfillState = {
         inFlight: new Map<number, Promise<string>>(),
         retryAfter: new Map<number, number>(),
       };
     }
-    return (this.app).projectVideoPosterBackfillState;
+    return this.app.projectVideoPosterBackfillState;
   }
 
   buildBaseName(projectId: number | string, videoUrl: string): string {
@@ -76,7 +76,7 @@ class ProjectVideoPosterService extends Service {
       throw new Error('only a successful project video can create a poster');
     }
     const posterUrl = await this.extract(project.id, project.video_url);
-    await (this.app).mysqlPool.execute(
+    await this.app.mysqlPool.execute(
       `UPDATE projects SET video_poster_url = ?
        WHERE id = ? AND deleted_at IS NULL AND COALESCE(video_poster_url, '') = ''`,
       [posterUrl, project.id],
@@ -102,7 +102,7 @@ class ProjectVideoPosterService extends Service {
       })
       .catch((error: unknown) => {
         this.backfillState.retryAfter.set(projectId, Date.now() + POSTER_RETRY_COOLDOWN_MS);
-        (this.ctx).logger.warn(
+        this.ctx.logger.warn(
           '[video-poster] project=%s extraction failed: %s',
           projectId,
           sanitizeExtractionError(error),

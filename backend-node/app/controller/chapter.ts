@@ -4,7 +4,6 @@ const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
 
 class ChapterController extends ApiController {
-
   async indexByProject() {
     const projectId = this.parseId();
     if (!projectId) {

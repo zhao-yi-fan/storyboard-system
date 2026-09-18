@@ -13,7 +13,12 @@ async function columnExists(pool: DbPool, tableName: string, columnName: string)
   return rows.length > 0;
 }
 
-async function addColumnIfMissing(pool: DbPool, tableName: string, columnName: string, definition: string) {
+async function addColumnIfMissing(
+  pool: DbPool,
+  tableName: string,
+  columnName: string,
+  definition: string,
+) {
   if (!(await columnExists(pool, tableName, columnName))) {
     await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`);
   }
@@ -188,7 +193,13 @@ async function _migrateLegacySceneData(connection: DbConnection) {
   }
 }
 
-async function selectCurrentSceneMedia(connection: DbConnection, sceneId: number, mediaType: string, storyboardId: number, preserveNew: unknown) {
+async function selectCurrentSceneMedia(
+  connection: DbConnection,
+  sceneId: number,
+  mediaType: string,
+  storyboardId: number,
+  preserveNew: unknown,
+) {
   if (preserveNew) {
     const [newRows] = await connection.query(
       `SELECT id, result_url, preview_url, status, error_message

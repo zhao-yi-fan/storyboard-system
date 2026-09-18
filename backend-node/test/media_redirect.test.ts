@@ -41,7 +41,10 @@ const app = {
 describe('test/media_redirect.test.ts', () => {
   it('returns a retryable error when OSS streaming is unavailable', async () => {
     const { context } = createContext('scene-covers/cover.png');
-    await MediaRedirectController.prototype.stream.call({ app: { config: { storyboard: {} } }, ctx: context });
+    await MediaRedirectController.prototype.stream.call({
+      app: { config: { storyboard: {} } },
+      ctx: context,
+    });
 
     assert.equal(context.status, 503);
   });

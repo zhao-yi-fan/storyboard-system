@@ -78,7 +78,11 @@ async function downloadToBuffer(source: string, timeoutMs = 120000): Promise<Buf
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function materializeSourceToLocalFile(app: App, source: unknown, suffix = ''): Promise<MaterializedSource> {
+async function materializeSourceToLocalFile(
+  app: App,
+  source: unknown,
+  suffix = '',
+): Promise<MaterializedSource> {
   const value = String(source || '').trim();
   if (!value) {
     throw new Error('source is empty');
@@ -137,7 +141,13 @@ function buildScaleFilter(spec: PreviewSpec): string {
   return `scale=${spec.width}:${spec.height}:force_original_aspect_ratio=decrease`;
 }
 
-async function createPreviewFromLocalPath(app: App, localPath: string, subdir: string, previewFilename: string, spec: PreviewSpec): Promise<string> {
+async function createPreviewFromLocalPath(
+  app: App,
+  localPath: string,
+  subdir: string,
+  previewFilename: string,
+  spec: PreviewSpec,
+): Promise<string> {
   await ensureFfmpeg();
   const publicPath = generatedPublicPath(app, subdir, previewFilename);
   const outputExtension = path.extname(previewFilename) || '.webp';
@@ -186,7 +196,13 @@ function isMissingWebpEncoderError(error: unknown): boolean {
   return /(?:webp|encoder).*(?:disabled|not found)|Error selecting an encoder/i.test(message);
 }
 
-async function createPreviewFromInput(app: App, input: string, subdir: string, baseName: string, spec: PreviewSpec): Promise<string> {
+async function createPreviewFromInput(
+  app: App,
+  input: string,
+  subdir: string,
+  baseName: string,
+  spec: PreviewSpec,
+): Promise<string> {
   const sanitizedBaseName = sanitizeFileName(baseName);
   try {
     return await createPreviewFromLocalPath(
@@ -208,7 +224,13 @@ async function createPreviewFromInput(app: App, input: string, subdir: string, b
   }
 }
 
-async function createPreviewFromSource(app: App, source: unknown, subdir: string, baseName: string, spec: PreviewSpec): Promise<string> {
+async function createPreviewFromSource(
+  app: App,
+  source: unknown,
+  subdir: string,
+  baseName: string,
+  spec: PreviewSpec,
+): Promise<string> {
   const materialized = await materializeSourceToLocalFile(app, source);
   try {
     return await createPreviewFromInput(app, materialized.localPath, subdir, baseName, spec);
@@ -217,7 +239,13 @@ async function createPreviewFromSource(app: App, source: unknown, subdir: string
   }
 }
 
-async function createPreviewFromRemoteSource(app: App, source: unknown, subdir: string, baseName: string, spec: PreviewSpec): Promise<string> {
+async function createPreviewFromRemoteSource(
+  app: App,
+  source: unknown,
+  subdir: string,
+  baseName: string,
+  spec: PreviewSpec,
+): Promise<string> {
   const value = String(source || '').trim();
   if (!/^https?:\/\//.test(value)) {
     throw new Error('remote preview source must be an HTTP URL');
@@ -286,7 +314,15 @@ function formatDurationSeconds(value: number): string {
   return `${duration.toFixed(1)}秒`;
 }
 
-async function normalizeAudioDuration(buffer: Buffer, options: Record<string, unknown> = {}): Promise<{ audioBuffer: Buffer; duration: number; originalDuration: number; wasTrimmed: boolean }> {
+async function normalizeAudioDuration(
+  buffer: Buffer,
+  options: Record<string, unknown> = {},
+): Promise<{
+  audioBuffer: Buffer;
+  duration: number;
+  originalDuration: number;
+  wasTrimmed: boolean;
+}> {
   const minSeconds = Number(options.minSeconds || 0);
   const maxSeconds = Number(options.maxSeconds || 0);
   const extension = String(options.extension || 'wav').replace(/^\./, '') || 'wav';
@@ -347,7 +383,12 @@ async function normalizeAudioDuration(buffer: Buffer, options: Record<string, un
   }
 }
 
-async function composeVideos(app: App, sources: unknown[], subdir: string, filename: string): Promise<{ publicPath: string; previewPath: string; duration: number }> {
+async function composeVideos(
+  app: App,
+  sources: unknown[],
+  subdir: string,
+  filename: string,
+): Promise<{ publicPath: string; previewPath: string; duration: number }> {
   await ensureFfmpeg();
   const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-compose-'));
   try {
@@ -425,7 +466,14 @@ async function composeVideos(app: App, sources: unknown[], subdir: string, filen
   }
 }
 
-async function trimVideo(app: App, source: unknown, startSeconds: number, endSeconds: number, subdir: string, filename: string): Promise<{ publicPath: string; previewPath: string; duration: number }> {
+async function trimVideo(
+  app: App,
+  source: unknown,
+  startSeconds: number,
+  endSeconds: number,
+  subdir: string,
+  filename: string,
+): Promise<{ publicPath: string; previewPath: string; duration: number }> {
   await ensureFfmpeg();
   const materialized = await materializeSourceToLocalFile(app, source, '.mp4');
   const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'storyboard-trim-'));

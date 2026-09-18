@@ -1,13 +1,7 @@
 'use strict';
 
-import {
-  DEFAULT_REQUEST_TIMEOUT_SECONDS,
-} from '../../config/shared/constants';
-import {
-  GENERATION_STATUS,
-  VIDEO_ASPECT_RATIO,
-  VIDEO_RESOLUTION,
-} from './domain_constants';
+import { DEFAULT_REQUEST_TIMEOUT_SECONDS } from '../../config/shared/constants';
+import { GENERATION_STATUS, VIDEO_ASPECT_RATIO, VIDEO_RESOLUTION } from './domain_constants';
 
 const SECOND_IN_MS = 1000;
 
@@ -63,25 +57,15 @@ export const AI_VOICE_DEFAULT = Object.freeze({
   PREFERRED_NAME_MAX_LENGTH: 12,
   PREFERRED_NAME_FALLBACK: 'character',
   REFERENCE_TEXT: '今天风很轻，我们慢慢把事情说清楚。',
-  DURATION_INSTRUCTION:
-    '试听参考音频必须控制在3-5秒内，使用一句中文短句，语速自然，不要拉长停顿。',
+  DURATION_INSTRUCTION: '试听参考音频必须控制在3-5秒内，使用一句中文短句，语速自然，不要拉长停顿。',
 });
 
 export const AI_TASK_STATUS = Object.freeze({
   WANX_SUCCEEDED: 'SUCCEEDED',
   WANX_FAILED: 'FAILED',
   WANX_CANCELED: 'CANCELED',
-  SUCCEEDED_ALIASES: Object.freeze([
-    GENERATION_STATUS.SUCCEEDED,
-    'success',
-    'completed',
-  ]),
-  FAILED_ALIASES: Object.freeze([
-    GENERATION_STATUS.FAILED,
-    'error',
-    'canceled',
-    'cancelled',
-  ]),
+  SUCCEEDED_ALIASES: Object.freeze([GENERATION_STATUS.SUCCEEDED, 'success', 'completed']),
+  FAILED_ALIASES: Object.freeze([GENERATION_STATUS.FAILED, 'error', 'canceled', 'cancelled']),
 });
 
 export const SEEDANCE_CONTENT = Object.freeze({

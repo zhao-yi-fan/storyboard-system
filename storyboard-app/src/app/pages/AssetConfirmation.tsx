@@ -66,7 +66,9 @@ function RequirementCard({
           </div>
         )}
         <span className={styles.kindBadge}>{KIND_LABELS[item.kind]}</span>
-        <span className={styles.statusBadge}>{STATUS_LABELS[item.status as keyof typeof STATUS_LABELS]}</span>
+        <span className={styles.statusBadge}>
+          {STATUS_LABELS[item.status as keyof typeof STATUS_LABELS]}
+        </span>
       </div>
       <div className={styles.cardContent}>
         <h3 className={styles.requirementName}>{item.name}</h3>
@@ -130,14 +132,12 @@ export default function AssetConfirmation() {
   const filteredRequirements = requirements.filter((item) => item.kind === activeKind);
   const readyCount = requirements.filter(
     (item) =>
-      (item.status === GENERATION_STATUS.PENDING ||
-        item.status === GENERATION_STATUS.FAILED) &&
+      (item.status === GENERATION_STATUS.PENDING || item.status === GENERATION_STATUS.FAILED) &&
       item.can_generate !== false,
   ).length;
   const blockedCount = requirements.filter(
     (item) =>
-      (item.status === GENERATION_STATUS.PENDING ||
-        item.status === GENERATION_STATUS.FAILED) &&
+      (item.status === GENERATION_STATUS.PENDING || item.status === GENERATION_STATUS.FAILED) &&
       item.can_generate === false,
   ).length;
 
@@ -178,9 +178,7 @@ export default function AssetConfirmation() {
         chapter_id: chapterId,
         requirement_id: requirementId,
       });
-      const failedItems = result.filter(
-        (item) => item.status === GENERATION_STATUS.FAILED,
-      );
+      const failedItems = result.filter((item) => item.status === GENERATION_STATUS.FAILED);
       const blockedItems = result.filter((item) => item.status === "blocked");
       if (failedItems.length) {
         const firstError = failedItems.find((item) => item.error)?.error;
@@ -259,7 +257,10 @@ export default function AssetConfirmation() {
           <Button variant="ghost" onClick={() => void navigate(`/assets?project=${projectId}`)}>
             项目资产编辑
           </Button>
-          <Button variant="outline" onClick={() => void navigate(`/workspace?project=${projectId}`)}>
+          <Button
+            variant="outline"
+            onClick={() => void navigate(`/workspace?project=${projectId}`)}
+          >
             进入分镜工作台
           </Button>
           <Button
@@ -340,12 +341,12 @@ export default function AssetConfirmation() {
                   item={item}
                   busy={busyId === item.id}
                   onGenerate={() => void generate(item.id)}
-                   onImport={() => void openPersonal(item)}
-                   onSave={() => void saveToPersonal(item)}
-                   onVersions={() => void openVersions(item)}
-                   onComplete={() =>
-                     void navigate(
-                       `/assets?project=${projectId}&character=${item.linked_entity_id ?? ""}`,
+                  onImport={() => void openPersonal(item)}
+                  onSave={() => void saveToPersonal(item)}
+                  onVersions={() => void openVersions(item)}
+                  onComplete={() =>
+                    void navigate(
+                      `/assets?project=${projectId}&character=${item.linked_entity_id ?? ""}`,
                     )
                   }
                 />
@@ -373,7 +374,7 @@ export default function AssetConfirmation() {
                 className={styles.personalAsset}
               >
                 <div className={styles.squarePreview}>
-                  {item.file_url ?? item.preview_url ? (
+                  {(item.file_url ?? item.preview_url) ? (
                     <img src={item.file_url ?? item.preview_url} className={styles.image} />
                   ) : null}
                 </div>

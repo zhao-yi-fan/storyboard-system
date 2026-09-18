@@ -22,7 +22,10 @@ type UseWorkspaceSceneMediaDeps = {
   applyClipSceneUpdate: (scene: Scene) => void;
   applyProjectUpdate: (project: Project) => void;
   applyStoryboardsRefresh: (storyboards: Storyboard[]) => void;
-  applyMediaMutation: (payload: { scene: Scene; media_generations: SceneMediaGeneration[] }) => void;
+  applyMediaMutation: (payload: {
+    scene: Scene;
+    media_generations: SceneMediaGeneration[];
+  }) => void;
   loadMediaGenerations: (sceneId: number) => Promise<void>;
   loadGenerationReferences: (sceneId: number) => Promise<void>;
 };

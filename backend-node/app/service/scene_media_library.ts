@@ -3,11 +3,7 @@
 const Service = require('egg').Service;
 import type { SceneMediaGenerationEntity } from '../lib/entity';
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
-const {
-  ASSET_SOURCE_TYPE,
-  GENERATION_STATUS,
-  MEDIA_TYPE,
-} = require('../lib/domain_constants');
+const { ASSET_SOURCE_TYPE, GENERATION_STATUS, MEDIA_TYPE } = require('../lib/domain_constants');
 
 class SceneMediaLibraryService extends Service {
   async list(sceneId: number) {
@@ -100,10 +96,7 @@ class SceneMediaLibraryService extends Service {
 
   async uploadCover(sceneId: number, coverUrl: string) {
     if (!(await this.ctx.service.scene.findById(sceneId))) throw new Error('scene not found');
-    const normalized = normalizeGeneratedAssetReference(
-      this.app,
-      String(coverUrl || '').trim(),
-    );
+    const normalized = normalizeGeneratedAssetReference(this.app, String(coverUrl || '').trim());
     if (!normalized) throw new Error('cover_url is required');
     const generation = await this.ctx.service.sceneMediaGeneration.create({
       scene_id: sceneId,

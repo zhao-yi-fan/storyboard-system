@@ -53,7 +53,10 @@ class AssetWorkspaceService extends Service {
     return deriveAssetRequirementStatus(currentStatus, hasMedia);
   }
 
-  async queryRequirements(projectId: number, chapterId: number | null): Promise<RequirementEntity[]> {
+  async queryRequirements(
+    projectId: number,
+    chapterId: number | null,
+  ): Promise<RequirementEntity[]> {
     const params = [projectId];
     let chapterFilter = '';
     if (chapterId) {
@@ -82,7 +85,14 @@ class AssetWorkspaceService extends Service {
     return rows;
   }
 
-  async insertLegacyVersion(conn: DbPool | DbConnection, project: { id: number; user_id?: unknown }, entityType: string, entityId: number, fileUrl: string, previewUrl: string) {
+  async insertLegacyVersion(
+    conn: DbPool | DbConnection,
+    project: { id: number; user_id?: unknown },
+    entityType: string,
+    entityId: number,
+    fileUrl: string,
+    previewUrl: string,
+  ) {
     if (!project.user_id || !fileUrl) return;
     const [versions] = await conn.query(
       `SELECT id FROM asset_versions
@@ -283,7 +293,9 @@ class AssetWorkspaceService extends Service {
         if (/(prop|道具)/i.test(String(prop.type || ''))) appendProp(prop, prop.source_count);
       }
 
-      for (const requirement of existingRequirements.filter((item: RequirementEntity) => item.kind === ASSET_KIND.PROP)) {
+      for (const requirement of existingRequirements.filter(
+        (item: RequirementEntity) => item.kind === ASSET_KIND.PROP,
+      )) {
         let [assets] = await conn.query(
           `SELECT id, name, type, meta, file_url, cover_url, thumbnail_url
            FROM assets WHERE id = ? AND project_id = ? AND deleted_at IS NULL`,
@@ -349,7 +361,8 @@ class AssetWorkspaceService extends Service {
         const current = candidates[0];
         const hasMedia = Boolean(item.fileUrl);
         const status = this.deriveRequirementStatus(current?.status, hasMedia);
-        const errorMessage = status === GENERATION_STATUS.FAILED ? current?.error_message || null : null;
+        const errorMessage =
+          status === GENERATION_STATUS.FAILED ? current?.error_message || null : null;
         if (current) {
           retainedIds.add(Number(current.id));
           await conn.execute(
@@ -421,7 +434,10 @@ class AssetWorkspaceService extends Service {
         id: Number(row.id),
         project_id: Number(row.project_id),
         chapter_id: Number(row.chapter_id),
-        linked_entity_id: row.linked_entity_id === null || row.linked_entity_id === undefined ? null : Number(row.linked_entity_id),
+        linked_entity_id:
+          row.linked_entity_id === null || row.linked_entity_id === undefined
+            ? null
+            : Number(row.linked_entity_id),
         file_url: resolveUrl(this.app, row.file_url || '', base),
         preview_url: resolveUrl(this.app, row.preview_url || '', base),
         can_generate: canGenerate,
@@ -449,24 +465,30 @@ class AssetWorkspaceService extends Service {
     if (!name) throw new Error('资产名称不能为空');
     const sourceType = payload.source_entity_type || null;
     const sourceId = payload.source_entity_id || null;
-    const [existing] = sourceType && sourceId
-      ? await this.pool.query(
-          `SELECT id FROM personal_assets
+    const [existing] =
+      sourceType && sourceId
+        ? await this.pool.query(
+            `SELECT id FROM personal_assets
            WHERE user_id = ? AND source_entity_type = ? AND source_entity_id = ?
              AND deleted_at IS NULL LIMIT 1`,
-          [userId, sourceType, sourceId],
-        )
-      : [[]];
+            [userId, sourceType, sourceId],
+          )
+        : [[]];
     if (existing.length) {
       await this.pool.execute(
         `UPDATE personal_assets SET kind = ?, name = ?, description = ?, file_url = ?,
          preview_url = ?, metadata_json = ?, source_project_id = ?, updated_at = NOW()
          WHERE id = ?`,
-        [kind, name, String(payload.description || ''),
+        [
+          kind,
+          name,
+          String(payload.description || ''),
           normalizeGeneratedAssetReference(this.app, String(payload.file_url || '')),
           normalizeGeneratedAssetReference(this.app, String(payload.preview_url || '')),
           payload.metadata_json ? JSON.stringify(payload.metadata_json) : null,
-          payload.source_project_id || null, existing[0].id],
+          payload.source_project_id || null,
+          existing[0].id,
+        ],
       );
       const [updatedRows] = await this.pool.query('SELECT * FROM personal_assets WHERE id = ?', [
         existing[0].id,
@@ -529,7 +551,12 @@ class AssetWorkspaceService extends Service {
     });
   }
 
-  async importPersonal(personalAssetId: number, projectId: number, userId: number, requirementId: number) {
+  async importPersonal(
+    personalAssetId: number,
+    projectId: number,
+    userId: number,
+    requirementId: number,
+  ) {
     await this.ensureOwnedProject(projectId, userId);
     const [rows] = await this.pool.query(
       'SELECT * FROM personal_assets WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
@@ -548,16 +575,22 @@ class AssetWorkspaceService extends Service {
       requirement = requirements[0];
     }
     if (item.kind === ASSET_KIND.CHARACTER) {
-      if (requirement && requirement.kind !== ASSET_KIND.CHARACTER) throw new Error('个人资产类型与需求不匹配');
-      const character = requirement?.linked_entity_type === ENTITY_TYPE.CHARACTER && requirement.linked_entity_id
-        ? await this.ctx.service.character.update(requirement.linked_entity_id, {
-            name: item.name, description: item.description,
-            avatar_url: item.preview_url || item.file_url, design_sheet_url: item.file_url,
-          })
-        : await this.ctx.service.character.create(projectId, {
-            name: item.name, description: item.description,
-            avatar_url: item.preview_url || item.file_url, design_sheet_url: item.file_url,
-          });
+      if (requirement && requirement.kind !== ASSET_KIND.CHARACTER)
+        throw new Error('个人资产类型与需求不匹配');
+      const character =
+        requirement?.linked_entity_type === ENTITY_TYPE.CHARACTER && requirement.linked_entity_id
+          ? await this.ctx.service.character.update(requirement.linked_entity_id, {
+              name: item.name,
+              description: item.description,
+              avatar_url: item.preview_url || item.file_url,
+              design_sheet_url: item.file_url,
+            })
+          : await this.ctx.service.character.create(projectId, {
+              name: item.name,
+              description: item.description,
+              avatar_url: item.preview_url || item.file_url,
+              design_sheet_url: item.file_url,
+            });
       await this.pool.execute('UPDATE characters SET source_personal_asset_id = ? WHERE id = ?', [
         item.id,
         character.id,
@@ -574,15 +607,20 @@ class AssetWorkspaceService extends Service {
       };
     }
     if (requirement && requirement.kind !== item.kind) throw new Error('个人资产类型与需求不匹配');
-    const asset = requirement?.linked_entity_type === ENTITY_TYPE.ASSET && requirement.linked_entity_id
-      ? await this.ctx.service.asset.update(requirement.linked_entity_id, {
-          name: item.name, type: item.kind === ASSET_KIND.PROP ? ASSET_KIND.PROP : ASSET_KIND.SCENE,
-          file_url: item.file_url, meta: item.description,
-        })
-      : await this.ctx.service.asset.create(projectId, {
-          name: item.name, type: item.kind === ASSET_KIND.PROP ? ASSET_KIND.PROP : ASSET_KIND.SCENE,
-          file_url: item.file_url, meta: item.description,
-        });
+    const asset =
+      requirement?.linked_entity_type === ENTITY_TYPE.ASSET && requirement.linked_entity_id
+        ? await this.ctx.service.asset.update(requirement.linked_entity_id, {
+            name: item.name,
+            type: item.kind === ASSET_KIND.PROP ? ASSET_KIND.PROP : ASSET_KIND.SCENE,
+            file_url: item.file_url,
+            meta: item.description,
+          })
+        : await this.ctx.service.asset.create(projectId, {
+            name: item.name,
+            type: item.kind === ASSET_KIND.PROP ? ASSET_KIND.PROP : ASSET_KIND.SCENE,
+            file_url: item.file_url,
+            meta: item.description,
+          });
     await this.pool.execute(
       'UPDATE assets SET source_personal_asset_id = ?, cover_url = ?, thumbnail_url = ? WHERE id = ?',
       [item.id, item.file_url || '', item.preview_url || '', asset.id],
@@ -593,7 +631,10 @@ class AssetWorkspaceService extends Service {
         [asset.id, requirementId, projectId],
       );
     }
-    return { entity_type: ENTITY_TYPE.ASSET, entity: await this.ctx.service.asset.findById(asset.id) };
+    return {
+      entity_type: ENTITY_TYPE.ASSET,
+      entity: await this.ctx.service.asset.findById(asset.id),
+    };
   }
 
   async recordVersion(
@@ -618,24 +659,24 @@ class AssetWorkspaceService extends Service {
         [entityType, entityId],
       );
       const [result] = await conn.execute(
-      `INSERT INTO asset_versions
+        `INSERT INTO asset_versions
        (owner_user_id, scope_type, entity_type, entity_id, file_url, preview_url, model, prompt, status, is_current, source_type)
        VALUES (?, 'project', ?, ?, ?, ?, 'seedream-4.5', ?, 'succeeded', 1, ?)`,
-      [
-        userId,
-        entityType,
-        entityId,
-        normalizeGeneratedAssetReference(this.app, fileUrl),
-        normalizeGeneratedAssetReference(this.app, previewUrl || ''),
-        prompt || '',
-        sourceType,
-      ],
-    );
+        [
+          userId,
+          entityType,
+          entityId,
+          normalizeGeneratedAssetReference(this.app, fileUrl),
+          normalizeGeneratedAssetReference(this.app, previewUrl || ''),
+          prompt || '',
+          sourceType,
+        ],
+      );
       await conn.execute(
-      `UPDATE asset_requirements SET status = 'generated', error_message = NULL
+        `UPDATE asset_requirements SET status = 'generated', error_message = NULL
        WHERE linked_entity_type = ? AND linked_entity_id = ? AND deleted_at IS NULL`,
-      [entityType, entityId],
-    );
+        [entityType, entityId],
+      );
       await conn.commit();
       return result.insertId;
     } catch (error) {
@@ -646,7 +687,11 @@ class AssetWorkspaceService extends Service {
     }
   }
 
-  async recordCharacterDesignSheetVersion(character: CharacterEntity, fileUrl: string, prompt: string) {
+  async recordCharacterDesignSheetVersion(
+    character: CharacterEntity,
+    fileUrl: string,
+    prompt: string,
+  ) {
     const [projects] = await this.pool.query('SELECT user_id FROM projects WHERE id = ?', [
       character.project_id,
     ]);
@@ -737,10 +782,14 @@ class AssetWorkspaceService extends Service {
          (owner_user_id, character_id, file_url, duration, voice_name, user_prompt,
           effective_prompt, reference_text, source_type, status, is_current)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'succeeded', 1)`,
-        [userId, character.id,
+        [
+          userId,
+          character.id,
           normalizeGeneratedAssetReference(this.app, character.voice_reference_url),
-          character.voice_reference_duration || null, character.voice_name || '',
-          details.userPrompt || '', details.effectivePrompt || '',
+          character.voice_reference_duration || null,
+          character.voice_name || '',
+          details.userPrompt || '',
+          details.effectivePrompt || '',
           character.voice_reference_text || '',
           details.sourceType || ASSET_SOURCE_TYPE.GENERATED,
         ],
@@ -790,8 +839,14 @@ class AssetWorkspaceService extends Service {
         `UPDATE characters SET voice_reference_url = ?, voice_reference_duration = ?,
          voice_reference_text = ?, voice_name = ?, voice_prompt = ?,
          voice_reference_status = 'succeeded', voice_reference_error = NULL WHERE id = ?`,
-        [version.file_url, version.duration, version.reference_text || '', version.voice_name || '',
-          version.user_prompt || '', characterId],
+        [
+          version.file_url,
+          version.duration,
+          version.reference_text || '',
+          version.voice_name || '',
+          version.user_prompt || '',
+          characterId,
+        ],
       );
       await conn.commit();
     } catch (error) {
@@ -859,7 +914,11 @@ class AssetWorkspaceService extends Service {
     );
   }
 
-  async generateRequirements(projectId: number, chapterId: number | null, requirementId: number | null) {
+  async generateRequirements(
+    projectId: number,
+    chapterId: number | null,
+    requirementId: number | null,
+  ) {
     const requirements = (await this.listRequirements(projectId, chapterId)).filter((item) =>
       requirementId
         ? item.id === Number(requirementId) && item.status !== GENERATION_STATUS.GENERATING
@@ -906,7 +965,11 @@ class AssetWorkspaceService extends Service {
           "UPDATE asset_requirements SET status = 'failed', error_message = ? WHERE id = ?",
           [(error as Error).message || '生成失败', item.id],
         );
-        results.push({ id: item.id, status: GENERATION_STATUS.FAILED, error: (error as Error).message || '生成失败' });
+        results.push({
+          id: item.id,
+          status: GENERATION_STATUS.FAILED,
+          error: (error as Error).message || '生成失败',
+        });
       }
     }
     return results;

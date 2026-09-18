@@ -1,6 +1,11 @@
 'use strict';
-import type { PromptBeat, PromptBlueprint, PromptDisplayBlock, PromptDisplayToken } from './prompt_blueprint';
-import { toDisplayItems,uniqueParts } from './prompt_blueprint';
+import type {
+  PromptBeat,
+  PromptBlueprint,
+  PromptDisplayBlock,
+  PromptDisplayToken,
+} from './prompt_blueprint';
+import { toDisplayItems, uniqueParts } from './prompt_blueprint';
 
 /**
  * 把结构化 prompt blueprint 转成前端可直接渲染的分段展示块。

@@ -24,8 +24,7 @@ const FRAME_EXTRACTION_MODE = {
   VIDEO: "video",
 } as const;
 
-type FrameExtractionMode =
-  (typeof FRAME_EXTRACTION_MODE)[keyof typeof FRAME_EXTRACTION_MODE];
+type FrameExtractionMode = (typeof FRAME_EXTRACTION_MODE)[keyof typeof FRAME_EXTRACTION_MODE];
 
 type Props = {
   open: boolean;
@@ -406,9 +405,7 @@ export function VideoFrameExtractionDialog({
                 <button
                   type="button"
                   className={
-                    mode === FRAME_EXTRACTION_MODE.VIDEO
-                      ? styles.modeActive
-                      : styles.modeButton
+                    mode === FRAME_EXTRACTION_MODE.VIDEO ? styles.modeActive : styles.modeButton
                   }
                   onClick={() => switchMode(FRAME_EXTRACTION_MODE.VIDEO)}
                 >

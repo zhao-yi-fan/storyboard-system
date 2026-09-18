@@ -12,13 +12,7 @@ import type {
   Storyboard,
   StoryboardMediaGeneration,
 } from "../api";
-import {
-  assetApi,
-  chapterApi,
-  characterApi,
-  projectApi,
-  sceneApi,
-} from "../api";
+import { assetApi, chapterApi, characterApi, projectApi, sceneApi } from "../api";
 import { sceneMediaToWorkspaceMedia, sceneToWorkspaceClip } from "./Workspace.helpers";
 
 export function useWorkspaceData() {

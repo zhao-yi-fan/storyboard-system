@@ -1,11 +1,6 @@
 import { ENTITY_TYPE, type EntityType } from "../constants/domain";
 import { apiClient } from "./client";
-import type {
-  AssetRequirement,
-  AssetVersion,
-  CharacterVoiceVersion,
-  PersonalAsset,
-} from "./types";
+import type { AssetRequirement, AssetVersion, CharacterVoiceVersion, PersonalAsset } from "./types";
 
 export function getRequirements(projectId: number, chapterId?: number) {
   return apiClient.get<AssetRequirement[]>(`/projects/${projectId}/asset-requirements`, {

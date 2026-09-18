@@ -17,8 +17,7 @@ export const AI_PREVIEW_ACTION = {
   ASSET_COVER: "asset-cover",
 } as const;
 
-export type AIPreviewAction =
-  (typeof AI_PREVIEW_ACTION)[keyof typeof AI_PREVIEW_ACTION];
+export type AIPreviewAction = (typeof AI_PREVIEW_ACTION)[keyof typeof AI_PREVIEW_ACTION];
 
 export type AIPreviewDialogState = {
   action: AIPreviewAction;
@@ -76,8 +75,7 @@ export function AIGenerationPreviewDialog({
   onPreviewReference,
   onConfirm,
 }: AIGenerationPreviewDialogProps) {
-  const promptIsEditable =
-    state?.action === AI_PREVIEW_ACTION.CHARACTER_DESIGN_SHEET;
+  const promptIsEditable = state?.action === AI_PREVIEW_ACTION.CHARACTER_DESIGN_SHEET;
 
   return (
     <Dialog open={!!state} onOpenChange={(open) => !open && onClose()}>

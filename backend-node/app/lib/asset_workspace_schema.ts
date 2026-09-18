@@ -11,7 +11,12 @@ async function columnExists(pool: DbPool, tableName: string, columnName: string)
   return rows.length > 0;
 }
 
-async function addColumnIfMissing(pool: DbPool, tableName: string, columnName: string, definition: string) {
+async function addColumnIfMissing(
+  pool: DbPool,
+  tableName: string,
+  columnName: string,
+  definition: string,
+) {
   if (!(await columnExists(pool, tableName, columnName))) {
     await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`);
   }
@@ -97,12 +102,7 @@ export async function ensureAssetWorkspaceSchema(pool: DbPool) {
       'cover_status',
       "VARCHAR(32) NOT NULL DEFAULT 'idle' AFTER cover_url",
     );
-    await addColumnIfMissing(
-      connection,
-      'assets',
-      'cover_error',
-      'TEXT NULL AFTER cover_status',
-    );
+    await addColumnIfMissing(connection, 'assets', 'cover_error', 'TEXT NULL AFTER cover_status');
 
     await connection.query(`
     CREATE TABLE IF NOT EXISTS personal_assets (

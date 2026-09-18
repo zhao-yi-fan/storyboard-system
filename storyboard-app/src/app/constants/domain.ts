@@ -9,8 +9,7 @@ export const GENERATION_STATUS = {
   CONFIRMED: "confirmed",
 } as const;
 
-export type GenerationStatus =
-  (typeof GENERATION_STATUS)[keyof typeof GENERATION_STATUS];
+export type GenerationStatus = (typeof GENERATION_STATUS)[keyof typeof GENERATION_STATUS];
 
 export const MEDIA_TYPE = {
   COVER: "cover",
@@ -42,8 +41,7 @@ export const ASSET_SOURCE_TYPE = {
   MANUAL_UPLOAD: "manual-upload",
 } as const;
 
-export type AssetSourceType =
-  (typeof ASSET_SOURCE_TYPE)[keyof typeof ASSET_SOURCE_TYPE];
+export type AssetSourceType = (typeof ASSET_SOURCE_TYPE)[keyof typeof ASSET_SOURCE_TYPE];
 
 export const VIDEO_MODEL = {
   SEEDANCE_2: "seedance-2.0",
@@ -58,15 +56,13 @@ export const VIDEO_RESOLUTION = {
   FULL_HD: "1080p",
 } as const;
 
-export type VideoResolution =
-  (typeof VIDEO_RESOLUTION)[keyof typeof VIDEO_RESOLUTION];
+export type VideoResolution = (typeof VIDEO_RESOLUTION)[keyof typeof VIDEO_RESOLUTION];
 
 export const VIDEO_ASPECT_RATIO = {
   PORTRAIT: "9:16",
 } as const;
 
-export type VideoAspectRatio =
-  (typeof VIDEO_ASPECT_RATIO)[keyof typeof VIDEO_ASPECT_RATIO];
+export type VideoAspectRatio = (typeof VIDEO_ASPECT_RATIO)[keyof typeof VIDEO_ASPECT_RATIO];
 
 export const PROMPT_MODE = {
   COMPOSITE: "composite",
@@ -80,8 +76,7 @@ export const PROMPT_TOKEN_TYPE = {
   TEXT: "text",
 } as const;
 
-export type PromptTokenType =
-  (typeof PROMPT_TOKEN_TYPE)[keyof typeof PROMPT_TOKEN_TYPE];
+export type PromptTokenType = (typeof PROMPT_TOKEN_TYPE)[keyof typeof PROMPT_TOKEN_TYPE];
 
 export const GENERATION_INPUT_MODE = {
   REFERENCE: "reference",
@@ -100,8 +95,7 @@ export const SOURCE_IMAGE_STATUS = {
   NOT_REQUIRED: "not-required",
 } as const;
 
-export type SourceImageStatus =
-  (typeof SOURCE_IMAGE_STATUS)[keyof typeof SOURCE_IMAGE_STATUS];
+export type SourceImageStatus = (typeof SOURCE_IMAGE_STATUS)[keyof typeof SOURCE_IMAGE_STATUS];
 
 export const ASSET_LIBRARY_TAB = {
   CHARACTERS: "characters",
@@ -109,13 +103,11 @@ export const ASSET_LIBRARY_TAB = {
   PROPS: "props",
 } as const;
 
-export type AssetLibraryTab =
-  (typeof ASSET_LIBRARY_TAB)[keyof typeof ASSET_LIBRARY_TAB];
+export type AssetLibraryTab = (typeof ASSET_LIBRARY_TAB)[keyof typeof ASSET_LIBRARY_TAB];
 
 export const ASSET_VIEW_MODE = {
   GRID: "grid",
   LIST: "list",
 } as const;
 
-export type AssetViewMode =
-  (typeof ASSET_VIEW_MODE)[keyof typeof ASSET_VIEW_MODE];
+export type AssetViewMode = (typeof ASSET_VIEW_MODE)[keyof typeof ASSET_VIEW_MODE];

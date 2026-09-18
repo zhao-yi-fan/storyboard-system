@@ -8,11 +8,7 @@ import type {
   VideoAspectRatio,
 } from "../api";
 import { PROMPT_MENTION_CATEGORY } from "../components/workspace/RichPromptEditor";
-import {
-  GENERATION_STATUS,
-  VIDEO_ASPECT_RATIO,
-  VIDEO_MODEL,
-} from "../constants/domain";
+import { GENERATION_STATUS, VIDEO_ASPECT_RATIO, VIDEO_MODEL } from "../constants/domain";
 import { buildLegacyCompositePrompt } from "../lib/compositePrompt";
 
 export const VIDEO_MODEL_OPTIONS = [
@@ -106,7 +102,10 @@ export const emptyDescriptionOptimization = {
   error: "",
 };
 
-export const buildShotFormState = (shot: Storyboard | null, scene: Scene | null): ShotFormState => ({
+export const buildShotFormState = (
+  shot: Storyboard | null,
+  scene: Scene | null,
+): ShotFormState => ({
   content: scene?.prompt ?? (shot ? buildLegacyCompositePrompt(shot, scene) : ""),
 });
 
@@ -165,8 +164,7 @@ export const isSeedanceVideoModel = (model: string) => model === VIDEO_MODEL.SEE
 export const buildCoverPreviewItems = (generations: StoryboardMediaGeneration[]) =>
   generations
     .filter(
-      (generation) =>
-        generation.status === GENERATION_STATUS.SUCCEEDED && !!generation.result_url,
+      (generation) => generation.status === GENERATION_STATUS.SUCCEEDED && !!generation.result_url,
     )
     .map((generation) => ({
       src: generation.result_url as string,

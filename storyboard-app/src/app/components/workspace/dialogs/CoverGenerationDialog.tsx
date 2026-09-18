@@ -114,9 +114,7 @@ export function CoverGenerationDialog({
             {!!preview?.missing_references?.length && (
               <div>
                 <div className={styles.fieldLabelLegacy}>缺失参考图</div>
-                <div className={styles.compactContent}>
-                  {preview.missing_references.join("、")}
-                </div>
+                <div className={styles.compactContent}>{preview.missing_references.join("、")}</div>
               </div>
             )}
           </div>
@@ -133,7 +131,10 @@ export function CoverGenerationDialog({
                 ["台词", preview?.fields.dialogue ?? "-"],
                 ["备注", preview?.fields.notes ?? "-"],
               ].map(([label, value], index) => (
-                <div className={[3, 4, 7].includes(index) ? styles.wideField : undefined} key={label}>
+                <div
+                  className={[3, 4, 7].includes(index) ? styles.wideField : undefined}
+                  key={label}
+                >
                   <span className={styles.labelText}>{label}：</span>
                   <span>{value}</span>
                 </div>

@@ -35,8 +35,7 @@ export const CHARACTER_GENERATION_COPY = {
   VOICE_REFERENCE_TEXT: "今天风很轻，我们慢慢把事情说清楚。",
   VOICE_REFERENCE_DURATION_HINT:
     "目标 3-5 秒；超过 5 秒会自动裁剪，低于 3 秒会生成失败且不覆盖已有语音。",
-  VOICE_REFERENCE_TEXT_HINT:
-    "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。",
+  VOICE_REFERENCE_TEXT_HINT: "主语音参考统一使用系统固定短句，避免参考音频过长影响 Seedance。",
 } as const;
 
 export const getAssetOriginalSrc = (asset: Asset | null | undefined) => asset?.file_url ?? "";

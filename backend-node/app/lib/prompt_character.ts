@@ -8,9 +8,17 @@
  * // => { template: "mythic-awakening", blueprint: {...}, prompt: "..." }
  */
 import type { CharacterEntity } from './entity';
-import { buildPromptBlueprint, normalizeTextList, PROMPT_TEMPLATE, renderPromptBlueprint,selectPromptTemplate } from './prompt_blueprint';
+import {
+  buildPromptBlueprint,
+  normalizeTextList,
+  PROMPT_TEMPLATE,
+  renderPromptBlueprint,
+  selectPromptTemplate,
+} from './prompt_blueprint';
 
-export function buildCharacterDesignPrompt(character: Pick<CharacterEntity, 'name' | 'description'>) {
+export function buildCharacterDesignPrompt(
+  character: Pick<CharacterEntity, 'name' | 'description'>,
+) {
   const template = PROMPT_TEMPLATE.DEFAULT;
   const blueprint = buildPromptBlueprint({
     template,
@@ -71,10 +79,7 @@ export function buildCharacterDesignPrompt(character: Pick<CharacterEntity, 'nam
  * buildCharacterVoicePromptText({ name: "林婉", description: "温婉端庄" })
  * // => { template: "cinematic-default", blueprint: {...}, prompt: "..." }
  */
-export function buildCharacterVoicePromptText(
-  character: CharacterEntity,
-  userDirection = '',
-) {
+export function buildCharacterVoicePromptText(character: CharacterEntity, userDirection = '') {
   const template = selectPromptTemplate([character.description]);
   const blueprint = buildPromptBlueprint({
     template,
@@ -84,9 +89,7 @@ export function buildCharacterVoicePromptText(
       character.description ? `人设描述为${character.description}` : '',
     ]),
     style: ['自然真人感', '适合剧情对白', '声音气质贴合角色而不过度表演'],
-    action: normalizeTextList([
-      userDirection ? `创作者补充要求：${userDirection}` : '',
-    ]),
+    action: normalizeTextList([userDirection ? `创作者补充要求：${userDirection}` : '']),
     audio: ['吐字清晰', '口语节奏自然', '一句 3-5 秒短句', '不要主持腔', '不要广告腔'],
     output: ['生成 3-5 秒短句参考音频', '适合作为主语音参考'],
   });

@@ -44,14 +44,16 @@ function getConfig(app: LibApp): StoryboardAppConfig {
  * await generateSeedreamImage(app, "生成高细节角色主设定板", ["https://role-ref.png"], { size: "1600x2304" })
  * // => "https://..."
  */
-async function generateSeedreamImage(app: LibApp, prompt: string, imageUrls: string[], options: { size?: string } = {}) {
+async function generateSeedreamImage(
+  app: LibApp,
+  prompt: string,
+  imageUrls: string[],
+  options: { size?: string } = {},
+) {
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
   const seedreamImageApiKey = String(cfg.seedreamImageApiKey || '');
-  const baseUrl = normalizeBaseUrl(
-    cfg.seedreamImageBaseUrl,
-    DEFAULT_PROVIDER_BASE_URL.ARK,
-  );
+  const baseUrl = normalizeBaseUrl(cfg.seedreamImageBaseUrl, DEFAULT_PROVIDER_BASE_URL.ARK);
   const timeoutMs = resolveTimeoutMs(
     cfg.seedreamImageTimeoutSeconds,
     AI_REQUEST_TIMEOUT.SEEDREAM_SECONDS,
@@ -65,9 +67,7 @@ async function generateSeedreamImage(app: LibApp, prompt: string, imageUrls: str
     watermark: boolean;
     image?: string | string[];
   } = {
-    model: String(
-      cfg.seedreamImageModel || DEFAULT_PROVIDER_MODEL.SEEDREAM_IMAGE,
-    ).trim(),
+    model: String(cfg.seedreamImageModel || DEFAULT_PROVIDER_MODEL.SEEDREAM_IMAGE).trim(),
     prompt: String(prompt || '').trim(),
     size: String(options.size || AI_IMAGE_SIZE.STORYBOARD_COVER).trim(),
     response_format: AI_IMAGE_DEFAULT.RESPONSE_FORMAT,
@@ -115,24 +115,15 @@ async function generateWanxVideo(
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '镜头视频生成未配置：缺少 DASHSCOPE_API_KEY');
-  const baseUrl = normalizeBaseUrl(
-    cfg.wanxVideoBaseUrl,
-    DEFAULT_PROVIDER_BASE_URL.DASHSCOPE,
-  );
+  const baseUrl = normalizeBaseUrl(cfg.wanxVideoBaseUrl, DEFAULT_PROVIDER_BASE_URL.DASHSCOPE);
   const timeoutMs = resolveTimeoutMs(
     cfg.wanxVideoRequestTimeoutSeconds,
     AI_REQUEST_TIMEOUT.WANX_VIDEO_SECONDS,
     AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
   );
   const selectedModel = useFirstFrame
-    ? String(
-        model ||
-          cfg.wanxVideoModel ||
-          DEFAULT_PROVIDER_MODEL.WANX_VIDEO,
-      ).trim()
-    : String(
-        cfg.wanxTextVideoModel || DEFAULT_PROVIDER_MODEL.WANX_TEXT_VIDEO,
-      ).trim();
+    ? String(model || cfg.wanxVideoModel || DEFAULT_PROVIDER_MODEL.WANX_VIDEO).trim()
+    : String(cfg.wanxTextVideoModel || DEFAULT_PROVIDER_MODEL.WANX_TEXT_VIDEO).trim();
   const payload: {
     model: string;
     parameters: {
@@ -200,10 +191,7 @@ async function generateWanxVideo(
       );
       return { videoUrl, duration: actualDuration };
     }
-    if (
-      status === AI_TASK_STATUS.WANX_FAILED ||
-      status === AI_TASK_STATUS.WANX_CANCELED
-    ) {
+    if (status === AI_TASK_STATUS.WANX_FAILED || status === AI_TASK_STATUS.WANX_CANCELED) {
       throw new Error(String(taskData?.output?.message || taskData?.message || '视频任务失败'));
     }
   }
@@ -310,19 +298,14 @@ async function generateSeedanceVideo(
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
-  const baseUrl = normalizeBaseUrl(
-    cfg.seedanceBaseUrl,
-    DEFAULT_PROVIDER_BASE_URL.ARK,
-  );
+  const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, DEFAULT_PROVIDER_BASE_URL.ARK);
   const timeoutMs = resolveTimeoutMs(
     cfg.seedanceRequestTimeoutSeconds,
     AI_REQUEST_TIMEOUT.SEEDANCE_SECONDS,
     AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
   );
   const payload = buildSeedanceVideoPayload({
-    model: String(
-      cfg.seedanceModel || DEFAULT_PROVIDER_MODEL.SEEDANCE,
-    ).trim(),
+    model: String(cfg.seedanceModel || DEFAULT_PROVIDER_MODEL.SEEDANCE).trim(),
     prompt,
     imageUrl,
     duration,
@@ -369,8 +352,14 @@ async function generateSeedanceVideo(
         timeoutMs,
       );
     } catch (error) {
-      if (Number((error as { status?: unknown }).status) >= 400 && Number((error as { status?: unknown }).status) < 500) throw error;
-      app.logger?.warn?.(`[Seedance] task ${taskId} poll failed, retrying: ${(error as Error).message}`);
+      if (
+        Number((error as { status?: unknown }).status) >= 400 &&
+        Number((error as { status?: unknown }).status) < 500
+      )
+        throw error;
+      app.logger?.warn?.(
+        `[Seedance] task ${taskId} poll failed, retrying: ${(error as Error).message}`,
+      );
       continue;
     }
     const status = String(taskData?.status || '').toLowerCase();
@@ -402,7 +391,12 @@ async function generateSeedanceVideo(
  * await createCharacterVoicePreview(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
  * // => { voicePrompt: "...", previewText: "今晚你先走。", targetModel: "qwen3-tts-vd-2026-01-26" }
  */
-async function createCharacterVoicePreview(app: LibApp, character: CharacterEntity, customPrompt: string, _customText: string) {
+async function createCharacterVoicePreview(
+  app: LibApp,
+  character: CharacterEntity,
+  customPrompt: string,
+  _customText: string,
+) {
   const cfg = getConfig(app);
   const voicePrompt = withVoiceDurationInstruction(
     buildCharacterVoicePromptText(character, String(customPrompt || '').trim()).prompt,
@@ -410,12 +404,10 @@ async function createCharacterVoicePreview(app: LibApp, character: CharacterEnti
   const previewText = buildCharacterVoiceReferenceText(character);
   return {
     designModel: String(
-      cfg.dashScopeVoiceDesignModel ||
-        DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_DESIGN,
+      cfg.dashScopeVoiceDesignModel || DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_DESIGN,
     ).trim(),
     targetModel: String(
-      cfg.dashScopeVoiceTargetModel ||
-        DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_TARGET,
+      cfg.dashScopeVoiceTargetModel || DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_TARGET,
     ).trim(),
     voicePrompt,
     previewText,
@@ -434,7 +426,12 @@ async function createCharacterVoicePreview(app: LibApp, character: CharacterEnti
  * await generateCharacterVoiceReference(app, { name: "林婉", description: "温婉端庄" }, "年轻女性，温柔克制", "今晚你先走。")
  * // => { audioBuffer: <Buffer ...>, voiceName: "...", voicePrompt: "..." }
  */
-async function generateCharacterVoiceReference(app: LibApp, character: CharacterEntity, customPrompt: string, customText: string) {
+async function generateCharacterVoiceReference(
+  app: LibApp,
+  character: CharacterEntity,
+  customPrompt: string,
+  customText: string,
+) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '角色主语音参考生成未配置：缺少 DASHSCOPE_API_KEY');
   const preview = await createCharacterVoicePreview(app, character, customPrompt, customText);
@@ -443,10 +440,7 @@ async function generateCharacterVoiceReference(app: LibApp, character: Character
     AI_REQUEST_TIMEOUT.VOICE_SECONDS,
     AI_REQUEST_TIMEOUT.VOICE_INVALID_VALUE_MS,
   );
-  const baseUrl = normalizeBaseUrl(
-    cfg.dashScopeVoiceBaseUrl,
-    DEFAULT_PROVIDER_BASE_URL.DASHSCOPE,
-  );
+  const baseUrl = normalizeBaseUrl(cfg.dashScopeVoiceBaseUrl, DEFAULT_PROVIDER_BASE_URL.DASHSCOPE);
   const data = await postJson(
     `${baseUrl}/services/audio/tts/customization`,
     cfg.dashScopeApiKey,

@@ -1,10 +1,6 @@
 import { Loader2 } from "lucide-react";
 
-import {
-  ASSET_KIND,
-  type AssetKind,
-  ENTITY_TYPE,
-} from "../../../constants/domain";
+import { ASSET_KIND, type AssetKind, ENTITY_TYPE } from "../../../constants/domain";
 import styles from "../../../pages/AssetLibrary.module.scss";
 import {
   AlertDialog,
@@ -50,8 +46,7 @@ export function DeleteAssetDialog({
             {isCharacter
               ? "确认删除角色"
               : `确认删除${
-                  target?.type === ENTITY_TYPE.ASSET &&
-                  target.assetKind === ASSET_KIND.PROP
+                  target?.type === ENTITY_TYPE.ASSET && target.assetKind === ASSET_KIND.PROP
                     ? "道具"
                     : "场景"
                 }资产`}

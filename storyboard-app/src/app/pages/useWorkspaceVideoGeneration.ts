@@ -26,9 +26,7 @@ type UseWorkspaceVideoGenerationDeps = {
   saveShotDraftBeforeGeneration: () => Promise<boolean>;
   applyClipSceneUpdate: (scene: Scene) => void;
   loadMediaGenerations: (sceneId: number) => Promise<void>;
-  setMediaGenerations: (
-    value: SetStateAction<StoryboardMediaGeneration[]>,
-  ) => void;
+  setMediaGenerations: (value: SetStateAction<StoryboardMediaGeneration[]>) => void;
 };
 
 export function useWorkspaceVideoGeneration({
@@ -43,8 +41,9 @@ export function useWorkspaceVideoGeneration({
   const [selectedVideoModel, setSelectedVideoModel] = useState<
     (typeof VIDEO_MODEL_OPTIONS)[number]["value"]
   >(VIDEO_MODEL_OPTIONS[0].value);
-  const [selectedVideoResolution, setSelectedVideoResolution] =
-    useState<VideoResolution>(VIDEO_RESOLUTION.HD);
+  const [selectedVideoResolution, setSelectedVideoResolution] = useState<VideoResolution>(
+    VIDEO_RESOLUTION.HD,
+  );
   const [selectedVideoDuration, setSelectedVideoDuration] = useState(5);
   const [generateVideoAudio, setGenerateVideoAudio] = useState(true);
   const [useFirstFrameForVideo, setUseFirstFrameForVideo] = useState(false);

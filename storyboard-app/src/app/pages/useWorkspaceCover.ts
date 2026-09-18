@@ -54,9 +54,7 @@ export function useWorkspaceCover({
   const [coverGenerationError, setCoverGenerationError] = useState("");
   const [isCoverConfirmOpen, setIsCoverConfirmOpen] = useState(false);
 
-  const coverGenerations = mediaGenerations.filter(
-    (item) => item.media_type === MEDIA_TYPE.COVER,
-  );
+  const coverGenerations = mediaGenerations.filter((item) => item.media_type === MEDIA_TYPE.COVER);
 
   const runGenerateCover = async (useTextOnly = false) => {
     if (!selectedShot) {

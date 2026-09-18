@@ -71,9 +71,7 @@ export function ManageReferencesDialog({
       <DialogContent className={styles.manageDialog}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className={styles.dialogDescription}>
-            {description}
-          </DialogDescription>
+          <DialogDescription className={styles.dialogDescription}>{description}</DialogDescription>
         </DialogHeader>
         <div className={styles.manageSections}>
           <div className={styles.manageSection}>
