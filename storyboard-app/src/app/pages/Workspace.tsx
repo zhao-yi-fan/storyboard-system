@@ -21,7 +21,6 @@ import {
   type AIGenerationPreview,
   chapterApi,
   ossApi,
-  projectApi,
   type Scene,
   sceneApi,
   type StoryboardMediaGeneration,
@@ -81,6 +80,7 @@ import {COMPOSITE_PROMPT_SPEC } from "../lib/compositePrompt";
 import { useWorkspaceCharacterAsset } from "./useWorkspaceCharacterAsset";
 import { useWorkspaceCover } from "./useWorkspaceCover";
 import { useWorkspaceData } from "./useWorkspaceData";
+import { useWorkspaceSceneMedia } from "./useWorkspaceSceneMedia";
 import { useWorkspaceVideoGeneration } from "./useWorkspaceVideoGeneration";
 import type { ShotFormState } from "./Workspace.helpers";
 import {
@@ -182,23 +182,12 @@ export default function Workspace() {
   } | null>(null);
   const [frameExtractionGeneration, setFrameExtractionGeneration] =
     useState<StoryboardMediaGeneration | null>(null);
-  const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
   const [sceneCoverGenerationPreview] =
     useState<AIGenerationPreview | null>(null);
-  const [isBatchSceneCoverConfirmOpen, setIsBatchSceneCoverConfirmOpen] = useState(false);
-  const [isSceneVideoConfirmOpen, setIsSceneVideoConfirmOpen] = useState(false);
-  const [isProjectVideoConfirmOpen, setIsProjectVideoConfirmOpen] = useState(false);
   const [isCreateSceneOpen, setIsCreateSceneOpen] = useState(false);
   const [sceneInsertSortOrder, setSceneInsertSortOrder] = useState<number | null>(null);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
-  const [isComposingProjectVideo, setIsComposingProjectVideo] = useState(false);
-  const [, setIsGeneratingSceneCover] = useState(false);
-  const [, setIsBatchGeneratingSceneCover] = useState(false);
-  const [, setIsComposingSceneVideo] = useState(false);
-  const [deleteTargetGeneration, setDeleteTargetGeneration] =
-    useState<StoryboardMediaGeneration | null>(null);
   const [deleteTargetScene, setDeleteTargetScene] = useState<Scene | null>(null);
-  const [activeMediaActionKey, setActiveMediaActionKey] = useState<string | null>(null);
   const [previewSceneVideo, setPreviewSceneVideo] = useState<VideoPreview | null>(null);
   const [previewProjectVideo, setPreviewProjectVideo] = useState<VideoPreview | null>(null);
   const [shotForm, setShotForm] = useState<ShotFormState>(emptyShotForm);
@@ -317,26 +306,20 @@ export default function Workspace() {
     setGeneratingVideoId,
     selectedVideoModel,
     setSelectedVideoResolution,
-    selectedVideoDuration,
     setSelectedVideoDuration,
-    generateVideoAudio,
     setGenerateVideoAudio,
     useFirstFrameForVideo,
     setUseFirstFrameForVideo,
     isLoadingVideoPreview,
     videoGenerationPreview,
-    videoGenerationRequest,
     isVideoConfirmOpen,
     activeVideoResolution,
     activeVideoDuration,
     activeVideoAudio,
-    activeVideoSpecLabel,
     previewVideoSpecLabel,
-    buildVideoGenerationRequest,
     handleVideoModelChange,
     pollStoryboardVideo,
     stopVideoPolling,
-    runGenerateVideo,
     handleGenerateVideo,
     confirmGenerateVideo,
     handleVideoConfirmOpenChange,
@@ -412,172 +395,44 @@ export default function Workspace() {
     }
   };
 
-  const runGenerateSceneCover = async () => {
-    if (!selectedScene) {
-      return;
-    }
-
-    setIsGeneratingSceneCover(true);
-    try {
-      const result = await sceneApi.generateSceneCover(selectedScene.id);
-      applySceneUpdate(result.scene);
-      toast.success("片段封面生成完成");
-    } catch (error) {
-      console.error("Failed to generate scene cover:", error);
-    } finally {
-      setIsGeneratingSceneCover(false);
-    }
-  };
-
-  const confirmGenerateSceneCover = async () => {
-    setIsSceneCoverConfirmOpen(false);
-    await runGenerateSceneCover();
-  };
-
-  const runBatchGenerateSceneCovers = async () => {
-    if (!selectedScene) {
-      return;
-    }
-
-    const currentShotId = selectedShot?.id ?? null;
-    setIsBatchGeneratingSceneCover(true);
-    try {
-      const result = await sceneApi.generateSceneStoryboardCovers(selectedScene.id);
-      applySceneUpdate(result.scene);
-      applyStoryboardsRefresh(result.storyboards);
-      if (currentShotId) {
-        const refreshedSelected = result.storyboards.find((shot) => shot.id === currentShotId);
-        if (refreshedSelected) {
-          setSelectedShot(refreshedSelected);
-          await loadMediaGenerations(refreshedSelected.id);
-        } else {
-          setMediaGenerations([]);
-        }
-      }
-      if (result.generated_count > 0) {
-        toast.success(`已为 ${result.generated_count} 个镜头生成首帧`);
-      }
-      if (result.failed.length > 0) {
-        toast.error(`${result.failed.length} 个镜头首帧生成失败`);
-      }
-    } catch (error) {
-      console.error("Failed to batch generate storyboard covers:", error);
-    } finally {
-      setIsBatchGeneratingSceneCover(false);
-    }
-  };
-
-  const confirmBatchGenerateSceneCovers = async () => {
-    setIsBatchSceneCoverConfirmOpen(false);
-    await runBatchGenerateSceneCovers();
-  };
-
-  const runComposeSceneVideo = async () => {
-    if (!selectedScene) {
-      return;
-    }
-
-    setIsComposingSceneVideo(true);
-    try {
-      const result = await sceneApi.composeSceneVideo(selectedScene.id);
-      applySceneUpdate(result.scene);
-      toast.success("片段视频合成完成");
-    } catch (error) {
-      console.error("Failed to compose scene video:", error);
-    } finally {
-      setIsComposingSceneVideo(false);
-    }
-  };
-
-  const confirmComposeSceneVideo = async () => {
-    setIsSceneVideoConfirmOpen(false);
-    await runComposeSceneVideo();
-  };
-
-  const handleComposeProjectVideo = () => {
-    if (!selectedProject || isComposingProjectVideo) {
-      return;
-    }
-    setIsProjectVideoConfirmOpen(true);
-  };
-
-  const runComposeProjectVideo = async () => {
-    if (!selectedProject) {
-      return;
-    }
-
-    setIsComposingProjectVideo(true);
-    try {
-      const result = await projectApi.composeProjectVideo(selectedProject.id);
-      applyProjectUpdate(result.project);
-      toast.success("项目总片合成完成");
-    } catch (error) {
-      console.error("Failed to compose project video:", error);
-    } finally {
-      setIsComposingProjectVideo(false);
-    }
-  };
-
-  const confirmComposeProjectVideo = async () => {
-    setIsProjectVideoConfirmOpen(false);
-    await runComposeProjectVideo();
-  };
-
-  const handleSetCurrentGeneration = async (generation: StoryboardMediaGeneration) => {
-    if (!selectedShot) {
-      return;
-    }
-    if (generation.status !== GENERATION_STATUS.SUCCEEDED || !generation.result_url) {
-      toast.error("该版本尚未生成成功，不能设为当前版本");
-      return;
-    }
-    const actionKey = `set-current:${generation.id}`;
-    setActiveMediaActionKey(actionKey);
-    try {
-      const result = await sceneApi.setSceneMediaGenerationCurrent(selectedShot.id, generation.id);
-      applyMediaMutation(result);
-    } catch (error) {
-      console.error("Failed to set current media generation:", error);
-    } finally {
-      setActiveMediaActionKey(null);
-    }
-  };
-
-  const handleRequestDeleteGeneration = (generation: StoryboardMediaGeneration) => {
-    setDeleteTargetGeneration(generation);
-  };
-
-  const handleInsertVideoFrame = async (file: File, timestampMs: number, targetScene: Scene) => {
-    if (!selectedScene || !frameExtractionGeneration) {
-      throw new Error("抽帧来源不可用");
-    }
-    const frame = await sceneApi.createSceneVideoFrame(
-      selectedScene.id,
-      frameExtractionGeneration.id,
-      { file, timestampMs, targetSceneId: targetScene.id },
-    );
-    await loadMediaGenerations(selectedScene.id);
-    if (targetScene.id === selectedScene.id) {
-      const refreshed = await sceneApi.getScene(selectedScene.id);
-      applyClipSceneUpdate(refreshed);
-      await loadGenerationReferences(selectedScene.id);
-    }
-    toast.success(`已将抽帧作为「${targetScene.title}」的参考图`);
-    return frame;
-  };
-
-  const handleCreateVideoClip = async (startMs: number, endMs: number) => {
-    if (!selectedScene || !frameExtractionGeneration) {
-      throw new Error("视频来源不可用");
-    }
-    const result = await sceneApi.createSceneVideoClip(
-      selectedScene.id,
-      frameExtractionGeneration.id,
-      { startMs, endMs },
-    );
-    applyMediaMutation(result);
-    toast.success("截取视频已保存到视频版本");
-  };
+  const {
+    isSceneCoverConfirmOpen,
+    setIsSceneCoverConfirmOpen,
+    isBatchSceneCoverConfirmOpen,
+    setIsBatchSceneCoverConfirmOpen,
+    isSceneVideoConfirmOpen,
+    setIsSceneVideoConfirmOpen,
+    isProjectVideoConfirmOpen,
+    setIsProjectVideoConfirmOpen,
+    isComposingProjectVideo,
+    deleteTargetGeneration,
+    setDeleteTargetGeneration,
+    activeMediaActionKey,
+    confirmGenerateSceneCover,
+    confirmBatchGenerateSceneCovers,
+    confirmComposeSceneVideo,
+    handleComposeProjectVideo,
+    confirmComposeProjectVideo,
+    handleSetCurrentGeneration,
+    handleRequestDeleteGeneration,
+    confirmDeleteGeneration,
+    handleInsertVideoFrame,
+    handleCreateVideoClip,
+  } = useWorkspaceSceneMedia({
+    selectedProject,
+    selectedScene,
+    selectedShot,
+    frameExtractionGeneration,
+    setSelectedShot,
+    setMediaGenerations,
+    applySceneUpdate,
+    applyClipSceneUpdate,
+    applyProjectUpdate,
+    applyStoryboardsRefresh,
+    applyMediaMutation,
+    loadMediaGenerations,
+    loadGenerationReferences,
+  });
 
   const {
     isManageCharactersOpen,
@@ -626,27 +481,6 @@ export default function Workspace() {
       }
     } catch (error) {
       console.error("Failed to delete scene:", error);
-    }
-  };
-
-  const confirmDeleteGeneration = async () => {
-    if (!selectedShot || !deleteTargetGeneration) {
-      return;
-    }
-
-    const actionKey = `delete:${deleteTargetGeneration.id}`;
-    setActiveMediaActionKey(actionKey);
-    try {
-      const result = await sceneApi.deleteSceneMediaGeneration(
-        selectedShot.id,
-        deleteTargetGeneration.id,
-      );
-      applyMediaMutation(result);
-    } catch (error) {
-      console.error("Failed to delete media generation:", error);
-    } finally {
-      setActiveMediaActionKey(null);
-      setDeleteTargetGeneration(null);
     }
   };
 
