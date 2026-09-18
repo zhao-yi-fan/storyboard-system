@@ -44,10 +44,7 @@ describe('test/auth.test.ts', () => {
 
   it('rejects duplicate accounts', async () => {
     const service = makeService({ query: async () => [[ACTIVE_ROW]] });
-    await assert.rejects(
-      service.createUser({ account: 'editor', password: 'x' }),
-      /账号已存在/,
-    );
+    await assert.rejects(service.createUser({ account: 'editor', password: 'x' }), /账号已存在/);
   });
 
   it('builds cookie options with expiry', () => {
