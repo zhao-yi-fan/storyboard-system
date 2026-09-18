@@ -9,6 +9,12 @@ const {
   buildCharacterDescription,
   uniqueNonEmpty,
 } = require('../lib/script_import');
+import type { DeepSeekConfig } from '../lib/deepseek';
+
+type ParseScriptFn = (
+  config: DeepSeekConfig,
+  scriptText: string,
+) => Promise<{ cleaned: string; document: Record<string, unknown> }>;
 
 class ScriptImportService extends Service {
   get pool() {
@@ -24,16 +30,17 @@ class ScriptImportService extends Service {
    * await service.parseAndImport(19, "李明推开便利店门。")
    * // => { project_id: 19, chapter_count: 1, scene_count: 1, storyboard_count: 3, character_count: 2 }
    */
-  async parseAndImport(projectId: number, scriptText: string) {
+  async parseAndImport(
+    projectId: number,
+    scriptText: string,
+    parseScript: ParseScriptFn = parseScriptWithDeepSeek,
+  ) {
     const project = await this.ctx.service.project.findById(projectId);
     if (!project) {
       throw new Error('project not found');
     }
 
-    const { cleaned, document } = await parseScriptWithDeepSeek(
-      this.app.config.storyboard,
-      scriptText,
-    );
+    const { cleaned, document } = await parseScript(this.app.config.storyboard, scriptText);
     const { parsed, normalizedCharacters } = normalizeLLMStoryboardDocument(document);
 
     const conn = await this.pool.getConnection();
