@@ -7,11 +7,11 @@ type PoolLike = {
   execute: (sql: string, params?: unknown[]) => Promise<[any, unknown]>;
 };
 
-type AuthConfig = {
-  bootstrapAccount: string;
-  bootstrapPassword: string;
-  bootstrapDisplayName: string;
-  bootstrapRoleLabel: string;
+export type AuthConfig = {
+  bootstrapAccount?: string;
+  bootstrapPassword?: string;
+  bootstrapDisplayName?: string;
+  bootstrapRoleLabel?: string;
 };
 
 export async function ensureAuthSchema(pool: PoolLike) {

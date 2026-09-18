@@ -1,5 +1,7 @@
-// @ts-nocheck
 'use strict';
+
+import type { AuthConfig } from './app/lib/auth_schema';
+import type { SqlExecutor, StoryboardAppConfig } from './app/lib/entity';
 
 const mysql = require('mysql2/promise');
 const { ensureAuthSchema, ensureBootstrapAuthUser } = require('./app/lib/auth_schema');
@@ -18,25 +20,39 @@ function isUnitTestEnvironment() {
 }
 
 class AppBootHook {
-  constructor(app) {
+  app: {
+    config: {
+      mysql: unknown;
+      auth?: AuthConfig;
+      storyboard: StoryboardAppConfig;
+      [key: string]: unknown;
+    };
+    mysqlPool?: SqlExecutor;
+    coreLogger: {
+      warn: (...args: unknown[]) => void;
+    };
+  };
+
+  constructor(app: AppBootHook['app']) {
     this.app = app;
   }
 
   async didLoad() {
-    this.app.mysqlPool = mysql.createPool(this.app.config.mysql);
+    const pool: SqlExecutor = mysql.createPool(this.app.config.mysql);
+    this.app.mysqlPool = pool;
     try {
-      await ensureAuthSchema(this.app.mysqlPool);
-      await ensureBootstrapAuthUser(this.app.mysqlPool, this.app.config.auth || {});
-      await ensureAssetWorkspaceSchema(this.app.mysqlPool);
-      await ensureSceneGenerationSchema(this.app.mysqlPool);
-      await ensureShotDirectionAnalysisSchema(this.app.mysqlPool);
+      await ensureAuthSchema(pool);
+      await ensureBootstrapAuthUser(pool, this.app.config.auth || {});
+      await ensureAssetWorkspaceSchema(pool);
+      await ensureSceneGenerationSchema(pool);
+      await ensureShotDirectionAnalysisSchema(pool);
     } catch (error) {
       if (!isUnitTestEnvironment()) {
         throw error;
       }
       this.app.coreLogger.warn(
         '[auth] skip auth schema bootstrap in unittest: %s',
-        error?.message || error,
+        error instanceof Error ? error.message : error,
       );
     }
   }

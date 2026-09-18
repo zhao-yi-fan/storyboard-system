@@ -27,6 +27,7 @@ export interface SqlExecutor {
   commit: () => Promise<unknown>;
   rollback: () => Promise<unknown>;
   release: () => void;
+  end: () => Promise<unknown>;
 }
 
 export type DbPool = SqlExecutor;
