@@ -10,7 +10,7 @@ const testFiles = ['test/**/*.ts'];
 
 export default [
   {
-    ignores: ['dist/**', 'logs/**', 'node_modules/**', 'run/**'],
+    ignores: ['dist/**', 'logs/**', 'node_modules/**', 'run/**', 'typings/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
