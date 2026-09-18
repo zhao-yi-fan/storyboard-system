@@ -97,7 +97,11 @@ describe('test/script_import.test.ts', () => {
       storyboard_count: 1,
       character_count: 1,
     });
-    assert.ok(calls.some((call) => call.sql === 'PARSE' && String(call.params?.[0] || '').includes('便利店')));
+    assert.ok(
+      calls.some(
+        (call) => call.sql === 'PARSE' && String(call.params?.[0] || '').includes('便利店'),
+      ),
+    );
     assert.ok(calls.some((call) => call.sql.startsWith('INSERT INTO chapters')));
     assert.ok(calls.some((call) => call.sql.startsWith('INSERT INTO scenes')));
     assert.ok(
