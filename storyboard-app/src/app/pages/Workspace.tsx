@@ -25,9 +25,6 @@ import {
   type Scene,
   sceneApi,
   type StoryboardMediaGeneration,
-  type StoryboardVideoGenerationOptions,
-  type StoryboardVideoGenerationPreview,
-  type VideoResolution,
 } from "../api";
 import { ImagePreviewDialog } from "../components/shared/ImagePreviewDialog";
 import { Badge } from "../components/ui/badge";
@@ -61,7 +58,6 @@ import {
   type VideoPreview,
   VideoPreviewDialog,
 } from "../components/workspace/dialogs/VideoPreviewDialog";
-import { useSceneVideoPolling } from "../components/workspace/hooks/useSceneVideoPolling";
 import {
   PromptOptimizationDialog,
   PromptOptimizeButton,
@@ -73,7 +69,6 @@ import {
 } from "../components/workspace/RichPromptEditor";
 import { VideoFrameExtractionDialog } from "../components/workspace/VideoFrameExtractionDialog";
 import {
-  getVideoGenerationSpecLabel,
   VideoGenerationSettings,
 } from "../components/workspace/VideoGenerationSettings";
 import { WorkspaceHeader } from "../components/workspace/WorkspaceHeader";
@@ -81,12 +76,12 @@ import {
   ENTITY_TYPE,
   GENERATION_STATUS,
   MEDIA_TYPE,
-  VIDEO_RESOLUTION,
 } from "../constants/domain";
 import {COMPOSITE_PROMPT_SPEC } from "../lib/compositePrompt";
 import { useWorkspaceCharacterAsset } from "./useWorkspaceCharacterAsset";
 import { useWorkspaceCover } from "./useWorkspaceCover";
 import { useWorkspaceData } from "./useWorkspaceData";
+import { useWorkspaceVideoGeneration } from "./useWorkspaceVideoGeneration";
 import type { ShotFormState } from "./Workspace.helpers";
 import {
   buildShotFormState,
@@ -102,8 +97,6 @@ import {
   getSceneNavigatorThumbnailSrc,
   getStoryboardPreviewSrc,
   getStoryboardVideoPreviewSrc,
-  isSeedanceVideoModel,
-  sceneMediaToWorkspaceMedia,
   VIDEO_MODEL_OPTIONS,
 } from "./Workspace.helpers";
 import styles from "./Workspace.module.scss";
@@ -181,7 +174,6 @@ export default function Workspace() {
   const [hoveredSceneIndex, setHoveredSceneIndex] = useState<number | null>(null);
   const [isEpisodeRailCollapsed, setIsEpisodeRailCollapsed] = useState(false);
   const [isSavingShot, setIsSavingShot] = useState(false);
-  const [generatingVideoId, setGeneratingVideoId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<{
     src: string;
     alt: string;
@@ -190,20 +182,6 @@ export default function Workspace() {
   } | null>(null);
   const [frameExtractionGeneration, setFrameExtractionGeneration] =
     useState<StoryboardMediaGeneration | null>(null);
-  const [selectedVideoModel, setSelectedVideoModel] = useState<
-    (typeof VIDEO_MODEL_OPTIONS)[number]["value"]
-  >(VIDEO_MODEL_OPTIONS[0].value);
-  const [selectedVideoResolution, setSelectedVideoResolution] =
-    useState<VideoResolution>(VIDEO_RESOLUTION.HD);
-  const [selectedVideoDuration, setSelectedVideoDuration] = useState(5);
-  const [generateVideoAudio, setGenerateVideoAudio] = useState(true);
-  const [useFirstFrameForVideo, setUseFirstFrameForVideo] = useState(false);
-  const [isLoadingVideoPreview, setIsLoadingVideoPreview] = useState(false);
-  const [videoGenerationPreview, setVideoGenerationPreview] =
-    useState<StoryboardVideoGenerationPreview | null>(null);
-  const [videoGenerationRequest, setVideoGenerationRequest] =
-    useState<StoryboardVideoGenerationOptions | null>(null);
-  const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
   const [isSceneCoverConfirmOpen, setIsSceneCoverConfirmOpen] = useState(false);
   const [sceneCoverGenerationPreview] =
     useState<AIGenerationPreview | null>(null);
@@ -252,16 +230,6 @@ export default function Workspace() {
     setShotForm(buildShotFormState(selectedShot, selectedScene));
   }, [selectedScene, selectedShot]);
 
-  const { start: pollStoryboardVideo, stop: stopVideoPolling } = useSceneVideoPolling({
-    onScene: applyClipSceneUpdate,
-    onGenerations: (generations) =>
-      setMediaGenerations(generations.map(sceneMediaToWorkspaceMedia)),
-    onTerminal: () => setGeneratingVideoId(null),
-    onError: (error) => {
-      console.error("Failed to poll storyboard video status:", error);
-      setGeneratingVideoId(null);
-    },
-  });
 
   const filteredShots = selectedScene
     ? storyboards.filter((shot) => shot.scene_id === selectedScene.id)
@@ -304,53 +272,6 @@ export default function Workspace() {
   ];
   const activeChapterForSceneCreation = selectedChapter ?? chapters[0] ?? null;
 
-  const calculateTotalDuration = () => {
-    return selectedScene?.generation_duration ?? activeVideoDuration;
-  };
-
-  const countPromptShots = (prompt?: string) =>
-    Math.max(1, (String(prompt ?? "").match(/(?:^|\n)\s*镜号\s*[：:]/g) ?? []).length);
-
-  const formatShotNumber = (num?: number) => String(num ?? 0).padStart(3, "0");
-
-  const activeVideoResolution: VideoResolution = isSeedanceVideoModel(selectedVideoModel)
-    ? selectedVideoResolution
-    : VIDEO_RESOLUTION.HD;
-  const activeVideoDuration = isSeedanceVideoModel(selectedVideoModel) ? selectedVideoDuration : 5;
-  const activeVideoAudio = isSeedanceVideoModel(selectedVideoModel) ? generateVideoAudio : true;
-  const activeVideoSpecLabel = getVideoGenerationSpecLabel(
-    FIXED_VIDEO_ASPECT_RATIO,
-    activeVideoResolution,
-    activeVideoDuration,
-    activeVideoAudio,
-  );
-  const previewVideoSpecLabel = videoGenerationPreview
-    ? getVideoGenerationSpecLabel(
-        videoGenerationPreview.aspect_ratio || FIXED_VIDEO_ASPECT_RATIO,
-        videoGenerationPreview.resolution as VideoResolution,
-        videoGenerationPreview.duration,
-        videoGenerationPreview.audio,
-      )
-    : activeVideoSpecLabel;
-
-  const buildVideoGenerationRequest = (): StoryboardVideoGenerationOptions => ({
-    model: selectedVideoModel,
-    aspect_ratio: FIXED_VIDEO_ASPECT_RATIO,
-    resolution: activeVideoResolution,
-    duration: activeVideoDuration,
-    generate_audio: activeVideoAudio,
-    use_first_frame: useFirstFrameForVideo,
-  });
-
-  const handleVideoModelChange = (value: string) => {
-    const model = value as (typeof VIDEO_MODEL_OPTIONS)[number]["value"];
-    setSelectedVideoModel(model);
-    if (!isSeedanceVideoModel(model)) {
-      setSelectedVideoResolution(VIDEO_RESOLUTION.HD);
-      setSelectedVideoDuration(5);
-      setGenerateVideoAudio(true);
-    }
-  };
 
   const buildShotUpdatePayload = () => ({
     content: shotForm.content,
@@ -392,6 +313,52 @@ export default function Workspace() {
   const saveShotDraftBeforeGeneration = () => saveShotDraft(true);
 
   const {
+    generatingVideoId,
+    setGeneratingVideoId,
+    selectedVideoModel,
+    setSelectedVideoResolution,
+    selectedVideoDuration,
+    setSelectedVideoDuration,
+    generateVideoAudio,
+    setGenerateVideoAudio,
+    useFirstFrameForVideo,
+    setUseFirstFrameForVideo,
+    isLoadingVideoPreview,
+    videoGenerationPreview,
+    videoGenerationRequest,
+    isVideoConfirmOpen,
+    activeVideoResolution,
+    activeVideoDuration,
+    activeVideoAudio,
+    activeVideoSpecLabel,
+    previewVideoSpecLabel,
+    buildVideoGenerationRequest,
+    handleVideoModelChange,
+    pollStoryboardVideo,
+    stopVideoPolling,
+    runGenerateVideo,
+    handleGenerateVideo,
+    confirmGenerateVideo,
+    handleVideoConfirmOpenChange,
+  } = useWorkspaceVideoGeneration({
+    selectedShot,
+    isSavingShot,
+    saveShotDraftBeforeGeneration,
+    applyClipSceneUpdate,
+    loadMediaGenerations,
+    setMediaGenerations,
+  });
+
+  const calculateTotalDuration = () => {
+    return selectedScene?.generation_duration ?? activeVideoDuration;
+  };
+
+  const countPromptShots = (prompt?: string) =>
+    Math.max(1, (String(prompt ?? "").match(/(?:^|\n)\s*镜号\s*[：:]/g) ?? []).length);
+
+  const formatShotNumber = (num?: number) => String(num ?? 0).padStart(3, "0");
+
+  const {
     generatingCoverId,
     isLoadingCoverPreview,
     coverGenerationPreview,
@@ -421,60 +388,6 @@ export default function Workspace() {
   });
 
 
-  const runGenerateVideo = async () => {
-    if (!selectedShot) {
-      return;
-    }
-
-    setGeneratingVideoId(selectedShot.id);
-    try {
-      const result = await sceneApi.generateSceneVideo(
-        selectedShot.id,
-        videoGenerationRequest ?? buildVideoGenerationRequest(),
-      );
-      const nextScene = result.scene;
-      applyClipSceneUpdate(nextScene);
-      await loadMediaGenerations(nextScene.id);
-      if (nextScene.video_status === GENERATION_STATUS.GENERATING) {
-        pollStoryboardVideo(nextScene.id);
-      } else {
-        setGeneratingVideoId(null);
-      }
-    } catch (error) {
-      console.error("Failed to generate storyboard video:", error);
-      setGeneratingVideoId(null);
-    } finally {
-      setVideoGenerationRequest(null);
-    }
-  };
-
-  const handleGenerateVideo = async () => {
-    if (
-      !selectedShot ||
-      generatingVideoId === selectedShot.id ||
-      isLoadingVideoPreview ||
-      isSavingShot
-    ) {
-      return;
-    }
-
-    if (!(await saveShotDraftBeforeGeneration())) {
-      return;
-    }
-
-    const request = buildVideoGenerationRequest();
-    setIsLoadingVideoPreview(true);
-    try {
-      const preview = await sceneApi.getSceneVideoGenerationPreview(selectedShot.id, request);
-      setVideoGenerationRequest(request);
-      setVideoGenerationPreview(preview);
-      setIsVideoConfirmOpen(true);
-    } catch (error) {
-      console.error("Failed to preview storyboard video generation:", error);
-    } finally {
-      setIsLoadingVideoPreview(false);
-    }
-  };
 
   const handleRequestUploadShotCover = () => {
     shotCoverInputRef.current?.click();
@@ -496,19 +409,6 @@ export default function Workspace() {
       if (shotCoverInputRef.current) {
         shotCoverInputRef.current.value = "";
       }
-    }
-  };
-
-  const confirmGenerateVideo = async () => {
-    setIsVideoConfirmOpen(false);
-    await runGenerateVideo();
-  };
-
-  const handleVideoConfirmOpenChange = (open: boolean) => {
-    setIsVideoConfirmOpen(open);
-    if (!open && !generatingVideoId) {
-      setVideoGenerationRequest(null);
-      setVideoGenerationPreview(null);
     }
   };
 
