@@ -39,19 +39,16 @@ const app = {
 };
 
 describe('test/media_redirect.test.ts', () => {
-  it('redirects a valid object key to a non-cacheable HTTPS signed OSS URL', async () => {
-    const { context, headers } = createContext('scene-covers/cover.png');
-    await MediaRedirectController.prototype.redirect.call({ app, ctx: context });
+  it('returns a retryable error when OSS streaming is unavailable', async () => {
+    const { context } = createContext('scene-covers/cover.png');
+    await MediaRedirectController.prototype.stream.call({ app: { config: { storyboard: {} } }, ctx: context });
 
-    assert.equal(context.status, 302);
-    assert.match(context.location, /^https:\/\//);
-    assert.match(context.location, /Expires=/);
-    assert.equal(headers.get('Cache-Control'), 'private, no-store, max-age=0');
+    assert.equal(context.status, 503);
   });
 
   it('rejects traversal object keys', async () => {
     const { context } = createContext('../secrets.txt');
-    await MediaRedirectController.prototype.redirect.call({ app, ctx: context });
+    await MediaRedirectController.prototype.stream.call({ app, ctx: context });
 
     assert.equal(context.status, 404);
     assert.equal(context.body, 'Not Found');

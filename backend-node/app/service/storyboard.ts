@@ -12,7 +12,7 @@ const {
   probeDuration,
   resolveMediaUrl,
 } = require('../lib/media');
-const { resolveUrl } = require('../lib/generated_asset');
+const { resolveSignedUrl } = require('../lib/generated_asset');
 const {
   generateSeedreamImage,
   generateWanxVideo,
@@ -414,7 +414,7 @@ class StoryboardService extends Service {
     const missing: string[] = [];
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
       if (this.isAudioAsset(asset)) continue;
-      const url = resolveUrl(
+      const url = resolveSignedUrl(
         this.app,
         asset.cover_url || asset.file_url,
         this.app.config.storyboard.publicAppBaseUrl || '',
@@ -438,7 +438,7 @@ class StoryboardService extends Service {
   async selectReferenceImages(storyboard: ReferenceSubject, scene: SceneEntity) {
     const { references, missing } = await this.selectAssetReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveUrl(
+      const url = resolveSignedUrl(
         this.app,
         character.design_sheet_url,
         this.app.config.storyboard.publicAppBaseUrl || '',
@@ -462,7 +462,7 @@ class StoryboardService extends Service {
     const references: ImageReferenceItem[] = [];
     const missing: string[] = [];
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveUrl(
+      const url = resolveSignedUrl(
         this.app,
         character.design_sheet_url,
         this.app.config.storyboard.publicAppBaseUrl || '',
@@ -559,7 +559,7 @@ class StoryboardService extends Service {
     const missing: string[] = [];
     const blockingReasons: string[] = [];
     for (const character of Array.isArray(storyboard.characters) ? storyboard.characters : []) {
-      const url = resolveUrl(
+      const url = resolveSignedUrl(
         this.app,
         character.voice_reference_url,
         this.app.config.storyboard.publicAppBaseUrl || '',
@@ -581,7 +581,7 @@ class StoryboardService extends Service {
     }
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
       if (!this.isAudioAsset(asset)) continue;
-      const url = resolveUrl(
+      const url = resolveSignedUrl(
         this.app,
         asset.file_url,
         this.app.config.storyboard.publicAppBaseUrl || '',

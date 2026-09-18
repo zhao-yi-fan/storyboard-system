@@ -6,6 +6,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: RootRedirect,
+    HydrateFallback: () => null,
   },
   {
     Component: GuestOnlyRoute,

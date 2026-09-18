@@ -15,7 +15,7 @@ const {
   isOssEnabled,
   uploadLocalFile,
   downloadGeneratedToFile,
-  resolveUrl,
+  resolveSignedUrl,
 } = require('./generated_asset');
 
 const execFileAsync = promisify(execFile);
@@ -474,7 +474,7 @@ async function trimVideo(app: App, source: unknown, startSeconds: number, endSec
 }
 
 function resolveMediaUrl(app: App, raw: unknown): string {
-  return resolveUrl(app, raw, app.config.storyboard.publicAppBaseUrl || '');
+  return resolveSignedUrl(app, raw, app.config.storyboard.publicAppBaseUrl || '');
 }
 
 export {

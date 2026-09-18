@@ -17,9 +17,8 @@ NODE_BACKEND_SERVICE="storyboard-backend-node.service"
 NODE_BACKEND_UNIT_SOURCE="$ROOT_DIR/scripts/systemd/$NODE_BACKEND_SERVICE"
 NODE_BACKEND_UNIT_TARGET="/etc/systemd/system/$NODE_BACKEND_SERVICE"
 NODE_API_HEALTH_URL="http://127.0.0.1:8083/api/health"
-NGINX_CONFIG_SOURCE="$ROOT_DIR/scripts/nginx/nginx.conf"
-NGINX_CONFIG_TARGET="/etc/nginx/nginx.conf"
-NGINX_CONFIG_CANDIDATE="/etc/nginx/nginx.conf.storyboard-candidate"
+NGINX_SITE_SOURCE="$ROOT_DIR/scripts/nginx/storyboard-8081.conf"
+NGINX_SITE_TARGET="/etc/nginx/conf.d/storyboard-8081.conf"
 
 log() {
   printf '[deploy] %s\n' "$1"
@@ -65,9 +64,9 @@ run "install backend-node dependencies" bash -lc "cd '$NODE_BACKEND_DIR' && npm 
 run "typecheck backend-node" bash -lc "cd '$NODE_BACKEND_DIR' && npm run typecheck"
 run "build backend-node dist" bash -lc "cd '$NODE_BACKEND_DIR' && npm run build"
 
-run "stage nginx configuration" sudo install -m 0644 "$NGINX_CONFIG_SOURCE" "$NGINX_CONFIG_CANDIDATE"
-run "validate nginx configuration" sudo nginx -t -c "$NGINX_CONFIG_CANDIDATE"
-run "install nginx configuration" sudo install -m 0644 "$NGINX_CONFIG_SOURCE" "$NGINX_CONFIG_TARGET"
+run "install nginx 8081 site" sudo install -m 0644 "$NGINX_SITE_SOURCE" "$NGINX_SITE_TARGET"
+run "remove legacy nginx 8081 site" sudo rm -f /etc/nginx/conf.d/vue-admin.conf
+run "validate nginx configuration" sudo nginx -t
 run "reload nginx" sudo systemctl reload nginx
 
 if ! sudo systemctl is-active --quiet "$NODE_BACKEND_SERVICE"; then

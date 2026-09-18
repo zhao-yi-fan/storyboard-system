@@ -3,7 +3,7 @@
 const Service = require('egg').Service;
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
+const { normalizeGeneratedAssetReference, resolveSignedUrl, resolveUrl } = require('../lib/generated_asset');
 const {
   downloadAndStore,
   materializeSourceToLocalFile,
@@ -282,7 +282,7 @@ class CharacterService extends Service {
   collectDesignReferenceImages(character: CharacterEntity) {
     const references = [];
     const missing = [];
-    const avatarUrl = resolveUrl(
+    const avatarUrl = resolveSignedUrl(
       this.app,
       character.avatar_url,
       this.app.config.storyboard.publicAppBaseUrl || '',

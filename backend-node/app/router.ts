@@ -10,7 +10,7 @@ type EggRouter = {
 module.exports = (app: { router: EggRouter; controller: Record<string, Record<string, unknown>> }) => {
   const { router, controller } = app;
 
-  router.get('/_media/redirect/:objectKey(.*)', controller.mediaRedirect.redirect);
+  router.get('/_media/stream/:objectKey(.*)', controller.mediaRedirect.stream);
   router.get('/api/health', controller.health.index);
   router.post('/api/auth/login', controller.auth.login);
   router.post('/api/auth/logout', controller.auth.logout);

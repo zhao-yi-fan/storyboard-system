@@ -28,6 +28,7 @@ export type OssClient = {
   signatureUrl: (objectKey: string, options?: Record<string, unknown>) => string;
   put: (...args: unknown[]) => Promise<unknown>;
   get: (...args: unknown[]) => Promise<{ res?: { status?: number } }>;
+  getStream: (...args: unknown[]) => Promise<{ stream: NodeJS.ReadableStream; res: { status: number; headers: Record<string, string | string[] | undefined> } }>;
   delete: (...args: unknown[]) => Promise<unknown>;
 };
 
@@ -188,15 +189,26 @@ function resolveUrl(app: App, raw: unknown, publicBaseUrl = ''): string {
     return '';
   }
   if (isGeneratedAssetPath(app, value)) {
-    return resolveGeneratedUrl(app, value);
+    return value;
   }
   if (/^https?:\/\//.test(value)) {
-    return value;
+    return normalizeGeneratedAssetReference(app, value);
   }
   if (value.startsWith('/') && String(publicBaseUrl || '').trim()) {
     return `${String(publicBaseUrl).trim().replace(/\/$/, '')}${value}`;
   }
   return value;
+}
+
+function resolveSignedUrl(app: App, raw: unknown, publicBaseUrl = ''): string {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  const normalized = normalizeGeneratedAssetReference(app, value);
+  if (isGeneratedAssetPath(app, normalized)) return resolveGeneratedUrl(app, normalized);
+  if (/^https?:\/\//.test(normalized)) return normalized;
+  return normalized.startsWith('/') && publicBaseUrl
+    ? `${String(publicBaseUrl).replace(/\/$/, '')}${normalized}`
+    : normalized;
 }
 
 function isManagedOssHost(app: App, host: string): boolean {
@@ -321,6 +333,7 @@ module.exports = {
   createOssClient,
   resolveGeneratedUrl,
   resolveUrl,
+  resolveSignedUrl,
   normalizeGeneratedAssetReference,
   ensureGeneratedDir,
   uploadLocalFile,
