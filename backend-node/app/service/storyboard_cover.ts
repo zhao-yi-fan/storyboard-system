@@ -84,6 +84,34 @@ class StoryboardCoverService extends Service {
   }
 
   async generateCover(id: number, selectedModel: string, useTextOnly: boolean) {
+    // 事务抢占：锁镜头行后复查有无进行中的封面任务，
+    // 输家直接返回现状，不建新任务。
+    const conn = await this.app.mysqlPool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [parents] = await conn.query(
+        'SELECT id FROM storyboards WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+        [id],
+      );
+      if (!parents.length) throw new Error('storyboard not found');
+      const [running] = await conn.query(
+        'SELECT id FROM storyboard_media_generations WHERE storyboard_id = ? AND media_type = ? AND status = ? LIMIT 1',
+        [id, MEDIA_TYPE.COVER, GENERATION_STATUS.GENERATING],
+      );
+      await conn.commit();
+      if (running.length) {
+        const latest = await this.ctx.service.storyboard.findById(id);
+        if (!latest) throw new Error('storyboard not found');
+        return {
+          storyboard_id: latest.id,
+          thumbnail_url: latest.thumbnail_url,
+          thumbnail_preview_url: latest.thumbnail_preview_url,
+          storyboard: latest,
+        };
+      }
+    } finally {
+      conn.release();
+    }
     const preview = await this.previewCoverGeneration(id, selectedModel);
     const generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,

@@ -402,10 +402,16 @@ class CharacterService extends Service {
     if (!avatarUrl) {
       throw new Error('生成主设定图前请先上传角色参考图');
     }
-    await this.pool.execute(
-      "UPDATE characters SET design_sheet_status = 'generating', design_sheet_error = NULL WHERE id = ?",
+    // 原子抢占：并发双击只有一笔能开工，输家直接返回现状。
+    const [designClaim] = await this.pool.execute(
+      "UPDATE characters SET design_sheet_status = 'generating', design_sheet_error = NULL WHERE id = ? AND design_sheet_status != 'generating'",
       [id],
     );
+    if (!designClaim.affectedRows) {
+      const latest = await this.findById(id);
+      if (!latest) throw new Error('character not found');
+      return latest;
+    }
     try {
       const prompt = this.resolveDesignPrompt(character, promptOverride);
       const imageUrl = await generateSeedreamImage(this.app, prompt, [avatarUrl], {
@@ -482,10 +488,16 @@ class CharacterService extends Service {
   async generateVoiceReference(id: number, voicePrompt: string, previewText: string) {
     const character = await this.findById(id);
     if (!character) throw new Error('character not found');
-    await this.pool.execute(
-      "UPDATE characters SET voice_reference_status = 'generating', voice_reference_error = NULL WHERE id = ?",
+    // 原子抢占：并发双击只有一笔能开工，输家直接返回现状。
+    const [voiceClaim] = await this.pool.execute(
+      "UPDATE characters SET voice_reference_status = 'generating', voice_reference_error = NULL WHERE id = ? AND voice_reference_status != 'generating'",
       [id],
     );
+    if (!voiceClaim.affectedRows) {
+      const latest = await this.findById(id);
+      if (!latest) throw new Error('character not found');
+      return latest;
+    }
     try {
       const result = await this.generateVoiceReferenceAudio(character, voicePrompt, previewText);
       const extension = String(result.extension || 'wav').replace(/^\./, '') || 'wav';

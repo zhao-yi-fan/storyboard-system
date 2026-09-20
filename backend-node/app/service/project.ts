@@ -327,10 +327,16 @@ class ProjectService extends Service {
     if (!inputs.length) {
       throw new Error('当前项目没有可合成的场景视频');
     }
-    await this.pool.execute(
-      'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ?',
-      ['', '', '', GENERATION_STATUS.GENERATING, '', 0, id],
+    // 原子抢占：并发合成只有一笔能开工，输家直接返回进行中的现状。
+    const [claim] = await this.pool.execute(
+      'UPDATE projects SET video_url = ?, video_preview_url = ?, video_poster_url = ?, video_status = ?, video_error = ?, video_duration = ? WHERE id = ? AND video_status != ?',
+      ['', '', '', GENERATION_STATUS.GENERATING, '', 0, id, GENERATION_STATUS.GENERATING],
     );
+    if (!claim.affectedRows) {
+      const latest = await this.findById(id);
+      if (!latest) throw new Error('project not found');
+      return latest;
+    }
     try {
       const filename = `${sanitizeFileName(`project-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(this.app, inputs, 'project-videos', filename);

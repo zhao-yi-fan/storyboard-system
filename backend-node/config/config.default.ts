@@ -13,6 +13,7 @@ import { buildWanxConfig } from './providers/wanx';
 import { buildAuthConfig } from './sections/auth';
 import { buildCorsConfig } from './sections/cors';
 import { buildMysqlConfig } from './sections/mysql';
+import { buildRateLimitConfig } from './sections/ratelimit';
 import { buildServerConfig } from './sections/server';
 import { buildStoryboardBaseConfig } from './sections/storyboard';
 import { DEFAULT_ENV_PATH } from './shared/constants';
@@ -45,9 +46,11 @@ module.exports = (appInfo: { name: string }) => {
 
   config.keys = `${appInfo.name}-migration-key`;
 
-  config.middleware = ['requestId', 'apiCors', 'authSession', 'projectAccess'];
+  config.middleware = ['requestId', 'apiCors', 'authSession', 'rateLimit', 'projectAccess'];
   config.requestId = {};
   config.apiCors = buildCorsConfig();
+  config.rateLimit = buildRateLimitConfig();
+  config.proxy = true;
   config.authSession = {
     publicPaths: authConfig.publicPaths,
     sessionCookieName: authConfig.sessionCookieName,

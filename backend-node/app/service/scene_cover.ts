@@ -72,6 +72,27 @@ class SceneCoverService extends Service {
     if (!scene) {
       throw new Error('scene not found');
     }
+    // 事务抢占：锁场景行后复查有无进行中的封面任务，
+    // 输家直接返回现状，不建新任务。
+    const conn = await this.app.mysqlPool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [parents] = await conn.query(
+        'SELECT id FROM scenes WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+        [id],
+      );
+      if (!parents.length) throw new Error('scene not found');
+      const [running] = await conn.query(
+        'SELECT id FROM scene_media_generations WHERE scene_id = ? AND media_type = ? AND status = ? LIMIT 1',
+        [id, MEDIA_TYPE.COVER, GENERATION_STATUS.GENERATING],
+      );
+      await conn.commit();
+      if (running.length) {
+        return scene;
+      }
+    } finally {
+      conn.release();
+    }
     const preview = await this.previewCoverGeneration(id, selectedModel);
     const generation = await this.ctx.service.sceneMediaGeneration.create({
       scene_id: id,

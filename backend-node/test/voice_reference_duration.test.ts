@@ -110,6 +110,7 @@ describe('test/voice_reference_duration.test.ts', () => {
       pool: {
         execute: async (...args: unknown[]) => {
           executedQueries.push(args);
+          return [{ affectedRows: 1 }, []];
         },
       },
       findById: async () => ({ id: 8, name: '林婉' }),

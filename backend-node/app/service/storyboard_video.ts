@@ -241,15 +241,25 @@ class StoryboardVideoService extends Service {
     }
     const current = await this.ctx.service.storyboard.findById(id);
     if (!current) throw new Error('storyboard not found');
-    if (current.video_status === GENERATION_STATUS.GENERATING) {
+    // 原子抢占：并发双击只有一笔能把状态翻成 generating，
+    // 输家直接返回现状（前端轮询继续等赢家的任务），不建新任务。
+    const [claim] = await this.app.mysqlPool.execute(
+      'UPDATE storyboards SET video_status = ?, video_error = ? WHERE id = ? AND deleted_at IS NULL AND video_status != ?',
+      [GENERATION_STATUS.GENERATING, '', id, GENERATION_STATUS.GENERATING],
+    );
+    if (!claim.affectedRows) {
+      const latest = await this.ctx.service.storyboard.findById(id);
+      if (!latest) throw new Error('storyboard not found');
       return {
-        storyboard_id: current.id,
-        video_url: current.video_url,
-        video_preview_url: current.video_preview_url,
-        storyboard: current,
+        storyboard_id: latest.id,
+        video_url: latest.video_url,
+        video_preview_url: latest.video_preview_url,
+        storyboard: latest,
       };
     }
-    const generation = await this.ctx.service.mediaGeneration.create({
+    let generation;
+    try {
+      generation = await this.ctx.service.mediaGeneration.create({
       storyboard_id: id,
       media_type: MEDIA_TYPE.VIDEO,
       model: preview.model,
@@ -268,11 +278,14 @@ class StoryboardVideoService extends Service {
         audio_reference_total_duration: preview.audio_reference_total_duration || 0,
       }),
     });
-
-    await this.ctx.service.storyboard.update(id, {
-      video_status: GENERATION_STATUS.GENERATING,
-      video_error: '',
-    });
+    } catch (error) {
+      // 建 generation 行失败：把抢占回滚成失败态，避免烂在 generating 无人认领。
+      await this.app.mysqlPool.execute(
+        'UPDATE storyboards SET video_status = ?, video_error = ? WHERE id = ?',
+        [GENERATION_STATUS.FAILED, (error as Error).message, id],
+      );
+      throw error;
+    }
 
     void this.generateVideoAsync(id, preview, generation.id).catch((err: unknown) =>
       this.ctx.logger.error(err),

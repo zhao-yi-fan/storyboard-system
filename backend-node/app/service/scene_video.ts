@@ -140,10 +140,20 @@ class SceneVideoService extends Service {
     if (preview.blocking_reasons.length) throw new Error(preview.blocking_reasons.join('；'));
     const current = await this.ctx.service.scene.findById(id);
     if (!current) throw new Error('scene not found');
-    if (current.video_status === GENERATION_STATUS.GENERATING) {
-      return { scene_id: id, scene: current };
+    // 原子抢占：并发双击只有一笔能把状态翻成 generating，
+    // 输家直接返回现状（前端轮询继续等赢家的任务），不建新任务。
+    const [claim] = await this.app.mysqlPool.execute(
+      'UPDATE scenes SET generation_duration = ?, video_status = ?, video_error = ? WHERE id = ? AND deleted_at IS NULL AND video_status != ?',
+      [preview.duration, GENERATION_STATUS.GENERATING, '', id, GENERATION_STATUS.GENERATING],
+    );
+    if (!claim.affectedRows) {
+      const latest = await this.ctx.service.scene.findById(id);
+      if (!latest) throw new Error('scene not found');
+      return { scene_id: id, scene: latest };
     }
-    const generation = await this.ctx.service.sceneMediaGeneration.create({
+    let generation;
+    try {
+      generation = await this.ctx.service.sceneMediaGeneration.create({
       scene_id: id,
       media_type: MEDIA_TYPE.VIDEO,
       model: preview.model,
@@ -160,11 +170,14 @@ class SceneVideoService extends Service {
         audio_reference_count: preview.audio_reference_assets.length,
       }),
     });
-    await this.ctx.service.scene.update(id, {
-      generation_duration: preview.duration,
-      video_status: GENERATION_STATUS.GENERATING,
-      video_error: '',
-    });
+    } catch (error) {
+      // 建 generation 行失败：把抢占回滚成失败态，避免烂在 generating 无人认领。
+      await this.app.mysqlPool.execute(
+        'UPDATE scenes SET video_status = ?, video_error = ? WHERE id = ?',
+        [GENERATION_STATUS.FAILED, (error as Error).message, id],
+      );
+      throw error;
+    }
     void this.generateVideoAsync(id, preview, generation.id).catch((error: unknown) =>
       this.ctx.logger.error(error),
     );
@@ -420,10 +433,16 @@ class SceneVideoService extends Service {
     if (!inputs.length) {
       throw new Error('当前场景没有可合成的视频镜头');
     }
-    await this.ctx.service.scene.update(id, {
-      video_status: GENERATION_STATUS.GENERATING,
-      video_error: '',
-    });
+    // 原子抢占：并发合成只有一笔能开工，输家直接返回进行中的现状。
+    const [claim] = await this.app.mysqlPool.execute(
+      'UPDATE scenes SET video_status = ?, video_error = ? WHERE id = ? AND deleted_at IS NULL AND video_status != ?',
+      [GENERATION_STATUS.GENERATING, '', id, GENERATION_STATUS.GENERATING],
+    );
+    if (!claim.affectedRows) {
+      const latest = await this.ctx.service.scene.findById(id);
+      if (!latest) throw new Error('scene not found');
+      return latest;
+    }
     try {
       const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
       const composed = await composeVideos(

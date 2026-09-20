@@ -410,10 +410,16 @@ class AssetService extends Service {
     if (!this.canGenerateSceneAssetCover(asset.type) && asset.type !== ASSET_KIND.PROP) {
       throw new Error('当前资产类型不支持生成封面');
     }
-    await this.pool.execute(
-      "UPDATE assets SET cover_status = 'generating', cover_error = NULL WHERE id = ?",
+    // 原子抢占：并发双击只有一笔能开工，输家直接返回现状。
+    const [claim] = await this.pool.execute(
+      "UPDATE assets SET cover_status = 'generating', cover_error = NULL WHERE id = ? AND cover_status != 'generating'",
       [id],
     );
+    if (!claim.affectedRows) {
+      const latest = await this.findById(id);
+      if (!latest) throw new Error('资产不存在');
+      return latest;
+    }
     try {
       const prompt = this.buildCoverPrompt(asset);
       const { generateSeedreamImage } = require('../lib/ai_clients');
