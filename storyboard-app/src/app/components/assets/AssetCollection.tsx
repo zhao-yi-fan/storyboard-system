@@ -8,7 +8,7 @@ import {
   type AssetLibraryTab,
   type AssetViewMode,
 } from "../../constants/domain";
-import styles from "../../pages/AssetLibrary.module.scss";
+import styles from "../../pages/asset-library/AssetLibrary.module.scss";
 import { Badge } from "../ui/badge";
 
 export const getAssetPreviewSrc = (asset: Asset | null | undefined) =>

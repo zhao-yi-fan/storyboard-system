@@ -1,6 +1,6 @@
 import { Loader2, X } from "lucide-react";
 
-import styles from "../../../pages/Workspace.module.scss";
+import styles from "../../../pages/workspace/Workspace.module.scss";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import {

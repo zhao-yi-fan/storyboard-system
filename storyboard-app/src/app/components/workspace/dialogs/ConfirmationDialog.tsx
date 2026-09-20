@@ -1,4 +1,4 @@
-import styles from "../../../pages/Workspace.module.scss";
+import styles from "../../../pages/workspace/Workspace.module.scss";
 import {
   AlertDialog,
   AlertDialogAction,

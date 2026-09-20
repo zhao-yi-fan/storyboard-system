@@ -1,6 +1,6 @@
 import type { StoryboardVideoGenerationPreview } from "../../../api";
 import { ASSET_KIND, VIDEO_ASPECT_RATIO } from "../../../constants/domain";
-import styles from "../../../pages/Workspace.module.scss";
+import styles from "../../../pages/workspace/Workspace.module.scss";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import {

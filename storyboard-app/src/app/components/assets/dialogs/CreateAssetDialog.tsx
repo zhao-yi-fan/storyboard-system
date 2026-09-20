@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 
 import { ASSET_KIND, type AssetKind } from "../../../constants/domain";
-import styles from "../../../pages/AssetLibrary.module.scss";
+import styles from "../../../pages/asset-library/AssetLibrary.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,

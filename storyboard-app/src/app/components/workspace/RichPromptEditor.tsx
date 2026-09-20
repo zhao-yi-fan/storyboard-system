@@ -242,7 +242,11 @@ export function RichPromptEditor({
   const [query, setQuery] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const { refs, floatingStyles, update: updateFloatingPosition } = useFloating({
+  const {
+    refs,
+    floatingStyles,
+    update: updateFloatingPosition,
+  } = useFloating({
     placement: "bottom-start",
     strategy: "fixed",
     middleware: [

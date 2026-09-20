@@ -14,7 +14,7 @@ export const router = createBrowserRouter([
       {
         path: "/login",
         async lazy() {
-          const module = await import("./pages/Login");
+          const module = await import("./pages/login/Login");
           return { Component: module.default };
         },
       },
@@ -26,42 +26,42 @@ export const router = createBrowserRouter([
       {
         path: "/projects",
         async lazy() {
-          const module = await import("./pages/ProjectDashboard");
+          const module = await import("./pages/project-dashboard/ProjectDashboard");
           return { Component: module.default };
         },
       },
       {
         path: "/import",
         async lazy() {
-          const module = await import("./pages/ImportScript");
+          const module = await import("./pages/import-script/ImportScript");
           return { Component: module.default };
         },
       },
       {
         path: "/workspace",
         async lazy() {
-          const module = await import("./pages/Workspace");
+          const module = await import("./pages/workspace/Workspace");
           return { Component: module.default };
         },
       },
       {
         path: "/assets",
         async lazy() {
-          const module = await import("./pages/AssetLibrary");
+          const module = await import("./pages/asset-library/AssetLibrary");
           return { Component: module.default };
         },
       },
       {
         path: "/asset-confirmation",
         async lazy() {
-          const module = await import("./pages/AssetConfirmation");
+          const module = await import("./pages/asset-confirmation/AssetConfirmation");
           return { Component: module.default };
         },
       },
       {
         path: "/personal-assets",
         async lazy() {
-          const module = await import("./pages/PersonalAssets");
+          const module = await import("./pages/personal-assets/PersonalAssets");
           return { Component: module.default };
         },
       },

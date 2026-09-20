@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 
 import type { AssetVersion } from "../../api";
-import styles from "../../pages/AssetLibrary.module.scss";
+import styles from "../../pages/asset-library/AssetLibrary.module.scss";
 import { Button } from "../ui/button";
 
 export type VersionImageCardProps = {

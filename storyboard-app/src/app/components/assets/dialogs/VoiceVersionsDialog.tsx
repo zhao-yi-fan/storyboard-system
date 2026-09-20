@@ -1,6 +1,6 @@
 import type { CharacterVoiceVersion } from "../../../api";
 import { ASSET_SOURCE_TYPE } from "../../../constants/domain";
-import styles from "../../../pages/AssetLibrary.module.scss";
+import styles from "../../../pages/asset-library/AssetLibrary.module.scss";
 import { Button } from "../../ui/button";
 import {
   Dialog,

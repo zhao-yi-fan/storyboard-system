@@ -1,7 +1,7 @@
 import { ArrowLeft, Film, Image as ImageIcon, MoreHorizontal, Play } from "lucide-react";
 
 import type { Project } from "../../api";
-import styles from "../../pages/Workspace.module.scss";
+import styles from "../../pages/workspace/Workspace.module.scss";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
