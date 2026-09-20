@@ -4,6 +4,7 @@ import { END, START, StateGraph, StateSchema } from '@langchain/langgraph';
 import { z } from 'zod';
 
 import type { DbRow } from './entity';
+import { requestDeepSeekText } from './deepseek';
 import { LLM_JSON_PROTOCOL } from './llm_json_protocol';
 
 const SYSTEM_PROMPT = [
@@ -204,37 +205,12 @@ async function requestShotDirectionAnalysis(
   storyboards: Array<Record<string, unknown>>,
 ) {
   ensureConfigured(config);
-  const response = await fetch(
-    `${String(config.deepSeekBaseUrl).replace(LLM_JSON_PROTOCOL.TRAILING_SLASH_PATTERN, '')}/chat/completions`,
-    {
-      method: LLM_JSON_PROTOCOL.POST_METHOD,
-      headers: {
-        Authorization: `Bearer ${config.deepSeekApiKey}`,
-        'Content-Type': LLM_JSON_PROTOCOL.CONTENT_TYPE,
-      },
-      body: JSON.stringify({
-        model: config.deepSeekModel,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(scene, storyboards) },
-        ],
-      }),
-      signal: AbortSignal.timeout((Number(config.deepSeekRequestTimeoutSeconds) || 180) * 1000),
-    },
-  );
-
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(
-      `DeepSeek 镜头走向分析失败: ${body?.error?.message || `HTTP ${response.status}`}`,
-    );
-  }
-
-  const content = cleanString(body?.choices?.[0]?.message?.content);
-  if (!content) {
-    throw new Error('DeepSeek 镜头走向分析失败：返回内容为空');
-  }
+  const content = await requestDeepSeekText(config, {
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: buildUserPrompt(scene, storyboards),
+    temperature: 0.2,
+    errorLabel: 'DeepSeek 镜头走向分析',
+  });
   return { raw: content, parsed: parseShotDirectionResponse(content) };
 }
 
