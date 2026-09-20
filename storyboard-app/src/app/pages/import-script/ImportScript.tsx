@@ -8,7 +8,6 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { UserMenu } from "../../components/UserMenu";
 import styles from "./ImportScript.module.scss";
 
 export default function ImportScript() {
@@ -153,9 +152,6 @@ export default function ImportScript() {
             <span className={styles.stepPending}>2. 确认资产</span>
             <ChevronRight className={styles.stepIcon} />
             <span className={styles.stepPending}>3. 生成分镜</span>
-            <div className={styles.userMenu}>
-              <UserMenu />
-            </div>
           </div>
         </div>
       </header>
