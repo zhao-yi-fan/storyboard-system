@@ -137,7 +137,7 @@ class StoryboardController extends ApiController {
         generation.media_type,
         generationId,
       );
-      const storyboard = await this.ctx.service.storyboard.applyMediaGeneration(
+      const storyboard = await this.ctx.service.storyboardVideo.applyMediaGeneration(
         storyboardId,
         generation,
       );
@@ -184,7 +184,7 @@ class StoryboardController extends ApiController {
             generation.media_type,
             fallback.id,
           );
-          storyboard = await this.ctx.service.storyboard.applyMediaGeneration(
+          storyboard = await this.ctx.service.storyboardVideo.applyMediaGeneration(
             storyboardId,
             fallback,
           );
@@ -215,7 +215,7 @@ class StoryboardController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.storyboard.previewCoverGeneration(id, this.ctx.query.model),
+      this.ctx.service.storyboardCover.previewCoverGeneration(id, this.ctx.query.model),
     );
   }
 
@@ -230,7 +230,7 @@ class StoryboardController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.storyboard.previewVideoGeneration(
+      this.ctx.service.storyboardVideo.previewVideoGeneration(
         id,
         this.ctx.query.model,
         this.ctx.query.duration,
@@ -252,7 +252,7 @@ class StoryboardController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.storyboard.generateCover(
+      this.ctx.service.storyboardCover.generateCover(
         id,
         (this.ctx.request.body || {}).model,
         Boolean((this.ctx.request.body || {}).use_text_only),
@@ -271,7 +271,7 @@ class StoryboardController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.storyboard.uploadCover(id, (this.ctx.request.body || {}).thumbnail_url),
+      this.ctx.service.storyboardCover.uploadCover(id, (this.ctx.request.body || {}).thumbnail_url),
     );
   }
 
@@ -286,7 +286,7 @@ class StoryboardController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.storyboard.generateVideo(
+      this.ctx.service.storyboardVideo.generateVideo(
         id,
         (this.ctx.request.body || {}).model,
         (this.ctx.request.body || {}).duration,

@@ -9,11 +9,11 @@ const { DEFAULT_PROVIDER_MODEL } = cjsRequire('../config/shared/constants');
 const { ASSET_KIND, REFERENCE_TYPE, VIDEO_ASPECT_RATIO, VIDEO_MODEL, VIDEO_RESOLUTION } =
   cjsRequire('../app/lib/domain_constants');
 const { buildSeedanceVideoPayload, generateSeedanceVideo } = cjsRequire('../app/lib/ai_clients');
-const StoryboardService = cjsRequire('../app/service/storyboard');
+const StoryboardReferenceService = cjsRequire('../app/service/storyboard_reference');
 const AssetService = cjsRequire('../app/service/asset');
 
 const normalizationContext = {
-  isSeedanceVideoModel: StoryboardService.prototype.isSeedanceVideoModel,
+  isSeedanceVideoModel: StoryboardReferenceService.prototype.isSeedanceVideoModel,
 };
 
 describe('test/seedance_video_generation.test.ts', () => {
@@ -149,7 +149,7 @@ describe('test/seedance_video_generation.test.ts', () => {
 
   it('accepts Seedance resolution and duration boundaries', () => {
     assert.equal(
-      StoryboardService.prototype.normalizeVideoAspectRatio.call(
+      StoryboardReferenceService.prototype.normalizeVideoAspectRatio.call(
         normalizationContext,
         VIDEO_MODEL.SEEDANCE_2,
         VIDEO_ASPECT_RATIO.PORTRAIT,
@@ -158,7 +158,7 @@ describe('test/seedance_video_generation.test.ts', () => {
     );
     for (const resolution of Object.values(VIDEO_RESOLUTION)) {
       assert.equal(
-        StoryboardService.prototype.normalizeVideoResolution.call(
+        StoryboardReferenceService.prototype.normalizeVideoResolution.call(
           normalizationContext,
           VIDEO_MODEL.SEEDANCE_2,
           resolution,
@@ -167,7 +167,7 @@ describe('test/seedance_video_generation.test.ts', () => {
       );
     }
     assert.equal(
-      StoryboardService.prototype.normalizeVideoDuration.call(
+      StoryboardReferenceService.prototype.normalizeVideoDuration.call(
         normalizationContext,
         VIDEO_MODEL.SEEDANCE_2,
         4,
@@ -175,7 +175,7 @@ describe('test/seedance_video_generation.test.ts', () => {
       4,
     );
     assert.equal(
-      StoryboardService.prototype.normalizeVideoDuration.call(
+      StoryboardReferenceService.prototype.normalizeVideoDuration.call(
         normalizationContext,
         VIDEO_MODEL.SEEDANCE_2,
         15,
@@ -187,7 +187,7 @@ describe('test/seedance_video_generation.test.ts', () => {
   it('rejects unsupported Seedance specs instead of falling back', () => {
     assert.throws(
       () =>
-        StoryboardService.prototype.normalizeVideoAspectRatio.call(
+        StoryboardReferenceService.prototype.normalizeVideoAspectRatio.call(
           normalizationContext,
           VIDEO_MODEL.SEEDANCE_2,
           '16:9',
@@ -196,7 +196,7 @@ describe('test/seedance_video_generation.test.ts', () => {
     );
     assert.throws(
       () =>
-        StoryboardService.prototype.normalizeVideoResolution.call(
+        StoryboardReferenceService.prototype.normalizeVideoResolution.call(
           normalizationContext,
           VIDEO_MODEL.SEEDANCE_2,
           '4k',
@@ -206,7 +206,7 @@ describe('test/seedance_video_generation.test.ts', () => {
     for (const duration of [3, 16, 4.5]) {
       assert.throws(
         () =>
-          StoryboardService.prototype.normalizeVideoDuration.call(
+          StoryboardReferenceService.prototype.normalizeVideoDuration.call(
             normalizationContext,
             VIDEO_MODEL.SEEDANCE_2,
             duration,
@@ -219,26 +219,29 @@ describe('test/seedance_video_generation.test.ts', () => {
   it('routes bound visual assets to images and excludes audio assets', async () => {
     const context = {
       app: { config: { storyboard: {} } },
-      getAssetFileExtension: StoryboardService.prototype.getAssetFileExtension,
-      isAudioAsset: StoryboardService.prototype.isAudioAsset,
-      getAssetReferenceType: StoryboardService.prototype.getAssetReferenceType,
+      getAssetFileExtension: StoryboardReferenceService.prototype.getAssetFileExtension,
+      isAudioAsset: StoryboardReferenceService.prototype.isAudioAsset,
+      getAssetReferenceType: StoryboardReferenceService.prototype.getAssetReferenceType,
     };
-    const result = await StoryboardService.prototype.selectAssetReferenceImages.call(context, {
-      assets: [
-        {
-          id: 1,
-          name: '卧室场景',
-          type: ASSET_KIND.SCENE,
-          file_url: 'https://example.com/room.png',
-        },
-        {
-          id: 2,
-          name: '角色脚步声',
-          type: 'sfx',
-          file_url: 'https://example.com/steps.wav',
-        },
-      ],
-    });
+    const result = await StoryboardReferenceService.prototype.selectAssetReferenceImages.call(
+      context,
+      {
+        assets: [
+          {
+            id: 1,
+            name: '卧室场景',
+            type: ASSET_KIND.SCENE,
+            file_url: 'https://example.com/room.png',
+          },
+          {
+            id: 2,
+            name: '角色脚步声',
+            type: 'sfx',
+            file_url: 'https://example.com/steps.wav',
+          },
+        ],
+      },
+    );
 
     assert.equal(result.references.length, 1);
     assert.equal(result.references[0].name, '卧室场景');
@@ -248,12 +251,12 @@ describe('test/seedance_video_generation.test.ts', () => {
   it('routes bound audio assets into Seedance reference audio', async () => {
     const context = {
       app: { config: { storyboard: {} } },
-      getAssetFileExtension: StoryboardService.prototype.getAssetFileExtension,
-      isAudioAsset: StoryboardService.prototype.isAudioAsset,
+      getAssetFileExtension: StoryboardReferenceService.prototype.getAssetFileExtension,
+      isAudioAsset: StoryboardReferenceService.prototype.isAudioAsset,
       resolveAssetAudioDuration: async () => 4,
       resolveVoiceReferenceDuration: async () => 4,
     };
-    const result = await StoryboardService.prototype.selectVideoAudioReferences.call(
+    const result = await StoryboardReferenceService.prototype.selectVideoAudioReferences.call(
       context,
       {
         characters: [],

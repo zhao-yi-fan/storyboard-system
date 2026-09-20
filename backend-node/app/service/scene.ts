@@ -498,7 +498,7 @@ class SceneService extends Service {
 
   async generationReferencesForScene(scene: SceneEntity) {
     const [{ references, missing }, characters, assets] = await Promise.all([
-      this.ctx.service.storyboard.selectReferenceImages(scene, scene),
+      this.ctx.service.storyboardReference.selectReferenceImages(scene, scene),
       this.ctx.service.character.findByProjectId(scene.project_id),
       this.ctx.service.asset.findByProjectId(scene.project_id),
     ]);
@@ -647,7 +647,7 @@ class SceneService extends Service {
     let generatedCount = 0;
     for (const storyboard of storyboards) {
       try {
-        await this.ctx.service.storyboard.generateCover(storyboard.id, '', false);
+        await this.ctx.service.storyboardCover.generateCover(storyboard.id, '', false);
         generatedCount++;
       } catch (error) {
         failed.push({ storyboard_id: storyboard.id, error: (error as Error).message });
@@ -713,7 +713,7 @@ class SceneService extends Service {
     if (!scene) throw new Error('scene not found');
     const prompt = assertCompositePromptLength(scene.prompt || '');
     if (!prompt) throw new Error('片段 Prompt 不能为空');
-    const helper = this.ctx.service.storyboard;
+    const helper = this.ctx.service.storyboardReference;
     const model = String(selectedModel || '').trim() || VIDEO_MODEL.SEEDANCE_2;
     if (!helper.supportedVideoModels().has(model)) throw new Error('unsupported video model');
     const selectedDuration = helper.normalizeVideoDuration(
@@ -858,7 +858,7 @@ class SceneService extends Service {
       if (preview.use_first_frame && !imageInput) {
         throw new Error('片段首帧不可用，无法生成视频');
       }
-      const result = this.ctx.service.storyboard.isSeedanceVideoModel(preview.model)
+      const result = this.ctx.service.storyboardReference.isSeedanceVideoModel(preview.model)
         ? await generateSeedanceVideo(
             this.app,
             preview.final_prompt,

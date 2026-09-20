@@ -305,6 +305,20 @@ export interface AudioReferenceItem {
   voice_name: string;
 }
 
+export interface AudioReferenceSummary {
+  references: AudioReferenceItem[];
+  missing: string[];
+  totalDuration: number;
+  blockingReasons: string[];
+  limits: {
+    max_count: number;
+    min_duration: number;
+    max_duration: number;
+    max_total_duration: number;
+    formats: string[];
+  } | null;
+}
+
 export interface PreviewReferenceImage {
   type: string;
   name: string;

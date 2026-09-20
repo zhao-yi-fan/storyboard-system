@@ -4,9 +4,9 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const require = createRequire(import.meta.url);
-const StoryboardService = require('../app/service/storyboard');
+const StoryboardReferenceService = require('../app/service/storyboard_reference');
 
-const service = Object.create(StoryboardService.prototype);
+const service = Object.create(StoryboardReferenceService.prototype);
 
 describe('test/storyboard_helpers.test.ts', () => {
   it('parses boolean flags from mixed input', () => {
