@@ -1117,6 +1117,23 @@
     color: color-mix(in oklab, var(--color-red-300, oklch(80.8% 0.114 19.571)) 70%, transparent);
   }
 }
+.videoTimeoutAction {
+  margin-top: calc(var(--spacing, 0.25rem) * 2);
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing, 0.25rem) * 1.5);
+  border-radius: var(--radius-lg, 0.5rem);
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  padding-inline: calc(var(--spacing, 0.25rem) * 3);
+  padding-block: calc(var(--spacing, 0.25rem) * 1.5);
+  font-size: var(--text-xs, 0.75rem);
+  color: inherit;
+  cursor: pointer;
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 50%;
+  }
+}
 .emptySelection {
   text-align: center;
   color: var(--color-gray-700, oklch(37.3% 0.034 259.733));

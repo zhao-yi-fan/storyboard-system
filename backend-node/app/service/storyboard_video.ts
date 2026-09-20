@@ -3,7 +3,13 @@
 const Service = require('egg').Service;
 
 const { sanitizeFileName, downloadAndStore, resolveMediaUrl } = require('../lib/media');
-const { generateWanxVideo, generateSeedanceVideo } = require('../lib/ai_clients');
+const {
+  generateWanxVideo,
+  generateSeedanceVideo,
+  isVideoTimeoutError,
+  pollSeedanceVideoTask,
+  pollWanxVideoTask,
+} = require('../lib/ai_clients');
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 import type {
   AudioReferenceSummary,
@@ -329,47 +335,45 @@ class StoryboardVideoService extends Service {
             preview.model,
             preview.duration,
             preview.use_first_frame,
+            {
+              onTaskCreated: async (taskId: string) => {
+                const currentGeneration =
+                  await this.ctx.service.mediaGeneration.findById(generationId);
+                await this.ctx.service.mediaGeneration.update(generationId, {
+                  meta_json: {
+                    ...parseMediaGenerationMeta(currentGeneration?.meta_json),
+                    provider_task_id: taskId,
+                  },
+                });
+              },
+            },
           );
-      const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.mp4`;
-      const stored = await downloadAndStore(
-        this.app,
-        result.videoUrl,
-        'videos',
-        filename,
-        'video/mp4',
-      );
-      await this.ctx.service.storyboard.update(id, {
-        video_url: stored.publicPath,
-        video_preview_url: stored.publicPath,
-        video_status: GENERATION_STATUS.SUCCEEDED,
-        video_error: '',
-        video_duration: result.duration,
-        duration: result.duration,
+      await this.applySucceededVideoGeneration(id, generationId, storyboard, result, {
+        sourceUrl: preview.use_first_frame ? storyboard.thumbnail_url : '',
+        promptMode: preview.prompt_mode,
+        resolution: preview.resolution,
+        audio: preview.audio,
+        useFirstFrame: preview.use_first_frame,
+        firstFrameStatus: preview.source_image_status,
+        referenceImageCount: preview.reference_images?.length || 0,
+        audioReferenceCount: preview.audio_reference_assets?.length || 0,
+        audioReferenceCharacters: (preview.audio_reference_assets || []).map((item) => item.name),
+        audioReferenceTotalDuration: preview.audio_reference_total_duration || 0,
       });
-      await this.ctx.service.mediaGeneration.update(generation.id, {
-        status: GENERATION_STATUS.SUCCEEDED,
-        result_url: stored.publicPath,
-        preview_url: stored.publicPath,
-        source_url: preview.use_first_frame ? storyboard.thumbnail_url : '',
-        error_message: null,
-        meta_json: JSON.stringify({
-          prompt_mode: preview.prompt_mode,
-          resolution: preview.resolution,
-          duration: result.duration,
-          audio: preview.audio,
-          use_first_frame: preview.use_first_frame,
-          first_frame_status: preview.source_image_status,
-          reference_image_count: preview.reference_images?.length || 0,
-          audio_reference_count: preview.audio_reference_assets?.length || 0,
-          audio_reference_characters: (preview.audio_reference_assets || []).map(
-            (item) => item.name,
-          ),
-          audio_reference_total_duration: preview.audio_reference_total_duration || 0,
-          provider_task_id: result.taskId || undefined,
-        }),
-      });
-      await this.ctx.service.mediaGeneration.markCurrent(id, MEDIA_TYPE.VIDEO, generation.id);
     } catch (error) {
+      if (isVideoTimeoutError(error)) {
+        // 超时不等于失败：云端任务可能仍在执行并最终成功。
+        // 落 timeout 态保留续查通道，不清空已有可播放地址。
+        await this.ctx.service.storyboard.update(id, {
+          video_status: GENERATION_STATUS.TIMEOUT,
+          video_error: (error as Error).message,
+        });
+        await this.ctx.service.mediaGeneration.update(generation.id, {
+          status: GENERATION_STATUS.TIMEOUT,
+          error_message: (error as Error).message,
+        });
+        return;
+      }
       await this.ctx.service.storyboard.update(id, {
         video_url: '',
         video_preview_url: '',
@@ -381,6 +385,152 @@ class StoryboardVideoService extends Service {
         error_message: (error as Error).message,
       });
     }
+  }
+
+  /**
+   * 落库一次成功的镜头视频，供初次生成与超时续查共用。
+   * @param {number} id 镜头 id，例如 `146`。
+   * @param {number} generationId 镜头视频生成记录 id。
+   * @param {object} storyboard 镜头对象。
+   * @param {{ videoUrl: string; duration: number; taskId?: string }} result 云端终态结果。
+   * @param {object} context 落库上下文（首帧地址、提示词模式、分辨率等）。
+   * @returns {Promise<void>} 无返回。
+   */
+  async applySucceededVideoGeneration(
+    id: number,
+    generationId: number,
+    storyboard: { thumbnail_url?: string },
+    result: { videoUrl: string; duration: number; taskId?: string },
+    context: {
+      sourceUrl: string;
+      promptMode?: string;
+      resolution?: string;
+      audio?: boolean;
+      useFirstFrame?: boolean;
+      firstFrameStatus?: string;
+      referenceImageCount?: number;
+      audioReferenceCount?: number;
+      audioReferenceCharacters?: string[];
+      audioReferenceTotalDuration?: number;
+    },
+  ) {
+    const filename = `${sanitizeFileName(`storyboard-${id}`)}-${Date.now()}.mp4`;
+    const stored = await downloadAndStore(
+      this.app,
+      result.videoUrl,
+      'videos',
+      filename,
+      'video/mp4',
+    );
+    await this.ctx.service.storyboard.update(id, {
+      video_url: stored.publicPath,
+      video_preview_url: stored.publicPath,
+      video_status: GENERATION_STATUS.SUCCEEDED,
+      video_error: '',
+      video_duration: result.duration,
+      duration: result.duration,
+    });
+    await this.ctx.service.mediaGeneration.update(generationId, {
+      status: GENERATION_STATUS.SUCCEEDED,
+      result_url: stored.publicPath,
+      preview_url: stored.publicPath,
+      source_url: context.sourceUrl,
+      error_message: null,
+      meta_json: JSON.stringify({
+        prompt_mode: context.promptMode,
+        resolution: context.resolution,
+        duration: result.duration,
+        audio: context.audio,
+        use_first_frame: context.useFirstFrame,
+        first_frame_status: context.firstFrameStatus,
+        reference_image_count: context.referenceImageCount || 0,
+        audio_reference_count: context.audioReferenceCount || 0,
+        audio_reference_characters: context.audioReferenceCharacters || [],
+        audio_reference_total_duration: context.audioReferenceTotalDuration || 0,
+        provider_task_id: result.taskId || undefined,
+      }),
+    });
+    await this.ctx.service.mediaGeneration.markCurrent(id, MEDIA_TYPE.VIDEO, generationId);
+  }
+
+  /**
+   * 凭已持久化的云端任务 ID 续查超时任务到终态（超时恢复通道）。
+   * 只接受 timeout 态的记录；generating 表示后台仍在等待，直接返回现状。
+   * @param {number} id 镜头 id，例如 `146`。
+   * @param {number} [generationId] 生成记录 id，不传则取最近一条视频记录。
+   * @returns {Promise<object>} 更新后的镜头对象。
+   */
+  async resumeVideoGeneration(id: number, generationId?: number) {
+    const storyboard = await this.ctx.service.storyboard.findById(id);
+    if (!storyboard) throw new Error('storyboard not found');
+    const generation = generationId
+      ? await this.ctx.service.mediaGeneration.findById(generationId)
+      : (await this.ctx.service.mediaGeneration.listByStoryboardId(id)).find(
+          (item: { media_type?: string }) => item.media_type === MEDIA_TYPE.VIDEO,
+        );
+    if (!generation || generation.media_type !== MEDIA_TYPE.VIDEO) {
+      throw new Error('没有可继续等待的视频任务');
+    }
+    if (generation.status === GENERATION_STATUS.GENERATING) {
+      return { storyboard: await this.ctx.service.storyboard.findById(id), resumed: false };
+    }
+    if (generation.status !== GENERATION_STATUS.TIMEOUT) {
+      throw new Error('该任务不在可继续等待状态');
+    }
+    const meta = parseMediaGenerationMeta(generation.meta_json);
+    const taskId = typeof meta.provider_task_id === 'string' ? meta.provider_task_id : '';
+    if (!taskId) {
+      throw new Error('该任务缺少云端任务 ID，无法继续等待，请重新生成');
+    }
+    await this.ctx.service.storyboard.update(id, {
+      video_status: GENERATION_STATUS.GENERATING,
+      video_error: '',
+    });
+    await this.ctx.service.mediaGeneration.update(generation.id, {
+      status: GENERATION_STATUS.GENERATING,
+      error_message: null,
+    });
+    try {
+      const result = this.ctx.service.storyboardReference.isSeedanceVideoModel(generation.model)
+        ? await pollSeedanceVideoTask(this.app, taskId)
+        : await pollWanxVideoTask(this.app, taskId);
+      await this.applySucceededVideoGeneration(id, generation.id, storyboard, result, {
+        sourceUrl: generation.source_url || '',
+        promptMode: meta.prompt_mode as string | undefined,
+        resolution: meta.resolution as string | undefined,
+        audio: meta.audio as boolean | undefined,
+        useFirstFrame: meta.use_first_frame as boolean | undefined,
+        firstFrameStatus: meta.first_frame_status as string | undefined,
+        referenceImageCount: meta.reference_image_count as number | undefined,
+        audioReferenceCount: meta.audio_reference_count as number | undefined,
+        audioReferenceCharacters: meta.audio_reference_characters as string[] | undefined,
+        audioReferenceTotalDuration: meta.audio_reference_total_duration as number | undefined,
+      });
+    } catch (error) {
+      if (isVideoTimeoutError(error)) {
+        await this.ctx.service.storyboard.update(id, {
+          video_status: GENERATION_STATUS.TIMEOUT,
+          video_error: (error as Error).message,
+        });
+        await this.ctx.service.mediaGeneration.update(generation.id, {
+          status: GENERATION_STATUS.TIMEOUT,
+          error_message: (error as Error).message,
+        });
+        return { storyboard: await this.ctx.service.storyboard.findById(id), resumed: false };
+      }
+      await this.ctx.service.storyboard.update(id, {
+        video_url: '',
+        video_preview_url: '',
+        video_status: GENERATION_STATUS.FAILED,
+        video_error: (error as Error).message,
+      });
+      await this.ctx.service.mediaGeneration.update(generation.id, {
+        status: GENERATION_STATUS.FAILED,
+        error_message: (error as Error).message,
+      });
+      throw error;
+    }
+    return { storyboard: await this.ctx.service.storyboard.findById(id), resumed: true };
   }
 
   async applyMediaGeneration(storyboardId: number, generation: StoryboardMediaGenerationEntity) {

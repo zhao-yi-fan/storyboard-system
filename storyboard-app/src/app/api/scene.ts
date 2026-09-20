@@ -187,6 +187,12 @@ export function generateSceneVideo(id: number, options: StoryboardVideoGeneratio
   );
 }
 
+export function resumeSceneVideo(id: number, generationId?: number) {
+  return apiClient.post<{ scene: Scene; resumed: boolean }>(`/scenes/${id}/resume-video`, {
+    generation_id: generationId,
+  });
+}
+
 export function addSceneCharacter(id: number, characterId: number) {
   return apiClient.post<Scene>(`/scenes/${id}/characters`, { character_id: characterId });
 }

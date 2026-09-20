@@ -8,7 +8,13 @@ const {
   composeVideos,
   resolveMediaUrl,
 } = require('../lib/media');
-const { generateWanxVideo, generateSeedanceVideo } = require('../lib/ai_clients');
+const {
+  generateWanxVideo,
+  generateSeedanceVideo,
+  isVideoTimeoutError,
+  pollSeedanceVideoTask,
+  pollWanxVideoTask,
+} = require('../lib/ai_clients');
 const {
   assertCompositePromptLength,
   buildCompositeVideoPrompt,
@@ -210,45 +216,40 @@ class SceneVideoService extends Service {
             preview.model,
             preview.duration,
             preview.use_first_frame,
+            {
+              onTaskCreated: async (taskId: string) => {
+                const currentGeneration =
+                  await this.ctx.service.sceneMediaGeneration.findById(generationId);
+                await this.ctx.service.sceneMediaGeneration.update(generationId, {
+                  meta_json: {
+                    ...parseMediaGenerationMeta(currentGeneration?.meta_json),
+                    provider_task_id: taskId,
+                  },
+                });
+              },
+            },
           );
-      const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
-      const stored = await downloadAndStore(
-        this.app,
-        result.videoUrl,
-        'scene-videos',
-        filename,
-        'video/mp4',
+      await this.applySucceededVideoGeneration(
+        id,
+        generationId,
+        scene,
+        preview.use_first_frame ? scene.cover_url : '',
+        result,
       );
-      await this.ctx.service.scene.update(id, {
-        video_url: stored.publicPath,
-        video_preview_url: stored.publicPath,
-        video_status: GENERATION_STATUS.SUCCEEDED,
-        video_error: '',
-        video_duration: result.duration,
-        generation_duration: result.duration,
-      });
-      await this.ctx.service.sceneMediaGeneration.update(generationId, {
-        status: GENERATION_STATUS.SUCCEEDED,
-        result_url: stored.publicPath,
-        preview_url: stored.publicPath,
-        source_url: preview.use_first_frame ? scene.cover_url : '',
-        error_message: null,
-        meta_json: {
-          ...parseMediaGenerationMeta(
-            (await this.ctx.service.sceneMediaGeneration.findById(generationId))?.meta_json,
-          ),
-          provider_task_id: result.taskId || undefined,
-        },
-      });
-      const completedGeneration =
-        await this.ctx.service.sceneMediaGeneration.findById(generationId);
-      const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(
-        completedGeneration,
-        stored.localPath,
-      );
-      await this.ctx.service.scene.update(id, { video_poster_url: posterUrl });
-      await this.ctx.service.sceneMediaGeneration.markCurrent(id, MEDIA_TYPE.VIDEO, generationId);
     } catch (error) {
+      if (isVideoTimeoutError(error)) {
+        // 超时不等于失败：云端任务可能仍在执行并最终成功。
+        // 落 timeout 态保留续查通道，不清空已有可播放地址。
+        await this.ctx.service.scene.update(id, {
+          video_status: GENERATION_STATUS.TIMEOUT,
+          video_error: (error as Error).message,
+        });
+        await this.ctx.service.sceneMediaGeneration.update(generationId, {
+          status: GENERATION_STATUS.TIMEOUT,
+          error_message: (error as Error).message,
+        });
+        return;
+      }
       await this.ctx.service.scene.update(id, {
         video_url: '',
         video_preview_url: '',
@@ -262,6 +263,140 @@ class SceneVideoService extends Service {
       });
       throw error;
     }
+  }
+
+  /**
+   * 落库一次成功的场景视频（含下载、海报、置顶），供初次生成与超时续查共用。
+   * @param {number} id 场景 id，例如 `21`。
+   * @param {number} generationId 场景视频生成记录 id。
+   * @param {object} scene 场景对象。
+   * @param {string} sourceUrl 首帧来源地址，文生视频时传空串。
+   * @param {{ videoUrl: string; duration: number; taskId?: string }} result 云端终态结果。
+   * @returns {Promise<void>} 无返回。
+   */
+  async applySucceededVideoGeneration(
+    id: number,
+    generationId: number,
+    scene: { cover_url?: string },
+    sourceUrl: string,
+    result: { videoUrl: string; duration: number; taskId?: string },
+  ) {
+    const filename = `${sanitizeFileName(`scene-${id}`)}-${Date.now()}.mp4`;
+    const stored = await downloadAndStore(
+      this.app,
+      result.videoUrl,
+      'scene-videos',
+      filename,
+      'video/mp4',
+    );
+    await this.ctx.service.scene.update(id, {
+      video_url: stored.publicPath,
+      video_preview_url: stored.publicPath,
+      video_status: GENERATION_STATUS.SUCCEEDED,
+      video_error: '',
+      video_duration: result.duration,
+      generation_duration: result.duration,
+    });
+    await this.ctx.service.sceneMediaGeneration.update(generationId, {
+      status: GENERATION_STATUS.SUCCEEDED,
+      result_url: stored.publicPath,
+      preview_url: stored.publicPath,
+      source_url: sourceUrl,
+      error_message: null,
+      meta_json: {
+        ...parseMediaGenerationMeta(
+          (await this.ctx.service.sceneMediaGeneration.findById(generationId))?.meta_json,
+        ),
+        provider_task_id: result.taskId || undefined,
+      },
+    });
+    const completedGeneration =
+      await this.ctx.service.sceneMediaGeneration.findById(generationId);
+    const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(
+      completedGeneration,
+      stored.localPath,
+    );
+    await this.ctx.service.scene.update(id, { video_poster_url: posterUrl });
+    await this.ctx.service.sceneMediaGeneration.markCurrent(id, MEDIA_TYPE.VIDEO, generationId);
+  }
+
+  /**
+   * 凭已持久化的云端任务 ID 续查超时任务到终态（超时恢复通道）。
+   * 只接受 timeout 态的记录；generating 表示后台仍在等待，直接返回现状。
+   * @param {number} id 场景 id，例如 `21`。
+   * @param {number} [generationId] 生成记录 id，不传则取最近一条视频记录。
+   * @returns {Promise<object>} 更新后的场景对象。
+   * @example
+   * POST /api/scenes/21/resume-video { "generation_id": 88 }
+   * // => { id: 21, video_status: "succeeded", ... }
+   */
+  async resumeVideoGeneration(id: number, generationId?: number) {
+    const scene = await this.ctx.service.scene.findById(id);
+    if (!scene) throw new Error('scene not found');
+    const generation = generationId
+      ? await this.ctx.service.sceneMediaGeneration.findById(generationId)
+      : (await this.ctx.service.sceneMediaGeneration.listBySceneId(id)).find(
+          (item: { media_type?: string }) => item.media_type === MEDIA_TYPE.VIDEO,
+        );
+    if (!generation || generation.media_type !== MEDIA_TYPE.VIDEO) {
+      throw new Error('没有可继续等待的视频任务');
+    }
+    if (generation.status === GENERATION_STATUS.GENERATING) {
+      return { scene: await this.ctx.service.scene.findById(id), resumed: false };
+    }
+    if (generation.status !== GENERATION_STATUS.TIMEOUT) {
+      throw new Error('该任务不在可继续等待状态');
+    }
+    const meta = parseMediaGenerationMeta(generation.meta_json);
+    const taskId = typeof meta.provider_task_id === 'string' ? meta.provider_task_id : '';
+    if (!taskId) {
+      throw new Error('该任务缺少云端任务 ID，无法继续等待，请重新生成');
+    }
+    await this.ctx.service.scene.update(id, {
+      video_status: GENERATION_STATUS.GENERATING,
+      video_error: '',
+    });
+    await this.ctx.service.sceneMediaGeneration.update(generation.id, {
+      status: GENERATION_STATUS.GENERATING,
+      error_message: null,
+    });
+    try {
+      const result = this.ctx.service.storyboardReference.isSeedanceVideoModel(generation.model)
+        ? await pollSeedanceVideoTask(this.app, taskId)
+        : await pollWanxVideoTask(this.app, taskId);
+      await this.applySucceededVideoGeneration(
+        id,
+        generation.id,
+        scene,
+        generation.source_url || '',
+        result,
+      );
+    } catch (error) {
+      if (isVideoTimeoutError(error)) {
+        await this.ctx.service.scene.update(id, {
+          video_status: GENERATION_STATUS.TIMEOUT,
+          video_error: (error as Error).message,
+        });
+        await this.ctx.service.sceneMediaGeneration.update(generation.id, {
+          status: GENERATION_STATUS.TIMEOUT,
+          error_message: (error as Error).message,
+        });
+        return { scene: await this.ctx.service.scene.findById(id), resumed: false };
+      }
+      await this.ctx.service.scene.update(id, {
+        video_url: '',
+        video_preview_url: '',
+        video_poster_url: '',
+        video_status: GENERATION_STATUS.FAILED,
+        video_error: (error as Error).message,
+      });
+      await this.ctx.service.sceneMediaGeneration.update(generation.id, {
+        status: GENERATION_STATUS.FAILED,
+        error_message: (error as Error).message,
+      });
+      throw error;
+    }
+    return { scene: await this.ctx.service.scene.findById(id), resumed: true };
   }
 
   /**

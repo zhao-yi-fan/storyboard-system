@@ -184,6 +184,7 @@ export default function Workspace() {
     stopVideoPolling,
     handleGenerateVideo,
     confirmGenerateVideo,
+    runResumeVideo,
     handleVideoConfirmOpenChange,
   } = useWorkspaceVideoGeneration({
     selectedShot,
@@ -368,6 +369,8 @@ export default function Workspace() {
     videoGenerations.find(
       (item) => item.is_current && item.status === GENERATION_STATUS.SUCCEEDED && item.result_url,
     ) ?? null;
+  const timeoutVideoGeneration =
+    videoGenerations.find((item) => item.status === GENERATION_STATUS.TIMEOUT) ?? null;
   const selectedSceneIndex = selectedScene
     ? scenes.findIndex((scene) => scene.id === selectedScene.id)
     : -1;
@@ -454,6 +457,9 @@ export default function Workspace() {
           selectedShot={selectedShot}
           isEpisodeRailCollapsed={isEpisodeRailCollapsed}
           currentVideoGeneration={currentVideoGeneration}
+          timeoutVideoGeneration={timeoutVideoGeneration}
+          isResumingVideo={selectedShot !== null && selectedShot.id === generatingVideoId}
+          onResumeVideo={(generationId) => void runResumeVideo(generationId)}
           setFrameExtractionGeneration={setFrameExtractionGeneration}
           videoGenerations={videoGenerations}
           activeMediaActionKey={activeMediaActionKey}

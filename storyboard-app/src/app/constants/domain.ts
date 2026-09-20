@@ -5,6 +5,7 @@ export const GENERATION_STATUS = {
   GENERATING: "generating",
   SUCCEEDED: "succeeded",
   FAILED: "failed",
+  TIMEOUT: "timeout",
   GENERATED: "generated",
   CONFIRMED: "confirmed",
 } as const;

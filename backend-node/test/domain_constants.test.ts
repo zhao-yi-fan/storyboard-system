@@ -21,6 +21,7 @@ describe('domain constants', () => {
       GENERATING: 'generating',
       SUCCEEDED: 'succeeded',
       FAILED: 'failed',
+      TIMEOUT: 'timeout',
       GENERATED: 'generated',
       CONFIRMED: 'confirmed',
     });

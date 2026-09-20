@@ -9,6 +9,7 @@ export const GENERATION_STATUS = Object.freeze({
   GENERATING: 'generating',
   SUCCEEDED: 'succeeded',
   FAILED: 'failed',
+  TIMEOUT: 'timeout',
   GENERATED: 'generated',
   CONFIRMED: 'confirmed',
 });

@@ -164,6 +164,28 @@ export function useWorkspaceVideoGeneration({
     await runGenerateVideo();
   };
 
+  const runResumeVideo = async (generationId?: number) => {
+    if (!selectedShot || generatingVideoId === selectedShot.id) {
+      return;
+    }
+
+    setGeneratingVideoId(selectedShot.id);
+    try {
+      const result = await sceneApi.resumeSceneVideo(selectedShot.id, generationId);
+      const nextScene = result.scene;
+      applyClipSceneUpdate(nextScene);
+      await loadMediaGenerations(nextScene.id);
+      if (nextScene.video_status === GENERATION_STATUS.GENERATING) {
+        pollStoryboardVideo(nextScene.id);
+      } else {
+        setGeneratingVideoId(null);
+      }
+    } catch (error) {
+      console.error("Failed to resume storyboard video:", error);
+      setGeneratingVideoId(null);
+    }
+  };
+
   const handleVideoConfirmOpenChange = (open: boolean) => {
     setIsVideoConfirmOpen(open);
     if (!open && !generatingVideoId) {
@@ -198,6 +220,7 @@ export function useWorkspaceVideoGeneration({
     pollStoryboardVideo,
     stopVideoPolling,
     runGenerateVideo,
+    runResumeVideo,
     handleGenerateVideo,
     confirmGenerateVideo,
     handleVideoConfirmOpenChange,

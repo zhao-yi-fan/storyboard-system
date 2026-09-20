@@ -85,6 +85,7 @@ module.exports = (app: {
   );
   router.get('/api/scenes/:id/video-generation-preview', controller.scene.previewVideoGeneration);
   router.post('/api/scenes/:id/generate-video', controller.scene.generateVideo);
+  router.post('/api/scenes/:id/resume-video', controller.scene.resumeVideo);
   router.post('/api/scenes/:id/upload-cover', controller.scene.uploadCover);
   router.post('/api/scenes/:id/characters', controller.scene.addCharacter);
   router.delete('/api/scenes/:id/characters/:characterId', controller.scene.removeCharacter);

@@ -350,6 +350,23 @@ class SceneController extends ApiController {
     );
   }
 
+  /**
+   * 凭已持久化的云端任务 ID 续查超时的场景视频任务到终态。
+   * 只接受 timeout 态的记录；generating 表示后台仍在等待，直接返回现状。
+   * @returns {Promise<void>} 通过统一响应格式返回更新后的场景与是否恢复成功。
+   * @example
+   * POST /api/scenes/21/resume-video { "generation_id": 88 }
+   * // => { code: 200, data: { scene: { id: 21, video_status: "succeeded" }, resumed: true }, message: "" }
+   */
+  async resumeVideo() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    const body = this.ctx.request.body || {};
+    await this.respond(() =>
+      this.ctx.service.sceneVideo.resumeVideoGeneration(id, body.generation_id),
+    );
+  }
+
   async uploadCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');

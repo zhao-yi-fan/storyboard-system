@@ -13,6 +13,9 @@ type WorkspacePreviewStageProps = {
   selectedShot: Storyboard | null;
   isEpisodeRailCollapsed: boolean;
   currentVideoGeneration: StoryboardMediaGeneration | null;
+  timeoutVideoGeneration: StoryboardMediaGeneration | null;
+  isResumingVideo: boolean;
+  onResumeVideo: (generationId: number) => void;
   setFrameExtractionGeneration: (generation: StoryboardMediaGeneration | null) => void;
   videoGenerations: StoryboardMediaGeneration[];
   activeMediaActionKey: string | null;
@@ -24,6 +27,9 @@ export function WorkspacePreviewStage({
   selectedShot,
   isEpisodeRailCollapsed,
   currentVideoGeneration,
+  timeoutVideoGeneration,
+  isResumingVideo,
+  onResumeVideo,
   setFrameExtractionGeneration,
   videoGenerations,
   activeMediaActionKey,
@@ -85,6 +91,25 @@ export function WorkspacePreviewStage({
               <div className={styles.videoError}>
                 <div className={styles.videoErrorTitle}>视频生成失败</div>
                 <div className={styles.videoErrorMessage}>{selectedShot.video_error}</div>
+              </div>
+            ) : null}
+
+            {selectedShot.video_status === GENERATION_STATUS.TIMEOUT ? (
+              <div className={styles.videoError}>
+                <div className={styles.videoErrorTitle}>视频生成超时，任务可能仍在云端执行</div>
+                {selectedShot.video_error ? (
+                  <div className={styles.videoErrorMessage}>{selectedShot.video_error}</div>
+                ) : null}
+                {timeoutVideoGeneration ? (
+                  <button
+                    type="button"
+                    className={styles.videoTimeoutAction}
+                    disabled={isResumingVideo}
+                    onClick={() => onResumeVideo(timeoutVideoGeneration.id)}
+                  >
+                    {isResumingVideo ? "正在继续等待…" : "继续等待任务结果"}
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </div>

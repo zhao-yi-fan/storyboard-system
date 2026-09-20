@@ -3,8 +3,8 @@
 import { END, START, StateGraph, StateSchema } from '@langchain/langgraph';
 import { z } from 'zod';
 
-import type { DbRow } from './entity';
 import { requestDeepSeekText } from './deepseek';
+import type { DbRow } from './entity';
 import { LLM_JSON_PROTOCOL } from './llm_json_protocol';
 
 const SYSTEM_PROMPT = [

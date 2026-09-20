@@ -29,6 +29,32 @@ const {
 const { buildCharacterVoicePromptText } = require('./prompt_library');
 import type { CharacterEntity, LibApp, StoryboardAppConfig } from './entity';
 
+/**
+ * 视频任务等待窗口耗尽时抛出的错误。
+ *
+ * 超时只代表“本次等待没有拿到终态”，不代表云端任务失败：
+ * 任务可能仍在服务端执行并最终成功。调用方必须将其落为可续查的
+ * `timeout` 状态，不得直接记为失败，避免把实际成功的任务误判掉。
+ */
+export class VideoTimeoutError extends Error {
+  readonly code = 'VIDEO_TIMEOUT';
+  readonly taskId?: string;
+  constructor(message: string, taskId?: string) {
+    super(message);
+    this.name = 'VideoTimeoutError';
+    this.taskId = taskId;
+  }
+}
+
+export function isVideoTimeoutError(error: unknown): error is VideoTimeoutError {
+  return (
+    error instanceof VideoTimeoutError ||
+    (typeof error === 'object' &&
+      error !== null &&
+      (error as { code?: unknown }).code === 'VIDEO_TIMEOUT')
+  );
+}
+
 function getConfig(app: LibApp): StoryboardAppConfig {
   return app.config.storyboard || {};
 }
@@ -112,9 +138,13 @@ async function generateWanxVideo(
   model: string,
   duration: number,
   useFirstFrame = AI_VIDEO_DEFAULT.USE_FIRST_FRAME,
+  options: {
+    onTaskCreated?: (taskId: string) => void;
+  } = {},
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.dashScopeApiKey, '镜头视频生成未配置：缺少 DASHSCOPE_API_KEY');
+  const dashScopeApiKey = String(cfg.dashScopeApiKey || '');
   const baseUrl = normalizeBaseUrl(cfg.wanxVideoBaseUrl, DEFAULT_PROVIDER_BASE_URL.DASHSCOPE);
   const timeoutMs = resolveTimeoutMs(
     cfg.wanxVideoRequestTimeoutSeconds,
@@ -172,11 +202,38 @@ async function generateWanxVideo(
   if (!taskId) {
     throw new Error('提交视频生成任务失败: 未返回 task_id');
   }
+  if (typeof options.onTaskCreated === 'function') {
+    try {
+      await options.onTaskCreated(taskId);
+    } catch (error) {
+      app.logger?.error?.(`[Wanx] persist task id failed: ${(error as Error).message}`);
+    }
+  }
 
+  return await pollWanxTaskResult(
+    baseUrl,
+    dashScopeApiKey,
+    taskId,
+    timeoutMs,
+    duration || AI_VIDEO_DEFAULT.DURATION_SECONDS,
+  );
+}
+
+/**
+ * 轮询万相视频任务到终态，供初次生成与超时后续查共用。
+ * 等待窗口耗尽抛 VideoTimeoutError（不断言失败），云端明确失败才抛普通 Error。
+ */
+async function pollWanxTaskResult(
+  baseUrl: string,
+  apiKey: string,
+  taskId: string,
+  timeoutMs: number,
+  fallbackDuration: number,
+) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await wait(AI_POLL_INTERVAL_MS.WANX_VIDEO);
-    const taskData = await getJson(`${baseUrl}/tasks/${taskId}`, cfg.dashScopeApiKey, timeoutMs);
+    const taskData = await getJson(`${baseUrl}/tasks/${taskId}`, apiKey, timeoutMs);
     const status = String(taskData?.output?.task_status || '').toUpperCase();
     if (status === AI_TASK_STATUS.WANX_SUCCEEDED) {
       const videoUrl = taskData?.output?.video_url;
@@ -186,16 +243,44 @@ async function generateWanxVideo(
       const actualDuration = Number(
         taskData?.usage?.output_video_duration ||
           taskData?.usage?.duration ||
-          duration ||
+          fallbackDuration ||
           AI_VIDEO_DEFAULT.DURATION_SECONDS,
       );
-      return { videoUrl, duration: actualDuration };
+      return { taskId, videoUrl, duration: actualDuration };
     }
     if (status === AI_TASK_STATUS.WANX_FAILED || status === AI_TASK_STATUS.WANX_CANCELED) {
       throw new Error(String(taskData?.output?.message || taskData?.message || '视频任务失败'));
     }
   }
-  throw new Error('视频生成任务超时');
+  throw new VideoTimeoutError(
+    '视频生成任务已提交但在等待窗口内未完成，任务可能仍在云端执行，可稍后继续等待任务结果',
+    taskId,
+  );
+}
+
+/**
+ * 凭已持久化的万相 taskId 续查任务终态（超时恢复通道）。
+ * @param {any} app Egg app 实例。
+ * @param {string} taskId 云端任务 ID，例如 `"abc-123"`。
+ * @returns {Promise<{ taskId: string; videoUrl: string; duration: number }>} 终态结果。
+ */
+async function pollWanxVideoTask(app: LibApp, taskId: string) {
+  const cfg = getConfig(app);
+  requireValue(cfg.dashScopeApiKey, '镜头视频生成未配置：缺少 DASHSCOPE_API_KEY');
+  const dashScopeApiKey = String(cfg.dashScopeApiKey || '');
+  const baseUrl = normalizeBaseUrl(cfg.wanxVideoBaseUrl, DEFAULT_PROVIDER_BASE_URL.DASHSCOPE);
+  const timeoutMs = resolveTimeoutMs(
+    cfg.wanxVideoRequestTimeoutSeconds,
+    AI_REQUEST_TIMEOUT.WANX_VIDEO_SECONDS,
+    AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
+  );
+  return await pollWanxTaskResult(
+    baseUrl,
+    dashScopeApiKey,
+    taskId,
+    timeoutMs,
+    AI_VIDEO_DEFAULT.DURATION_SECONDS,
+  );
 }
 
 /**
@@ -298,6 +383,7 @@ async function generateSeedanceVideo(
 ) {
   const cfg = getConfig(app);
   requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
+  const seedanceApiKey = String(cfg.seedanceApiKey || '');
   const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, DEFAULT_PROVIDER_BASE_URL.ARK);
   const timeoutMs = resolveTimeoutMs(
     cfg.seedanceRequestTimeoutSeconds,
@@ -342,22 +428,45 @@ async function generateSeedanceVideo(
     ? Math.max(0, Number(options.pollIntervalMs))
     : AI_POLL_INTERVAL_MS.SEEDANCE_VIDEO;
 
-  while (true) {
+  // 有界等待：窗口耗尽只停轮询、不判失败，任务可能仍在云端执行，
+  // 调用方可凭 taskId 续查。
+  return await pollSeedanceTaskResult(
+    baseUrl,
+    seedanceApiKey,
+    taskId,
+    timeoutMs,
+    pollIntervalMs,
+    duration || AI_VIDEO_DEFAULT.DURATION_SECONDS,
+    app,
+  );
+}
+
+/**
+ * 轮询 Seedance 视频任务到终态，供初次生成与超时后续查共用。
+ * 等待窗口耗尽抛 VideoTimeoutError（不断言失败），云端明确失败才抛普通 Error。
+ */
+async function pollSeedanceTaskResult(
+  baseUrl: string,
+  apiKey: string,
+  taskId: string,
+  timeoutMs: number,
+  pollIntervalMs: number,
+  fallbackDuration: number,
+  app?: LibApp,
+) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     await wait(pollIntervalMs);
     let taskData;
     try {
-      taskData = await getJson(
-        `${baseUrl}/contents/generations/tasks/${taskId}`,
-        cfg.seedanceApiKey,
-        timeoutMs,
-      );
+      taskData = await getJson(`${baseUrl}/contents/generations/tasks/${taskId}`, apiKey, timeoutMs);
     } catch (error) {
       if (
         Number((error as { status?: unknown }).status) >= 400 &&
         Number((error as { status?: unknown }).status) < 500
       )
         throw error;
-      app.logger?.warn?.(
+      app?.logger?.warn?.(
         `[Seedance] task ${taskId} poll failed, retrying: ${(error as Error).message}`,
       );
       continue;
@@ -371,13 +480,44 @@ async function generateSeedanceVideo(
       return {
         taskId,
         videoUrl,
-        duration: Number(duration || AI_VIDEO_DEFAULT.DURATION_SECONDS),
+        duration: Number(fallbackDuration || AI_VIDEO_DEFAULT.DURATION_SECONDS),
       };
     }
     if (AI_TASK_STATUS.FAILED_ALIASES.includes(status)) {
       throw new Error(String(findFirstMessage(taskData) || 'Seedance 视频任务失败'));
     }
   }
+  throw new VideoTimeoutError(
+    'Seedance 视频任务已提交但在等待窗口内未完成，任务可能仍在云端执行，可稍后继续等待任务结果',
+    taskId,
+  );
+}
+
+/**
+ * 凭已持久化的 Seedance taskId 续查任务终态（超时恢复通道）。
+ * @param {any} app Egg app 实例。
+ * @param {string} taskId 云端任务 ID，例如 `"abc-123"`。
+ * @returns {Promise<{ taskId: string; videoUrl: string; duration: number }>} 终态结果。
+ */
+async function pollSeedanceVideoTask(app: LibApp, taskId: string) {
+  const cfg = getConfig(app);
+  requireValue(cfg.seedanceApiKey, '镜头视频生成未配置：缺少 SEEDANCE_API_KEY');
+  const seedanceApiKey = String(cfg.seedanceApiKey || '');
+  const baseUrl = normalizeBaseUrl(cfg.seedanceBaseUrl, DEFAULT_PROVIDER_BASE_URL.ARK);
+  const timeoutMs = resolveTimeoutMs(
+    cfg.seedanceRequestTimeoutSeconds,
+    AI_REQUEST_TIMEOUT.SEEDANCE_SECONDS,
+    AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
+  );
+  return await pollSeedanceTaskResult(
+    baseUrl,
+    seedanceApiKey,
+    taskId,
+    timeoutMs,
+    AI_POLL_INTERVAL_MS.SEEDANCE_VIDEO,
+    AI_VIDEO_DEFAULT.DURATION_SECONDS,
+    app,
+  );
 }
 
 /**
@@ -503,10 +643,14 @@ function buildCharacterVoiceReferenceText(_character: unknown) {
 }
 
 module.exports = {
+  VideoTimeoutError,
+  isVideoTimeoutError,
   generateSeedreamImage,
   SEEDREAM_DESIGN_SHEET_SIZE: AI_IMAGE_SIZE.CHARACTER_DESIGN_SHEET,
   generateWanxVideo,
   generateSeedanceVideo,
+  pollWanxVideoTask,
+  pollSeedanceVideoTask,
   buildSeedanceVideoPayload,
   createCharacterVoicePreview,
   generateCharacterVoiceReference,
