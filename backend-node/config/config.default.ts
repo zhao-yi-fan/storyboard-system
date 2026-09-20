@@ -11,6 +11,7 @@ import { buildSeedanceConfig } from './providers/seedance';
 import { buildSeedreamConfig } from './providers/seedream';
 import { buildWanxConfig } from './providers/wanx';
 import { buildAuthConfig } from './sections/auth';
+import { buildCorsConfig } from './sections/cors';
 import { buildMysqlConfig } from './sections/mysql';
 import { buildServerConfig } from './sections/server';
 import { buildStoryboardBaseConfig } from './sections/storyboard';
@@ -44,7 +45,9 @@ module.exports = (appInfo: { name: string }) => {
 
   config.keys = `${appInfo.name}-migration-key`;
 
-  config.middleware = ['apiCors', 'authSession', 'projectAccess'];
+  config.middleware = ['requestId', 'apiCors', 'authSession', 'projectAccess'];
+  config.requestId = {};
+  config.apiCors = buildCorsConfig();
   config.authSession = {
     publicPaths: authConfig.publicPaths,
     sessionCookieName: authConfig.sessionCookieName,

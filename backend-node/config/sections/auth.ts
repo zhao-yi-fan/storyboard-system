@@ -17,6 +17,6 @@ export function buildAuthConfig() {
     ),
     sessionCookieName: getStringEnv('AUTH_SESSION_COOKIE_NAME', DEFAULT_AUTH.COOKIE_NAME),
     sessionTtlDays: getNumberEnv('AUTH_SESSION_TTL_DAYS', DEFAULT_AUTH.SESSION_TTL_DAYS),
-    publicPaths: ['/api/health', '/api/auth/login', '/api/auth/logout'],
+    publicPaths: ['/api/health', '/api/health/deep', '/api/auth/login', '/api/auth/logout'],
   };
 }

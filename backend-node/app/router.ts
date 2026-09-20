@@ -15,6 +15,7 @@ module.exports = (app: {
 
   router.get('/_media/stream/:objectKey(.*)', controller.mediaRedirect.stream);
   router.get('/api/health', controller.health.index);
+  router.get('/api/health/deep', controller.health.deep);
   router.post('/api/auth/login', controller.auth.login);
   router.post('/api/auth/logout', controller.auth.logout);
   router.get('/api/auth/me', controller.auth.me);
