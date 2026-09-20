@@ -346,7 +346,10 @@ class SceneService extends Service {
        VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE line = VALUES(line)`,
       [sceneId, characterId, String(scene.prompt || '')],
     );
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(scene.project_id, scene.chapter_id);
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
+      scene.project_id,
+      scene.chapter_id,
+    );
     return await this.findById(sceneId);
   }
 
@@ -357,7 +360,10 @@ class SceneService extends Service {
       'DELETE FROM scene_characters WHERE scene_id = ? AND character_id = ?',
       [sceneId, characterId],
     );
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(scene.project_id, scene.chapter_id);
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
+      scene.project_id,
+      scene.chapter_id,
+    );
     return await this.findById(sceneId);
   }
 
@@ -374,7 +380,10 @@ class SceneService extends Service {
        ON DUPLICATE KEY UPDATE usage_type = VALUES(usage_type)`,
       [sceneId, assetId],
     );
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(scene.project_id, scene.chapter_id);
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
+      scene.project_id,
+      scene.chapter_id,
+    );
     return await this.findById(sceneId);
   }
 
@@ -385,7 +394,10 @@ class SceneService extends Service {
       sceneId,
       assetId,
     ]);
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(scene.project_id, scene.chapter_id);
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
+      scene.project_id,
+      scene.chapter_id,
+    );
     return await this.findById(sceneId);
   }
 }

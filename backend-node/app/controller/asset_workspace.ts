@@ -12,7 +12,7 @@ class AssetWorkspaceController extends ApiController {
     const projectId = Number(this.ctx.params.id);
     const chapterId = Number(this.ctx.query.chapter_id || 0) || null;
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.listRequirements(projectId, chapterId),
+      this.ctx.service.assetRequirement.listRequirements(projectId, chapterId),
     );
   }
 
@@ -21,13 +21,13 @@ class AssetWorkspaceController extends ApiController {
     const chapterId = Number(this.ctx.request.body?.chapter_id || 0) || null;
     const requirementId = Number(this.ctx.request.body?.requirement_id || 0) || null;
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.generateRequirements(projectId, chapterId, requirementId),
+      this.ctx.service.assetRequirement.generateRequirements(projectId, chapterId, requirementId),
     );
   }
 
   async confirmRequirement() {
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.confirmRequirement(Number(this.ctx.params.id)),
+      this.ctx.service.assetRequirement.confirmRequirement(Number(this.ctx.params.id)),
     );
   }
 
@@ -81,13 +81,13 @@ class AssetWorkspaceController extends ApiController {
 
   async characterVoiceVersions() {
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.listVoiceVersions(Number(this.ctx.params.id)),
+      this.ctx.service.assetVersioning.listVoiceVersions(Number(this.ctx.params.id)),
     );
   }
 
   async setCharacterVoiceVersion() {
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.setCurrentVoiceVersion(
+      this.ctx.service.assetVersioning.setCurrentVoiceVersion(
         Number(this.ctx.params.id),
         Number(this.ctx.params.versionId),
         this.userId(),
@@ -97,13 +97,13 @@ class AssetWorkspaceController extends ApiController {
 
   async versions(entityType: string) {
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.listVersions(entityType, Number(this.ctx.params.id)),
+      this.ctx.service.assetVersioning.listVersions(entityType, Number(this.ctx.params.id)),
     );
   }
 
   async setVersion(entityType: string) {
     await this.respond(() =>
-      this.ctx.service.assetWorkspace.setCurrentVersion(
+      this.ctx.service.assetVersioning.setCurrentVersion(
         entityType,
         Number(this.ctx.params.id),
         Number(this.ctx.params.versionId),

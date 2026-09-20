@@ -6,13 +6,11 @@ import * as AiClientsNamespace from '../app/lib/ai_clients';
 import { GENERATION_STATUS } from '../app/lib/domain_constants';
 import * as ScriptImportNamespace from '../app/lib/script_import';
 import * as AssetServiceNamespace from '../app/service/asset';
-import * as AssetWorkspaceServiceNamespace from '../app/service/asset_workspace';
+const AssetRequirementService = require('../app/service/asset_requirement');
 
 const aiClients: any = (AiClientsNamespace as any).default || AiClientsNamespace;
 const scriptImport: any = (ScriptImportNamespace as any).default || ScriptImportNamespace;
 const AssetService: any = (AssetServiceNamespace as any).default || AssetServiceNamespace;
-const AssetWorkspaceService: any =
-  (AssetWorkspaceServiceNamespace as any).default || AssetWorkspaceServiceNamespace;
 
 describe('test/asset_workspace_foundation.test.ts', () => {
   it('exposes Seedream as the only image generation client', () => {
@@ -72,7 +70,7 @@ describe('test/asset_workspace_foundation.test.ts', () => {
   });
 
   it('keeps a failed regeneration visible when the previous media still exists', () => {
-    const service = Object.create(AssetWorkspaceService.prototype);
+    const service = Object.create(AssetRequirementService.prototype);
     assert.equal(
       service.deriveRequirementStatus(GENERATION_STATUS.FAILED, true),
       GENERATION_STATUS.FAILED,

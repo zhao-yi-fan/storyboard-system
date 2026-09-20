@@ -434,7 +434,7 @@ class AssetService extends Service {
       );
       const updated = await this.findById(id);
       if (!updated) throw new Error('资产不存在');
-      await this.ctx.service.assetWorkspace.recordVersion(
+      await this.ctx.service.assetVersioning.recordVersion(
         ENTITY_TYPE.ASSET,
         id,
         updated.project_id,

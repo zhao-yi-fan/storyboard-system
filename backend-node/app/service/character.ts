@@ -419,7 +419,7 @@ class CharacterService extends Service {
         filename,
         'image/png',
       );
-      await this.ctx.service.assetWorkspace.recordCharacterDesignSheetVersion(
+      await this.ctx.service.assetVersioning.recordCharacterDesignSheetVersion(
         character,
         stored.publicPath,
         prompt,
@@ -512,7 +512,7 @@ class CharacterService extends Service {
         ],
       );
       const updated = await this.findById(id);
-      await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
+      await this.ctx.service.assetVersioning.recordVoiceVersion(updated, {
         userPrompt: String(voicePrompt || '').trim(),
         effectivePrompt: result.voicePrompt,
         sourceType: ASSET_SOURCE_TYPE.GENERATED,
@@ -570,7 +570,7 @@ class CharacterService extends Service {
       );
       const updated = await this.findById(id);
       if (!updated) throw new Error('角色不存在');
-      await this.ctx.service.assetWorkspace.recordVoiceVersion(updated, {
+      await this.ctx.service.assetVersioning.recordVoiceVersion(updated, {
         userPrompt: updated.voice_prompt || '',
         effectivePrompt: '',
         sourceType: ASSET_SOURCE_TYPE.MANUAL_UPLOAD,

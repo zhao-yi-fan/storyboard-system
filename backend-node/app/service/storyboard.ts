@@ -270,7 +270,7 @@ class StoryboardService extends Service {
        ON DUPLICATE KEY UPDATE line = VALUES(line)`,
       [storyboardId, characterId, String(storyboard.dialogue || storyboard.content || '').trim()],
     );
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
       storyboard.project_id,
       storyboard.chapter_id,
     );
@@ -286,7 +286,7 @@ class StoryboardService extends Service {
       'DELETE FROM storyboard_characters WHERE storyboard_id = ? AND character_id = ?',
       [storyboardId, characterId],
     );
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
       storyboard.project_id,
       storyboard.chapter_id,
     );
@@ -314,7 +314,7 @@ class StoryboardService extends Service {
        VALUES (?, ?, ?)`,
       [storyboardId, assetId, StoryboardService.REFERENCE_ASSET_USAGE],
     );
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
       storyboard.project_id,
       storyboard.chapter_id,
     );
@@ -330,7 +330,7 @@ class StoryboardService extends Service {
       'DELETE FROM storyboard_asset_usages WHERE storyboard_id = ? AND asset_id = ?',
       [storyboardId, assetId],
     );
-    await this.ctx.service.assetWorkspace.syncAssetRequirements(
+    await this.ctx.service.assetRequirement.syncAssetRequirements(
       storyboard.project_id,
       storyboard.chapter_id,
     );

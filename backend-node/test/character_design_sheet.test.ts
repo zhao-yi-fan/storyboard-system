@@ -4,13 +4,13 @@ import { describe, it } from 'mocha';
 
 import { ENTITY_TYPE, GENERATION_STATUS } from '../app/lib/domain_constants';
 import { buildCharacterDesignPrompt } from '../app/lib/prompt_library';
-import * as AssetWorkspaceServiceNamespace from '../app/service/asset_workspace';
+import * as AssetVersioningServiceNamespace from '../app/service/asset_versioning';
 import * as CharacterServiceNamespace from '../app/service/character';
 
 const CharacterService: any =
   (CharacterServiceNamespace as any).default || CharacterServiceNamespace;
-const AssetWorkspaceService: any =
-  (AssetWorkspaceServiceNamespace as any).default || AssetWorkspaceServiceNamespace;
+const AssetVersioningService: any =
+  (AssetVersioningServiceNamespace as any).default || AssetVersioningServiceNamespace;
 
 describe('test/character_design_sheet.test.ts', () => {
   it('uses a fixed horizontal design-sheet layout prompt', () => {
@@ -100,7 +100,7 @@ describe('test/character_design_sheet.test.ts', () => {
         calls.push({ kind: 'release' });
       },
     };
-    const service = Object.create(AssetWorkspaceService.prototype);
+    const service = Object.create(AssetVersioningService.prototype);
     service.app = {
       mysqlPool: {
         async query() {
@@ -190,7 +190,7 @@ describe('test/character_design_sheet.test.ts', () => {
       async rollback() {},
       release() {},
     };
-    const service = Object.create(AssetWorkspaceService.prototype);
+    const service = Object.create(AssetVersioningService.prototype);
     service.app = {
       mysqlPool: {
         async query(sql: string) {
