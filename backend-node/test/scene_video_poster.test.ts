@@ -5,7 +5,7 @@ import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
 const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = cjsRequire('../app/lib/domain_constants');
-const SceneService = cjsRequire('../app/service/scene');
+const SceneMediaLibraryService = cjsRequire('../app/service/scene_media_library');
 const SceneMediaGenerationService = cjsRequire('../app/service/scene_media_generation');
 const SceneVideoPosterService = cjsRequire('../app/service/scene_video_poster');
 
@@ -62,14 +62,16 @@ describe('test/scene_video_poster.test.ts', () => {
           sceneVideoPoster: {
             ensureBestEffort: async () => '/generated/scene-video-posters/current.webp',
           },
+          scene: {
+            update: async (_sceneId: number, payload: Record<string, unknown>) => {
+              updatePayload = payload;
+              return payload;
+            },
+          },
         },
       },
-      update: async (_sceneId: number, payload: Record<string, unknown>) => {
-        updatePayload = payload;
-        return payload;
-      },
     };
-    await SceneService.prototype.applyMediaGeneration.call(context, 21, {
+    await SceneMediaLibraryService.prototype.apply.call(context, 21, {
       id: 89,
       scene_id: 21,
       media_type: MEDIA_TYPE.VIDEO,

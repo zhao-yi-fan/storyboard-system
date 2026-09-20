@@ -2,14 +2,15 @@ import assert from 'node:assert/strict';
 
 import { REFERENCE_TYPE } from '../app/lib/domain_constants';
 import type { ReferenceMapping } from '../app/lib/entity';
-import * as SceneServiceNamespace from '../app/service/scene';
+import * as SceneReferenceServiceNamespace from '../app/service/scene_reference';
 
-const SceneService: any =
-  (SceneServiceNamespace as { default?: { prototype: object } }).default || SceneServiceNamespace;
+const SceneReferenceService: any =
+  (SceneReferenceServiceNamespace as { default?: { prototype: object } }).default ||
+  SceneReferenceServiceNamespace;
 
 describe('scene generation reference mapping', () => {
   it('keeps reference order and describes mention bindings in the final prompt', () => {
-    const service = Object.create(SceneService.prototype);
+    const service = Object.create(SceneReferenceService.prototype);
     const state = service.buildGenerationReferenceState(
       {
         prompt: '镜号：1 | @女神 站在 @神殿 中。',
@@ -51,7 +52,7 @@ describe('scene generation reference mapping', () => {
   });
 
   it('reports bound images missing from the prompt and mentioned assets missing a binding', () => {
-    const service = Object.create(SceneService.prototype);
+    const service = Object.create(SceneReferenceService.prototype);
     const state = service.buildGenerationReferenceState(
       {
         prompt: '镜号：1 | @未绑定角色 出场。',

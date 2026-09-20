@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
-const SceneService = cjsRequire('../app/service/scene');
+const SceneReferenceService = cjsRequire('../app/service/scene_reference');
 const SceneVideoFrameService = cjsRequire('../app/service/scene_video_frame');
 
 describe('test/scene_video_frame.test.ts', () => {
@@ -17,7 +17,7 @@ describe('test/scene_video_frame.test.ts', () => {
   });
 
   it('describes extracted frames as visual references with source traceability', () => {
-    const references = SceneService.prototype.buildVideoFrameReferences([
+    const references = SceneReferenceService.prototype.buildVideoFrameReferences([
       {
         id: 3,
         source_scene_id: 21,

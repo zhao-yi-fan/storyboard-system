@@ -120,14 +120,14 @@ class SceneController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.scene.previewCoverGeneration(id, this.ctx.query.model),
+      this.ctx.service.sceneCover.previewCoverGeneration(id, this.ctx.query.model),
     );
   }
 
   async generationReferences() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    await this.respond(() => this.ctx.service.scene.generationReferences(id));
+    await this.respond(() => this.ctx.service.sceneReference.generationReferences(id));
   }
 
   /**
@@ -141,7 +141,7 @@ class SceneController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(async () => {
-      const scene = await this.ctx.service.scene.generateCover(
+      const scene = await this.ctx.service.sceneCover.generateCover(
         id,
         (this.ctx.request.body || {}).model,
         Boolean((this.ctx.request.body || {}).use_text_only),
@@ -165,7 +165,7 @@ class SceneController extends ApiController {
   async generateStoryboardCovers() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    await this.respond(() => this.ctx.service.scene.generateStoryboardCovers(id));
+    await this.respond(() => this.ctx.service.sceneCover.generateStoryboardCovers(id));
   }
 
   /**
@@ -208,7 +208,7 @@ class SceneController extends ApiController {
       !Object.prototype.hasOwnProperty.call(this.ctx.request.body || {}, 'regenerate') ||
       Boolean((this.ctx.request.body || {}).regenerate);
     await this.respond(async () => {
-      const scene = await this.ctx.service.scene.composeVideo(id, regenerate);
+      const scene = await this.ctx.service.sceneVideo.composeVideo(id, regenerate);
       return {
         scene_id: scene.id,
         video_url: scene.video_url,
@@ -224,7 +224,7 @@ class SceneController extends ApiController {
   async mediaGenerations() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
-    await this.respond(() => this.ctx.service.scene.listMediaGenerations(id));
+    await this.respond(() => this.ctx.service.sceneMediaLibrary.list(id));
   }
 
   async setMediaGenerationCurrent() {
@@ -233,7 +233,7 @@ class SceneController extends ApiController {
     if (!id || !Number.isInteger(generationId) || generationId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    await this.respond(() => this.ctx.service.scene.setMediaGenerationCurrent(id, generationId));
+    await this.respond(() => this.ctx.service.sceneMediaLibrary.setCurrent(id, generationId));
   }
 
   async deleteMediaGeneration() {
@@ -242,7 +242,7 @@ class SceneController extends ApiController {
     if (!id || !Number.isInteger(generationId) || generationId <= 0) {
       return response.error(this.ctx, 'invalid id');
     }
-    await this.respond(() => this.ctx.service.scene.deleteMediaGeneration(id, generationId));
+    await this.respond(() => this.ctx.service.sceneMediaLibrary.remove(id, generationId));
   }
 
   async videoFrames() {
@@ -321,7 +321,7 @@ class SceneController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.scene.previewVideoGeneration(
+      this.ctx.service.sceneVideo.previewVideoGeneration(
         id,
         this.ctx.query.model,
         this.ctx.query.duration,
@@ -338,7 +338,7 @@ class SceneController extends ApiController {
     if (!id) return response.error(this.ctx, 'invalid id');
     const body = this.ctx.request.body || {};
     await this.respond(() =>
-      this.ctx.service.scene.generateVideo(
+      this.ctx.service.sceneVideo.generateVideo(
         id,
         body.model,
         body.duration,
@@ -354,7 +354,7 @@ class SceneController extends ApiController {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');
     await this.respond(() =>
-      this.ctx.service.scene.uploadCover(id, (this.ctx.request.body || {}).cover_url),
+      this.ctx.service.sceneMediaLibrary.uploadCover(id, (this.ctx.request.body || {}).cover_url),
     );
   }
 

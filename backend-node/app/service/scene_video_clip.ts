@@ -80,7 +80,7 @@ class SceneVideoClipService extends Service {
     }
     return {
       scene: await this.ctx.service.scene.findById(sceneId),
-      media_generations: await this.ctx.service.scene.listMediaGenerations(sceneId),
+      media_generations: await this.ctx.service.sceneMediaLibrary.list(sceneId),
     };
   }
 }
