@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-import { clearAuthSession } from "../lib/auth";
+import { buildLoginUrl, clearAuthSession } from "../lib/auth";
 import type { ApiResponse } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
@@ -41,7 +41,7 @@ function redirectToLogin() {
   clearAuthSession();
   toast.dismiss();
   const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  window.location.replace(`/login?from=${encodeURIComponent(currentPath)}`);
+  window.location.replace(buildLoginUrl(currentPath));
 }
 
 async function parseApiResponse<T>(response: Response): Promise<ApiResponse<T>> {

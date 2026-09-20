@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import loginBgVideo from "../../../imports/login_bg_video.mp4";
 import { authApi } from "../../api";
-import { saveAuthSession } from "../../lib/auth";
+import { getRedirectTarget, saveAuthSession } from "../../lib/auth";
 import styles from "./Login.module.scss";
 
 export default function Login() {
@@ -22,13 +22,10 @@ export default function Login() {
   const [outerGlow, setOuterGlow] = useState({ x: 0, y: 0, alpha: 0 });
   const cardWrapRef = useRef<HTMLDivElement>(null);
 
-  const redirectTarget = useMemo(() => {
-    const state = location.state as { from?: string } | null;
-    const queryTarget = new URLSearchParams(location.search).get("from") ?? "";
-    const safeQueryTarget =
-      queryTarget.startsWith("/") && !queryTarget.startsWith("//") ? queryTarget : "";
-    return state?.from ?? safeQueryTarget ?? "/projects";
-  }, [location.search, location.state]);
+  const redirectTarget = useMemo(
+    () => getRedirectTarget(location.search),
+    [location.search],
+  );
 
   useEffect(() => {
     const fadePx = 220;

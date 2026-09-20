@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 
 import { authApi } from "../api";
-import { clearAuthSession, getAuthSession, saveAuthSession } from "../lib/auth";
+import { buildLoginUrl, clearAuthSession, getAuthSession, getRedirectTarget, saveAuthSession } from "../lib/auth";
 import styles from "./RouteGuards.module.scss";
 
 const AUTH_STATUS = {
@@ -61,7 +61,7 @@ export function RequireAuthRoute() {
 
   if (status !== AUTH_STATUS.AUTHENTICATED) {
     const redirectTarget = `${location.pathname}${location.search}${location.hash}`;
-    return <Navigate to="/login" replace state={{ from: redirectTarget }} />;
+    return <Navigate to={buildLoginUrl(redirectTarget)} replace />;
   }
 
   return <Outlet />;
@@ -76,15 +76,7 @@ export function GuestOnlyRoute() {
   }
 
   if (status === AUTH_STATUS.AUTHENTICATED) {
-    const redirectTarget =
-      typeof location.state === "object" &&
-      location.state &&
-      "from" in location.state &&
-      typeof location.state.from === "string" &&
-      location.state.from
-        ? location.state.from
-        : "/projects";
-    return <Navigate to={redirectTarget} replace />;
+    return <Navigate to={getRedirectTarget(location.search)} replace />;
   }
 
   return <Outlet />;

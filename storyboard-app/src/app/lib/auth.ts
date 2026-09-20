@@ -42,3 +42,18 @@ export function clearAuthSession() {
   if (!isBrowser()) return;
   window.localStorage.removeItem(AUTH_SESSION_KEY);
 }
+
+/**
+ * 登录回跳目标只走 query `?from=`（location.state 刷新即丢）。
+ * 仅接受本站单 `/` 开头路径，其余一律回 fallback。
+ */
+export function getRedirectTarget(search: string, fallback = "/projects"): string {
+  const target = new URLSearchParams(search).get("from") ?? "";
+  return target.startsWith("/") && !target.startsWith("//") ? target : fallback;
+}
+
+/** 拼登录地址，有回跳目标就带上 `?from=`。 */
+export function buildLoginUrl(from?: string): string {
+  if (!from) return "/login";
+  return `/login?from=${encodeURIComponent(from)}`;
+}
