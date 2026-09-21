@@ -2,6 +2,7 @@
 
 const { ApiController } = require('../lib/api_controller');
 const response = require('../lib/response');
+const { reclaimGeneratedPaths } = require('../lib/media_reclamation');
 const { GENERATION_STATUS } = require('../lib/domain_constants');
 
 class StoryboardController extends ApiController {
@@ -197,6 +198,11 @@ class StoryboardController extends ApiController {
       } else {
         storyboard = await this.ctx.service.storyboard.findById(storyboardId);
       }
+      // 用户主动删除：实体引用已全部落地，回收不再被任何有效行引用的文件。
+      await reclaimGeneratedPaths(this.app, this.app.mysqlPool, [
+        generation.result_url,
+        generation.preview_url,
+      ]);
       return {
         storyboard,
         media_generations: await this.ctx.service.mediaGeneration.listByStoryboardId(storyboardId),

@@ -3,6 +3,7 @@
 const Service = require('egg').Service;
 import type { SceneMediaGenerationEntity } from '../lib/entity';
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
+const { reclaimGeneratedPaths } = require('../lib/media_reclamation');
 const { ASSET_SOURCE_TYPE, GENERATION_STATUS, MEDIA_TYPE } = require('../lib/domain_constants');
 
 class SceneMediaLibraryService extends Service {
@@ -88,6 +89,12 @@ class SceneMediaLibraryService extends Service {
         });
       }
     }
+    // 用户主动删除：实体引用已全部落地，回收不再被任何有效行引用的文件。
+    await reclaimGeneratedPaths(this.app, this.app.mysqlPool, [
+      generation.result_url,
+      generation.preview_url,
+      generation.poster_url,
+    ]);
     return {
       scene: await this.ctx.service.scene.findById(sceneId),
       media_generations: await this.list(sceneId),
