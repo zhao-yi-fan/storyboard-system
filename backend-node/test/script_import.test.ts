@@ -96,6 +96,7 @@ describe('test/script_import.test.ts', () => {
       scene_count: 1,
       storyboard_count: 1,
       character_count: 1,
+      character_names: ['李明'],
     });
     assert.ok(
       calls.some(
@@ -148,5 +149,28 @@ describe('test/script_import.test.ts', () => {
     });
     await assert.rejects(service.parseAndImport(19, 'x', parseScript), /db gone/);
     assert.ok(calls.some((call) => call.sql === 'ROLLBACK'));
+  });
+
+  it('splits overlong text into chunks, wiping once and appending the rest', async () => {
+    const { service, calls, parseScript } = makeService();
+    const longText = `${'甲'.repeat(11990)}\n\n${'乙'.repeat(11990)}`;
+    const result = await service.importScriptChunked(19, longText, parseScript);
+    assert.equal(result.chunk_count, 2);
+    assert.equal(result.chapter_count, 2);
+    assert.equal(result.character_count, 1);
+    const parses = calls.filter((call) => call.sql === 'PARSE');
+    assert.equal(parses.length, 2);
+    const wipes = calls.filter(
+      (call) =>
+        typeof call.sql === 'string' && call.sql.startsWith('UPDATE storyboards SET deleted_at'),
+    );
+    assert.equal(wipes.length, 1);
+    assert.ok(
+      calls.some(
+        (call) =>
+          typeof call.sql === 'string' &&
+          call.sql.startsWith('UPDATE projects SET script_text = CONCAT'),
+      ),
+    );
   });
 });

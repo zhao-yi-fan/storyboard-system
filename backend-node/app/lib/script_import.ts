@@ -48,6 +48,43 @@ function filterNonEmptyStrings(values: unknown[]): string[] {
   return values.map((value) => String(value || '').trim()).filter(Boolean);
 }
 
+/**
+ * 把长文本按段落贪心切成多段，每段不超过 maxChars。
+ * 整段装得下直接返回单段；超长单段落按字硬切。
+ * 分段只影响单次 LLM 调用的输入量，章节结构由模型逐段自动整理后拼接。
+ */
+export function splitScriptIntoChunks(text: string, maxChars: number): string[] {
+  const cleaned = String(text || '').trim();
+  if (!cleaned) return [];
+  const limit = Math.max(1, Math.floor(Number(maxChars) || 0));
+  if (cleaned.length <= limit) return [cleaned];
+  const paragraphs = cleaned.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
+  const chunks: string[] = [];
+  let current = '';
+  const push = (piece: string) => {
+    if (piece) chunks.push(piece);
+  };
+  for (const paragraph of paragraphs) {
+    if (paragraph.length > limit) {
+      push(current);
+      current = '';
+      for (let start = 0; start < paragraph.length; start += limit) {
+        push(paragraph.slice(start, start + limit));
+      }
+      continue;
+    }
+    const candidate = current ? `${current}\n\n${paragraph}` : paragraph;
+    if (candidate.length > limit) {
+      push(current);
+      current = paragraph;
+    } else {
+      current = candidate;
+    }
+  }
+  push(current);
+  return chunks.filter(Boolean);
+}
+
 export function uniqueNonEmpty(values: unknown[]): string[] {
   return [...new Set(filterNonEmptyStrings(values))];
 }

@@ -42,6 +42,7 @@ export function unpinProject(id: number) {
 export function importScript(id: number, scriptText: string, options?: RequestBehaviorOptions) {
   return apiClient.post<{
     project_id: number;
+    chunk_count: number;
     chapter_count: number;
     scene_count: number;
     storyboard_count: number;

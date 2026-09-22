@@ -314,6 +314,64 @@ function formatDurationSeconds(value: number): string {
   return `${duration.toFixed(1)}秒`;
 }
 
+const COMPOSE_TARGET_SPEC = Object.freeze({
+  WIDTH: 1280,
+  HEIGHT: 720,
+  FPS: 24,
+  VIDEO_CODEC: 'h264',
+  AUDIO_CODEC: 'aac',
+  SAMPLE_RATE: 48000,
+});
+
+function parseFrameRate(raw: unknown): number {
+  const text = String(raw || '').trim();
+  if (!text) return 0;
+  const slash = text.indexOf('/');
+  if (slash < 0) {
+    const value = Number(text);
+    return Number.isFinite(value) ? value : 0;
+  }
+  const numerator = Number(text.slice(0, slash));
+  const denominator = Number(text.slice(slash + 1));
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || !denominator) return 0;
+  return numerator / denominator;
+}
+
+/**
+ * 探测视频规格，判断是否可直接参与 concat 而无需转码。
+ * 对标 composeVideos 的转码输出：1280x720、24fps、h264 + aac(48kHz)。
+ * 无音频流的不跳过（走原转码路径，保持与历史行为一致）。
+ */
+async function matchesComposeTargetSpec(localPath: string): Promise<boolean> {
+  try {
+    await ensureFfprobe();
+    const { stdout } = await run('ffprobe', [
+      '-v',
+      'error',
+      '-show_streams',
+      '-of',
+      'json',
+      localPath,
+    ]);
+    const parsed = JSON.parse(String(stdout || '{}'));
+    const streams = Array.isArray(parsed?.streams) ? parsed.streams : [];
+    const video = streams.find((item: { codec_type?: unknown }) => item.codec_type === 'video');
+    const audio = streams.find((item: { codec_type?: unknown }) => item.codec_type === 'audio');
+    if (!video || !audio) return false;
+    return (
+      String(video.codec_name || '').toLowerCase() === COMPOSE_TARGET_SPEC.VIDEO_CODEC &&
+      Number(video.width) === COMPOSE_TARGET_SPEC.WIDTH &&
+      Number(video.height) === COMPOSE_TARGET_SPEC.HEIGHT &&
+      Math.abs(parseFrameRate(video.avg_frame_rate) - COMPOSE_TARGET_SPEC.FPS) < 0.01 &&
+      String(audio.codec_name || '').toLowerCase() === COMPOSE_TARGET_SPEC.AUDIO_CODEC &&
+      Number(audio.sample_rate) === COMPOSE_TARGET_SPEC.SAMPLE_RATE
+    );
+  } catch {
+    // 探测失败一律走转码，不挡合成。
+    return false;
+  }
+}
+
 async function normalizeAudioDuration(
   buffer: Buffer,
   options: Record<string, unknown> = {},
@@ -398,6 +456,11 @@ async function composeVideos(
       const tempInput = path.join(workDir, `input-${String(index + 1).padStart(3, '0')}.mp4`);
       await fsp.copyFile(materialized.localPath, tempInput);
       await materialized.cleanup();
+      // 已是目标规格的自家文件跳过转码，直接参与 concat。
+      if (await matchesComposeTargetSpec(tempInput)) {
+        inputPaths.push(tempInput);
+        continue;
+      }
       const transcoded = path.join(workDir, `transcoded-${String(index + 1).padStart(3, '0')}.mp4`);
       await run('ffmpeg', [
         '-y',
@@ -534,8 +597,10 @@ export {
   createPreviewFromSource,
   downloadAndStore,
   downloadToBuffer,
+  matchesComposeTargetSpec,
   materializeSourceToLocalFile,
   normalizeAudioDuration,
+  parseFrameRate,
   probeDuration,
   resolveMediaUrl,
   sanitizeFileName,

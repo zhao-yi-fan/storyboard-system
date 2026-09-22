@@ -143,7 +143,7 @@ class ProjectController extends ApiController {
       response.error(this.ctx, 'script_text is required');
       return;
     }
-    await this.respond(() => this.ctx.service.scriptImport.parseAndImport(id, script_text));
+    await this.respond(() => this.ctx.service.scriptImport.importScriptChunked(id, script_text));
   }
 
   /**

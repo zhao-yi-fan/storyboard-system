@@ -3,10 +3,11 @@
 const Service = require('egg').Service;
 import type { DbRow } from '../lib/entity';
 const { ASSET_KIND } = require('../lib/domain_constants');
-const { parseScriptWithDeepSeek } = require('../lib/deepseek');
+const { parseScriptWithDeepSeek, DEFAULT_MAX_SCRIPT_CHARS } = require('../lib/deepseek');
 const {
   normalizeLLMStoryboardDocument,
   buildCharacterDescription,
+  splitScriptIntoChunks,
   uniqueNonEmpty,
 } = require('../lib/script_import');
 import type { DeepSeekConfig } from '../lib/deepseek';
@@ -25,6 +26,8 @@ class ScriptImportService extends Service {
    * 使用 DeepSeek 解析整段小说/剧本，并重建项目下的章节、场景、镜头和角色关联。
    * @param {number} projectId 项目 id，例如 `19`。
    * @param {string} scriptText 原始小说或剧本文本，例如 `"李明推开便利店门。"`。
+   * @param {Function} [parseScript] 解析函数，默认 DeepSeek，可注入 fake。
+   * @param {object} [options] 选项：`append` 为 true 时跳过清空阶段，直接追加。
    * @returns {Promise<object>} 导入结果统计，例如 `{ chapter_count: 2, scene_count: 6, storyboard_count: 18 }`。
    * @example
    * await service.parseAndImport(19, "李明推开便利店门。")
@@ -34,6 +37,7 @@ class ScriptImportService extends Service {
     projectId: number,
     scriptText: string,
     parseScript: ParseScriptFn = parseScriptWithDeepSeek,
+    options: { append?: boolean } = {},
   ) {
     const project = await this.ctx.service.project.findById(projectId);
     if (!project) {
@@ -46,10 +50,16 @@ class ScriptImportService extends Service {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
-      await conn.execute(
-        'UPDATE projects SET script_text = ? WHERE id = ? AND deleted_at IS NULL',
-        [cleaned, projectId],
-      );
+      if (options.append) {
+        await conn.execute(
+          "UPDATE projects SET script_text = CONCAT(COALESCE(script_text, ''), ?, ?) WHERE id = ? AND deleted_at IS NULL",
+          ['\n\n', cleaned, projectId],
+        );
+      } else {
+        await conn.execute(
+          'UPDATE projects SET script_text = ? WHERE id = ? AND deleted_at IS NULL',
+          [cleaned, projectId],
+        );
       await conn.execute(
         'UPDATE asset_requirements SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL',
         [projectId],
@@ -87,6 +97,7 @@ class ScriptImportService extends Service {
         'UPDATE chapters SET deleted_at = NOW() WHERE project_id = ? AND deleted_at IS NULL',
         [projectId],
       );
+      }
 
       const [characterRows] = await conn.query(
         'SELECT id, name FROM characters WHERE project_id = ? AND deleted_at IS NULL',
@@ -291,13 +302,58 @@ class ScriptImportService extends Service {
 
       result.character_count = parsedCharacters.size;
       await conn.commit();
-      return result;
+      return { ...result, character_names: [...parsedCharacters] };
     } catch (err) {
       await conn.rollback();
       throw err;
     } finally {
       conn.release();
     }
+  }
+
+  /**
+   * 自动分段导入：超长文本按段落切成多段，首段重建、后续段追加。
+   * 单段与过去行为一致；中途失败已提交的分段保留，重试即整篇重导
+   * （首段清空，幂等）。调用方第一次失败后如需续传，可自行对剩余
+   * 分段调 parseAndImport 追加。
+   * @param {number} projectId 项目 id，例如 `19`。
+   * @param {string} scriptText 原始小说或剧本文本。
+   * @param {Function} [parseScript] 解析函数，默认 DeepSeek，可注入 fake。
+   * @returns {Promise<object>} 合计统计 + 分段数，例如 `{ chunk_count: 3, ... }`。
+   */
+  async importScriptChunked(
+    projectId: number,
+    scriptText: string,
+    parseScript: ParseScriptFn = parseScriptWithDeepSeek,
+  ) {
+    const project = await this.ctx.service.project.findById(projectId);
+    if (!project) {
+      throw new Error('project not found');
+    }
+    const chunks = splitScriptIntoChunks(scriptText, DEFAULT_MAX_SCRIPT_CHARS);
+    if (!chunks.length) {
+      throw new Error('script text is empty');
+    }
+    const total = {
+      project_id: projectId,
+      chunk_count: chunks.length,
+      chapter_count: 0,
+      scene_count: 0,
+      storyboard_count: 0,
+      character_count: 0,
+    };
+    const seenCharacters = new Set<string>();
+    for (let index = 0; index < chunks.length; index += 1) {
+      const result = await this.parseAndImport(projectId, chunks[index], parseScript, {
+        append: index > 0,
+      });
+      total.chapter_count += Number(result.chapter_count) || 0;
+      total.scene_count += Number(result.scene_count) || 0;
+      total.storyboard_count += Number(result.storyboard_count) || 0;
+      for (const name of result.character_names || []) seenCharacters.add(String(name));
+    }
+    total.character_count = seenCharacters.size || total.character_count;
+    return total;
   }
 }
 
