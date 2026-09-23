@@ -397,7 +397,9 @@
   position: relative;
   min-height: 0px;
   flex: 1;
-  overflow: hidden;
+  min-width: 1000px;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: calc(var(--spacing, 0.25rem) * 4);
 }
 .sceneRail,

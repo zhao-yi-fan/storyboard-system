@@ -85,6 +85,22 @@ export default function Workspace() {
   } = useWorkspaceData();
   const [hoveredSceneIndex, setHoveredSceneIndex] = useState<number | null>(null);
   const [isEpisodeRailCollapsed, setIsEpisodeRailCollapsed] = useState(false);
+
+  // 窄屏优先保中间视频区：1120px 以下自动收起左侧栏（只收不展，尊重用户手动展开）。
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+    const query = window.matchMedia("(max-width: 1120px)");
+    const apply = () => {
+      if (query.matches) {
+        setIsEpisodeRailCollapsed(true);
+      }
+    };
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, []);
   const [previewImage, setPreviewImage] = useState<{
     src: string;
     alt: string;
