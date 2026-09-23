@@ -3,7 +3,7 @@
 const Service = require('egg').Service;
 
 const { materializeSourceToLocalFile, probeDuration } = require('../lib/media');
-const { resolveSignedUrl } = require('../lib/generated_asset');
+const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
 import type {
   AssetEntity,
   AudioReferenceItem,
@@ -144,11 +144,8 @@ class StoryboardReferenceService extends Service {
     const missing: string[] = [];
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
       if (this.isAudioAsset(asset)) continue;
-      const url = resolveSignedUrl(
-        this.app,
-        asset.cover_url || asset.file_url,
-        this.app.config.storyboard.publicAppBaseUrl || '',
-      );
+      // 组装层只出同源路径（供前端直接展示）；真正调模型时由 ai_clients 入口统一签名。
+      const url = normalizeGeneratedAssetReference(this.app, asset.cover_url || asset.file_url);
       if (url) {
         references.push({
           asset_id: Number(asset.id),
@@ -168,11 +165,8 @@ class StoryboardReferenceService extends Service {
   async selectReferenceImages(storyboard: ReferenceSubject, scene: SceneEntity) {
     const { references, missing } = await this.selectAssetReferenceImages(storyboard, scene);
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveSignedUrl(
-        this.app,
-        character.design_sheet_url,
-        this.app.config.storyboard.publicAppBaseUrl || '',
-      );
+      // 组装层只出同源路径（供前端直接展示）；真正调模型时由 ai_clients 入口统一签名。
+      const url = normalizeGeneratedAssetReference(this.app, character.design_sheet_url);
       if (!url) {
         missing.push(`character:${character.name}`);
         continue;
@@ -192,11 +186,8 @@ class StoryboardReferenceService extends Service {
     const references: ImageReferenceItem[] = [];
     const missing: string[] = [];
     for (const character of storyboard.characters.slice(0, 2)) {
-      const url = resolveSignedUrl(
-        this.app,
-        character.design_sheet_url,
-        this.app.config.storyboard.publicAppBaseUrl || '',
-      );
+      // 组装层只出同源路径（供前端直接展示）；真正调模型时由 ai_clients 入口统一签名。
+      const url = normalizeGeneratedAssetReference(this.app, character.design_sheet_url);
       if (!url) {
         missing.push(`character:${character.name}`);
         continue;
@@ -289,11 +280,8 @@ class StoryboardReferenceService extends Service {
     const missing: string[] = [];
     const blockingReasons: string[] = [];
     for (const character of Array.isArray(storyboard.characters) ? storyboard.characters : []) {
-      const url = resolveSignedUrl(
-        this.app,
-        character.voice_reference_url,
-        this.app.config.storyboard.publicAppBaseUrl || '',
-      );
+      // 组装层只出同源路径（供前端直接展示）；真正调模型时由 ai_clients 入口统一签名。
+      const url = normalizeGeneratedAssetReference(this.app, character.voice_reference_url);
       if (!url) {
         missing.push(character.name);
         continue;
@@ -311,11 +299,8 @@ class StoryboardReferenceService extends Service {
     }
     for (const asset of Array.isArray(storyboard.assets) ? storyboard.assets : []) {
       if (!this.isAudioAsset(asset)) continue;
-      const url = resolveSignedUrl(
-        this.app,
-        asset.file_url,
-        this.app.config.storyboard.publicAppBaseUrl || '',
-      );
+      // 组装层只出同源路径（供前端直接展示）；真正调模型时由 ai_clients 入口统一签名。
+      const url = normalizeGeneratedAssetReference(this.app, asset.file_url);
       if (!url) {
         missing.push(asset.name);
         continue;

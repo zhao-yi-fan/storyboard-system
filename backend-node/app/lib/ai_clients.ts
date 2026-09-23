@@ -27,7 +27,20 @@ const {
   wait,
 } = require('./ai_client_http');
 const { buildCharacterVoicePromptText } = require('./prompt_library');
+const { resolveSignedUrl } = require('./generated_asset');
 import type { CharacterEntity, LibApp, StoryboardAppConfig } from './entity';
+
+/**
+ * 模型输入地址归一化：同源路径签名为云端可直访地址，
+ * 已签名或外部地址原样通过（幂等，可反复调用）。
+ */
+function signProviderUrl(app: LibApp, raw: unknown): string {
+  return resolveSignedUrl(app, raw, String(getConfig(app).publicAppBaseUrl || ''));
+}
+
+function signProviderUrls(app: LibApp, values: unknown[]): string[] {
+  return values.map((item) => signProviderUrl(app, item)).filter(Boolean);
+}
 
 /**
  * 视频任务等待窗口耗尽时抛出的错误。
@@ -79,6 +92,7 @@ async function generateSeedreamImage(
   const cfg = getConfig(app);
   requireValue(cfg.seedreamImageApiKey, 'Seedream 4.5 未配置：缺少 SEEDREAM_IMAGE_API_KEY');
   const seedreamImageApiKey = String(cfg.seedreamImageApiKey || '');
+  const signedImageUrls = signProviderUrls(app, imageUrls);
   const baseUrl = normalizeBaseUrl(cfg.seedreamImageBaseUrl, DEFAULT_PROVIDER_BASE_URL.ARK);
   const timeoutMs = resolveTimeoutMs(
     cfg.seedreamImageTimeoutSeconds,
@@ -99,7 +113,7 @@ async function generateSeedreamImage(
     response_format: AI_IMAGE_DEFAULT.RESPONSE_FORMAT,
     watermark: AI_IMAGE_DEFAULT.WATERMARK,
   };
-  const refs = imageUrls.filter(Boolean);
+  const refs = signedImageUrls.filter(Boolean);
   if (refs.length === 1) {
     payload.image = refs[0];
   } else if (refs.length > 1) {
@@ -179,10 +193,10 @@ async function generateWanxVideo(
   } else if (selectedModel === DEFAULT_PROVIDER_MODEL.WANX_VIDEO) {
     payload.input = {
       prompt,
-      media: [{ type: WANX_MEDIA_TYPE.FIRST_FRAME, url: imageUrl }],
+      media: [{ type: WANX_MEDIA_TYPE.FIRST_FRAME, url: signProviderUrl(app, imageUrl) }],
     };
   } else {
-    payload.input = { prompt, img_url: imageUrl };
+    payload.input = { prompt, img_url: signProviderUrl(app, imageUrl) };
   }
   const response = await fetch(`${baseUrl}/services/aigc/video-generation/video-synthesis`, {
     method: AI_HTTP.POST_METHOD,
@@ -393,11 +407,11 @@ async function generateSeedanceVideo(
   const payload = buildSeedanceVideoPayload({
     model: String(cfg.seedanceModel || DEFAULT_PROVIDER_MODEL.SEEDANCE).trim(),
     prompt,
-    imageUrl,
+    imageUrl: signProviderUrl(app, imageUrl),
     duration,
     useFirstFrame,
-    referenceImageUrls,
-    referenceAudioUrls,
+    referenceImageUrls: signProviderUrls(app, referenceImageUrls),
+    referenceAudioUrls: signProviderUrls(app, referenceAudioUrls),
     resolution,
     aspectRatio,
     generateAudio,

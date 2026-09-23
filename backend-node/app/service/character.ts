@@ -5,7 +5,6 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
   normalizeGeneratedAssetReference,
-  resolveSignedUrl,
   resolveUrl,
 } = require('../lib/generated_asset');
 const {
@@ -288,11 +287,8 @@ class CharacterService extends Service {
   collectDesignReferenceImages(character: CharacterEntity) {
     const references = [];
     const missing = [];
-    const avatarUrl = resolveSignedUrl(
-      this.app,
-      character.avatar_url,
-      this.app.config.storyboard.publicAppBaseUrl || '',
-    );
+    // 组装层只出同源路径（供前端直接展示）；真正调模型时由 ai_clients 入口统一签名。
+    const avatarUrl = normalizeGeneratedAssetReference(this.app, character.avatar_url);
     if (avatarUrl) {
       references.push({
         type: 'character-reference',
