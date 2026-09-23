@@ -535,13 +535,13 @@ async function createCharacterVoicePreview(
   app: LibApp,
   character: Pick<CharacterEntity, 'description' | 'id' | 'name'>,
   customPrompt: string,
-  _customText: string,
+  customText: string,
 ) {
   const cfg = getConfig(app);
   const voicePrompt = withVoiceDurationInstruction(
     buildCharacterVoicePromptText(character, String(customPrompt || '').trim()).prompt,
   );
-  const previewText = buildCharacterVoiceReferenceText(character);
+  const previewText = buildCharacterVoiceReferenceText(character, customText);
   return {
     designModel: String(
       cfg.dashScopeVoiceDesignModel || DEFAULT_PROVIDER_MODEL.DASHSCOPE_VOICE_DESIGN,
@@ -617,14 +617,19 @@ async function generateCharacterVoiceReference(
 }
 
 function preferredVoiceName(character: Pick<CharacterEntity, 'id' | 'name'>) {
+  // Qwen preferred_name 上限 16 字符：token 预算随 id 位数动态收缩，总长恒不超过上限。
+  const idSuffix = String(character?.id ?? '');
+  const tokenBudget = Math.max(
+    1,
+    Math.min(AI_VOICE_DEFAULT.PREFERRED_NAME_MAX_LENGTH, 16 - 1 - idSuffix.length),
+  );
   const token =
     String(character?.name || AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK)
       .toLowerCase()
       .replace(/[^a-z0-9_]+/g, '_')
       .replace(/^_+|_+$/g, '')
-      .slice(0, AI_VOICE_DEFAULT.PREFERRED_NAME_MAX_LENGTH) ||
-    AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK;
-  return `${token}_${character.id}`;
+      .slice(0, tokenBudget) || AI_VOICE_DEFAULT.PREFERRED_NAME_FALLBACK;
+  return `${token}_${idSuffix}`;
 }
 
 function withVoiceDurationInstruction(prompt: unknown) {
@@ -638,8 +643,12 @@ function withVoiceDurationInstruction(prompt: unknown) {
   return `${text}\n${AI_VOICE_DEFAULT.DURATION_INSTRUCTION}`;
 }
 
-function buildCharacterVoiceReferenceText(_character: unknown) {
-  return AI_VOICE_DEFAULT.REFERENCE_TEXT;
+const VOICE_PREVIEW_TEXT_MAX_LENGTH = 50;
+
+function buildCharacterVoiceReferenceText(_character: unknown, customText?: string) {
+  const custom = String(customText || '').trim();
+  if (!custom) return AI_VOICE_DEFAULT.REFERENCE_TEXT;
+  return custom.slice(0, VOICE_PREVIEW_TEXT_MAX_LENGTH);
 }
 
 module.exports = {

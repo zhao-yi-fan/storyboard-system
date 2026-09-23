@@ -549,10 +549,16 @@ class CharacterService extends Service {
     if (!normalizedUrl) {
       throw new Error('voice_reference_url is required');
     }
-    await this.pool.execute(
-      "UPDATE characters SET voice_reference_status = 'generating', voice_reference_error = NULL WHERE id = ?",
+    // 原子抢占：并发双击只有一笔能开工，输家直接返回现状。
+    const [uploadClaim] = await this.pool.execute(
+      "UPDATE characters SET voice_reference_status = 'generating', voice_reference_error = NULL WHERE id = ? AND voice_reference_status != 'generating'",
       [id],
     );
+    if (!uploadClaim.affectedRows) {
+      const latest = await this.findById(id);
+      if (!latest) throw new Error('character not found');
+      return latest;
+    }
     let materialized;
     try {
       const sourceExtension = path
@@ -575,10 +581,10 @@ class CharacterService extends Service {
       );
       await this.pool.execute(
         `UPDATE characters
-         SET voice_reference_url = ?, voice_reference_duration = ?, voice_name = ?,
+         SET voice_reference_url = ?, voice_reference_duration = ?,
              voice_reference_status = 'succeeded', voice_reference_error = NULL
          WHERE id = ?`,
-        [stored.publicPath, normalized.duration, ASSET_SOURCE_TYPE.MANUAL_UPLOAD, id],
+        [stored.publicPath, normalized.duration, id],
       );
       const updated = await this.findById(id);
       if (!updated) throw new Error('角色不存在');

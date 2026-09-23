@@ -27,19 +27,17 @@ function mockApp() {
 }
 
 describe('test/voice_reference_text.test.ts', () => {
-  it('should always use the fixed short reference text in previews', async () => {
+  it('should honor custom preview text and fall back to the fixed line', async () => {
     const character = { id: 8, name: '林婉', description: '温婉端庄' };
-    for (const customText of [
-      '',
-      '今晚你先走。',
-      '我叫林婉。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。',
-    ]) {
-      const preview = await createCharacterVoicePreview(mockApp(), character, '', customText);
-      assert.equal(preview.previewText, FIXED_REFERENCE_TEXT);
-    }
+    const custom = await createCharacterVoicePreview(mockApp(), character, '', '今晚你先走。');
+    assert.equal(custom.previewText, '今晚你先走。');
+    const fallback = await createCharacterVoicePreview(mockApp(), character, '', '');
+    assert.equal(fallback.previewText, FIXED_REFERENCE_TEXT);
+    const trimmed = await createCharacterVoicePreview(mockApp(), character, '', '甲'.repeat(80));
+    assert.equal(trimmed.previewText, '甲'.repeat(50));
   });
 
-  it('should send the fixed short reference text to DashScope', async () => {
+  it('should send the effective preview text to DashScope', async () => {
     const originalFetch = globalThis.fetch;
     let requestBody: { input?: { preview_text?: unknown } } | null = null;
     const mockFetch = async (_url: string, options: RequestInit) => {
@@ -65,8 +63,14 @@ describe('test/voice_reference_text.test.ts', () => {
         '我叫林婉。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。',
       );
 
-      assert.equal(requestBody?.input?.preview_text, FIXED_REFERENCE_TEXT);
-      assert.equal(result.voiceReferenceText, FIXED_REFERENCE_TEXT);
+      assert.equal(
+        requestBody?.input?.preview_text,
+        '我叫林婉。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。',
+      );
+      assert.equal(
+        result.voiceReferenceText,
+        '我叫林婉。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。',
+      );
     } finally {
       globalThis.fetch = originalFetch;
     }
