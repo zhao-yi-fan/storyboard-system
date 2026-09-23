@@ -1,3 +1,4 @@
+import { PanelLeftOpen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -452,6 +453,17 @@ export default function Workspace() {
       />
 
       <div className={styles.workspaceBody}>
+        {isEpisodeRailCollapsed && (
+          <button
+            type="button"
+            className={styles.railReopenButton}
+            aria-label="展开选集"
+            title="展开选集"
+            onClick={() => setIsEpisodeRailCollapsed(false)}
+          >
+            <PanelLeftOpen className={styles.icon} />
+          </button>
+        )}
         <WorkspaceSceneRail
           loading={loading}
           chapters={chapters}

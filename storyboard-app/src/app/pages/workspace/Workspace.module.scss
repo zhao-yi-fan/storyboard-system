@@ -916,6 +916,33 @@
     padding-left: 324px;
   }
 }
+// 窄屏收起即整块隐藏；手动展开时目录以浮层形式盖在左侧，中间保持吃满宽。
+@media (width <= 1120px) {
+  .sceneRailCollapsed {
+    display: none;
+  }
+  .centerStage,
+  .centerStageCollapsed {
+    padding-left: calc(var(--spacing, 0.25rem) * 4);
+  }
+  .railReopenButton {
+    display: inline-flex;
+  }
+}
+.railReopenButton {
+  position: absolute;
+  top: calc(var(--spacing, 0.25rem) * 4);
+  left: calc(var(--spacing, 0.25rem) * 4);
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: calc(var(--spacing, 0.25rem) * 8);
+  width: calc(var(--spacing, 0.25rem) * 8);
+  border-radius: var(--radius-lg, 0.5rem);
+  background-color: color-mix(in srgb, #000 60%, transparent);
+  color: var(--color-white, #fff);
+}
 .previewStage {
   position: relative;
   display: flex;
