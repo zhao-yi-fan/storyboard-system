@@ -1,9 +1,8 @@
 'use strict';
 
-const fs = require('node:fs/promises');
-const path = require('node:path');
-
 const Controller = require('egg').Controller;
+
+const { resolveGeneratedAssetRoot } = require('../lib/generated_asset');
 
 class HealthController extends Controller {
   /**
@@ -34,10 +33,9 @@ class HealthController extends Controller {
       this.app.logger.error(`[health] database check failed: ${(error as Error).message}`);
     }
     try {
-      const configuredDir = this.app.config.storyboard.generatedAssetDir;
-      const dir = path.isAbsolute(configuredDir)
-        ? configuredDir
-        : path.resolve(this.app.baseDir, configuredDir);
+      // 与业务共用同一根目录解析（兼容 dist 运行），避免探针与实际读写两张皮。
+      const fs = require('node:fs/promises');
+      const dir = await resolveGeneratedAssetRoot(this.app);
       await fs.access(dir, fs.constants.W_OK);
       checks.storage = 'ok';
     } catch (error) {
