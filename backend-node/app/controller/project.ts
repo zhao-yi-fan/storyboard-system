@@ -138,12 +138,43 @@ class ProjectController extends ApiController {
       response.error(this.ctx, 'invalid id');
       return;
     }
-    const { script_text } = this.ctx.request.body || {};
+    const { script_text, resume_from_chunk, text_hash } = this.ctx.request.body || {};
     if (!script_text) {
       response.error(this.ctx, 'script_text is required');
       return;
     }
-    await this.respond(() => this.ctx.service.scriptImport.importScriptChunked(id, script_text));
+    try {
+      const result = await this.ctx.service.scriptImport.importScriptChunked(
+        id,
+        script_text,
+        undefined,
+        { skipChunks: resume_from_chunk, textHash: text_hash },
+      );
+      this.ctx.body = { code: 200, data: result, message: '' };
+    } catch (error) {
+      // 分段失败且有进度：把可续传信息放在 data，调用方可只补剩余分段。
+      const progress = error as {
+        completedChunks?: unknown;
+        totalChunks?: unknown;
+        skippedChunks?: unknown;
+        textHash?: unknown;
+        message?: unknown;
+      };
+      if (typeof progress.completedChunks === 'number') {
+        this.ctx.body = {
+          code: 0,
+          data: {
+            completed_chunks: progress.completedChunks,
+            total_chunks: progress.totalChunks,
+            skipped_chunks: progress.skippedChunks,
+            text_hash: progress.textHash,
+          },
+          message: String(progress.message || '导入失败'),
+        };
+        return;
+      }
+      response.error(this.ctx, error instanceof Error ? error.message : 'unknown error');
+    }
   }
 
   /**

@@ -173,4 +173,71 @@ describe('test/script_import.test.ts', () => {
       ),
     );
   });
+
+  it('carries resumable progress when a later chunk fails', async () => {
+    const { service, calls, parseScript } = makeService();
+    const flakyParse = async (config: unknown, text: string) => {
+      if (String(text).includes('乙')) throw new Error('DeepSeek 解析失败');
+      return parseScript(config, text);
+    };
+    const longText = `${'甲'.repeat(11990)}\n\n${'乙'.repeat(11990)}`;
+    const error = await service
+      .importScriptChunked(19, longText, flakyParse)
+      .then(
+        () => null,
+        (cause: unknown) => cause,
+      );
+    assert.ok(error instanceof Error);
+    const progress = error as Error & {
+      completedChunks?: unknown;
+      totalChunks?: unknown;
+      textHash?: unknown;
+    };
+    assert.equal(progress.completedChunks, 1);
+    assert.equal(progress.totalChunks, 2);
+    assert.match(String(progress.textHash), /^[0-9a-f]{64}$/);
+    assert.equal(
+      calls.filter((call) => call.sql === 'PARSE').length,
+      1,
+    );
+  });
+
+  it('resumes remaining chunks without wiping committed ones', async () => {
+    const { createHash } = await import('node:crypto');
+    const { service, calls, parseScript } = makeService();
+    const longText = `${'甲'.repeat(11990)}\n\n${'乙'.repeat(11990)}`;
+    const textHash = createHash('sha256').update(longText.trim()).digest('hex');
+    const result = await service.importScriptChunked(19, longText, parseScript, {
+      skipChunks: 1,
+      textHash,
+    });
+    assert.equal(result.chunk_count, 2);
+    assert.equal(result.chapter_count, 1);
+    assert.equal(
+      calls.filter((call) => call.sql === 'PARSE').length,
+      1,
+    );
+    assert.ok(
+      !calls.some(
+        (call) =>
+          typeof call.sql === 'string' && call.sql.startsWith('UPDATE storyboards SET deleted_at'),
+      ),
+    );
+  });
+
+  it('rejects resume when the text changed or nothing remains', async () => {
+    const { service, parseScript } = makeService();
+    const longText = `${'甲'.repeat(11990)}\n\n${'乙'.repeat(11990)}`;
+    await assert.rejects(
+      service.importScriptChunked(19, longText, parseScript, {
+        skipChunks: 1,
+        textHash: 'deadbeef',
+      }),
+      /文本已变更/,
+    );
+    await assert.rejects(
+      service.importScriptChunked(19, longText, parseScript, { skipChunks: 5 }),
+      /没有可继续导入的分段/,
+    );
+  });
 });

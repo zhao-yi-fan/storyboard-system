@@ -24,6 +24,7 @@ export type ApiRequestBody =
 
 type ToastHandledError = Error & {
   __toastHandled?: boolean;
+  responseData?: unknown;
 };
 
 let isRedirectingToLogin = false;
@@ -99,6 +100,7 @@ async function request<T = unknown>(url: string, options: RequestOptions = {}): 
       }
       const error = new Error(message) as ToastHandledError;
       error.__toastHandled = !suppressToast;
+      error.responseData = result.data;
       throw error;
     }
   } catch (error) {

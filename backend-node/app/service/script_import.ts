@@ -17,6 +17,12 @@ type ParseScriptFn = (
   scriptText: string,
 ) => Promise<{ cleaned: string; document: Record<string, unknown> }>;
 
+/** 文本指纹：续传时校验文本未被改过，切分才可复用。 */
+function hashScriptText(scriptText: string): string {
+  const { createHash } = require('node:crypto');
+  return createHash('sha256').update(String(scriptText || '').trim()).digest('hex');
+}
+
 class ScriptImportService extends Service {
   get pool() {
     return this.app.mysqlPool;
@@ -319,12 +325,15 @@ class ScriptImportService extends Service {
    * @param {number} projectId 项目 id，例如 `19`。
    * @param {string} scriptText 原始小说或剧本文本。
    * @param {Function} [parseScript] 解析函数，默认 DeepSeek，可注入 fake。
+   * @param {object} [options] 选项：`skipChunks` 跳过前 N 段（续传），
+   * 须配合 `textHash` 校验文本未变更。
    * @returns {Promise<object>} 合计统计 + 分段数，例如 `{ chunk_count: 3, ... }`。
    */
   async importScriptChunked(
     projectId: number,
     scriptText: string,
     parseScript: ParseScriptFn = parseScriptWithDeepSeek,
+    options: { skipChunks?: number; textHash?: string } = {},
   ) {
     const project = await this.ctx.service.project.findById(projectId);
     if (!project) {
@@ -334,23 +343,51 @@ class ScriptImportService extends Service {
     if (!chunks.length) {
       throw new Error('script text is empty');
     }
+    const skipChunks = Math.floor(Number(options.skipChunks) || 0);
+    if (skipChunks < 0 || skipChunks >= chunks.length) {
+      throw new Error('没有可继续导入的分段，请重新完整导入');
+    }
+    if (skipChunks > 0) {
+      const expectedHash = String(options.textHash || '').trim();
+      const actualHash = hashScriptText(scriptText);
+      if (!expectedHash || expectedHash !== actualHash) {
+        throw new Error('文本已变更，请重新完整导入');
+      }
+    }
     const total = {
       project_id: projectId,
       chunk_count: chunks.length,
+      completed_chunks: chunks.length,
+      text_hash: hashScriptText(scriptText),
       chapter_count: 0,
       scene_count: 0,
       storyboard_count: 0,
       character_count: 0,
     };
     const seenCharacters = new Set<string>();
-    for (let index = 0; index < chunks.length; index += 1) {
-      const result = await this.parseAndImport(projectId, chunks[index], parseScript, {
-        append: index > 0,
-      });
-      total.chapter_count += Number(result.chapter_count) || 0;
-      total.scene_count += Number(result.scene_count) || 0;
-      total.storyboard_count += Number(result.storyboard_count) || 0;
-      for (const name of result.character_names || []) seenCharacters.add(String(name));
+    // 续传时历史数据已在库中，全程追加不再清空。
+    const alwaysAppend = skipChunks > 0;
+    for (let index = skipChunks; index < chunks.length; index += 1) {
+      try {
+        const result = await this.parseAndImport(projectId, chunks[index], parseScript, {
+          append: alwaysAppend || index > 0,
+        });
+        total.chapter_count += Number(result.chapter_count) || 0;
+        total.scene_count += Number(result.scene_count) || 0;
+        total.storyboard_count += Number(result.storyboard_count) || 0;
+        for (const name of result.character_names || []) seenCharacters.add(String(name));
+      } catch (error) {
+        // 已提交的分段保留：把进度挂在错误上，调用方可凭此续传剩余分段。
+        const completed = index - skipChunks;
+        const progress = new Error(
+          `${(error as Error).message}（已导入 ${completed}/${chunks.length - skipChunks} 段）`,
+        );
+        (progress as { completedChunks?: number }).completedChunks = completed;
+        (progress as { totalChunks?: number }).totalChunks = chunks.length - skipChunks;
+        (progress as { skippedChunks?: number }).skippedChunks = skipChunks;
+        (progress as { textHash?: string }).textHash = total.text_hash;
+        throw progress;
+      }
     }
     total.character_count = seenCharacters.size || total.character_count;
     return total;

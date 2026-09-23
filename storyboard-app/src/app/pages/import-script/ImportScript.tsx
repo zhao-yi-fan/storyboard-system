@@ -18,6 +18,41 @@ export default function ImportScript() {
   const [loading, setLoading] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [resumeProjectId, setResumeProjectId] = useState<number | null>(null);
+  const [resumeInfo, setResumeInfo] = useState<{
+    completed: number;
+    total: number;
+    skipped: number;
+    hash: string;
+  } | null>(null);
+
+  function readResumeInfo(error: unknown): {
+    completed: number;
+    total: number;
+    skipped: number;
+    hash: string;
+  } | null {
+    const data = (error as { responseData?: unknown }).responseData as {
+      completed_chunks?: unknown;
+      total_chunks?: unknown;
+      skipped_chunks?: unknown;
+      text_hash?: unknown;
+    } | null;
+    if (
+      !data ||
+      typeof data.completed_chunks !== "number" ||
+      typeof data.total_chunks !== "number" ||
+      typeof data.text_hash !== "string"
+    ) {
+      return null;
+    }
+    return {
+      completed: data.completed_chunks,
+      total: data.total_chunks,
+      skipped: typeof data.skipped_chunks === "number" ? data.skipped_chunks : 0,
+      hash: data.text_hash,
+    };
+  }
 
   const exampleScript = `第一章：觉醒
 
@@ -67,6 +102,45 @@ export default function ImportScript() {
     setProjectDescription("一个关于人生选择与自我觉醒的都市剧情短片");
   };
 
+  const handleResumeImport = async () => {
+    if (resumeProjectId === null || !resumeInfo || loading) {
+      return;
+    }
+    setLoading(true);
+    setIsParsing(true);
+    setErrorMessage("");
+    try {
+      await projectApi.importScript(
+        resumeProjectId,
+        scriptText,
+        { suppressToast: true },
+        {
+          resume_from_chunk: resumeInfo.skipped + resumeInfo.completed,
+          text_hash: resumeInfo.hash,
+        },
+      );
+      window.localStorage.setItem("currentProjectId", String(resumeProjectId));
+      setResumeInfo(null);
+      setResumeProjectId(null);
+      void navigate(`/asset-confirmation?project=${resumeProjectId}`);
+    } catch (error) {
+      console.error("Failed to resume import:", error);
+      const resumable = readResumeInfo(error);
+      if (resumable) {
+        setResumeInfo(resumable);
+      } else {
+        setResumeInfo(null);
+        setResumeProjectId(null);
+      }
+      const message = error instanceof Error ? error.message : "继续导入失败";
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setIsParsing(false);
+      setLoading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!projectName.trim() || !scriptText.trim()) {
       const message = "请先填写项目名称并输入剧本内容";
@@ -77,6 +151,8 @@ export default function ImportScript() {
 
     setLoading(true);
     setErrorMessage("");
+    setResumeInfo(null);
+    setResumeProjectId(null);
     let parsingTimer: number | null = null;
     let createdProjectId: number | null = null;
     try {
@@ -104,7 +180,12 @@ export default function ImportScript() {
       void navigate(`/asset-confirmation?project=${targetProjectId}`);
     } catch (error) {
       console.error("Failed to create project:", error);
-      if (createdProjectId) {
+      const resumable = readResumeInfo(error);
+      if (resumable && createdProjectId !== null) {
+        // 分段导入中途失败：保留已入库的分段，提供续传（不删项目）。
+        setResumeProjectId(createdProjectId);
+        setResumeInfo(resumable);
+      } else if (createdProjectId) {
         try {
           await projectApi.deleteProject(createdProjectId);
           window.localStorage.removeItem("currentProjectId");
@@ -171,6 +252,21 @@ export default function ImportScript() {
           <div className={styles.projectInfo}>
             <h2 className={styles.projectInfoTitle}>项目信息</h2>
             {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
+            {resumeInfo && resumeProjectId !== null && (
+              <div className={styles.errorMessage}>
+                已导入 {resumeInfo.skipped + resumeInfo.completed}/{resumeInfo.skipped + resumeInfo.total}{" "}
+                段，剩余分段可继续导入（不再重复计费已完成的分段）。
+                <div>
+                  <Button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void handleResumeImport()}
+                  >
+                    {loading ? "正在继续导入…" : "继续导入剩余分段"}
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className={styles.projectFields}>
               <div>
                 <Label className={styles.label}>项目名称</Label>

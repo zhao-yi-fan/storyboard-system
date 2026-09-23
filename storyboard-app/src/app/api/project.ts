@@ -39,18 +39,40 @@ export function unpinProject(id: number) {
   return apiClient.delete<Project>(`/projects/${id}/pin`);
 }
 
-export function importScript(id: number, scriptText: string, options?: RequestBehaviorOptions) {
-  return apiClient.post<{
-    project_id: number;
-    chunk_count: number;
-    chapter_count: number;
-    scene_count: number;
-    storyboard_count: number;
-    character_count: number;
-  }>(
+export type ScriptImportResume = {
+  resume_from_chunk?: number;
+  text_hash?: string;
+};
+
+export type ScriptImportResult = {
+  project_id: number;
+  chunk_count: number;
+  completed_chunks: number;
+  chapter_count: number;
+  scene_count: number;
+  storyboard_count: number;
+  character_count: number;
+};
+
+export type ScriptImportResumeInfo = {
+  completed_chunks: number;
+  total_chunks: number;
+  skipped_chunks: number;
+  text_hash: string;
+};
+
+export function importScript(
+  id: number,
+  scriptText: string,
+  options?: RequestBehaviorOptions,
+  resume?: ScriptImportResume,
+) {
+  return apiClient.post<ScriptImportResult>(
     `/projects/${id}/import-script`,
     {
       script_text: scriptText,
+      resume_from_chunk: resume?.resume_from_chunk,
+      text_hash: resume?.text_hash,
     },
     options,
   );
