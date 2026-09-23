@@ -8,6 +8,10 @@ const { ensureAuthSchema, ensureBootstrapAuthUser } = require('./app/lib/auth_sc
 const { ensureShotDirectionAnalysisSchema } = require('./app/lib/shot_direction_schema');
 const { ensureAssetWorkspaceSchema } = require('./app/lib/asset_workspace_schema');
 const { ensureSceneGenerationSchema } = require('./app/lib/scene_generation_schema');
+const {
+  ensureSchemaMigrationsTable,
+  runSchemaSteps,
+} = require('./app/lib/schema_migrations');
 
 function isUnitTestEnvironment() {
   return (
@@ -41,11 +45,14 @@ class AppBootHook {
     const pool: SqlExecutor = mysql.createPool(this.app.config.mysql);
     this.app.mysqlPool = pool;
     try {
-      await ensureAuthSchema(pool);
+      await ensureSchemaMigrationsTable(pool);
+      await runSchemaSteps(pool, [
+        { name: 'auth', ensure: ensureAuthSchema },
+        { name: 'asset_workspace', ensure: ensureAssetWorkspaceSchema },
+        { name: 'scene_generation', ensure: ensureSceneGenerationSchema },
+        { name: 'shot_direction', ensure: ensureShotDirectionAnalysisSchema },
+      ]);
       await ensureBootstrapAuthUser(pool, this.app.config.auth || {});
-      await ensureAssetWorkspaceSchema(pool);
-      await ensureSceneGenerationSchema(pool);
-      await ensureShotDirectionAnalysisSchema(pool);
     } catch (error) {
       if (!isUnitTestEnvironment()) {
         throw error;
