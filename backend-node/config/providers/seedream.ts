@@ -14,7 +14,7 @@ export function buildSeedreamConfig() {
     seedreamImageModel: getStringEnv('SEEDREAM_IMAGE_MODEL', DEFAULT_PROVIDER_MODEL.SEEDREAM_IMAGE),
     seedreamImageTimeoutSeconds: getNumberEnv(
       'SEEDREAM_IMAGE_TIMEOUT_SECONDS',
-      DEFAULT_REQUEST_TIMEOUT_SECONDS.STANDARD,
+      DEFAULT_REQUEST_TIMEOUT_SECONDS.SEEDREAM,
     ),
   };
 }

@@ -83,7 +83,7 @@ async function generateSeedreamImage(
   const timeoutMs = resolveTimeoutMs(
     cfg.seedreamImageTimeoutSeconds,
     AI_REQUEST_TIMEOUT.SEEDREAM_SECONDS,
-    AI_REQUEST_TIMEOUT.STANDARD_INVALID_VALUE_MS,
+    AI_REQUEST_TIMEOUT.SEEDREAM_INVALID_VALUE_MS,
   );
   const payload: {
     model: string;

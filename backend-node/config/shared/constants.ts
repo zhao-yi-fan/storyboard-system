@@ -50,4 +50,5 @@ export const DEFAULT_REQUEST_TIMEOUT_SECONDS = Object.freeze({
   STANDARD: 180,
   LONG: 300,
   VOICE: 120,
+  SEEDREAM: 120,
 });
