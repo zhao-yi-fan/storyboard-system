@@ -1,35 +1,36 @@
 # Deploy
 
+生产发布唯一入口是 push to `main`：GitHub Actions（`.github/workflows/deploy.yml`）
+自动 SSH 到 ECS 跑 `scripts/deploy.sh`。**禁止为发版直连 ECS 手动跑脚本**；
+SSH 只用于部署失败后的排障和只读检查。
+
 ## Standard flow
 
-### Local
-
 1. Develop locally in `<repo-root>`
-2. Push to GitHub:
+2. Commit and push to GitHub:
 
 ```bash
 git push origin main
 ```
 
-### ECS
-
-1. SSH into the server as `admin`
+3. Watch the Actions run and verify it is green:
 
 ```bash
-ssh <deploy-user>@<ecs-host>
+gh run watch
 ```
 
-2. Run the single deploy script
+4. Verify production:
 
 ```bash
-cd <deploy-directory>
-./scripts/deploy.sh
+curl -s http://8.152.208.234:8081/api/health/deep
 ```
 
 ## Important rules
 
 - Do not run `git pull` as `root` inside the deployment directory.
 - Git operations on ECS must run as the configured deployment user.
+- Never deploy by SSHing into ECS and running the script by hand; all releases go
+  through Actions so every deploy is logged and reproducible.
 - The deploy script handles:
   - `git fetch` + `git pull --ff-only origin main`
   - frontend build

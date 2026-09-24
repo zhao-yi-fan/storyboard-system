@@ -4,7 +4,7 @@ set -euo pipefail
 
 if [[ "${USER:-}" != "admin" ]]; then
   echo "[deploy] this script must be run as admin" >&2
-  echo "[deploy] usage: ssh <deploy-user>@<ecs-host> && cd <deploy-directory> && ./scripts/deploy.sh" >&2
+  echo "[deploy] releases go through GitHub Actions; see DEPLOY.md (manual runs are for debugging only)" >&2
   exit 1
 fi
 
