@@ -66,6 +66,7 @@ run "typecheck backend-node" bash -lc "cd '$NODE_BACKEND_DIR' && npm run typeche
 run "build backend-node dist" bash -lc "cd '$NODE_BACKEND_DIR' && npm run build"
 
 run "install nginx 8081 site" sudo install -m 0644 "$NGINX_SITE_SOURCE" "$NGINX_SITE_TARGET"
+run "install nginx popreels site (replaces legacy hand-written popreels.conf)" sudo install -m 0644 "$ROOT_DIR/scripts/nginx/popreels.conf" /etc/nginx/conf.d/popreels.conf
 run "remove legacy nginx 8081 site" sudo rm -f /etc/nginx/conf.d/vue-admin.conf
 run "validate nginx configuration" sudo nginx -t
 run "reload nginx" sudo systemctl reload nginx

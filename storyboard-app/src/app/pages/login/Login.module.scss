@@ -481,6 +481,18 @@
     transform: rotate(360deg);
   }
 }
+.beianFooter {
+  margin-top: calc(var(--spacing, 0.25rem) * 4);
+  text-align: center;
+  font-size: var(--text-xs, 0.75rem);
+  a {
+    color: var(--color-gray-500, oklch(55.1% 0.027 264.364));
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or
     ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {

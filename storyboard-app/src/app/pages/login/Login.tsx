@@ -281,6 +281,15 @@ export default function Login() {
                     )}
                   </button>
                 </form>
+                <div className={styles.beianFooter}>
+                  <a
+                    href="https://beian.miit.gov.cn/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    津ICP备2026014429号
+                  </a>
+                </div>
               </div>
             </div>
           </div>
