@@ -22,7 +22,7 @@ gh run watch
 4. Verify production:
 
 ```bash
-curl -s http://8.152.208.234:8081/api/health/deep
+curl -s https://popreels.zhaoyifan.top/api/health/deep
 ```
 
 ## Important rules
