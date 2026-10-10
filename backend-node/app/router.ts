@@ -17,6 +17,10 @@ module.exports = (app: {
   router.post('/api/local-worker/claim', controller.localWorker.claim);
   router.post('/api/local-worker/jobs/:id/heartbeat', controller.localWorker.heartbeat);
   router.get('/api/local-worker/jobs/:id/first-frame', controller.localWorker.firstFrame);
+  router.get(
+    '/api/local-worker/jobs/:id/references/:kind/:index',
+    controller.localWorker.reference,
+  );
   router.post('/api/local-worker/jobs/:id/upload-sign', controller.localWorker.sign);
   router.post('/api/local-worker/jobs/:id/complete', controller.localWorker.complete);
   router.post('/api/local-worker/jobs/:id/fail', controller.localWorker.fail);

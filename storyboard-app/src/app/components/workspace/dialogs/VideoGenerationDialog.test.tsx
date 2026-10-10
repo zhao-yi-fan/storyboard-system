@@ -31,5 +31,5 @@ it("shows local configuration errors even without cloud audio reference limits",
   );
   expect(screen.getByText("本地生成服务尚未配置")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "确认生成" })).toBeDisabled();
-  expect(screen.getByText(/本地 H3 开启后使用一张首帧/)).toBeInTheDocument();
+  expect(screen.getByText(/角色音色参考/)).toBeInTheDocument();
 });

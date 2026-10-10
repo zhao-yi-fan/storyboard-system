@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import test from "node:test";
 
 import { loadConfig } from "./config.mjs";
-import { buildGraph, findSubmission, videoOutput } from "./graph.mjs";
+import { buildGraph, buildReferenceGraph, findSubmission, videoOutput } from "./graph.mjs";
 
 const template = JSON.parse(await fs.readFile(new URL("./h3-api.json", import.meta.url)));
 const input = {
@@ -12,6 +12,23 @@ const input = {
   resolution: "preview",
   aspect_ratio: "9:16",
 };
+
+test("reference workflow binds ordered image and voice files with native audio", async () => {
+  const reference = JSON.parse(await fs.readFile(new URL("./h3-ref2va-api.json", import.meta.url)));
+  const params = { ...input, duration: 15, reference_images: [{}, {}], reference_audios: [{}] };
+  const graph = buildReferenceGraph(reference, params, ["hero.png", "scene.png"], ["voice.wav"]);
+  assert.equal(graph["136"].inputs.length, 362);
+  assert.deepEqual(graph["136"].inputs["ref_audios.ref_audio_0"], ["reference_audio_0", 0]);
+  assert.equal(graph.reference_audio_0.inputs.audio, "voice.wav");
+  assert.equal(graph["124"].inputs.steps, 4);
+  assert.deepEqual(graph["130"].inputs.audio, ["121", 0]);
+  assert.throws(() => buildReferenceGraph(reference, params, [], []), /Missing reference/);
+  assert.throws(
+    () => buildReferenceGraph(reference, { ...params, use_first_frame: true }),
+    /Unsupported/,
+  );
+  assert.equal(reference["136"].inputs["ref_images.ref_image_0"], undefined);
+});
 
 test("supports native audio text and first-frame workflows within duration limits", () => {
   const graph = buildGraph(template, input);

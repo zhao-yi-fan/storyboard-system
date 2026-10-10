@@ -104,7 +104,7 @@ export function VideoGenerationDialog({
                 <p className={styles.settingTitle}>指定首帧控制开场</p>
                 <p className={styles.settingDescription}>
                   {isLocal
-                    ? "本地 H3 开启后使用一张首帧，关闭后使用文字；第一版不支持多图、视频或音频参考。"
+                    ? "开启后使用首帧模式；关闭后可使用多张角色、场景参考图和角色音色参考。音色参考不保证逐字复现台词。"
                     : "Seedance 的首帧模式与参考素材模式互斥。开启后只发送首帧，关闭后发送角色、场景和语音参考素材。"}
                 </p>
               </div>
@@ -164,7 +164,7 @@ export function VideoGenerationDialog({
                 <div className={styles.sectionTitle}>参考图输入</div>
                 <div className={styles.itemCount}>
                   {isLocal
-                    ? "本地 H3 暂不支持这些参考输入，请移除后生成。"
+                    ? "本地 Ref2VA 最多接收 9 张参考图，可搭配角色音色参考。"
                     : "用于生成前确认；Seedance 2.0 会额外传入角色主语音参考"}
                 </div>
               </div>

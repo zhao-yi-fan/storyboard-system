@@ -6,7 +6,7 @@ import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 
 import { H3, loadConfig } from "./config.mjs";
-import { buildGraph, findSubmission, videoOutput } from "./graph.mjs";
+import { buildGraph, buildReferenceGraph, findSubmission, videoOutput } from "./graph.mjs";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -98,6 +98,61 @@ export class Worker {
     return image.subfolder ? `${image.subfolder}/${image.name}` : image.name;
   }
 
+  async referenceFiles(kind) {
+    const references =
+      this.state.input[kind === "image" ? "reference_images" : "reference_audios"] || [];
+    const maximum = kind === "image" ? H3.maxImages : H3.maxAudios;
+    if (references.length > maximum) throw new RejectedTask("Too many reference files");
+    const files = [];
+    for (let index = 0; index < references.length; index++) {
+      const signed = await this.platform(
+        `/jobs/${this.state.id}/references/${kind}/${index}`,
+        undefined,
+        { "X-Task-Token": this.state.token },
+      );
+      const url = new URL(signed.url);
+      if (!["http:", "https:"].includes(url.protocol))
+        throw new RejectedTask("Invalid reference URL");
+      const response = await fetch(url, { signal: AbortSignal.timeout(60000) });
+      if (!response.ok) throw new Error(`Reference HTTP ${response.status}`);
+      const mime = (response.headers.get("content-type") || "").split(";")[0];
+      const types =
+        kind === "image"
+          ? { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }
+          : {
+              "audio/wav": "wav",
+              "audio/x-wav": "wav",
+              "audio/wave": "wav",
+              "audio/vnd.wave": "wav",
+              "audio/mpeg": "mp3",
+              "audio/mp3": "mp3",
+            };
+      const extension = types[mime];
+      if (!extension) throw new RejectedTask("Unsupported reference media type");
+      const chunks = [];
+      let bytes = 0;
+      for await (const chunk of response.body) {
+        bytes += chunk.length;
+        if (bytes > H3.maxMediaBytes) throw new RejectedTask("Reference exceeds 20MB");
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+      const filename = `local-job-${this.state.id}-${kind}-${index}.${extension}`;
+      await fs.mkdir(this.config.directory, { recursive: true });
+      await fs.writeFile(path.join(this.config.directory, filename), buffer);
+      const form = new FormData();
+      form.append("image", new Blob([buffer], { type: mime }), filename);
+      form.append("overwrite", "true");
+      const upload = await this.request(this.config.comfy, "/upload/image", {
+        method: "POST",
+        body: form,
+      });
+      const file = await upload.json();
+      files.push(file.subfolder ? `${file.subfolder}/${file.name}` : file.name);
+    }
+    return files;
+  }
+
   async recoverSubmission() {
     const [history, queue] = await Promise.all([
       this.request(this.config.comfy, "/history").then((r) => r.json()),
@@ -129,11 +184,21 @@ export class Worker {
       await this.save();
     }
     if (!this.state.prompt_id) {
+      const reference = this.state.input.workflow === "ref2va";
       const template = JSON.parse(
-        await fs.readFile(new URL("./h3-api.json", import.meta.url), "utf8"),
+        await fs.readFile(
+          new URL(reference ? "./h3-ref2va-api.json" : "./h3-api.json", import.meta.url),
+          "utf8",
+        ),
       );
-      const firstFrame = await this.firstFrame();
-      const graph = buildGraph(template, this.state.input, firstFrame);
+      const graph = reference
+        ? buildReferenceGraph(
+            template,
+            this.state.input,
+            await this.referenceFiles("image"),
+            await this.referenceFiles("audio"),
+          )
+        : buildGraph(template, this.state.input, await this.firstFrame());
       graph["92"].inputs.filename_prefix = `video/local-job-${this.state.id}`;
       this.state.submission_id = `local-job-${this.state.id}-${this.state.token.slice(0, 16)}`;
       this.state.stage = "submitting";

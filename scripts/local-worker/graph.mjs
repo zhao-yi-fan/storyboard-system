@@ -38,6 +38,40 @@ export function buildGraph(template, input, firstFrame = "") {
   return graph;
 }
 
+export function buildReferenceGraph(template, input, images = [], audios = []) {
+  if (!input.prompt || typeof input.prompt !== "string") throw new Error("Missing prompt");
+  if (!Number.isInteger(input.duration) || input.duration < 4 || input.duration > 15)
+    throw new Error("Invalid duration");
+  const size = H3.resolutions[input.resolution];
+  if (!size || input.aspect_ratio !== "9:16") throw new Error("Unsupported video dimensions");
+  if (input.use_first_frame || images.length > H3.maxImages || audios.length > H3.maxAudios)
+    throw new Error("Unsupported reference inputs");
+  if (
+    images.length !== (input.reference_images || []).length ||
+    audios.length !== (input.reference_audios || []).length
+  )
+    throw new Error("Missing reference files");
+  const graph = structuredClone(template);
+  const h3 = graph["136"].inputs;
+  h3.prompt = input.prompt;
+  h3.width = size[0];
+  h3.height = size[1];
+  h3.length = Math.ceil((input.duration * 24 - 5) / 17) * 17 + 5;
+  graph["124"].inputs.steps = H3.referenceSteps;
+  graph["129"].inputs.noise_seed = randomInt(2 ** 48 - 1);
+  images.forEach((image, index) => {
+    const id = `reference_image_${index}`;
+    graph[id] = { class_type: "LoadImage", inputs: { image } };
+    h3[`ref_images.ref_image_${index}`] = [id, 0];
+  });
+  audios.forEach((audio, index) => {
+    const id = `reference_audio_${index}`;
+    graph[id] = { class_type: "LoadAudio", inputs: { audio } };
+    h3[`ref_audios.ref_audio_${index}`] = [id, 0];
+  });
+  return graph;
+}
+
 export function findSubmission(history, queue, submissionId) {
   for (const [id, record] of Object.entries(history)) {
     if (record.prompt?.[3]?.local_submission_id === submissionId) return id;

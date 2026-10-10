@@ -53,7 +53,27 @@ class LocalVideoJobService extends Service {
         aspect_ratio: preview.aspect_ratio,
         use_first_frame: preview.use_first_frame,
         source_image: source,
+        workflow:
+          !preview.use_first_frame &&
+          (preview.reference_images.length || preview.audio_reference_assets.length)
+            ? 'ref2va'
+            : 'fl2va',
+        reference_images: preview.reference_images.map((item: any) => ({
+          name: item.name,
+          url: normalizeGeneratedAssetReference(this.app, item.url),
+        })),
+        reference_audios: preview.audio_reference_assets.map((item: any) => ({
+          name: item.name,
+          url: normalizeGeneratedAssetReference(this.app, item.url),
+          duration: item.duration,
+        })),
       };
+      if (
+        [...input.reference_images, ...input.reference_audios].some(
+          (item: any) => !item.url || !isGeneratedAssetPath(this.app, item.url),
+        )
+      )
+        throw new Error('参考素材必须是平台已保存的媒体');
       const meta = {
         ...input,
         prompt: undefined,
@@ -213,6 +233,17 @@ class LocalVideoJobService extends Service {
     if (!source || !isGeneratedAssetPath(this.app, source))
       throw new Error('首帧必须是平台已保存的图片');
     return { url: resolveMediaUrl(this.app, source) };
+  }
+
+  async reference(id: number, token: string, kind: string, index: number) {
+    if (!['image', 'audio'].includes(kind) || !Number.isSafeInteger(index) || index < 0)
+      throw new Error('Invalid reference');
+    const task = await this.transaction(async (conn) => this.locked(conn, id, token));
+    const input = parseMediaGenerationMeta(task.input_json);
+    const item = (kind === 'image' ? input.reference_images : input.reference_audios)?.[index];
+    if (!item?.url || !isGeneratedAssetPath(this.app, item.url))
+      throw new Error('Invalid reference');
+    return { url: resolveMediaUrl(this.app, item.url) };
   }
 
   async sign(id: number, token: string) {

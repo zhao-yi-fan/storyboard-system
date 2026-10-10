@@ -294,7 +294,24 @@ class StoryboardReferenceService extends Service {
     }
   }
 
-  async selectVideoAudioReferences(storyboard: ReferenceSubject, hasVisualInput: boolean) {
+  async selectVideoAudioReferences(
+    storyboard: ReferenceSubject,
+    hasVisualInput: boolean,
+    local = false,
+  ) {
+    const limits = local
+      ? {
+          max_count: DEFAULT_LOCAL_WORKER.MAX_REFERENCE_AUDIOS,
+          min_duration: DEFAULT_LOCAL_WORKER.MIN_REFERENCE_AUDIO_SECONDS,
+          max_duration: DEFAULT_LOCAL_WORKER.MAX_REFERENCE_AUDIO_SECONDS,
+          max_total_duration: DEFAULT_LOCAL_WORKER.MAX_REFERENCE_AUDIO_TOTAL_SECONDS,
+        }
+      : {
+          max_count: StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT,
+          min_duration: StoryboardReferenceService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS,
+          max_duration: StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
+          max_total_duration: StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS,
+        };
     const references: AudioReferenceItem[] = [];
     const missing: string[] = [];
     const blockingReasons: string[] = [];
@@ -335,18 +352,16 @@ class StoryboardReferenceService extends Service {
         voice_name: String(asset.type || '音频资产').trim(),
       });
     }
-    if (missing.length) {
+    if (missing.length && !local) {
       blockingReasons.push(`以下角色缺少主语音参考：${missing.join('、')}`);
     }
-    if (references.length > StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT) {
+    if (references.length > limits.max_count) {
       blockingReasons.push(
-        `Seedance 2.0 最多支持 ${StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT} 段参考音频，当前为 ${references.length} 段`,
+        `Seedance 2.0 最多支持 ${limits.max_count} 段参考音频，当前为 ${references.length} 段`,
       );
     }
     const invalidDurationReferences = references.filter(
-      (item) =>
-        item.duration < StoryboardReferenceService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS ||
-        item.duration > StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
+      (item) => item.duration < limits.min_duration || item.duration > limits.max_duration,
     );
     if (invalidDurationReferences.length) {
       blockingReasons.push(
@@ -354,24 +369,25 @@ class StoryboardReferenceService extends Service {
       );
     }
     const totalDuration = references.reduce((sum: number, item) => sum + item.duration, 0);
-    if (totalDuration > StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS) {
+    if (totalDuration > limits.max_total_duration) {
       blockingReasons.push(
         `Seedance 2.0 参考音频总时长不能超过 15 秒，当前为 ${totalDuration.toFixed(1)} 秒`,
       );
     }
-    if (references.length && !hasVisualInput) {
+    if (references.length && !hasVisualInput && !local) {
       blockingReasons.push('Seedance 2.0 传入角色参考音频时必须同时传入首帧或参考图');
     }
     return {
       references,
       missing,
       totalDuration,
-      blockingReasons,
+      blockingReasons: local
+        ? blockingReasons.map((reason) =>
+            reason.replaceAll('Seedance 2.0', '本地 H3').replaceAll('角色主语音', '参考音频'),
+          )
+        : blockingReasons,
       limits: {
-        max_count: StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_COUNT,
-        min_duration: StoryboardReferenceService.SEEDANCE_MIN_REFERENCE_AUDIO_SECONDS,
-        max_duration: StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_SECONDS,
-        max_total_duration: StoryboardReferenceService.SEEDANCE_MAX_REFERENCE_AUDIO_TOTAL_SECONDS,
+        ...limits,
         formats: ['wav', 'mp3'],
       },
     };

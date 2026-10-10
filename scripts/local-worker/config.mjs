@@ -6,6 +6,10 @@ export const H3 = Object.freeze({
   heartbeatMs: 15000,
   resolutions: { preview: [352, 608], "480p": [480, 864], "768p": [768, 1344] },
   steps: 8,
+  referenceSteps: 4,
+  maxImages: 9,
+  maxAudios: 3,
+  maxMediaBytes: 20 * 1024 * 1024,
 });
 
 export function loadConfig(env = process.env) {

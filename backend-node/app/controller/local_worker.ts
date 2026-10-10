@@ -25,6 +25,17 @@ class LocalWorkerController extends ApiController {
       ),
     );
   }
+  async reference() {
+    await this.respond(() =>
+      this.ctx.service.localVideoJob.reference(
+        Number(this.ctx.params.id),
+        this.ctx.get('x-task-token'),
+        String(this.ctx.params.kind),
+        Number(this.ctx.params.index),
+      ),
+    );
+  }
+
   async sign() {
     await this.respond(() =>
       this.ctx.service.localVideoJob.sign(

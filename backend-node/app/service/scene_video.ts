@@ -22,6 +22,7 @@ const {
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
 import type { AssetEntity, SceneVideoPreview } from '../lib/entity';
 const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = require('../lib/domain_constants');
+const { DEFAULT_LOCAL_WORKER } = require('../../config/shared/constants');
 
 class SceneVideoService extends Service {
   async previewVideoGeneration(
@@ -67,23 +68,30 @@ class SceneVideoService extends Service {
     const omittedReferences = useFirstFrame ? boundReferences : [];
     const visualInputCount = useFirstFrame ? 1 : references.length;
     const audioSummary =
-      helper.isSeedanceVideoModel(model) && audio && !useFirstFrame
-        ? await helper.selectVideoAudioReferences(scene, visualInputCount > 0)
+      (helper.isSeedanceVideoModel(model) || model === VIDEO_MODEL.MINIMAX_H3_LOCAL) &&
+      audio &&
+      !useFirstFrame
+        ? await helper.selectVideoAudioReferences(
+            scene,
+            visualInputCount > 0,
+            model === VIDEO_MODEL.MINIMAX_H3_LOCAL,
+          )
         : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
     const blockingReasons = [...audioSummary.blockingReasons];
     if (model === VIDEO_MODEL.MINIMAX_H3_LOCAL) {
       if (
-        references.length ||
-        (scene.video_frame_references || []).length ||
         (scene.assets || []).some(
           (asset: AssetEntity) =>
-            helper.isAudioAsset(asset) ||
             /video|视频/i.test(asset.type || '') ||
             ['mp4', 'mov', 'webm', 'mkv'].includes(helper.getAssetFileExtension(asset)),
         )
       ) {
-        blockingReasons.push('本地 H3 第一版支持文字或一张首帧，请移除多图、视频和音频参考');
+        blockingReasons.push('本地 H3 暂不支持原始视频参考，请先抽帧后绑定图片');
       }
+      if (references.length > DEFAULT_LOCAL_WORKER.MAX_REFERENCE_IMAGES)
+        blockingReasons.push(
+          `本地 H3 最多支持 ${DEFAULT_LOCAL_WORKER.MAX_REFERENCE_IMAGES} 张参考图，当前为 ${references.length} 张`,
+        );
       const cfg = this.app.config.storyboard;
       if (String(cfg.localWorkerKey || '').length < 32 || !cfg.localWorkerOwnerId)
         blockingReasons.push('本地生成服务尚未配置');
@@ -93,7 +101,16 @@ class SceneVideoService extends Service {
         `Seedance 2.0 首帧与参考图合计最多支持 9 张，当前为 ${visualInputCount} 张`,
       );
     }
-    const finalPrompt = buildCompositeVideoPrompt(prompt, { audio, useFirstFrame });
+    let finalPrompt = buildCompositeVideoPrompt(prompt, { audio, useFirstFrame });
+    if (model === VIDEO_MODEL.MINIMAX_H3_LOCAL && !useFirstFrame) {
+      const labels = [
+        ...references.map((item: any, index: number) => `<Picture ${index + 1}>: ${item.name}`),
+        ...audioSummary.references.map(
+          (item: any, index: number) => `<Audio ${index + 1}>: ${item.name} 的音色参考`,
+        ),
+      ];
+      if (labels.length) finalPrompt += `\n参考素材对应关系：\n${labels.join('\n')}`;
+    }
     return {
       prompt_mode: 'composite',
       model,
