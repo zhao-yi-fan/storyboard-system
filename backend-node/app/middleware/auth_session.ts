@@ -27,7 +27,7 @@ module.exports = (options: { publicPaths?: string[]; sessionCookieName?: string 
       return;
     }
 
-    if (publicPaths.includes(ctx.path)) {
+    if (ctx.path.startsWith('/api/local-worker/') || publicPaths.includes(ctx.path)) {
       await next();
       return;
     }

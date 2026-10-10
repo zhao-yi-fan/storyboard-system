@@ -50,7 +50,15 @@ export function WorkspacePreviewStage({
             {selectedShot.video_status === GENERATION_STATUS.GENERATING ? (
               <div className={`storyboard-media-frame ${styles.generatingPreview}`}>
                 <Loader2 className={styles.previewLoadingIcon} />
-                <span className={styles.generatingText}>视频生成中，状态会自动刷新</span>
+                <span className={styles.generatingText}>
+                  {selectedShot.local_video_job?.disconnected
+                    ? "本地电脑连接中断，等待恢复"
+                    : selectedShot.local_video_job?.status === "queued"
+                      ? "等待本地电脑领取任务"
+                      : selectedShot.local_video_job?.status === "uploading"
+                        ? "视频上传中"
+                        : "视频生成中，状态会自动刷新"}
+                </span>
               </div>
             ) : getStoryboardVideoPreviewSrc(selectedShot) ? (
               <div className={`storyboard-media-frame ${styles.videoPreview}`}>
@@ -87,6 +95,18 @@ export function WorkspacePreviewStage({
               </div>
             )}
 
+            {selectedShot.local_video_job &&
+            (selectedShot.local_video_job.disconnected ||
+              selectedShot.video_status === GENERATION_STATUS.FAILED) ? (
+              <button
+                type="button"
+                className={styles.videoTimeoutAction}
+                onClick={() => onResumeVideo(0)}
+                title="重新提交将作废旧任务"
+              >
+                重新提交本地任务
+              </button>
+            ) : null}
             {selectedShot.video_status === GENERATION_STATUS.FAILED && selectedShot.video_error ? (
               <div className={styles.videoError}>
                 <div className={styles.videoErrorTitle}>视频生成失败</div>

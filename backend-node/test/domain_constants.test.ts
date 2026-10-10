@@ -47,6 +47,7 @@ describe('domain constants', () => {
     });
     assert.deepEqual(VIDEO_MODEL, {
       SEEDANCE_2: 'seedance-2.0',
+      MINIMAX_H3_LOCAL: 'minimax-h3-local',
       WAN_2_7_I2V: 'wan2.7-i2v',
     });
     assert.deepEqual(Object.values(VIDEO_RESOLUTION), ['480p', '720p', '1080p']);

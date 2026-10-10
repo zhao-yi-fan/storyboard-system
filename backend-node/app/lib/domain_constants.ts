@@ -1,6 +1,6 @@
 'use strict';
 
-import { DEFAULT_PROVIDER_MODEL } from '../../config/shared/constants';
+import { DEFAULT_LOCAL_WORKER, DEFAULT_PROVIDER_MODEL } from '../../config/shared/constants';
 
 export const GENERATION_STATUS = Object.freeze({
   IDLE: 'idle',
@@ -49,6 +49,7 @@ export const ASSET_SOURCE_TYPE = Object.freeze({
 
 export const VIDEO_MODEL = Object.freeze({
   SEEDANCE_2: 'seedance-2.0',
+  MINIMAX_H3_LOCAL: DEFAULT_LOCAL_WORKER.MODEL,
   WAN_2_7_I2V: DEFAULT_PROVIDER_MODEL.WANX_VIDEO,
 });
 

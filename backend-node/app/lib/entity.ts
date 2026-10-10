@@ -99,6 +99,7 @@ export interface ChapterEntity {
 }
 
 export interface SceneEntity {
+  local_video_job?: { id: number; status: string; disconnected: boolean } | null;
   id: number;
   chapter_id: number;
   project_id: number;

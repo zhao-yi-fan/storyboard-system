@@ -8,7 +8,16 @@ import { Slider } from "../ui/slider";
 import { Switch } from "../ui/switch";
 import styles from "./VideoGenerationSettings.module.scss";
 
-const SEEDANCE_RESOLUTIONS: VideoResolution[] = Object.values(VIDEO_RESOLUTION);
+const SEEDANCE_RESOLUTIONS: VideoResolution[] = [
+  VIDEO_RESOLUTION.SD,
+  VIDEO_RESOLUTION.HD,
+  VIDEO_RESOLUTION.FULL_HD,
+];
+const LOCAL_RESOLUTIONS: VideoResolution[] = [
+  VIDEO_RESOLUTION.LOCAL_PREVIEW,
+  VIDEO_RESOLUTION.SD,
+  VIDEO_RESOLUTION.LOCAL_NATIVE,
+];
 
 type VideoGenerationSettingsProps = {
   model: string;
@@ -41,6 +50,8 @@ export function VideoGenerationSettings({
   onGenerateAudioChange,
 }: VideoGenerationSettingsProps) {
   const isSeedance = model === VIDEO_MODEL.SEEDANCE_2;
+  const isLocal = model === VIDEO_MODEL.MINIMAX_H3_LOCAL;
+  const variableDuration = isSeedance || isLocal;
 
   return (
     <Popover>
@@ -54,9 +65,11 @@ export function VideoGenerationSettings({
         <div>
           <div className={styles.title}>生成规格</div>
           <div className={styles.description}>
-            {isSeedance
-              ? "Seedance 2.0 支持 480p、720p、1080p 和 4-15 秒输出。"
-              : "Wan 2.7 当前固定使用 720p、5 秒和有声输出。"}
+            {isLocal
+              ? "本地 H3 支持 4-15 秒、有声输出；先用预览画质测试，高画质需要更多资源。"
+              : isSeedance
+                ? "Seedance 2.0 支持 480p、720p、1080p 和 4-15 秒输出。"
+                : "Wan 2.7 当前固定使用 720p、5 秒和有声输出。"}
           </div>
         </div>
 
@@ -68,17 +81,17 @@ export function VideoGenerationSettings({
         <div className={styles.field}>
           <Label className={styles.label}>分辨率</Label>
           <div className={styles.resolutionGrid}>
-            {SEEDANCE_RESOLUTIONS.map((option) => (
+            {(isLocal ? LOCAL_RESOLUTIONS : SEEDANCE_RESOLUTIONS).map((option) => (
               <button
-                key={option}
+                key={option === "preview" ? "预览" : option}
                 type="button"
                 className={
                   resolution === option ? styles.resolutionActive : styles.resolutionOption
                 }
                 onClick={() => onResolutionChange(option)}
-                disabled={!isSeedance}
+                disabled={!variableDuration}
               >
-                {option}
+                {option === "preview" ? "预览" : option}
               </button>
             ))}
           </div>
@@ -91,17 +104,17 @@ export function VideoGenerationSettings({
           </div>
           <Slider
             value={[duration]}
-            min={isSeedance ? 4 : 5}
-            max={isSeedance ? 15 : 5}
+            min={variableDuration ? 4 : 5}
+            max={variableDuration ? 15 : 5}
             step={1}
-            disabled={!isSeedance}
+            disabled={!variableDuration}
             onValueChange={(value) => onDurationChange(value[0] ?? duration)}
             aria-label="视频时长"
             className={styles.slider}
           />
           <div className={styles.durationRange}>
-            <span>{isSeedance ? "4 秒" : "固定"}</span>
-            <span>{isSeedance ? "15 秒" : "5 秒"}</span>
+            <span>{variableDuration ? "4 秒" : "固定"}</span>
+            <span>{variableDuration ? "15 秒" : "5 秒"}</span>
           </div>
         </div>
 

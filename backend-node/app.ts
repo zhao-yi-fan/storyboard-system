@@ -7,11 +7,9 @@ const mysql = require('mysql2/promise');
 const { ensureAuthSchema, ensureBootstrapAuthUser } = require('./app/lib/auth_schema');
 const { ensureShotDirectionAnalysisSchema } = require('./app/lib/shot_direction_schema');
 const { ensureAssetWorkspaceSchema } = require('./app/lib/asset_workspace_schema');
+const { ensureLocalWorkerSchema } = require('./app/lib/local_worker_schema');
 const { ensureSceneGenerationSchema } = require('./app/lib/scene_generation_schema');
-const {
-  ensureSchemaMigrationsTable,
-  runSchemaSteps,
-} = require('./app/lib/schema_migrations');
+const { ensureSchemaMigrationsTable, runSchemaSteps } = require('./app/lib/schema_migrations');
 
 function isUnitTestEnvironment() {
   return (
@@ -51,6 +49,7 @@ class AppBootHook {
         { name: 'asset_workspace', ensure: ensureAssetWorkspaceSchema },
         { name: 'scene_generation', ensure: ensureSceneGenerationSchema },
         { name: 'shot_direction', ensure: ensureShotDirectionAnalysisSchema },
+        { name: 'local_video_jobs', ensure: ensureLocalWorkerSchema },
       ]);
       await ensureBootstrapAuthUser(pool, this.app.config.auth || {});
     } catch (error) {

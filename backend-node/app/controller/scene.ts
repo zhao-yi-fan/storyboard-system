@@ -367,6 +367,12 @@ class SceneController extends ApiController {
     );
   }
 
+  async retryLocalVideo() {
+    const id = this.parseId();
+    if (!id) return response.error(this.ctx, 'invalid id');
+    await this.respond(() => this.ctx.service.localVideoJob.retry(id));
+  }
+
   async uploadCover() {
     const id = this.parseId();
     if (!id) return response.error(this.ctx, 'invalid id');

@@ -12,7 +12,7 @@ import type {
 import { sceneApi } from "../../api";
 import { useSceneVideoPolling } from "../../components/workspace/hooks/useSceneVideoPolling";
 import { getVideoGenerationSpecLabel } from "../../components/workspace/VideoGenerationSettings";
-import { GENERATION_STATUS, VIDEO_RESOLUTION } from "../../constants/domain";
+import { GENERATION_STATUS, VIDEO_MODEL, VIDEO_RESOLUTION } from "../../constants/domain";
 import {
   FIXED_VIDEO_ASPECT_RATIO,
   isSeedanceVideoModel,
@@ -54,10 +54,13 @@ export function useWorkspaceVideoGeneration({
     useState<StoryboardVideoGenerationOptions | null>(null);
   const [isVideoConfirmOpen, setIsVideoConfirmOpen] = useState(false);
 
-  const activeVideoResolution: VideoResolution = isSeedanceVideoModel(selectedVideoModel)
-    ? selectedVideoResolution
-    : VIDEO_RESOLUTION.HD;
-  const activeVideoDuration = isSeedanceVideoModel(selectedVideoModel) ? selectedVideoDuration : 5;
+  const isLocal = selectedVideoModel === VIDEO_MODEL.MINIMAX_H3_LOCAL;
+  const activeVideoResolution: VideoResolution =
+    isSeedanceVideoModel(selectedVideoModel) || isLocal
+      ? selectedVideoResolution
+      : VIDEO_RESOLUTION.HD;
+  const activeVideoDuration =
+    isSeedanceVideoModel(selectedVideoModel) || isLocal ? selectedVideoDuration : 5;
   const activeVideoAudio = isSeedanceVideoModel(selectedVideoModel) ? generateVideoAudio : true;
   const activeVideoSpecLabel = getVideoGenerationSpecLabel(
     FIXED_VIDEO_ASPECT_RATIO,
@@ -86,7 +89,12 @@ export function useWorkspaceVideoGeneration({
   const handleVideoModelChange = (value: string) => {
     const model = value as (typeof VIDEO_MODEL_OPTIONS)[number]["value"];
     setSelectedVideoModel(model);
-    if (!isSeedanceVideoModel(model)) {
+    setSelectedVideoResolution(VIDEO_RESOLUTION.HD);
+    if (model === VIDEO_MODEL.MINIMAX_H3_LOCAL) {
+      setSelectedVideoResolution(VIDEO_RESOLUTION.LOCAL_PREVIEW);
+      setSelectedVideoDuration(5);
+      setGenerateVideoAudio(true);
+    } else if (!isSeedanceVideoModel(model)) {
       setSelectedVideoResolution(VIDEO_RESOLUTION.HD);
       setSelectedVideoDuration(5);
       setGenerateVideoAudio(true);
@@ -165,13 +173,18 @@ export function useWorkspaceVideoGeneration({
   };
 
   const runResumeVideo = async (generationId?: number) => {
-    if (!selectedShot || generatingVideoId === selectedShot.id) {
+    if (
+      !selectedShot ||
+      (generatingVideoId === selectedShot.id && !selectedShot.local_video_job?.disconnected)
+    ) {
       return;
     }
 
     setGeneratingVideoId(selectedShot.id);
     try {
-      const result = await sceneApi.resumeSceneVideo(selectedShot.id, generationId);
+      const result = selectedShot.local_video_job
+        ? await sceneApi.retryLocalVideo(selectedShot.id)
+        : await sceneApi.resumeSceneVideo(selectedShot.id, generationId);
       const nextScene = result.scene;
       applyClipSceneUpdate(nextScene);
       await loadMediaGenerations(nextScene.id);

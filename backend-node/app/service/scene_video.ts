@@ -20,7 +20,7 @@ const {
   buildCompositeVideoPrompt,
 } = require('../lib/composite_prompt');
 const { parseMediaGenerationMeta } = require('../lib/media_generation_meta');
-import type { SceneVideoPreview } from '../lib/entity';
+import type { AssetEntity, SceneVideoPreview } from '../lib/entity';
 const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = require('../lib/domain_constants');
 
 class SceneVideoService extends Service {
@@ -49,7 +49,7 @@ class SceneVideoService extends Service {
     const resolution = helper.normalizeVideoResolution(model, resolutionRaw);
     const audio = helper.parseGenerateAudio(generateAudioRaw);
     if (!helper.isSeedanceVideoModel(model) && !audio) {
-      throw new Error('当前 Wan 视频模型仅支持有声输出');
+      throw new Error('当前视频模型仅支持有声输出');
     }
     const sourceImageUrl =
       useFirstFrame && scene.cover_url ? resolveMediaUrl(this.app, scene.cover_url) : '';
@@ -71,6 +71,23 @@ class SceneVideoService extends Service {
         ? await helper.selectVideoAudioReferences(scene, visualInputCount > 0)
         : { references: [], missing: [], totalDuration: 0, blockingReasons: [], limits: null };
     const blockingReasons = [...audioSummary.blockingReasons];
+    if (model === VIDEO_MODEL.MINIMAX_H3_LOCAL) {
+      if (
+        references.length ||
+        (scene.video_frame_references || []).length ||
+        (scene.assets || []).some(
+          (asset: AssetEntity) =>
+            helper.isAudioAsset(asset) ||
+            /video|视频/i.test(asset.type || '') ||
+            ['mp4', 'mov', 'webm', 'mkv'].includes(helper.getAssetFileExtension(asset)),
+        )
+      ) {
+        blockingReasons.push('本地 H3 第一版支持文字或一张首帧，请移除多图、视频和音频参考');
+      }
+      const cfg = this.app.config.storyboard;
+      if (String(cfg.localWorkerKey || '').length < 32 || !cfg.localWorkerOwnerId)
+        blockingReasons.push('本地生成服务尚未配置');
+    }
     if (helper.isSeedanceVideoModel(model) && visualInputCount > 9) {
       blockingReasons.push(
         `Seedance 2.0 首帧与参考图合计最多支持 9 张，当前为 ${visualInputCount} 张`,
@@ -140,6 +157,9 @@ class SceneVideoService extends Service {
     if (preview.blocking_reasons.length) throw new Error(preview.blocking_reasons.join('；'));
     const current = await this.ctx.service.scene.findById(id);
     if (!current) throw new Error('scene not found');
+    if (preview.model === VIDEO_MODEL.MINIMAX_H3_LOCAL) {
+      return this.ctx.service.localVideoJob.create(id, preview);
+    }
     // 原子抢占：并发双击只有一笔能把状态翻成 generating，
     // 输家直接返回现状（前端轮询继续等赢家的任务），不建新任务。
     const [claim] = await this.app.mysqlPool.execute(
@@ -154,22 +174,22 @@ class SceneVideoService extends Service {
     let generation;
     try {
       generation = await this.ctx.service.sceneMediaGeneration.create({
-      scene_id: id,
-      media_type: MEDIA_TYPE.VIDEO,
-      model: preview.model,
-      status: GENERATION_STATUS.GENERATING,
-      source_url: preview.use_first_frame ? current.cover_url || null : null,
-      meta_json: JSON.stringify({
-        prompt_mode: 'composite',
-        aspect_ratio: preview.aspect_ratio,
-        resolution: preview.resolution,
-        duration: preview.duration,
-        audio: preview.audio,
-        use_first_frame: preview.use_first_frame,
-        reference_image_count: preview.reference_images.length,
-        audio_reference_count: preview.audio_reference_assets.length,
-      }),
-    });
+        scene_id: id,
+        media_type: MEDIA_TYPE.VIDEO,
+        model: preview.model,
+        status: GENERATION_STATUS.GENERATING,
+        source_url: preview.use_first_frame ? current.cover_url || null : null,
+        meta_json: JSON.stringify({
+          prompt_mode: 'composite',
+          aspect_ratio: preview.aspect_ratio,
+          resolution: preview.resolution,
+          duration: preview.duration,
+          audio: preview.audio,
+          use_first_frame: preview.use_first_frame,
+          reference_image_count: preview.reference_images.length,
+          audio_reference_count: preview.audio_reference_assets.length,
+        }),
+      });
     } catch (error) {
       // 建 generation 行失败：把抢占回滚成失败态，避免烂在 generating 无人认领。
       await this.app.mysqlPool.execute(
@@ -323,8 +343,7 @@ class SceneVideoService extends Service {
         provider_task_id: result.taskId || undefined,
       },
     });
-    const completedGeneration =
-      await this.ctx.service.sceneMediaGeneration.findById(generationId);
+    const completedGeneration = await this.ctx.service.sceneMediaGeneration.findById(generationId);
     const posterUrl = await this.ctx.service.sceneVideoPoster.ensureBestEffort(
       completedGeneration,
       stored.localPath,

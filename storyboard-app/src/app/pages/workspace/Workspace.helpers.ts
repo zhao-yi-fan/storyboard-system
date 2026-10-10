@@ -14,6 +14,7 @@ import { buildLegacyCompositePrompt } from "../../lib/compositePrompt";
 export const VIDEO_MODEL_OPTIONS = [
   { value: VIDEO_MODEL.SEEDANCE_2, label: "Seedance 2.0" },
   { value: VIDEO_MODEL.WAN_2_7_I2V, label: "Wan 2.7 I2V" },
+  { value: VIDEO_MODEL.MINIMAX_H3_LOCAL, label: "MiniMax H3 · 本地电脑" },
 ] as const;
 export const FIXED_VIDEO_ASPECT_RATIO: VideoAspectRatio = VIDEO_ASPECT_RATIO.PORTRAIT;
 
@@ -125,6 +126,7 @@ export function sceneToWorkspaceClip(scene: Scene): Storyboard {
     video_url: scene.video_url,
     video_preview_url: scene.video_preview_url,
     video_status: scene.video_status,
+    local_video_job: scene.local_video_job,
     video_error: scene.video_error,
     video_duration: scene.video_duration,
     notes: "",

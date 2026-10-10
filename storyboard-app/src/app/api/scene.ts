@@ -187,6 +187,10 @@ export function generateSceneVideo(id: number, options: StoryboardVideoGeneratio
   );
 }
 
+export function retryLocalVideo(id: number) {
+  return apiClient.post<{ scene: Scene; scene_id: number }>(`/scenes/${id}/retry-local-video`, {});
+}
+
 export function resumeSceneVideo(id: number, generationId?: number) {
   return apiClient.post<{ scene: Scene; resumed: boolean }>(`/scenes/${id}/resume-video`, {
     generation_id: generationId,

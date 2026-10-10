@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 
 import { buildDashScopeConfig } from './providers/dashscope';
 import { buildDeepSeekConfig } from './providers/deepseek';
+import { buildLocalWorkerConfig } from './providers/local_worker';
 import { buildOssConfig } from './providers/oss';
 import { buildSeedanceConfig } from './providers/seedance';
 import { buildSeedreamConfig } from './providers/seedream';
@@ -46,7 +47,14 @@ module.exports = (appInfo: { name: string }) => {
 
   config.keys = `${appInfo.name}-migration-key`;
 
-  config.middleware = ['requestId', 'apiCors', 'authSession', 'rateLimit', 'projectAccess'];
+  config.middleware = [
+    'requestId',
+    'apiCors',
+    'localWorkerAuth',
+    'authSession',
+    'rateLimit',
+    'projectAccess',
+  ];
   config.requestId = {};
   config.apiCors = buildCorsConfig();
   config.rateLimit = buildRateLimitConfig();
@@ -85,6 +93,7 @@ module.exports = (appInfo: { name: string }) => {
     ...buildSeedanceConfig(),
     ...buildSeedreamConfig(),
     ...buildOssConfig(),
+    ...buildLocalWorkerConfig(),
   };
 
   return config;

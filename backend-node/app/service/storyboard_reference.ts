@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { DEFAULT_LOCAL_WORKER } = require('../../config/shared/constants');
 
 const { materializeSourceToLocalFile, probeDuration } = require('../lib/media');
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
@@ -42,7 +43,11 @@ class StoryboardReferenceService extends Service {
   }
 
   supportedVideoModels() {
-    return new Set([VIDEO_MODEL.WAN_2_7_I2V, StoryboardReferenceService.SEEDANCE_VIDEO_MODEL]);
+    return new Set([
+      VIDEO_MODEL.MINIMAX_H3_LOCAL,
+      VIDEO_MODEL.WAN_2_7_I2V,
+      StoryboardReferenceService.SEEDANCE_VIDEO_MODEL,
+    ]);
   }
 
   isSeedanceVideoModel(model: string) {
@@ -84,6 +89,12 @@ class StoryboardReferenceService extends Service {
   }
 
   normalizeVideoResolution(model: string, value: string) {
+    if (model === VIDEO_MODEL.MINIMAX_H3_LOCAL) {
+      const resolution = String(value || DEFAULT_LOCAL_WORKER.DEFAULT_RESOLUTION);
+      if (!DEFAULT_LOCAL_WORKER.RESOLUTIONS.includes(resolution))
+        throw new Error('本地 H3 仅支持 preview、480p、768p');
+      return resolution;
+    }
     const isSeedance = this.isSeedanceVideoModel(model);
     const resolution = String(value || (isSeedance ? VIDEO_RESOLUTION.SD : VIDEO_RESOLUTION.HD))
       .trim()
@@ -101,6 +112,14 @@ class StoryboardReferenceService extends Service {
     const duration = Number(value === null || value === undefined || value === '' ? 5 : value);
     if (!Number.isInteger(duration)) {
       throw new Error('视频时长必须为整数秒');
+    }
+    if (model === VIDEO_MODEL.MINIMAX_H3_LOCAL) {
+      if (
+        duration < DEFAULT_LOCAL_WORKER.MIN_DURATION ||
+        duration > DEFAULT_LOCAL_WORKER.MAX_DURATION
+      )
+        throw new Error('本地 H3 视频时长仅支持 4-15 秒');
+      return duration;
     }
     if (this.isSeedanceVideoModel(model)) {
       if (duration < 4 || duration > 15) {

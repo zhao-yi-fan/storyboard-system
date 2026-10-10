@@ -309,6 +309,28 @@ async function probeDuration(localPath: string): Promise<number> {
   return Number.isFinite(value) ? value : 0;
 }
 
+async function probeVideoWithAudio(localPath: string): Promise<number> {
+  await ensureFfprobe();
+  const { stdout } = await run('ffprobe', [
+    '-v',
+    'error',
+    '-show_streams',
+    '-show_format',
+    '-of',
+    'json',
+    localPath,
+  ]);
+  const media = JSON.parse(String(stdout || '{}'));
+  const streams = Array.isArray(media.streams) ? media.streams : [];
+  if (
+    !streams.some((stream: { codec_type?: string }) => stream.codec_type === 'video') ||
+    !streams.some((stream: { codec_type?: string }) => stream.codec_type === 'audio')
+  ) {
+    throw new Error('本地视频必须包含画面和音频');
+  }
+  return Number(media.format?.duration || 0);
+}
+
 function formatDurationSeconds(value: number): string {
   const duration = Number(value || 0);
   return `${duration.toFixed(1)}秒`;
@@ -602,6 +624,7 @@ export {
   normalizeAudioDuration,
   parseFrameRate,
   probeDuration,
+  probeVideoWithAudio,
   resolveMediaUrl,
   sanitizeFileName,
   storeBuffer,

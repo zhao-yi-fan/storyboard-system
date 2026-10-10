@@ -14,10 +14,14 @@ async function removeDist() {
 }
 
 async function runTsc() {
-  await execFileAsync(path.join(rootDir, 'node_modules/.bin/tsc'), ['-p', 'tsconfig.json'], {
-    cwd: rootDir,
-    maxBuffer: 20 * 1024 * 1024,
-  });
+  await execFileAsync(
+    process.execPath,
+    [path.join(rootDir, 'node_modules/typescript/lib/tsc.js'), '-p', 'tsconfig.json'],
+    {
+      cwd: rootDir,
+      maxBuffer: 20 * 1024 * 1024,
+    },
+  );
 }
 
 async function writeDistPackageJson() {

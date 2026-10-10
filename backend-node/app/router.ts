@@ -14,6 +14,13 @@ module.exports = (app: {
   const { router, controller } = app;
 
   router.get('/_media/stream/:objectKey(.*)', controller.mediaRedirect.stream);
+  router.post('/api/local-worker/claim', controller.localWorker.claim);
+  router.post('/api/local-worker/jobs/:id/heartbeat', controller.localWorker.heartbeat);
+  router.get('/api/local-worker/jobs/:id/first-frame', controller.localWorker.firstFrame);
+  router.post('/api/local-worker/jobs/:id/upload-sign', controller.localWorker.sign);
+  router.post('/api/local-worker/jobs/:id/complete', controller.localWorker.complete);
+  router.post('/api/local-worker/jobs/:id/fail', controller.localWorker.fail);
+  router.post('/api/scenes/:id/retry-local-video', controller.scene.retryLocalVideo);
   router.get('/api/health', controller.health.index);
   router.get('/api/health/deep', controller.health.deep);
   router.post('/api/auth/login', controller.auth.login);

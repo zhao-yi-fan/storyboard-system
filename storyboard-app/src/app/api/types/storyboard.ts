@@ -33,6 +33,7 @@ export type Storyboard = {
   video_url?: string;
   video_preview_url?: string;
   video_status?: string;
+  local_video_job?: { id: number; status: string; disconnected: boolean } | null;
   video_error?: string;
   video_duration?: number;
   notes: string;

@@ -1,5 +1,15 @@
 'use strict';
 
+export const DEFAULT_LOCAL_WORKER = Object.freeze({
+  MODEL: 'minimax-h3-local',
+  LEASE_SECONDS: 120,
+  MIN_DURATION: 4,
+  MAX_DURATION: 15,
+  DEFAULT_DURATION: 5,
+  DEFAULT_RESOLUTION: 'preview',
+  RESOLUTIONS: ['preview', '480p', '768p'],
+});
+
 export const DEFAULT_ENV_PATH = Object.freeze({
   LOCAL: '.env',
   LEGACY_GO_FALLBACK: '../backend/.env',

@@ -52,6 +52,7 @@ class SceneService extends Service {
     await this.attachCharacters(items);
     await this.attachAssets(items);
     await this.attachVideoFrameReferences(items);
+    await this.ctx.service.localVideoJob.attachToScenes(items);
     return items;
   }
 
@@ -70,6 +71,7 @@ class SceneService extends Service {
     await this.attachCharacters([item]);
     await this.attachAssets([item]);
     await this.attachVideoFrameReferences([item]);
+    item.local_video_job = await this.ctx.service.localVideoJob.latest(id);
     return item;
   }
 

@@ -46,6 +46,7 @@ export type AssetSourceType = (typeof ASSET_SOURCE_TYPE)[keyof typeof ASSET_SOUR
 
 export const VIDEO_MODEL = {
   SEEDANCE_2: "seedance-2.0",
+  MINIMAX_H3_LOCAL: "minimax-h3-local",
   WAN_2_7_I2V: "wan2.7-i2v",
 } as const;
 
@@ -55,6 +56,8 @@ export const VIDEO_RESOLUTION = {
   SD: "480p",
   HD: "720p",
   FULL_HD: "1080p",
+  LOCAL_PREVIEW: "preview",
+  LOCAL_NATIVE: "768p",
 } as const;
 
 export type VideoResolution = (typeof VIDEO_RESOLUTION)[keyof typeof VIDEO_RESOLUTION];

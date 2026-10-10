@@ -19,6 +19,7 @@ export type Scene = {
   video_preview_url?: string;
   video_poster_url?: string;
   video_status?: string;
+  local_video_job?: { id: number; status: string; disconnected: boolean } | null;
   video_error?: string;
   video_duration?: number;
   generation_duration: number;
@@ -130,6 +131,7 @@ export type ComposeSceneVideoResult = {
   video_url: string;
   video_preview_url?: string;
   video_status?: string;
+  local_video_job?: { id: number; status: string; disconnected: boolean } | null;
   video_error?: string;
   video_duration?: number;
   scene: Scene;

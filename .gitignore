@@ -12,3 +12,8 @@ tmp/
 storyboard-backend
 bin/
 *.tsbuildinfo
+
+scripts/local-worker/.env
+.local-worker/
+
+/work/
