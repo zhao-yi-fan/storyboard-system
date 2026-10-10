@@ -214,7 +214,7 @@ export function WorkspaceSettingsPanel({
                   <div className={styles.firstFrameTitle}>指定首帧控制开场</div>
                   <div className={styles.firstFrameDescription}>
                     {selectedVideoModel === "minimax-h3-local"
-                      ? "关闭时仅使用文字，本地模型暂不支持多素材参考"
+                      ? "关闭时使用参考图和角色音色参考，无参考素材时使用文字"
                       : "关闭时使用角色和场景参考素材生成视频"}
                   </div>
                 </div>
