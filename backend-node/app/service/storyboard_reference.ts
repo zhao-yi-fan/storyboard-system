@@ -109,7 +109,11 @@ class StoryboardReferenceService extends Service {
   }
 
   normalizeVideoDuration(model: string, value: unknown) {
-    const duration = Number(value === null || value === undefined || value === '' ? 5 : value);
+    const fallback =
+      model === VIDEO_MODEL.MINIMAX_H3_LOCAL ? DEFAULT_LOCAL_WORKER.DEFAULT_DURATION : 5;
+    const duration = Number(
+      value === null || value === undefined || value === '' ? fallback : value,
+    );
     if (!Number.isInteger(duration)) {
       throw new Error('视频时长必须为整数秒');
     }

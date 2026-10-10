@@ -92,7 +92,7 @@ export function useWorkspaceVideoGeneration({
     setSelectedVideoResolution(VIDEO_RESOLUTION.HD);
     if (model === VIDEO_MODEL.MINIMAX_H3_LOCAL) {
       setSelectedVideoResolution(VIDEO_RESOLUTION.LOCAL_PREVIEW);
-      setSelectedVideoDuration(5);
+      setSelectedVideoDuration(15);
       setGenerateVideoAudio(true);
     } else if (!isSeedanceVideoModel(model)) {
       setSelectedVideoResolution(VIDEO_RESOLUTION.HD);

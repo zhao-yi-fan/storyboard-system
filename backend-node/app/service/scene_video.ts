@@ -43,7 +43,7 @@ class SceneVideoService extends Service {
     if (!helper.supportedVideoModels().has(model)) throw new Error('unsupported video model');
     const selectedDuration = helper.normalizeVideoDuration(
       model,
-      duration ?? scene.generation_duration,
+      duration ?? (model === VIDEO_MODEL.MINIMAX_H3_LOCAL ? undefined : scene.generation_duration),
     );
     const useFirstFrame = helper.parseUseFirstFrame(useFirstFrameRaw);
     const aspectRatio = helper.normalizeVideoAspectRatio(model, aspectRatioRaw);
