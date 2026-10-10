@@ -53,8 +53,21 @@ describe('test/auth.test.ts', () => {
     assert.deepEqual(service.buildCookieOptions(expiresAt), {
       httpOnly: true,
       sameSite: 'lax',
+      secure: false,
       overwrite: true,
       expires: expiresAt,
     });
+  });
+
+  it('marks cookies secure on https deployments only', () => {
+    const service = Object.create(AuthService.prototype);
+    Object.defineProperty(service, 'app', {
+      value: { config: { storyboard: { publicAppBaseUrl: 'https://popreels.zhaoyifan.top' } } },
+      configurable: true,
+    });
+    const expiresAt = new Date('2026-02-01T00:00:00.000Z');
+    const options = service.buildCookieOptions(expiresAt);
+    assert.equal(options.secure, true);
+    assert.equal(options.httpOnly, true);
   });
 });

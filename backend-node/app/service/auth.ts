@@ -91,9 +91,12 @@ class AuthService extends Service {
   }
 
   buildCookieOptions(expiresAt: Date) {
+    // https 站点才打 Secure 标记：本地 http 调试不受影响，生产杜绝明文传输。
+    const baseUrl = String(this.app?.config?.storyboard?.publicAppBaseUrl || '').trim();
     return {
       httpOnly: true,
       sameSite: 'lax',
+      secure: baseUrl.startsWith('https://'),
       overwrite: true,
       expires: expiresAt,
     };

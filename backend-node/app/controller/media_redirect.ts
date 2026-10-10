@@ -45,7 +45,8 @@ class MediaRedirectController extends Controller {
         const value = result.res.headers[name];
         if (value) this.ctx.set(name, Array.isArray(value) ? value.join(', ') : value);
       }
-      this.ctx.set('Cache-Control', 'private, no-store, max-age=0');
+      // 生成物文件名自带时间戳、内容不可变：允许浏览器与 CDN 长缓存。
+      this.ctx.set('Cache-Control', 'public, max-age=31536000, immutable');
       this.ctx.status = result.res.status;
       this.ctx.body = result.stream;
     } catch (error: unknown) {
