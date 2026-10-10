@@ -6,6 +6,8 @@ The server persists the input snapshot and generation association in MySQL. A de
 
 States: queued, generating, uploading, succeeded, failed, superseded. A 120-second lease expiry displays disconnected but never reassigns a claimed job. Resume uses the same token. Manual retry supersedes the old job and rejects stale callbacks. Completion is idempotent and transactionally updates scene and generation; old results cannot replace newer results. Requested duration is retained separately from the probed duration.
 
+Generation confirmation always displays blocking reasons, including missing local worker configuration, independently of cloud audio reference controls. Model descriptions reflect H3's text/single-first-frame capabilities.
+
 The worker writes active task/prompt IDs atomically before advancing. It recovers via a persisted submission ID in ComfyUI extra_data if submission response is lost; uncertain submissions are never blindly duplicated. Upload errors retry upload only. Model errors report failure. Completed files remain locally. A single-instance lock prevents two local workers.
 
 Worker authentication is separate from session authentication. Configuration requires a long random worker key and a project owner ID; workers can only claim that owner's jobs. First-frame URLs are signed from server-owned generated media. No arbitrary workflow, download URL or output path is accepted from a remote user. Secrets and local state are ignored by Git.

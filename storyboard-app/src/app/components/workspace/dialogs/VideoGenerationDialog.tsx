@@ -1,5 +1,5 @@
 import type { StoryboardVideoGenerationPreview } from "../../../api";
-import { ASSET_KIND, VIDEO_ASPECT_RATIO } from "../../../constants/domain";
+import { ASSET_KIND, VIDEO_ASPECT_RATIO, VIDEO_MODEL } from "../../../constants/domain";
 import styles from "../../../pages/workspace/Workspace.module.scss";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
@@ -42,6 +42,7 @@ export function VideoGenerationDialog({
   onUseFirstFrameChange,
   onConfirm,
 }: VideoGenerationDialogProps) {
+  const isLocal = (preview?.model ?? selectedModel) === VIDEO_MODEL.MINIMAX_H3_LOCAL;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={styles.detailDialog}>
@@ -86,13 +87,25 @@ export function VideoGenerationDialog({
             </div>
           </div>
 
+          {!!preview?.blocking_reasons?.length && (
+            <div className={styles.blockingError}>
+              <div className={styles.errorTitle}>当前不能生成视频：</div>
+              <ul className={styles.issueList}>
+                {preview.blocking_reasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className={styles.settingSection}>
             <div className={styles.sectionHeaderRow}>
               <div>
                 <p className={styles.settingTitle}>指定首帧控制开场</p>
                 <p className={styles.settingDescription}>
-                  Seedance
-                  的首帧模式与参考素材模式互斥。开启后只发送首帧，关闭后发送角色、场景和语音参考素材。
+                  {isLocal
+                    ? "本地 H3 开启后使用一张首帧，关闭后使用文字；第一版不支持多图、视频或音频参考。"
+                    : "Seedance 的首帧模式与参考素材模式互斥。开启后只发送首帧，关闭后发送角色、场景和语音参考素材。"}
                 </p>
               </div>
               <Switch checked={useFirstFrame} onCheckedChange={onUseFirstFrameChange} />
@@ -139,7 +152,9 @@ export function VideoGenerationDialog({
           {!!preview?.omitted_reference_images?.length && (
             <div className={styles.warningPanel}>
               当前为首帧模式，已绑定的 {preview.omitted_reference_images.length}{" "}
-              张视觉参考图不会发送给 Seedance。关闭“指定首帧控制开场”即可改用参考素材模式。
+              {isLocal
+                ? "张视觉参考图不会发送给本地 H3。"
+                : "张视觉参考图不会发送给 Seedance。关闭“指定首帧控制开场”即可改用参考素材模式。"}
             </div>
           )}
 
@@ -148,7 +163,9 @@ export function VideoGenerationDialog({
               <div className={styles.sectionHeaderRow}>
                 <div className={styles.sectionTitle}>参考图输入</div>
                 <div className={styles.itemCount}>
-                  用于生成前确认；Seedance 2.0 会额外传入角色主语音参考
+                  {isLocal
+                    ? "本地 H3 暂不支持这些参考输入，请移除后生成。"
+                    : "用于生成前确认；Seedance 2.0 会额外传入角色主语音参考"}
                 </div>
               </div>
               <div className={styles.cardGrid}>
@@ -239,16 +256,6 @@ export function VideoGenerationDialog({
                   <div className={styles.breakableText}>
                     {preview.missing_audio_references.join("、")}
                   </div>
-                </div>
-              )}
-              {!!preview.blocking_reasons?.length && (
-                <div className={styles.blockingError}>
-                  <div className={styles.errorTitle}>当前不能生成 Seedance 2.0 视频：</div>
-                  <ul className={styles.issueList}>
-                    {preview.blocking_reasons.map((reason) => (
-                      <li key={reason}>{reason}</li>
-                    ))}
-                  </ul>
                 </div>
               )}
             </div>
