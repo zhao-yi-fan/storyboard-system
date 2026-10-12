@@ -2,7 +2,7 @@
 
 ## Summary
 
-用户删除历史版本时同步删除不再被引用的文件；每日凌晨巡检本地盘，删除超过保留期且无任何数据行引用的孤儿文件。被顶替的旧版本不自动删（历史可回放）。
+用户删除历史版本时同步删除不再被引用的文件；置顶新版本时同 owner 同类型只保留最近 N 条历史（默认 5），超量旧版本软删除并回收文件；每日凌晨巡检本地盘，删除超过保留期且无任何数据行引用的孤儿文件。
 
 ## User Goal
 
@@ -14,11 +14,11 @@
 
 - `reclaimGeneratedPaths`：删前做全表引用检查（两 generation 表 + scenes/storyboards/characters/assets），只认未软删除的行；逐个 best-effort，失败只记日志。
 - 用户删 history（scene `remove`、storyboard `deleteMediaGeneration`）末尾接回收。
+- 历史保留：`markCurrent` 落点后裁剪（`pruneOldGenerations`），保留当前采用行 + 最新 keep-1 条非进行中记录（`RECLAIM_HISTORY_KEEP`，默认 5），进行中任务永远不动；超量行软删除并走同一回收路径。
 - `app/schedule/reclaim_media.ts`：每天 03:00 单 worker 扫本地盘，默认保留 24 小时、单次上限 500 个。
 
 本次不包含：
 
-- 被置顶顶替的旧版本自动删除（历史支持 set-current 回放，删了等于破坏功能；要做需另定保留策略）。
 - OSS 模式巡检（bucket 可能混有非本应用对象，不敢按前缀全扫；用户删除链路的 OSS 单文件删除正常工作）。
 - 已软删除整行（scene/角色/资产）的级联清盘（引用检查认有效行，被删实体的文件由巡检按孤儿处理）。
 
@@ -31,7 +31,8 @@
 ## Workflow
 
 1. 用户删 history：softDelete → 回退/清空实体引用 → `reclaimGeneratedPaths`（有别的有效行引用则跳过）。
-2. 每日巡检：递归本地生成物根目录 → mtime 超保留期 → 无引用 → 删除（dryRun 模式只列不清）。
+2. 置顶新版本：`markCurrent` 提交后裁剪同 owner 同类型历史，留 N 条，其余软删除并回收文件（best-effort，失败不影响主流程）。
+3. 每日巡检：递归本地生成物根目录 → mtime 超保留期 → 无引用 → 删除（dryRun 模式只列不清）。
 
 ## Data Shape
 
@@ -53,10 +54,11 @@
 ## Failure and Retry
 
 - 误删防护三层：生成物路径校验（含 `..` 拦截，复用 `generatedObjectKey`）、有效行引用检查、24 小时保留期（进行中的上传/生成远短于此）。
-- 清回收粒度：`RECLAIM_SWEEP_GRACE_HOURS`、`RECLAIM_SWEEP_MAX_FILES`。
+- 清回收粒度：`RECLAIM_SWEEP_GRACE_HOURS`、`RECLAIM_SWEEP_MAX_FILES`、`RECLAIM_HISTORY_KEEP`（默认 5，最小 1）。
 
 ## Acceptance
 
 - [ ] 用户删 history 后，无别的引用的文件从磁盘消失；仍被实体引用的保留。
+- [ ] 同一镜头/场景反复生成 7 次后，历史剩 5 条，多余文件被回收；当前采用版本与进行中任务不受影响。
 - [ ] 巡检 dry-run 列出的都是无主旧文件；新文件（保留期内）不动。
 - [ ] 后端 `npm run typecheck && npm run lint && npm run test` 通过。

@@ -109,6 +109,74 @@ export async function reclaimGeneratedPaths(
   return { deleted, skipped };
 }
 
+export type PruneScope = {
+  table: string;
+  ownerColumn: string;
+  ownerId: number;
+  mediaType: string;
+  /** 需要回收的文件地址列，例如 ['result_url', 'preview_url']。 */
+  urlColumns: string[];
+  /** 保留条数，默认读 RECLAIM_HISTORY_KEEP（默认 5）。 */
+  keep?: number;
+};
+
+/**
+ * 历史保留条数：同一 owner + 同一 media_type 最多留几条有效记录。
+ * 环境变量可调，最小为 1。
+ */
+export function getHistoryKeepCount(): number {
+  const raw = Number(process.env.RECLAIM_HISTORY_KEEP);
+  if (!Number.isFinite(raw) || raw < 1) return 5;
+  return Math.floor(raw);
+}
+
+/**
+ * 裁剪超量历史：保留当前采用行 + 最新的 keep-1 条非进行中记录，
+ * 其余软删除并回收其文件。进行中的任务永远不动。
+ * 全程 best-effort，失败只记日志不抛错。
+ */
+export async function pruneOldGenerations(
+  app: ReclaimApp,
+  pool: ReclaimPool & {
+    execute: (sql: string, params?: unknown[]) => Promise<[any, any]>;
+  },
+  scope: PruneScope,
+): Promise<{ pruned: number[]; deleted: string[] }> {
+  const empty = { pruned: [] as number[], deleted: [] as string[] };
+  try {
+    const keep = scope.keep ?? getHistoryKeepCount();
+    const urlSelect = scope.urlColumns.map((column) => `\`${column}\``).join(', ');
+    const [rows] = await pool.query(
+      `SELECT \`id\`, \`is_current\`${urlSelect ? `, ${urlSelect}` : ''} FROM \`${scope.table}\`
+       WHERE \`${scope.ownerColumn}\` = ? AND \`media_type\` = ?
+         AND \`deleted_at\` IS NULL AND \`status\` != 'generating'
+       ORDER BY \`is_current\` DESC, \`id\` DESC`,
+      [scope.ownerId, scope.mediaType],
+    );
+    const victims = (rows as Array<Record<string, unknown>>).slice(keep);
+    if (!victims.length) return empty;
+    const ids = victims.map((row) => Number(row.id)).filter((id) => Number.isFinite(id));
+    if (!ids.length) return empty;
+    await pool.execute(
+      `UPDATE \`${scope.table}\` SET \`deleted_at\` = NOW(), \`is_current\` = 0
+       WHERE \`id\` IN (${ids.map(() => '?').join(', ')})`,
+      ids,
+    );
+    const paths: string[] = [];
+    for (const row of victims) {
+      for (const column of scope.urlColumns) {
+        const value = String(row[column] || '').trim();
+        if (value) paths.push(value);
+      }
+    }
+    const { deleted } = await reclaimGeneratedPaths(app, pool, paths);
+    return { pruned: ids, deleted };
+  } catch (error) {
+    app.logger?.warn?.(`[reclaim] prune failed for ${scope.table}: ${(error as Error).message}`);
+    return empty;
+  }
+}
+
 async function listLocalFiles(root: string): Promise<Array<{ path: string; mtimeMs: number }>> {
   const out: Array<{ path: string; mtimeMs: number }> = [];
   const stack = [root];

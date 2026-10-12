@@ -3,6 +3,7 @@
 const Service = require('egg').Service;
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../lib/generated_asset');
 const { serializeMediaGenerationMeta } = require('../lib/media_generation_meta');
+const { pruneOldGenerations } = require('../lib/media_reclamation');
 import type { DbRow, SceneMediaGenerationEntity } from '../lib/entity';
 
 class SceneMediaGenerationService extends Service {
@@ -130,6 +131,18 @@ class SceneMediaGenerationService extends Service {
       throw error;
     } finally {
       conn.release();
+    }
+    // 历史保留：超量旧版本软删除并回收文件，失败不影响主流程。
+    try {
+      await pruneOldGenerations(this.app, this.pool, {
+        table: 'scene_media_generations',
+        ownerColumn: 'scene_id',
+        ownerId: sceneId,
+        mediaType,
+        urlColumns: ['result_url', 'preview_url', 'poster_url'],
+      });
+    } catch (err) {
+      this.ctx.logger.warn(`[reclaim] prune scene history failed: ${(err as Error).message}`);
     }
   }
 
