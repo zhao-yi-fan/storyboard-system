@@ -3,6 +3,7 @@
 生产发布唯一入口是 push to `main`：GitHub Actions（`.github/workflows/deploy.yml`）
 自动 SSH 到 ECS 跑 `scripts/deploy.sh`。**禁止为发版直连 ECS 手动跑脚本**；
 SSH 只用于部署失败后的排障和只读检查。
+Actions 在启动脚本前先快进到最新 main，确保本次发布使用更新后的部署步骤。
 
 ## Standard flow
 

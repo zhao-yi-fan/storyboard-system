@@ -18,4 +18,5 @@ jobs:
             cd /home/admin/projects/storyboard-system
             git fetch origin main
             git checkout -- storyboard-app/package-lock.json
+            git merge --ff-only origin/main
             ./scripts/deploy.sh
