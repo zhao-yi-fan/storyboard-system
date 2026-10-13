@@ -245,6 +245,40 @@ class SceneController extends ApiController {
     await this.respond(() => this.ctx.service.sceneMediaLibrary.remove(id, generationId));
   }
 
+  /**
+   * 钉住一条历史版本：不计入历史保留条数，超量裁剪与文件回收都会跳过。
+   * @returns {Promise<void>} 通过统一响应格式返回最新场景和历史。
+   * @example
+   * POST /api/scenes/21/media-generations/88/pin
+   * // => { code: 200, data: { scene: { id: 21 }, media_generations: [...] }, message: "" }
+   */
+  async pinMediaGeneration() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    await this.respond(() => this.ctx.service.sceneMediaLibrary.setPinned(id, generationId, true));
+  }
+
+  /**
+   * 取消钉住：该版本立刻重新参与历史保留计数。
+   * @returns {Promise<void>} 通过统一响应格式返回最新场景和历史。
+   * @example
+   * DELETE /api/scenes/21/media-generations/88/pin
+   * // => { code: 200, data: { scene: { id: 21 }, media_generations: [...] }, message: "" }
+   */
+  async unpinMediaGeneration() {
+    const id = this.parseId();
+    const generationId = Number(this.ctx.params.generationId);
+    if (!id || !Number.isInteger(generationId) || generationId <= 0) {
+      return response.error(this.ctx, 'invalid id');
+    }
+    await this.respond(() =>
+      this.ctx.service.sceneMediaLibrary.setPinned(id, generationId, false),
+    );
+  }
+
   async videoFrames() {
     const id = this.parseId();
     const generationId = Number(this.ctx.params.generationId);

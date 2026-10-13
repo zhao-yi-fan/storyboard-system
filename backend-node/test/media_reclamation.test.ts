@@ -168,16 +168,54 @@ describe('test/media_reclamation.test.ts', () => {
     const prev = process.env.RECLAIM_HISTORY_KEEP;
     try {
       delete process.env.RECLAIM_HISTORY_KEEP;
-      assert.equal(getHistoryKeepCount(), 5);
+      assert.equal(getHistoryKeepCount(), 10);
       process.env.RECLAIM_HISTORY_KEEP = '3';
       assert.equal(getHistoryKeepCount(), 3);
       process.env.RECLAIM_HISTORY_KEEP = '0';
-      assert.equal(getHistoryKeepCount(), 5);
+      assert.equal(getHistoryKeepCount(), 10);
       process.env.RECLAIM_HISTORY_KEEP = 'abc';
-      assert.equal(getHistoryKeepCount(), 5);
+      assert.equal(getHistoryKeepCount(), 10);
     } finally {
       if (prev === undefined) delete process.env.RECLAIM_HISTORY_KEEP;
       else process.env.RECLAIM_HISTORY_KEEP = prev;
     }
+  });
+
+  it('excludes pinned rows from prune candidates in SQL', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'reclaim-'));
+    fs.mkdirSync(path.join(root, 'videos'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'videos', 'old.mp4'), 'x');
+    const app = buildApp(root);
+    const queries: string[] = [];
+    const pool = {
+      async query(sql: string) {
+        queries.push(sql);
+        if (sql.includes('`is_current`')) {
+          // 模拟 DB 侧已按 is_pinned = 0 过滤：钉住的旧行根本不会返回。
+          return [
+            [
+              { id: 9, is_current: 1, result_url: '/generated/videos/new.mp4' },
+              { id: 5, is_current: 0, result_url: '/generated/videos/old.mp4' },
+            ],
+            [],
+          ];
+        }
+        return [[], []];
+      },
+      async execute() {
+        return [{ affectedRows: 1 }, []];
+      },
+    };
+    const result = await pruneOldGenerations(app, pool, {
+      table: 'scene_media_generations',
+      ownerColumn: 'scene_id',
+      ownerId: 21,
+      mediaType: 'video',
+      urlColumns: ['result_url'],
+      keep: 1,
+    });
+    assert.ok(queries.some((sql) => sql.includes('`is_pinned` = 0')));
+    assert.deepEqual(result.pruned, [5]);
+    assert.equal(fs.existsSync(path.join(root, 'videos', 'old.mp4')), false);
   });
 });

@@ -26,6 +26,7 @@ class SceneMediaGenerationService extends Service {
       source_url: resolveUrl(this.app, String(row.source_url || ''), baseUrl),
       error_message: String(row.error_message || ''),
       is_current: Boolean(row.is_current),
+      is_pinned: Boolean(row.is_pinned),
       meta_json: serializeMediaGenerationMeta(row.meta_json),
       created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
       updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
@@ -35,7 +36,7 @@ class SceneMediaGenerationService extends Service {
   async listBySceneId(sceneId: number) {
     const [rows] = await this.pool.query(
       `SELECT id, scene_id, legacy_storyboard_id, media_type, model, status, result_url,
-              preview_url, poster_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+              preview_url, poster_url, source_url, error_message, is_current, is_pinned, meta_json, created_at, updated_at
        FROM scene_media_generations
        WHERE scene_id = ? AND deleted_at IS NULL
        ORDER BY created_at DESC, id DESC`,
@@ -47,7 +48,7 @@ class SceneMediaGenerationService extends Service {
   async findById(id: number) {
     const [rows] = await this.pool.query(
       `SELECT id, scene_id, legacy_storyboard_id, media_type, model, status, result_url,
-              preview_url, poster_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+              preview_url, poster_url, source_url, error_message, is_current, is_pinned, meta_json, created_at, updated_at
        FROM scene_media_generations
        WHERE id = ? AND deleted_at IS NULL`,
       [id],
@@ -94,7 +95,7 @@ class SceneMediaGenerationService extends Service {
     await this.pool.execute(
       `UPDATE scene_media_generations
        SET model = ?, status = ?, result_url = ?, preview_url = ?, poster_url = ?, source_url = ?,
-           error_message = ?, is_current = ?, meta_json = ?
+           error_message = ?, is_current = ?, is_pinned = ?, meta_json = ?
        WHERE id = ?`,
       [
         value('model') || '',
@@ -105,6 +106,7 @@ class SceneMediaGenerationService extends Service {
         mediaReference('source_url'),
         value('error_message') || null,
         value('is_current') ? 1 : 0,
+        value('is_pinned') ? 1 : 0,
         serializeMediaGenerationMeta(value('meta_json')) || null,
         id,
       ],

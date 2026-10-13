@@ -1,4 +1,4 @@
-import { Camera, Loader2, Play, Scissors, X } from "lucide-react";
+import { Camera, Loader2, Pin, PinOff, Play, Scissors, X } from "lucide-react";
 
 import type { Storyboard, StoryboardMediaGeneration } from "../../api";
 import { GENERATION_STATUS } from "../../constants/domain";
@@ -20,6 +20,7 @@ type WorkspacePreviewStageProps = {
   videoGenerations: StoryboardMediaGeneration[];
   activeMediaActionKey: string | null;
   handleSetCurrentGeneration: (generation: StoryboardMediaGeneration) => void;
+  handleTogglePinGeneration: (generation: StoryboardMediaGeneration) => void;
   handleRequestDeleteGeneration: (generation: StoryboardMediaGeneration) => void;
 };
 
@@ -34,6 +35,7 @@ export function WorkspacePreviewStage({
   videoGenerations,
   activeMediaActionKey,
   handleSetCurrentGeneration,
+  handleTogglePinGeneration,
   handleRequestDeleteGeneration,
 }: WorkspacePreviewStageProps) {
   return (
@@ -198,6 +200,24 @@ export function WorkspacePreviewStage({
                   {generation.extracted_frames.length} 帧
                 </span>
               ) : null}
+              <button
+                type="button"
+                className={styles.historyExtractButton}
+                onClick={() => void handleTogglePinGeneration(generation)}
+                disabled={activeMediaActionKey === "pin:" + generation.id}
+                aria-label={generation.is_pinned ? "取消钉住历史版本" : "钉住历史版本"}
+                title={
+                  generation.is_pinned
+                    ? "已钉住，不会被自动清理，点击取消钉住"
+                    : "钉住此版本：历史最多保留 10 条，钉住后超出也不清理"
+                }
+              >
+                {generation.is_pinned ? (
+                  <PinOff className={styles.historyIcon} />
+                ) : (
+                  <Pin className={styles.historyIcon} />
+                )}
+              </button>
               <button
                 type="button"
                 className={styles.historyDeleteButton}

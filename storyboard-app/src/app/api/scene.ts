@@ -107,6 +107,18 @@ export function deleteSceneMediaGeneration(id: number, generationId: number) {
   );
 }
 
+export function pinSceneMediaGeneration(id: number, generationId: number) {
+  return apiClient.post<SceneMediaMutationResult>(
+    `/scenes/${id}/media-generations/${generationId}/pin`,
+  );
+}
+
+export function unpinSceneMediaGeneration(id: number, generationId: number) {
+  return apiClient.delete<SceneMediaMutationResult>(
+    `/scenes/${id}/media-generations/${generationId}/pin`,
+  );
+}
+
 export function getSceneVideoFrames(id: number, generationId: number) {
   return apiClient.get<SceneVideoFrame[]>(`/scenes/${id}/media-generations/${generationId}/frames`);
 }

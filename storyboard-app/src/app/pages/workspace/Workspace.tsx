@@ -288,6 +288,7 @@ export default function Workspace() {
     handleComposeProjectVideo,
     confirmComposeProjectVideo,
     handleSetCurrentGeneration,
+    handleTogglePinGeneration,
     handleRequestDeleteGeneration,
     confirmDeleteGeneration,
     handleInsertVideoFrame,
@@ -492,6 +493,7 @@ export default function Workspace() {
           videoGenerations={videoGenerations}
           activeMediaActionKey={activeMediaActionKey}
           handleSetCurrentGeneration={(generation) => void handleSetCurrentGeneration(generation)}
+          handleTogglePinGeneration={(generation) => void handleTogglePinGeneration(generation)}
           handleRequestDeleteGeneration={handleRequestDeleteGeneration}
         />
 

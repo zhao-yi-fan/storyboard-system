@@ -192,6 +192,24 @@ export function useWorkspaceSceneMedia({
     setDeleteTargetGeneration(generation);
   };
 
+  const handleTogglePinGeneration = async (generation: StoryboardMediaGeneration) => {
+    if (!selectedShot) {
+      return;
+    }
+    const actionKey = `pin:${generation.id}`;
+    setActiveMediaActionKey(actionKey);
+    try {
+      const result = generation.is_pinned
+        ? await sceneApi.unpinSceneMediaGeneration(selectedShot.id, generation.id)
+        : await sceneApi.pinSceneMediaGeneration(selectedShot.id, generation.id);
+      applyMediaMutation(result);
+    } catch (error) {
+      console.error("Failed to toggle pin on media generation:", error);
+    } finally {
+      setActiveMediaActionKey(null);
+    }
+  };
+
   const confirmDeleteGeneration = async () => {
     if (!selectedShot || !deleteTargetGeneration) {
       return;
@@ -268,6 +286,7 @@ export function useWorkspaceSceneMedia({
     runComposeProjectVideo,
     confirmComposeProjectVideo,
     handleSetCurrentGeneration,
+    handleTogglePinGeneration,
     handleRequestDeleteGeneration,
     confirmDeleteGeneration,
     handleInsertVideoFrame,

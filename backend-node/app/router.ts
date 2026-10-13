@@ -79,6 +79,14 @@ module.exports = (app: {
     '/api/scenes/:id/media-generations/:generationId',
     controller.scene.deleteMediaGeneration,
   );
+  router.post(
+    '/api/scenes/:id/media-generations/:generationId/pin',
+    controller.scene.pinMediaGeneration,
+  );
+  router.delete(
+    '/api/scenes/:id/media-generations/:generationId/pin',
+    controller.scene.unpinMediaGeneration,
+  );
   router.get(
     '/api/scenes/:id/media-generations/:generationId/frames',
     controller.scene.videoFrames,

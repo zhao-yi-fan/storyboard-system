@@ -53,6 +53,19 @@ class SceneMediaLibraryService extends Service {
     return { scene, media_generations: await this.list(sceneId) };
   }
 
+  /**
+   * 钉住/取消钉住一条历史版本。钉住的行不计入历史保留条数，
+   * 超量裁剪与文件回收都会跳过。
+   */
+  async setPinned(sceneId: number, generationId: number, pinned: boolean) {
+    const generation = await this.ctx.service.sceneMediaGeneration.findById(generationId);
+    if (!generation || Number(generation.scene_id) !== Number(sceneId)) {
+      throw new Error('scene media generation not found');
+    }
+    await this.ctx.service.sceneMediaGeneration.update(generationId, { is_pinned: pinned });
+    return { scene: await this.ctx.service.scene.findById(sceneId), media_generations: await this.list(sceneId) };
+  }
+
   async remove(sceneId: number, generationId: number) {
     const generation = await this.ctx.service.sceneMediaGeneration.findById(generationId);
     if (!generation || Number(generation.scene_id) !== Number(sceneId)) {

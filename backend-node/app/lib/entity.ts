@@ -173,6 +173,7 @@ export interface StoryboardMediaGenerationEntity {
   source_url: string;
   error_message: string;
   is_current: boolean;
+  is_pinned: boolean;
   meta_json: string;
   created_at: string | null;
   updated_at: string | null;
@@ -191,6 +192,7 @@ export interface SceneMediaGenerationEntity {
   source_url: string;
   error_message: string;
   is_current: boolean;
+  is_pinned: boolean;
   meta_json: string;
   created_at: string | null;
   updated_at: string | null;

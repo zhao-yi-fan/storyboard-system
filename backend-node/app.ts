@@ -8,7 +8,7 @@ const { ensureAuthSchema, ensureBootstrapAuthUser } = require('./app/lib/auth_sc
 const { ensureShotDirectionAnalysisSchema } = require('./app/lib/shot_direction_schema');
 const { ensureAssetWorkspaceSchema } = require('./app/lib/asset_workspace_schema');
 const { ensureLocalWorkerSchema } = require('./app/lib/local_worker_schema');
-const { ensureSceneGenerationSchema } = require('./app/lib/scene_generation_schema');
+const { ensureSceneGenerationSchema, ensureGenerationPinColumns } = require('./app/lib/scene_generation_schema');
 const { ensureSchemaMigrationsTable, runSchemaSteps } = require('./app/lib/schema_migrations');
 
 function isUnitTestEnvironment() {
@@ -48,6 +48,7 @@ class AppBootHook {
         { name: 'auth', ensure: ensureAuthSchema },
         { name: 'asset_workspace', ensure: ensureAssetWorkspaceSchema },
         { name: 'scene_generation', ensure: ensureSceneGenerationSchema },
+        { name: 'generation_pin', ensure: ensureGenerationPinColumns },
         { name: 'shot_direction', ensure: ensureShotDirectionAnalysisSchema },
         { name: 'local_video_jobs', ensure: ensureLocalWorkerSchema },
       ]);

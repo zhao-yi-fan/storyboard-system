@@ -126,7 +126,7 @@ export type PruneScope = {
  */
 export function getHistoryKeepCount(): number {
   const raw = Number(process.env.RECLAIM_HISTORY_KEEP);
-  if (!Number.isFinite(raw) || raw < 1) return 5;
+  if (!Number.isFinite(raw) || raw < 1) return 10;
   return Math.floor(raw);
 }
 
@@ -149,7 +149,7 @@ export async function pruneOldGenerations(
     const [rows] = await pool.query(
       `SELECT \`id\`, \`is_current\`${urlSelect ? `, ${urlSelect}` : ''} FROM \`${scope.table}\`
        WHERE \`${scope.ownerColumn}\` = ? AND \`media_type\` = ?
-         AND \`deleted_at\` IS NULL AND \`status\` != 'generating'
+         AND \`deleted_at\` IS NULL AND \`status\` != 'generating' AND \`is_pinned\` = 0
        ORDER BY \`is_current\` DESC, \`id\` DESC`,
       [scope.ownerId, scope.mediaType],
     );

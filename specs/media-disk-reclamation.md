@@ -14,7 +14,7 @@
 
 - `reclaimGeneratedPaths`：删前做全表引用检查（两 generation 表 + scenes/storyboards/characters/assets），只认未软删除的行；逐个 best-effort，失败只记日志。
 - 用户删 history（scene `remove`、storyboard `deleteMediaGeneration`）末尾接回收。
-- 历史保留：`markCurrent` 落点后裁剪（`pruneOldGenerations`），保留当前采用行 + 最新 keep-1 条非进行中记录（`RECLAIM_HISTORY_KEEP`，默认 5），进行中任务永远不动；超量行软删除并走同一回收路径。
+- 历史保留：`markCurrent` 落点后裁剪（`pruneOldGenerations`），保留当前采用行 + 最新 keep-1 条非进行中、未钉住记录（`RECLAIM_HISTORY_KEEP`，默认 10），进行中任务与钉住版本永远不动；超量行软删除并走同一回收路径。
 - `app/schedule/reclaim_media.ts`：每天 03:00 单 worker 扫本地盘，默认保留 24 小时、单次上限 500 个。
 
 本次不包含：
@@ -54,11 +54,13 @@
 ## Failure and Retry
 
 - 误删防护三层：生成物路径校验（含 `..` 拦截，复用 `generatedObjectKey`）、有效行引用检查、24 小时保留期（进行中的上传/生成远短于此）。
-- 清回收粒度：`RECLAIM_SWEEP_GRACE_HOURS`、`RECLAIM_SWEEP_MAX_FILES`、`RECLAIM_HISTORY_KEEP`（默认 5，最小 1）。
+- `is_pinned` 钉住标记（两 generation 表，独立 `generation_pin` migration 步骤）：历史列表图钉按钮切换，tooltip 写明保留条数；钉住行不计数、不裁剪，取消钉住后立刻重新参与计数。
+- 清回收粒度：`RECLAIM_SWEEP_GRACE_HOURS`、`RECLAIM_SWEEP_MAX_FILES`、`RECLAIM_HISTORY_KEEP`（默认 10，最小 1）。
 
 ## Acceptance
 
 - [ ] 用户删 history 后，无别的引用的文件从磁盘消失；仍被实体引用的保留。
-- [ ] 同一镜头/场景反复生成 7 次后，历史剩 5 条，多余文件被回收；当前采用版本与进行中任务不受影响。
+- [ ] 同一镜头/场景反复生成 12 次后，历史剩 10 条，多余文件被回收；当前采用版本、进行中任务与钉住版本不受影响。
+- [ ] 钉住/取消钉住后刷新列表状态一致；取消钉住的超量旧版在下次置顶时被裁剪。
 - [ ] 巡检 dry-run 列出的都是无主旧文件；新文件（保留期内）不动。
 - [ ] 后端 `npm run typecheck && npm run lint && npm run test` 通过。

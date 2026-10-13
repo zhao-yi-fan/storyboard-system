@@ -5,6 +5,7 @@ import { describe, it } from 'mocha';
 
 const cjsRequire = createRequire(import.meta.url);
 const { runSchemaSteps } = cjsRequire('../app/lib/schema_migrations');
+const { ensureGenerationPinColumns } = cjsRequire('../app/lib/scene_generation_schema');
 
 function buildPool(applied: string[]) {
   const executed: Array<{ sql: string; params?: unknown[] }> = [];
@@ -79,5 +80,56 @@ describe('test/schema_migrations.test.ts', () => {
     );
     assert.ok(failed);
     assert.match(String(failed?.params?.[1] || ''), /boom/);
+  });
+});
+
+describe('test/schema_migrations.test.ts generation_pin', () => {
+  it('adds is_pinned to both generation tables when missing', async () => {
+    const statements: string[] = [];
+    const pool = {
+      async query(sql: string, _params: unknown[] = []) {
+        if (sql.includes('information_schema.TABLES')) {
+          return [[{ 1: 1 }], null];
+        }
+        if (sql.includes('information_schema.COLUMNS')) {
+          return [[], null];
+        }
+        if (sql.includes('ALTER TABLE')) {
+          statements.push(sql);
+        }
+        return [[], null];
+      },
+      async execute(sql: string) {
+        statements.push(sql);
+        return [{ affectedRows: 0 }, null];
+      },
+    };
+    await ensureGenerationPinColumns(pool);
+    assert.equal(statements.length, 2);
+    assert.ok(statements.every((sql) => sql.includes('is_pinned')));
+    assert.ok(statements.some((sql) => sql.includes('scene_media_generations')));
+    assert.ok(statements.some((sql) => sql.includes('storyboard_media_generations')));
+  });
+
+  it('skips missing tables and columns already present', async () => {
+    const statements: string[] = [];
+    const pool = {
+      async query(sql: string, params: unknown[] = []) {
+        if (sql.includes('information_schema.TABLES')) {
+          // 只有 scene 表存在，storyboard 旧表缺失时跳过。
+          return [params[0] === 'scene_media_generations' ? [{ 1: 1 }] : [], null];
+        }
+        if (sql.includes('information_schema.COLUMNS')) {
+          return [[{ 1: 1 }], null];
+        }
+        return [[], null];
+      },
+      async execute(sql: string) {
+        statements.push(sql);
+        return [{ affectedRows: 0 }, null];
+      },
+    };
+    await ensureGenerationPinColumns(pool);
+    assert.deepEqual(statements, []);
   });
 });

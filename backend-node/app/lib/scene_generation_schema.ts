@@ -33,6 +33,39 @@ async function indexExists(pool: DbPool, tableName: string, indexName: string) {
   return rows.length > 0;
 }
 
+async function tableExists(pool: DbPool, tableName: string) {
+  const [rows] = await pool.query(
+    `SELECT 1 FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1`,
+    [tableName],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * 历史版本钉住标记：两 generation 表各加 is_pinned。
+ * 独立 migration 步骤（旧步骤已 applied 会跳过，不能塞进旧 ensure）。
+ * storyboard 旧表在全新环境可能不存在，缺表则跳过。
+ */
+export async function ensureGenerationPinColumns(pool: DbPool) {
+  if (await tableExists(pool, 'scene_media_generations')) {
+    await addColumnIfMissing(
+      pool,
+      'scene_media_generations',
+      'is_pinned',
+      'TINYINT(1) NOT NULL DEFAULT 0 AFTER is_current',
+    );
+  }
+  if (await tableExists(pool, 'storyboard_media_generations')) {
+    await addColumnIfMissing(
+      pool,
+      'storyboard_media_generations',
+      'is_pinned',
+      'TINYINT(1) NOT NULL DEFAULT 0 AFTER is_current',
+    );
+  }
+}
+
 function hasCompleteLegacySceneMapping(storyboards: DbRow[], scenes: DbRow[]) {
   if (storyboards.length !== scenes.length) return false;
   const expectedIds = new Set(storyboards.map((item) => Number(item.id)));

@@ -43,6 +43,7 @@ class MediaGenerationService extends Service {
       ),
       error_message: String(row.error_message || ''),
       is_current: Boolean(row.is_current),
+      is_pinned: Boolean(row.is_pinned),
       meta_json: serializeMediaGenerationMeta(row.meta_json),
       created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : null,
       updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
@@ -59,7 +60,7 @@ class MediaGenerationService extends Service {
    */
   async listByStoryboardId(storyboardId: number) {
     const [rows] = await this.pool.query(
-      `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+      `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, is_pinned, meta_json, created_at, updated_at
        FROM storyboard_media_generations
        WHERE storyboard_id = ? AND deleted_at IS NULL
        ORDER BY created_at DESC, id DESC`,
@@ -78,7 +79,7 @@ class MediaGenerationService extends Service {
    */
   async findById(id: number) {
     const [rows] = await this.pool.query(
-      `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+      `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, is_pinned, meta_json, created_at, updated_at
        FROM storyboard_media_generations
        WHERE id = ? AND deleted_at IS NULL`,
       [id],
@@ -189,7 +190,7 @@ class MediaGenerationService extends Service {
     }
     await this.pool.execute(
       `UPDATE storyboard_media_generations
-       SET model = ?, status = ?, result_url = ?, preview_url = ?, source_url = ?, error_message = ?, is_current = ?, meta_json = ?
+       SET model = ?, status = ?, result_url = ?, preview_url = ?, source_url = ?, error_message = ?, is_current = ?, is_pinned = ?, meta_json = ?
        WHERE id = ?`,
       [
         Object.prototype.hasOwnProperty.call(payload, 'model')
@@ -225,6 +226,13 @@ class MediaGenerationService extends Service {
           : current.is_current
             ? 1
             : 0,
+        Object.prototype.hasOwnProperty.call(payload, 'is_pinned')
+          ? payload.is_pinned
+            ? 1
+            : 0
+          : current.is_pinned
+            ? 1
+            : 0,
         Object.prototype.hasOwnProperty.call(payload, 'meta_json')
           ? serializeMediaGenerationMeta(payload.meta_json) || null
           : current.meta_json || null,
@@ -246,7 +254,7 @@ class MediaGenerationService extends Service {
    */
   async findLatestSucceeded(storyboardId: number, mediaType: string, excludeId: number = 0) {
     const [rows] = await this.pool.query(
-      `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, meta_json, created_at, updated_at
+      `SELECT id, storyboard_id, media_type, model, status, result_url, preview_url, source_url, error_message, is_current, is_pinned, meta_json, created_at, updated_at
        FROM storyboard_media_generations
        WHERE storyboard_id = ? AND media_type = ? AND deleted_at IS NULL AND status = 'succeeded' AND id <> ?
        ORDER BY created_at DESC, id DESC

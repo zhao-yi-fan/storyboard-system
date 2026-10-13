@@ -58,6 +58,7 @@ export type StoryboardMediaGeneration = {
   source_url?: string;
   error_message?: string;
   is_current: boolean;
+  is_pinned: boolean;
   meta_json?: string;
   created_at?: string;
   updated_at?: string;

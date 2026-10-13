@@ -16,6 +16,7 @@ const base = {
   videoGenerations: [],
   activeMediaActionKey: null,
   handleSetCurrentGeneration: vi.fn(),
+  handleTogglePinGeneration: vi.fn(),
   handleRequestDeleteGeneration: vi.fn(),
 };
 const shot = (status: string, disconnected = false) =>
@@ -87,5 +88,46 @@ describe("local video generation UI", () => {
     );
     expect(container.querySelectorAll("video")).toHaveLength(2);
     expect(screen.getByText("v1")).toBeInTheDocument();
+  });
+  it("toggles pin with an explicit retention tooltip", async () => {
+    const generation = {
+      id: 4,
+      status: "succeeded",
+      result_url: "/generated/local-videos/4.mp4",
+      is_current: false,
+      is_pinned: false,
+    } as StoryboardMediaGeneration;
+    const handleTogglePinGeneration = vi.fn();
+    const { rerender } = render(
+      <WorkspacePreviewStage
+        {...base}
+        handleTogglePinGeneration={handleTogglePinGeneration}
+        selectedShot={{
+          ...shot("succeeded"),
+          video_status: "succeeded",
+          video_url: generation.result_url,
+        }}
+        videoGenerations={[generation]}
+      />,
+    );
+    const pinButton = screen.getByRole("button", { name: "钉住历史版本" });
+    expect(pinButton.getAttribute("title")).toMatch(/最多保留 10 条/);
+    await userEvent.setup().click(pinButton);
+    expect(handleTogglePinGeneration).toHaveBeenCalledWith(generation);
+    rerender(
+      <WorkspacePreviewStage
+        {...base}
+        handleTogglePinGeneration={handleTogglePinGeneration}
+        selectedShot={{
+          ...shot("succeeded"),
+          video_status: "succeeded",
+          video_url: generation.result_url,
+        }}
+        videoGenerations={[{ ...generation, is_pinned: true }]}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "取消钉住历史版本" }).getAttribute("title"),
+    ).toMatch(/不会被自动清理/);
   });
 });
