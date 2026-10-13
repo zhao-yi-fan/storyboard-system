@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { describe, it } from 'mocha';
 
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const require = createRequire(import.meta.url);
 const { DEFAULT_PROVIDER_MODEL } = require('../config/shared/constants');
 const {
@@ -39,9 +40,9 @@ describe('test/voice_reference_text.test.ts', () => {
 
   it('should send the effective preview text to DashScope', async () => {
     const originalFetch = globalThis.fetch;
-    let requestBody: { input?: { preview_text?: unknown } } | null = null;
+    const captured: { body: { input?: { preview_text?: unknown } } | null } = { body: null };
     const mockFetch = async (_url: string, options: RequestInit) => {
-      requestBody = JSON.parse(String(options.body || '{}'));
+      captured.body = JSON.parse(String(options.body || '{}'));
       return {
         ok: true,
         text: async () =>
@@ -64,7 +65,7 @@ describe('test/voice_reference_text.test.ts', () => {
       );
 
       assert.equal(
-        requestBody?.input?.preview_text,
+        captured.body?.input?.preview_text,
         '我叫林婉。过去很多选择让我失去了方向，但这一次，我想亲手改写自己的命运。',
       );
       assert.equal(

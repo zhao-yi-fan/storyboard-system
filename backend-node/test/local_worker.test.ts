@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const require = createRequire(import.meta.url);
 const JobService = require('../app/service/local_video_job');
 const auth = require('../app/middleware/local_worker_auth');

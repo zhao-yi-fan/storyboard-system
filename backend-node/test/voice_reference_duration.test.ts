@@ -9,6 +9,7 @@ import { promisify } from 'node:util';
 import { describe, it } from 'mocha';
 
 const execFileAsync = promisify(execFile);
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const require = createRequire(import.meta.url);
 const { normalizeAudioDuration } = require('../app/lib/media');
 const CharacterService = require('../app/service/character');
@@ -104,7 +105,7 @@ describe('test/voice_reference_duration.test.ts', () => {
   });
 
   it('should persist a retryable failure without storing rejected audio', async () => {
-    const executedQueries: unknown[] = [];
+    const executedQueries: Array<unknown[]> = [];
     const fakeService = {
       app: {},
       pool: {

@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { describe, it } from 'mocha';
 
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const cjsRequire = createRequire(import.meta.url);
 const { GENERATION_STATUS, MEDIA_TYPE, VIDEO_MODEL } = cjsRequire('../app/lib/domain_constants');
 const SceneMediaLibraryService = cjsRequire('../app/service/scene_media_library');
@@ -87,7 +88,7 @@ describe('test/scene_video_poster.test.ts', () => {
       video_status: GENERATION_STATUS.SUCCEEDED,
       video_error: '',
     });
-    assert.equal(Object.hasOwn(updatePayload || {}, 'cover_url'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(updatePayload || {}, 'cover_url'), false);
   });
 
   it('stores stable generated paths when adding a poster to signed OSS media', async () => {

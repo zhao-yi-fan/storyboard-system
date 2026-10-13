@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { describe, it } from 'mocha';
 
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const require = createRequire(import.meta.url);
 const { normalizeGeneratedAssetReference, resolveUrl } = require('../app/lib/generated_asset');
 const { sanitizeFileName } = require('../app/lib/media');

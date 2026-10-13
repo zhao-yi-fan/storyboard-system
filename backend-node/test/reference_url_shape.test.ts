@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { describe, it } from 'mocha';
 
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const cjsRequire = createRequire(import.meta.url);
 const StoryboardReferenceService = cjsRequire('../app/service/storyboard_reference');
 const { generateSeedreamImage } = cjsRequire('../app/lib/ai_clients');
@@ -61,9 +62,9 @@ describe('test/reference_url_shape.test.ts', () => {
 
   it('signs provider-bound image urls at the Seedream entry', async () => {
     const originalFetch = globalThis.fetch;
-    let requestBody: { image?: unknown } | null = null;
+    const captured: { body: { image?: unknown } | null } = { body: null };
     const mockFetch = async (_url: string, options: RequestInit) => {
-      requestBody = JSON.parse(String(options.body || '{}'));
+      captured.body = JSON.parse(String(options.body || '{}'));
       return {
         ok: true,
         status: 200,
@@ -76,7 +77,7 @@ describe('test/reference_url_shape.test.ts', () => {
         '/generated/characters/sheet-8.png',
       ]);
       assert.equal(url, 'https://cdn.example.com/out.png');
-      const sent = (requestBody?.image as string) || '';
+      const sent = (captured.body?.image as string) || '';
       assert.ok(
         sent.includes(OSS_HOST),
         `provider must receive a signed url: ${sent}`,

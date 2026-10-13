@@ -7,6 +7,7 @@ import path from 'node:path';
 
 import { describe, it } from 'mocha';
 
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const cjsRequire = createRequire(import.meta.url);
 const { matchesComposeTargetSpec, parseFrameRate } = cjsRequire('../app/lib/media');
 

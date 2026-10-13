@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { describe, it } from 'mocha';
 
+// @ts-expect-error: tests execute as ESM (mocha + Node type stripping) while tsc assumes CJS from package.json
 const cjsRequire = createRequire(import.meta.url);
 const apiCors = cjsRequire('../app/middleware/api_cors');
 const rateLimit = cjsRequire('../app/middleware/rate_limit');
