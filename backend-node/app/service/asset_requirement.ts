@@ -28,6 +28,10 @@ class AssetRequirementService extends Service {
     const [rows] = await this.pool.query(
       `SELECT ar.*, c.title AS chapter_title,
         ch.avatar_url AS character_avatar_url,
+        CASE WHEN ar.linked_entity_type = 'character' THEN ch.design_sheet_status
+          ELSE a.cover_status END AS entity_generation_status,
+        CASE WHEN ar.linked_entity_type = 'character' THEN ch.design_sheet_error
+          ELSE a.cover_error END AS entity_generation_error,
         CASE WHEN ar.linked_entity_type = 'character'
           THEN COALESCE(NULLIF(ch.design_sheet_url, ''), ch.avatar_url)
           ELSE COALESCE(NULLIF(a.cover_url, ''), a.file_url)
@@ -387,6 +391,30 @@ class AssetRequirementService extends Service {
   async listRequirements(projectId: number, chapterId: number | null) {
     await this.syncAssetRequirements(projectId, chapterId);
     const rows = await this.queryRequirements(projectId, chapterId);
+    // Successful generation from either view retires stale requirement errors.
+    const reconciled = new Set();
+    for (const row of rows) {
+      const key = `${row.linked_entity_type}:${row.linked_entity_id}`;
+      if (row.entity_generation_status === GENERATION_STATUS.SUCCEEDED && row.file_url) {
+        if (
+          !reconciled.has(key) &&
+          (row.status === GENERATION_STATUS.FAILED || row.status === GENERATION_STATUS.GENERATING)
+        ) {
+          await this.pool.execute(
+            "UPDATE asset_requirements SET status = 'generated', error_message = NULL WHERE project_id = ? AND linked_entity_type = ? AND linked_entity_id = ? AND status IN ('failed', 'generating') AND deleted_at IS NULL",
+            [projectId, row.linked_entity_type, row.linked_entity_id],
+          );
+          reconciled.add(key);
+        }
+        if (
+          row.status === GENERATION_STATUS.FAILED ||
+          row.status === GENERATION_STATUS.GENERATING
+        ) {
+          row.status = GENERATION_STATUS.GENERATED;
+          row.error_message = '';
+        }
+      }
+    }
     const base = this.app.config.storyboard.publicAppBaseUrl || '';
     return rows.map((row: RequirementEntity) => {
       const isCharacter = row.linked_entity_type === ENTITY_TYPE.CHARACTER;
@@ -403,7 +431,9 @@ class AssetRequirementService extends Service {
         file_url: resolveUrl(this.app, row.file_url || '', base),
         preview_url: resolveUrl(this.app, row.preview_url || '', base),
         can_generate: canGenerate,
-        blocking_reason: canGenerate ? '' : '缺少角色参考图，请先到项目资产库补充',
+        blocking_reason: canGenerate ? '' : '缺少角色参考图，请在右侧资产详情补充',
+        generation_status: row.entity_generation_status || row.status,
+        generation_error: row.entity_generation_error || row.error_message || '',
       };
     });
   }
@@ -428,16 +458,18 @@ class AssetRequirementService extends Service {
     projectId: number,
     chapterId: number | null,
     requirementId: number | null,
+    missingOnly = false,
   ) {
-    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item) =>
-      requirementId
-        ? item.id === Number(requirementId) && item.status !== GENERATION_STATUS.GENERATING
-        : item.status === GENERATION_STATUS.PENDING || item.status === GENERATION_STATUS.FAILED,
-    );
+    const requirements = (await this.listRequirements(projectId, chapterId)).filter((item) => {
+      if ((item.generation_status || item.status) === GENERATION_STATUS.GENERATING) return false;
+      if (requirementId) return item.id === Number(requirementId);
+      if (missingOnly) return !item.file_url;
+      return item.status === GENERATION_STATUS.PENDING || item.status === GENERATION_STATUS.FAILED;
+    });
     const results = [];
-    const generatedEntities = new Set();
+    const generatedEntities = new Map<string, { status: string; error?: string }>();
     for (const item of requirements) {
-      if (!item.can_generate) {
+      if (!item.can_generate || !item.linked_entity_id) {
         results.push({
           id: item.id,
           status: 'blocked',
@@ -448,7 +480,7 @@ class AssetRequirementService extends Service {
       try {
         const entityKey = `${item.linked_entity_type}:${item.linked_entity_id}`;
         if (generatedEntities.has(entityKey)) {
-          results.push({ id: item.id, status: GENERATION_STATUS.GENERATED, reused: true });
+          results.push({ id: item.id, ...generatedEntities.get(entityKey), reused: true });
           continue;
         }
         await this.pool.execute(
@@ -460,9 +492,17 @@ class AssetRequirementService extends Service {
         } else {
           await this.ctx.service.asset.generateCover(item.linked_entity_id);
         }
-        generatedEntities.add(entityKey);
+        generatedEntities.set(entityKey, { status: GENERATION_STATUS.GENERATED });
+        await this.pool.execute(
+          "UPDATE asset_requirements SET status = 'generated', error_message = NULL WHERE project_id = ? AND linked_entity_type = ? AND linked_entity_id = ? AND deleted_at IS NULL",
+          [projectId, item.linked_entity_type, item.linked_entity_id],
+        );
         results.push({ id: item.id, status: GENERATION_STATUS.GENERATED });
       } catch (error) {
+        generatedEntities.set(`${item.linked_entity_type}:${item.linked_entity_id}`, {
+          status: GENERATION_STATUS.FAILED,
+          error: (error as Error).message || '生成失败',
+        });
         this.ctx.logger.error(
           '[asset-workspace] requirement generation failed: project=%s requirement=%s entity=%s:%s error=%s',
           projectId,

@@ -47,6 +47,7 @@ import {
 import { Input } from "../../components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
 import { UserMenu } from "../../components/UserMenu";
+import { getProjectPosition } from "../../lib/projectPosition";
 import styles from "./ProjectDashboard.module.scss";
 
 const gradients = [
@@ -377,7 +378,7 @@ export default function ProjectDashboard() {
                   project={project}
                   index={index}
                   pinningProjectId={pinningProjectId}
-                  onOpen={(item) => void navigate(`/asset-confirmation?project=${item.id}`)}
+                  onOpen={(item) => void navigate(getProjectPosition(item.id))}
                   onTogglePin={(item) => void togglePinProject(item)}
                   onRename={openRenameDialog}
                   onDelete={setDeleteTarget}

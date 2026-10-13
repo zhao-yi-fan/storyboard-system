@@ -13,6 +13,7 @@ import type {
   StoryboardMediaGeneration,
 } from "../../api";
 import { assetApi, chapterApi, characterApi, projectApi, sceneApi } from "../../api";
+import { getProjectPosition, rememberProjectPosition } from "../../lib/projectPosition";
 import { sceneMediaToWorkspaceMedia, sceneToWorkspaceClip } from "./Workspace.helpers";
 
 export function useWorkspaceData() {
@@ -165,13 +166,13 @@ export function useWorkspaceData() {
     }
   };
 
-  const loadScenes = async (chapterId: number, autoSelect = false) => {
+  const loadScenes = async (chapterId: number, autoSelect = false, restoreSceneId?: number) => {
     try {
       const data = await sceneApi.getScenesByChapter(chapterId);
       setScenes(data);
 
       if (autoSelect) {
-        const firstScene = data[0] ?? null;
+        const firstScene = data.find((item) => item.id === restoreSceneId) ?? data[0] ?? null;
         setSelectedScene(firstScene);
         if (firstScene) {
           await loadStoryboards(firstScene.id);
@@ -202,11 +203,17 @@ export function useWorkspaceData() {
       setChapters(data);
 
       if (autoSelect) {
-        const firstChapter = data[0] ?? null;
+        const url = new URL(window.location.href);
+        const saved = new URL(getProjectPosition(projectId, true), window.location.origin);
+        const chapterId = Number(
+          url.searchParams.get("chapter") ?? saved.searchParams.get("chapter"),
+        );
+        const sceneId = Number(url.searchParams.get("scene") ?? saved.searchParams.get("scene"));
+        const firstChapter = data.find((item) => item.id === chapterId) ?? data[0] ?? null;
         setSelectedChapter(firstChapter);
         setExpandedChapters(firstChapter ? [firstChapter.id] : []);
         if (firstChapter) {
-          await loadScenes(firstChapter.id, true);
+          await loadScenes(firstChapter.id, true, sceneId);
         } else {
           setScenes([]);
           setSelectedScene(null);
@@ -283,6 +290,22 @@ export function useWorkspaceData() {
     setSelectedScene(scene);
     await loadStoryboards(scene.id);
   };
+
+  useEffect(() => {
+    if (
+      loading ||
+      !selectedProject ||
+      !selectedChapter ||
+      selectedChapter.project_id !== selectedProject.id ||
+      !selectedScene ||
+      !scenes.some((item) => item.id === selectedScene.id)
+    )
+      return;
+    rememberProjectPosition(
+      selectedProject.id,
+      `/workspace?project=${selectedProject.id}&chapter=${selectedChapter.id}&scene=${selectedScene.id}`,
+    );
+  }, [loading, selectedProject, selectedChapter, selectedScene, scenes]);
 
   return {
     loading,

@@ -57,6 +57,8 @@ export type AssetRequirement = {
   error_message?: string;
   can_generate?: boolean;
   blocking_reason?: string;
+  generation_status?: string;
+  generation_error?: string;
 };
 
 export type PersonalAsset = {

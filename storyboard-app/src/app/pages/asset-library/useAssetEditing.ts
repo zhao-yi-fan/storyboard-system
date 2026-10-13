@@ -194,6 +194,7 @@ export function useAssetEditing({
     if (!file || !selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setUploadingCharacterReferenceId(selectedAsset.data.id);
     try {
+      await saveSelectedCharacter();
       const avatarURL = await ossApi.uploadFileToOss(file);
       const updated = await characterApi.updateCharacter(selectedAsset.data.id, {
         avatar_url: avatarURL,
@@ -216,6 +217,7 @@ export function useAssetEditing({
     if (!file || !selectedAsset || selectedAsset.type !== ENTITY_TYPE.CHARACTER) return;
     setUploadingCharacterVoiceReferenceId(selectedAsset.data.id);
     try {
+      await saveSelectedCharacter();
       const voiceReferenceURL = await ossApi.uploadFileToOss(file);
       const updated = await characterApi.uploadCharacterVoiceReference(
         selectedAsset.data.id,
@@ -241,6 +243,7 @@ export function useAssetEditing({
     setIsSavingAsset(true);
     try {
       const fileURL = await ossApi.uploadFileToOss(file);
+      await saveSelectedAsset();
       const updated = await assetApi.updateAsset(selectedAsset.data.id, { file_url: fileURL });
       setAssets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setSelectedAsset({ type: ENTITY_TYPE.ASSET, data: updated });

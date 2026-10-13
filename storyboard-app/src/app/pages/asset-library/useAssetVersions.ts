@@ -60,6 +60,7 @@ export function useAssetVersions({
       toast.success(type === ENTITY_TYPE.CHARACTER ? "已切换主设定图版本" : "已切换资产版本");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "切换版本失败");
+      setLoadError(error instanceof Error ? error.message : "切换版本失败");
     } finally {
       setSwitchingVersionId(null);
     }

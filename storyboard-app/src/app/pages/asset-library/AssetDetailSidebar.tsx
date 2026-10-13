@@ -43,6 +43,8 @@ import {
 import styles from "./AssetLibrary.module.scss";
 
 type AssetDetailSidebarProps = {
+  editingBusy?: boolean;
+  onImport?: () => void;
   selectedAsset: SelectedAsset;
   detailSidebarWidth: number;
   isResizingDetailSidebar: boolean;
@@ -82,6 +84,8 @@ type AssetDetailSidebarProps = {
 };
 
 export function AssetDetailSidebar({
+  editingBusy = false,
+  onImport,
   selectedAsset,
   detailSidebarWidth,
   isResizingDetailSidebar,
@@ -219,7 +223,17 @@ export function AssetDetailSidebar({
                   </Button>
                 </div>
               </div>
-              <div className={styles.detailScroll}>
+              <fieldset
+                disabled={editingBusy}
+                className={styles.detailScroll}
+                style={{ minWidth: 0, border: 0 }}
+                aria-label="资产详情编辑"
+              >
+                {onImport ? (
+                  <Button variant="outline" onClick={onImport}>
+                    从个人空间导入到此资产
+                  </Button>
+                ) : null}
                 {selectedAsset.type === ENTITY_TYPE.CHARACTER ? (
                   <div className={styles.detailSections}>
                     <div className={styles.detailCard}>
@@ -775,7 +789,7 @@ export function AssetDetailSidebar({
                     </div>
                   </div>
                 )}
-              </div>
+              </fieldset>
             </>
           </aside>
         </>

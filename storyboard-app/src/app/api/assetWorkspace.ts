@@ -10,7 +10,7 @@ export function getRequirements(projectId: number, chapterId?: number) {
 
 export function generateRequirements(
   projectId: number,
-  data: { chapter_id?: number; requirement_id?: number },
+  data: { chapter_id?: number; requirement_id?: number; missing_only?: boolean },
 ) {
   return apiClient.post<Array<{ id: number; status: string; error?: string }>>(
     `/projects/${projectId}/asset-requirements/generate`,

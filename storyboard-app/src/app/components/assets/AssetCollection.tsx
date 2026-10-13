@@ -11,6 +11,7 @@ import {
 import styles from "../../pages/asset-library/AssetLibrary.module.scss";
 import { SignedImage } from "../media/SignedMedia";
 import { Badge } from "../ui/badge";
+import { AssetGenerationStatus } from "./AssetGenerationStatus";
 
 export const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
   asset?.thumbnail_url ?? asset?.cover_url ?? asset?.file_url ?? "";
@@ -121,6 +122,7 @@ export function AssetCollection({
               <div className={styles.assetGridContent}>
                 <h4 className={styles.assetName}>{asset.name}</h4>
                 <p className={styles.assetGridDescription}>{deriveAssetDescription(asset)}</p>
+                <AssetGenerationStatus status={asset.cover_status} error={asset.cover_error} />
               </div>
             </button>
           );
@@ -158,6 +160,7 @@ export function AssetCollection({
                 <Badge className={styles.primaryBadge}>{getAssetKindLabel(asset)}</Badge>
               </div>
               <p className={styles.assetListDescription}>{deriveAssetDescription(asset)}</p>
+              <AssetGenerationStatus status={asset.cover_status} error={asset.cover_error} />
             </div>
           </button>
         );

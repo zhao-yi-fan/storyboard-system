@@ -16,6 +16,7 @@ import {
 } from "../../components/workspace/RichPromptEditor";
 import { WorkspaceHeader } from "../../components/workspace/WorkspaceHeader";
 import { ENTITY_TYPE, GENERATION_STATUS, MEDIA_TYPE } from "../../constants/domain";
+import { assetPreparationPath } from "../../lib/projectPosition";
 import { useShotDraft } from "./useShotDraft";
 import { useWorkspaceCharacterAsset } from "./useWorkspaceCharacterAsset";
 import { useWorkspaceCover } from "./useWorkspaceCover";
@@ -440,7 +441,10 @@ export default function Workspace() {
         projectVideoPreviewSrc={getProjectVideoPreviewSrc(selectedProject)}
         onBack={() => void navigate("/projects")}
         onOpenAssetConfirmation={() =>
-          void (selectedProject && navigate(`/asset-confirmation?project=${selectedProject.id}`))
+          void (
+            selectedProject &&
+            navigate(assetPreparationPath(selectedProject.id, selectedChapter?.id))
+          )
         }
         onComposeProjectVideo={handleComposeProjectVideo}
         onPreviewProjectVideo={() =>

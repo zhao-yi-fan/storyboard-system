@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
+import { assetPreparationPath } from "../../lib/projectPosition";
 import styles from "./ImportScript.module.scss";
 
 export default function ImportScript() {
@@ -122,7 +123,7 @@ export default function ImportScript() {
       window.localStorage.setItem("currentProjectId", String(resumeProjectId));
       setResumeInfo(null);
       setResumeProjectId(null);
-      void navigate(`/asset-confirmation?project=${resumeProjectId}`);
+      void navigate(assetPreparationPath(resumeProjectId));
     } catch (error) {
       console.error("Failed to resume import:", error);
       const resumable = readResumeInfo(error);
@@ -177,7 +178,7 @@ export default function ImportScript() {
       if (parsingTimer !== null) {
         window.clearTimeout(parsingTimer);
       }
-      void navigate(`/asset-confirmation?project=${targetProjectId}`);
+      void navigate(assetPreparationPath(targetProjectId));
     } catch (error) {
       console.error("Failed to create project:", error);
       const resumable = readResumeInfo(error);
@@ -254,7 +255,8 @@ export default function ImportScript() {
             {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
             {resumeInfo && resumeProjectId !== null && (
               <div className={styles.errorMessage}>
-                已导入 {resumeInfo.skipped + resumeInfo.completed}/{resumeInfo.skipped + resumeInfo.total}{" "}
+                已导入 {resumeInfo.skipped + resumeInfo.completed}/
+                {resumeInfo.skipped + resumeInfo.total}{" "}
                 段，剩余分段可继续导入（不再重复计费已完成的分段）。
                 <div>
                   <Button

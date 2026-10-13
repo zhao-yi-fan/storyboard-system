@@ -1,0 +1,107 @@
+.layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.chapters {
+  width: 200px;
+  flex-shrink: 0;
+  padding: 20px 12px;
+  border-right: 1px solid #303030;
+  overflow: auto;
+}
+.chapters h2 {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 16px;
+}
+.chapters button {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.chapters button[aria-pressed="true"],
+.kinds button[aria-pressed="true"] {
+  background: #38234f;
+  color: #e9caff;
+}
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.kinds {
+  display: flex;
+  gap: 8px;
+}
+.kinds button {
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+.hint {
+  color: #aaa;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: #191919;
+  border: 1px solid #333;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  width: 100%;
+  background: #101010;
+  color: #aaa;
+}
+.preview img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+.cardBody {
+  padding: 16px;
+}
+.cardBody h3 {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.cardBody p {
+  color: #aaa;
+  font-size: 13px;
+  margin: 8px 0 12px;
+  white-space: pre-wrap;
+}
+.error,
+.cardBody .error {
+  color: #f8a8a8;
+}
+@media (max-width: 800px) {
+  .chapters {
+    width: 140px;
+  }
+  .content {
+    padding: 12px;
+  }
+}

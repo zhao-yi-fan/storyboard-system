@@ -90,7 +90,7 @@ export default function PersonalAssets() {
           <div className={styles.emptyState}>
             <Image className={styles.emptyIcon} />
             <p>还没有可复用资产</p>
-            <p className={styles.emptyHint}>在项目资产确认页点击“保存复用”</p>
+            <p className={styles.emptyHint}>在项目资产详情中点击“保存到个人空间”</p>
           </div>
         )}
       </main>

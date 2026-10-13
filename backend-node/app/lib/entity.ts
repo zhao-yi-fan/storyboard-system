@@ -224,6 +224,8 @@ export interface ShotDirectionEntity {
 }
 
 export interface RequirementEntity {
+  entity_generation_status?: string;
+  entity_generation_error?: string;
   id: number;
   project_id: number;
   chapter_id: number;

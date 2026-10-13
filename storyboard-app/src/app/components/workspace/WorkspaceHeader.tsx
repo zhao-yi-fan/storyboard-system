@@ -60,7 +60,7 @@ export function WorkspaceHeader({
           <DropdownMenuContent align="start" className={styles.dropdownContent}>
             <DropdownMenuItem onClick={onOpenAssetConfirmation} disabled={!project}>
               <ImageIcon className={styles.icon} />
-              资产确认
+              项目资产
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={onComposeProjectVideo}
