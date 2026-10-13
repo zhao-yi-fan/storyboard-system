@@ -82,12 +82,23 @@ const frameExtractionRule = {
 };
 
 await client.putBucketCORS(bucket, [...preservedRules, frameExtractionRule]);
-const updated = await client.getBucketCORS(bucket);
-const configuredOrigins = updated.rules.flatMap((rule) => asArray(rule.allowedOrigin));
+// OSS control-plane reads can briefly return the previous rule after a successful write.
+let updated;
+let verified = false;
+for (let attempt = 0; attempt < 15; attempt++) {
+  if (attempt) await new Promise((resolve) => setTimeout(resolve, 2000));
+  updated = await client.getBucketCORS(bucket);
+  verified = managedOrigins.every((origin) => updated.rules.some((rule) =>
+    asArray(rule.allowedOrigin).includes(origin)
+    && ['GET', 'HEAD'].every((method) => asArray(rule.allowedMethod).includes(method))
+    && frameExtractionRule.exposeHeader.every((header) => asArray(rule.exposeHeader).includes(header)),
+  ));
+  if (verified) break;
+}
 
 console.log(`[oss-cors] Bucket configured: ${bucket}`);
 console.log(`[oss-cors] Frame extraction origins: ${managedOrigins.join(', ')}`);
 console.log(`[oss-cors] Total rules: ${updated.rules.length}`);
-if (!managedOrigins.every((origin) => configuredOrigins.includes(origin))) {
+if (!verified) {
   throw new Error('OSS CORS 写入后校验失败');
 }
