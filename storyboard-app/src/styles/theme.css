@@ -1,0 +1,50 @@
+/* Semantic tokens shared by components and feature styles. */
+:root,
+.dark {
+  --brand: #9333ea;
+  --brand-hover: #7e22ce;
+  --brand-active: #6b21a8;
+  --brand-foreground: #ffffff;
+  --brand-text: #7e22ce;
+  --brand-soft: #f3e8ff;
+  --success: #166534;
+  --warning: #854d0e;
+  --danger: #b91c1c;
+  --danger-background: #b91c1c;
+  --danger-hover: #991b1b;
+  --surface: #ffffff;
+  --surface-hover: #f3f4f6;
+  --surface-border: #d1d5db;
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --ring: var(--brand);
+}
+
+.dark {
+  --brand-text: #d8b4fe;
+  --brand-soft: #302039;
+  --success: #86efac;
+  --warning: #fde047;
+  --danger: #fca5a5;
+  --surface: #1a1a1a;
+  --surface-hover: #262626;
+  --surface-border: #525252;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--brand);
+}
+
+:where(button, input, textarea, select):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+[data-slot="tabs-trigger"][data-state="active"] {
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  border-color: var(--brand);
+}

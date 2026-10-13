@@ -84,6 +84,10 @@ describe("asset preparation", () => {
         onRefresh={vi.fn()}
       />,
     );
+    expect(screen.getByRole("button", { name: "补参考素材" }).dataset.variant).toBe("outline");
+    expect(screen.getByRole("button", { name: "补齐本集缺失图片（1）" }).dataset.variant).toBe(
+      "default",
+    );
     fireEvent.click(screen.getByRole("button", { name: "补参考素材" }));
     expect(onOpen).toHaveBeenCalledWith(requirements[0]);
     expect(screen.getByText("再生成失败")).toBeInTheDocument();

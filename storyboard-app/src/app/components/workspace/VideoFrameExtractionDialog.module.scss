@@ -45,7 +45,7 @@
 .titleIcon {
   height: calc(var(--spacing, 0.25rem) * 6);
   width: calc(var(--spacing, 0.25rem) * 6);
-  color: var(--color-teal-300, oklch(85.5% 0.138 181.071));
+  color: var(--brand-text);
 }
 .body {
   display: flex;
@@ -83,7 +83,7 @@
   height: calc(var(--spacing, 0.25rem) * 9);
   width: calc(var(--spacing, 0.25rem) * 9);
   animation: var(--animate-spin, spin 1s linear infinite);
-  color: var(--color-teal-300, oklch(85.5% 0.138 181.071));
+  color: var(--brand-text);
 }
 .video {
   height: 100%;
@@ -227,7 +227,7 @@
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
 }
 .clipDuration {
-  color: var(--color-teal-300, oklch(85.5% 0.138 181.071));
+  color: var(--brand-text);
 }
 .thumbnails {
   display: flex;

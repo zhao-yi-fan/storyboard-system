@@ -269,9 +269,9 @@
   }
   &:focus {
     background: rgba(109, 40, 217, 0.07);
-    border-color: rgba(139, 92, 246, 0.6);
+    border-color: var(--brand);
     box-shadow:
-      0 0 0 3px rgba(139, 92, 246, 0.14),
+      0 0 0 3px color-mix(in srgb, var(--brand) 20%, transparent),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 }
@@ -329,6 +329,10 @@
   transition-duration: 200ms;
   --tw-outline-style: none;
   outline-style: none;
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+  }
 }
 .keepLoginThumb {
   position: absolute;
@@ -412,13 +416,17 @@
   transition-duration: 150ms;
   --tw-outline-style: none;
   outline-style: none;
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+  }
   &:disabled {
     cursor: not-allowed;
   }
   &:disabled {
     opacity: 50%;
   }
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 45%, #6d28d9 100%);
+  background: var(--brand);
   border: 1px solid rgba(139, 92, 246, 0.45);
   letter-spacing: 0.025em;
   box-shadow:
@@ -426,7 +434,7 @@
     0 4px 16px rgba(109, 40, 217, 0.35),
     0 1px 3px rgba(0, 0, 0, 0.3);
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 45%, #7c3aed 100%);
+    background: var(--brand-hover);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.14) inset,
       0 6px 24px rgba(109, 40, 217, 0.5),

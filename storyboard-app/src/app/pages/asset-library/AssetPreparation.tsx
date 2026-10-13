@@ -164,7 +164,19 @@ function RequirementCard({ item, onOpen }: { item: AssetRequirement; onOpen: () 
       </button>
       <div className={styles.cardBody}>
         <h3>{item.name}</h3>
-        <span>{busy ? "生成中" : failed ? "生成失败" : item.file_url ? "有图片" : "缺图片"}</span>
+        <span
+          className={
+            busy
+              ? styles.generating
+              : failed
+                ? styles.error
+                : item.file_url
+                  ? styles.available
+                  : styles.missing
+          }
+        >
+          {busy ? "生成中" : failed ? "生成失败" : item.file_url ? "有图片" : "缺图片"}
+        </span>
         <p>{item.description || "暂无描述"}</p>
         {item.generation_error || item.error_message ? (
           <p className={styles.error}>
@@ -172,9 +184,9 @@ function RequirementCard({ item, onOpen }: { item: AssetRequirement; onOpen: () 
           </p>
         ) : null}
         {!item.file_url && item.blocking_reason ? (
-          <p className={styles.error}>{item.blocking_reason}</p>
+          <p className={styles.missing}>{item.blocking_reason}</p>
         ) : null}
-        <Button size="sm" variant={item.file_url ? "outline" : "default"} onClick={onOpen}>
+        <Button size="sm" variant="outline" onClick={onOpen}>
           {action}
         </Button>
       </div>

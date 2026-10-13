@@ -1,0 +1,49 @@
+.button {
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+  }
+  &:disabled,
+  &[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+.primary {
+  background: var(--brand);
+  color: var(--brand-foreground);
+  &:hover:not(:disabled) {
+    background: var(--brand-hover);
+  }
+  &:active:not(:disabled) {
+    background: var(--brand-active);
+  }
+}
+.secondary {
+  background: var(--surface);
+  color: var(--foreground);
+  border: 1px solid var(--surface-border);
+  &:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+}
+.ghost {
+  background: transparent;
+  color: var(--foreground);
+  &:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+}
+.danger {
+  background: var(--danger-background);
+  color: #fff;
+  &:hover:not(:disabled) {
+    background: var(--danger-hover);
+  }
+}
+.link {
+  color: var(--brand-text);
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+}

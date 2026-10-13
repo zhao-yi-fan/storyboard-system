@@ -507,7 +507,9 @@ function ProjectAssetPage() {
           <div className={styles.pageHeaderActions}>
             <Button
               size="sm"
-              variant={prepare ? "default" : "ghost"}
+              variant="ghost"
+              aria-pressed={prepare}
+              className={prepare ? styles.assetViewActive : undefined}
               onClick={() =>
                 requestAction(() => {
                   setSelectedAsset(null);
@@ -519,7 +521,9 @@ function ProjectAssetPage() {
             </Button>
             <Button
               size="sm"
-              variant={!prepare ? "default" : "ghost"}
+              variant="ghost"
+              aria-pressed={!prepare}
+              className={!prepare ? styles.assetViewActive : undefined}
               onClick={() =>
                 requestAction(() => {
                   setSelectedAsset(null);

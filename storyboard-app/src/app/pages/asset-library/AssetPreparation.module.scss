@@ -25,8 +25,8 @@
 }
 .chapters button[aria-pressed="true"],
 .kinds button[aria-pressed="true"] {
-  background: #38234f;
-  color: #e9caff;
+  background: var(--brand-soft);
+  color: var(--brand-text);
 }
 .content {
   flex: 1;
@@ -95,7 +95,17 @@
 }
 .error,
 .cardBody .error {
-  color: #f8a8a8;
+  color: var(--danger);
+}
+.available {
+  color: var(--success);
+}
+.missing,
+.cardBody .missing {
+  color: var(--warning);
+}
+.generating {
+  color: var(--brand-text);
 }
 @media (max-width: 800px) {
   .chapters {

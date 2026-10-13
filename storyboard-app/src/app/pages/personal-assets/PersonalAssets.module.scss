@@ -60,8 +60,8 @@
   }
 }
 .filterActive {
-  background-color: var(--color-teal-400, oklch(77.7% 0.152 181.912));
-  color: #07110f;
+  background-color: var(--brand-soft);
+  color: var(--brand-text);
 }
 .loading {
   display: flex;
@@ -73,7 +73,7 @@
   height: calc(var(--spacing, 0.25rem) * 6);
   width: calc(var(--spacing, 0.25rem) * 6);
   animation: var(--animate-spin, spin 1s linear infinite);
-  color: var(--color-teal-300, oklch(85.5% 0.138 181.071));
+  color: var(--brand-text);
 }
 .grid {
   display: grid;

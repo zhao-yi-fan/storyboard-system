@@ -144,7 +144,7 @@ export function ManageReferencesDialog({
                       className={
                         item.assigned
                           ? "h-7 border-gray-700 text-xs text-gray-400"
-                          : "h-7 bg-teal-400 px-3 text-xs text-[#071514] hover:bg-teal-300"
+                          : "h-7 px-3 text-xs"
                       }
                       onClick={() => onAdd(item.id)}
                       disabled={item.assigned || activeActionKey === `${actionPrefix}:${item.id}`}

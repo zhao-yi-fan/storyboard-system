@@ -242,7 +242,7 @@ export default function Login() {
                       className={styles.keepLoginSwitch}
                       style={{
                         background: keepLogin
-                          ? "linear-gradient(135deg, #8b5cf6, #7c3aed)"
+                          ? "var(--brand)"
                           : "rgba(255,255,255,0.06)",
                         border: keepLogin
                           ? "1px solid rgba(139,92,246,0.55)"
