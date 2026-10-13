@@ -189,12 +189,12 @@ function resolveGeneratedUrl(app: App, raw: unknown): string {
 }
 
 function resolveUrl(app: App, raw: unknown, publicBaseUrl = ''): string {
-  const value = String(raw || '').trim();
+  const value = normalizeGeneratedAssetReference(app, raw);
   if (!value) {
     return '';
   }
   if (isGeneratedAssetPath(app, value)) {
-    return value;
+    return isOssEnabled(app) ? resolveGeneratedUrl(app, value) : value;
   }
   if (/^https?:\/\//.test(value)) {
     return normalizeGeneratedAssetReference(app, value);

@@ -13,7 +13,6 @@ module.exports = (app: {
 }) => {
   const { router, controller } = app;
 
-  router.get('/_media/stream/:objectKey(.*)', controller.mediaRedirect.stream);
   router.post('/api/local-worker/claim', controller.localWorker.claim);
   router.post('/api/local-worker/jobs/:id/heartbeat', controller.localWorker.heartbeat);
   router.get('/api/local-worker/jobs/:id/first-frame', controller.localWorker.firstFrame);

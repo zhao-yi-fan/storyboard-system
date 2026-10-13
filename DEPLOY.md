@@ -61,9 +61,15 @@ sudo journalctl -u storyboard-backend-node.service -n 100 --no-pager
 
 ## OSS CORS for browser frame extraction
 
+生产媒体由业务 API 返回一小时 OSS 公网 HTTPS 签名，浏览器直接读取私有 OSS。
+`/generated/**` 与 `/_media/stream/**` 已关闭并返回 404；不再经 ECS 转发媒体。
+数据库仍保存稳定 `/generated/**` 对象键。本地未配置 OSS 时仍可使用静态文件。
+部署会在切换 Nginx 前更新 OSS CORS；生产 `PUBLIC_APP_BASE_URL` 必须是
+`https://popreels.zhaoyifan.top`。详细行为见 `specs/browser-private-oss-media.md`。
+
 Browser-side video frame extraction fetches a signed video and draws it to Canvas. Configure the
 media bucket CORS to allow `GET` and `HEAD` from the production origin and
-`http://localhost:5173`, and expose `Content-Length` and `Accept-Ranges`. Without this rule, the
+`http://localhost:5173`, and expose `Content-Length`, `Content-Range`, `ETag` and `Accept-Ranges`. Without this rule, the
 frame dialog reports a persistent cross-origin error and does not upload or create a database row.
 
 Apply the rule using the backend environment credentials:

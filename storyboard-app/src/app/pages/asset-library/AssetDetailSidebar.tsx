@@ -18,6 +18,7 @@ import {
   getAssetKindLabel,
 } from "../../components/assets/AssetCollection";
 import { VersionImageCard } from "../../components/assets/VersionImageCard";
+import { SignedAudio } from "../../components/media/SignedMedia";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -454,13 +455,12 @@ export function AssetDetailSidebar({
                         </div>
                       ) : null}
                       {getCharacterVoiceReferenceSrc(selectedAsset.data) ? (
-                        <audio
-                          key={selectedAsset.data.voice_reference_url}
+                        <SignedAudio
+                          key={selectedAsset.data.id}
                           controls
                           className={styles.fullWidth}
-                        >
-                          <source src={getCharacterVoiceReferenceSrc(selectedAsset.data)} />
-                        </audio>
+                          src={getCharacterVoiceReferenceSrc(selectedAsset.data)}
+                        />
                       ) : (
                         <div className={styles.audioEmpty}>
                           还没有主语音参考。生成后会自动绑定到这个角色。

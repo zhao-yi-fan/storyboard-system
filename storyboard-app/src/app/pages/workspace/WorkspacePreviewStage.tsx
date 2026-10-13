@@ -1,6 +1,7 @@
 import { Camera, Loader2, Pin, PinOff, Play, Scissors, X } from "lucide-react";
 
 import type { Storyboard, StoryboardMediaGeneration } from "../../api";
+import { SignedImage, SignedVideo } from "../../components/media/SignedMedia";
 import { GENERATION_STATUS } from "../../constants/domain";
 import {
   getGenerationPreviewSrc,
@@ -64,7 +65,7 @@ export function WorkspacePreviewStage({
               </div>
             ) : getStoryboardVideoPreviewSrc(selectedShot) ? (
               <div className={`storyboard-media-frame ${styles.videoPreview}`}>
-                <video
+                <SignedVideo
                   key={getStoryboardVideoPreviewSrc(selectedShot)}
                   src={getStoryboardVideoPreviewSrc(selectedShot)}
                   controls
@@ -84,7 +85,7 @@ export function WorkspacePreviewStage({
             ) : (
               <div className={`storyboard-media-frame ${styles.emptyVideoPreview}`}>
                 {getStoryboardPreviewSrc(selectedShot) ? (
-                  <img
+                  <SignedImage
                     src={getStoryboardPreviewSrc(selectedShot)}
                     alt=""
                     className={styles.coverBackdrop}
@@ -152,7 +153,7 @@ export function WorkspacePreviewStage({
               className={generation.is_current ? styles.historyItemCurrent : styles.historyItem}
             >
               {getGenerationPreviewSrc(generation) ? (
-                <video
+                <SignedVideo
                   src={getGenerationPreviewSrc(generation)}
                   muted
                   className={styles.historyVideo}

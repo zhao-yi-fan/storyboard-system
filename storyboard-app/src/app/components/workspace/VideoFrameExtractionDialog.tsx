@@ -2,6 +2,8 @@ import { Film, Image as ImageIcon, Loader2, Pause, Play, Video } from "lucide-re
 import { useEffect, useRef, useState } from "react";
 
 import type { Scene, SceneVideoFrame, StoryboardMediaGeneration } from "../../api/types";
+import { fetchMedia } from "../../lib/signedMedia";
+import { SignedImage, SignedVideo } from "../media/SignedMedia";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -184,7 +186,7 @@ export function VideoFrameExtractionDialog({
     setCurrentTime(0);
     setDuration(0);
     setIsLoading(true);
-    void fetch(source, { signal: controller.signal })
+    void fetchMedia(source, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`视频读取失败（HTTP ${response.status}）`);
         return response.blob();
@@ -364,7 +366,7 @@ export function VideoFrameExtractionDialog({
             <div className={styles.player}>
               {isLoading ? <Loader2 className={styles.playerLoadingIcon} /> : null}
               {videoUrl ? (
-                <video
+                <SignedVideo
                   ref={videoRef}
                   src={videoUrl}
                   crossOrigin="anonymous"
@@ -473,7 +475,7 @@ export function VideoFrameExtractionDialog({
                     onClick={() => seek(item.time)}
                     title={formatTime(item.time)}
                   >
-                    <img src={item.url} alt="" className={styles.thumbnailImage} />
+                    <SignedImage src={item.url} alt="" className={styles.thumbnailImage} />
                     <span className={styles.thumbnailTime}>{formatTime(item.time)}</span>
                   </button>
                 ))}

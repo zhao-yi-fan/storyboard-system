@@ -11,6 +11,8 @@ import {
 import { useState } from "react";
 
 import type { SceneGenerationReferences } from "../../api";
+import { mediaIdentity } from "../../lib/signedMedia";
+import { SignedImage } from "../media/SignedMedia";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -144,7 +146,7 @@ export function CoverReferencePanel({
           disabled={!currentCoverUrl}
         >
           {currentCoverUrl ? (
-            <img src={currentCoverUrl} alt="当前首帧" className={styles.coverImage} />
+            <SignedImage src={currentCoverUrl} alt="当前首帧" className={styles.coverImage} />
           ) : (
             <span className={styles.coverPlaceholder}>
               <ImageIcon className={styles.placeholderIcon} /> 尚未生成首帧
@@ -171,13 +173,13 @@ export function CoverReferencePanel({
               );
               return (
                 <button
-                  key={`${reference.type}-${reference.name}-${reference.url}`}
+                  key={`${reference.type}-${reference.name}-${mediaIdentity(reference.url)}`}
                   type="button"
                   className={styles.referenceCard}
                   onClick={() => onPreviewReference(actualIndex >= 0 ? actualIndex : index)}
                   title={`${reference.name} · ${reference.source}`}
                 >
-                  <img
+                  <SignedImage
                     src={reference.url}
                     alt={reference.name || referenceTypeLabel(reference.type)}
                     className={styles.coverImage}
@@ -241,7 +243,7 @@ export function CoverReferencePanel({
                 title={`查看首帧版本 ${item.label}`}
               >
                 {item.src ? (
-                  <img src={item.src} alt="" className={styles.coverImage} />
+                  <SignedImage src={item.src} alt="" className={styles.coverImage} />
                 ) : (
                   <span className={styles.historyStatus}>{item.status}</span>
                 )}

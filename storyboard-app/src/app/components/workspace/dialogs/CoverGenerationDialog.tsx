@@ -1,5 +1,6 @@
 import type { StoryboardCoverGenerationPreview } from "../../../api";
 import styles from "../../../pages/workspace/Workspace.module.scss";
+import { SignedImage } from "../../media/SignedMedia";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -74,7 +75,7 @@ export function CoverGenerationDialog({
                         onClick={() => onPreviewReference(index)}
                         aria-label={`预览参考图 ${reference.name || index + 1}`}
                       >
-                        <img
+                        <SignedImage
                           src={reference.url}
                           alt={reference.name || `${reference.type} 参考图`}
                           loading="lazy"

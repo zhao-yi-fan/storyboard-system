@@ -1,4 +1,5 @@
 import type { AuthUser } from "../api";
+import { clearSignedMedia } from "./signedMedia";
 
 export type AuthSession = AuthUser;
 
@@ -39,6 +40,7 @@ export function saveAuthSession(session: AuthSession) {
 }
 
 export function clearAuthSession() {
+  clearSignedMedia();
   if (!isBrowser()) return;
   window.localStorage.removeItem(AUTH_SESSION_KEY);
 }

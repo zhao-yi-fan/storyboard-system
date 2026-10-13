@@ -17,6 +17,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { type Project, projectApi } from "../../api";
+import { SignedImage } from "../../components/media/SignedMedia";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,7 +115,7 @@ function ProjectCard({
         onClick={() => onOpen(project)}
       >
         {showPoster ? (
-          <img
+          <SignedImage
             className={styles.coverImage}
             src={project.video_poster_url}
             alt=""

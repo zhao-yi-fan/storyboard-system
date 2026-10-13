@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { assetWorkspaceApi, type PersonalAsset } from "../../api";
+import { SignedImage } from "../../components/media/SignedMedia";
 import { Button } from "../../components/ui/button";
 import { ASSET_KIND } from "../../constants/domain";
 import styles from "./PersonalAssets.module.scss";
@@ -61,7 +62,7 @@ export default function PersonalAssets() {
               <article key={item.id} className={styles.card}>
                 <div className={styles.preview}>
                   {(item.file_url ?? item.preview_url) ? (
-                    <img
+                    <SignedImage
                       src={item.file_url ?? item.preview_url}
                       alt={item.name}
                       className={styles.image}

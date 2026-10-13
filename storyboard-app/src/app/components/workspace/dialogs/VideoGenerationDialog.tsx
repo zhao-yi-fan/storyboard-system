@@ -1,6 +1,8 @@
 import type { StoryboardVideoGenerationPreview } from "../../../api";
 import { ASSET_KIND, VIDEO_ASPECT_RATIO, VIDEO_MODEL } from "../../../constants/domain";
+import { mediaIdentity } from "../../../lib/signedMedia";
 import styles from "../../../pages/workspace/Workspace.module.scss";
+import { SignedAudio,SignedImage } from "../../media/SignedMedia";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import {
@@ -118,7 +120,7 @@ export function VideoGenerationDialog({
               {preview.source_image_url ? (
                 <div className={styles.firstFrameGrid}>
                   <div className={styles.firstFrameThumbnail}>
-                    <img
+                    <SignedImage
                       src={preview.source_image_url}
                       alt={shotNumberLabel ? `${shotNumberLabel} 首帧图` : "首帧图"}
                       loading="lazy"
@@ -172,7 +174,7 @@ export function VideoGenerationDialog({
                 {preview.reference_images.map((reference, index) => (
                   <div key={`${reference.name}-${index}`} className={styles.referenceCard}>
                     <div className={styles.borderedReferenceThumbnail}>
-                      <img
+                      <SignedImage
                         src={reference.url}
                         alt={reference.name}
                         loading="lazy"
@@ -229,7 +231,7 @@ export function VideoGenerationDialog({
                 <div className={styles.cardGrid}>
                   {preview.audio_reference_assets.map((reference) => (
                     <div
-                      key={reference.reference_id || reference.url}
+                      key={reference.reference_id || mediaIdentity(reference.url)}
                       className={styles.audioReferenceCard}
                     >
                       <div className={styles.compactHeaderRow}>
@@ -242,7 +244,7 @@ export function VideoGenerationDialog({
                         </div>
                         <Badge className={styles.audioTypeBadge}>reference_audio</Badge>
                       </div>
-                      <audio controls className={styles.audioPlayer} src={reference.url} />
+                      <SignedAudio controls className={styles.audioPlayer} src={reference.url} />
                       <div className={styles.breakableMutedValue}>{reference.url}</div>
                     </div>
                   ))}

@@ -64,6 +64,8 @@ run "build frontend" bash -lc "cd '$FRONTEND_DIR' && npm run build"
 run "install backend-node dependencies" bash -lc "cd '$NODE_BACKEND_DIR' && npm install"
 run "typecheck backend-node" bash -lc "cd '$NODE_BACKEND_DIR' && npm run typecheck"
 run "build backend-node dist" bash -lc "cd '$NODE_BACKEND_DIR' && npm run build"
+run "configure production media origin" bash -lc "cd '$NODE_BACKEND_DIR' && node scripts/configure-production-media.mjs"
+run "configure OSS browser access" bash -lc "cd '$NODE_BACKEND_DIR' && npm run configure:oss-cors"
 
 run "install nginx 8081 site" sudo install -m 0644 "$NGINX_SITE_SOURCE" "$NGINX_SITE_TARGET"
 run "install nginx popreels site (replaces legacy hand-written popreels.conf)" sudo install -m 0644 "$ROOT_DIR/scripts/nginx/popreels.conf" /etc/nginx/conf.d/popreels.conf

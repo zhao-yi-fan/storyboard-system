@@ -1,4 +1,6 @@
+import { freshMediaUrl, mediaIdentity } from "../../../lib/signedMedia";
 import styles from "../../../pages/workspace/Workspace.module.scss";
+import { SignedVideo } from "../../media/SignedMedia";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -37,8 +39,8 @@ export function VideoPreviewDialog({
         {preview ? (
           <div className={styles.mediaPreviewBody}>
             <div className={styles.mediaPreviewStage}>
-              <video
-                key={preview.src}
+              <SignedVideo
+                key={mediaIdentity(preview.src)}
                 src={preview.src}
                 controls
                 autoPlay
@@ -51,10 +53,14 @@ export function VideoPreviewDialog({
                 type="button"
                 variant="outline"
                 className={styles.secondaryButton}
-                onClick={() =>
-                  preview.originalSrc &&
-                  window.open(preview.originalSrc, "_blank", "noopener,noreferrer")
-                }
+                onClick={() => {
+                  if (!preview.originalSrc) return;
+                  const tab = window.open("about:blank", "_blank");
+                  if (tab) tab.opener = null;
+                  void freshMediaUrl(preview.originalSrc).then((url) => {
+                    if (tab) tab.location.href = url;
+                  }).catch(() => tab?.close());
+                }}
                 disabled={!preview.originalSrc}
               >
                 打开原视频

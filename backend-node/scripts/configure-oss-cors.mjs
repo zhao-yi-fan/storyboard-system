@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({ path: path.join(rootDir, '.env') });
+dotenv.config({ path: path.join(rootDir, '../backend/.env') });
 
 const required = [
   'ALIYUN_OSS_ENDPOINT',
@@ -68,14 +69,15 @@ try {
 }
 
 const managedOrigins = [...origins];
-const preservedRules = existingRules.filter(
-  (rule) => !rule.allowedOrigin.some((origin) => managedOrigins.includes(origin)),
-);
+const preservedRules = existingRules.map((rule) => ({
+  ...rule,
+  allowedOrigin: rule.allowedOrigin.filter((origin) => !managedOrigins.includes(origin)),
+})).filter((rule) => rule.allowedOrigin.length);
 const frameExtractionRule = {
   allowedOrigin: managedOrigins,
   allowedMethod: ['GET', 'HEAD'],
   allowedHeader: ['*'],
-  exposeHeader: ['Content-Length', 'Accept-Ranges', 'ETag'],
+  exposeHeader: ['Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag'],
   maxAgeSeconds: 3600,
 };
 

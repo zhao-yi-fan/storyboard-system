@@ -1,6 +1,7 @@
 import type { CharacterVoiceVersion } from "../../../api";
 import { ASSET_SOURCE_TYPE } from "../../../constants/domain";
 import styles from "../../../pages/asset-library/AssetLibrary.module.scss";
+import { SignedAudio } from "../../media/SignedMedia";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -37,9 +38,7 @@ export function VoiceVersionsDialog({
                 key={version.id}
                 className={version.is_current ? styles.voiceVersionCurrent : styles.voiceVersion}
               >
-                <audio controls className={styles.fullWidth}>
-                  <source src={version.file_url} />
-                </audio>
+                <SignedAudio controls className={styles.fullWidth} src={version.file_url} />
                 <div className={styles.voiceVersionFooter}>
                   <span>
                     {version.source_type === ASSET_SOURCE_TYPE.MANUAL_UPLOAD

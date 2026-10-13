@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import type { Chapter, Scene } from "../../api";
+import { SignedImage } from "../../components/media/SignedMedia";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -211,7 +212,7 @@ export function WorkspaceSceneRail({
                         />
                         <span className={styles.sceneThumbnail}>
                           {getSceneNavigatorThumbnailSrc(scene) ? (
-                            <img
+                            <SignedImage
                               src={getSceneNavigatorThumbnailSrc(scene)}
                               alt={`${scene.title}片段封面`}
                               loading="lazy"

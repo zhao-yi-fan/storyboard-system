@@ -1,5 +1,6 @@
 import type { AIGenerationPreview } from "../../../api";
 import styles from "../../../pages/asset-library/AssetLibrary.module.scss";
+import { SignedImage } from "../../media/SignedMedia";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -126,7 +127,7 @@ export function AIGenerationPreviewDialog({
                     onClick={() => onPreviewReference(image.url, image.name)}
                   >
                     <div className={styles.previewReferenceImageWrap}>
-                      <img
+                      <SignedImage
                         src={image.url}
                         alt={image.name}
                         className={styles.previewReferenceImage}

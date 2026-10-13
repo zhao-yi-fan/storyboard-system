@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 
 import { buildLoginUrl, clearAuthSession } from "../lib/auth";
+import { registerSignedMedia } from "../lib/signedMedia";
 import type { ApiResponse } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
@@ -28,6 +29,7 @@ type ToastHandledError = Error & {
 };
 
 let isRedirectingToLogin = false;
+const mediaRefreshers = new Map<string, () => Promise<unknown>>();
 
 function isUnauthorizedResponse(response: Response, result: ApiResponse<unknown>) {
   return response.status === 401 || result.message === "请先登录";
@@ -90,6 +92,19 @@ async function request<T = unknown>(url: string, options: RequestOptions = {}): 
 
     // 统一处理响应格式
     if (result.code === 200) {
+      if (config.method === "GET" && !mediaRefreshers.has(url)) {
+        mediaRefreshers.set(url, () =>
+          request(url, {
+            ...options,
+            signal: undefined,
+            suppressToast: true,
+          }),
+        );
+      }
+      registerSignedMedia(
+        result.data,
+        config.method === "GET" ? mediaRefreshers.get(url) : undefined,
+      );
       // 成功时直接返回 data
       return result.data;
     } else {

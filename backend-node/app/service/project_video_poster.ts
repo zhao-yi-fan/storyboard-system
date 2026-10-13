@@ -8,7 +8,7 @@ const {
   createPreviewFromSource,
   videoPosterSpec,
 } = require('../lib/media');
-const { isOssEnabled, resolveUrl } = require('../lib/generated_asset');
+const { isOssEnabled, resolveSignedUrl } = require('../lib/generated_asset');
 
 const POSTER_RETRY_COOLDOWN_MS = 10 * 60 * 1000;
 
@@ -55,7 +55,7 @@ class ProjectVideoPosterService extends Service {
     if (isOssEnabled(this.app)) {
       return await createPreviewFromRemoteSource(
         this.app,
-        resolveUrl(this.app, videoUrl),
+        resolveSignedUrl(this.app, videoUrl),
         'project-video-posters',
         baseName,
         videoPosterSpec(),

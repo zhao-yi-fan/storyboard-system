@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import loginBgVideo from "../../../imports/login_bg_video.mp4";
 import { authApi } from "../../api";
+import { SignedVideo } from "../../components/media/SignedMedia";
 import { getRedirectTarget, saveAuthSession } from "../../lib/auth";
 import styles from "./Login.module.scss";
 
@@ -115,7 +116,7 @@ export default function Login() {
 
   return (
     <div className={styles.page}>
-      <video
+      <SignedVideo
         src={loginBgVideo}
         autoPlay
         muted

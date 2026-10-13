@@ -13,6 +13,7 @@ import {
   type Project,
   projectApi,
 } from "../../api";
+import { SignedImage } from "../../components/media/SignedMedia";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { ASSET_KIND, GENERATION_STATUS } from "../../constants/domain";
@@ -59,7 +60,7 @@ function RequirementCard({
     <article className={styles.requirementCard}>
       <div className={styles.requirementPreview}>
         {imageUrl ? (
-          <img src={imageUrl} alt={item.name} className={styles.image} loading="lazy" />
+          <SignedImage src={imageUrl} alt={item.name} className={styles.image} loading="lazy" />
         ) : (
           <div className={styles.imagePlaceholder}>
             <Image className={styles.placeholderIcon} />
@@ -375,7 +376,7 @@ export default function AssetConfirmation() {
               >
                 <div className={styles.squarePreview}>
                   {(item.file_url ?? item.preview_url) ? (
-                    <img src={item.file_url ?? item.preview_url} className={styles.image} />
+                    <SignedImage src={item.file_url ?? item.preview_url} className={styles.image} />
                   ) : null}
                 </div>
                 <div className={styles.personalAssetName}>{item.name}</div>
@@ -404,7 +405,7 @@ export default function AssetConfirmation() {
                 className={version.is_current ? styles.versionCurrent : styles.version}
               >
                 <div className={styles.squarePreview}>
-                  <img src={version.preview_url ?? version.file_url} className={styles.image} />
+                  <SignedImage src={version.preview_url ?? version.file_url} className={styles.image} />
                 </div>
                 <div className={styles.versionInfo}>
                   <span>{version.model}</span>

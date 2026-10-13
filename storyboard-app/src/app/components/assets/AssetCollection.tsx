@@ -9,6 +9,7 @@ import {
   type AssetViewMode,
 } from "../../constants/domain";
 import styles from "../../pages/asset-library/AssetLibrary.module.scss";
+import { SignedImage } from "../media/SignedMedia";
 import { Badge } from "../ui/badge";
 
 export const getAssetPreviewSrc = (asset: Asset | null | undefined) =>
@@ -25,7 +26,7 @@ export function ContainedAssetImage({
 }) {
   return (
     <div className={`${styles.containedImage} ${className}`}>
-      <img
+      <SignedImage
         src={src}
         alt=""
         aria-hidden="true"
@@ -33,7 +34,7 @@ export function ContainedAssetImage({
         decoding="async"
         className={styles.containedImageBackdrop}
       />
-      <img
+      <SignedImage
         src={src}
         alt={alt}
         loading="lazy"

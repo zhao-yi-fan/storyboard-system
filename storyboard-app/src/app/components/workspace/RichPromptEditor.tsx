@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { EntityType } from "../../constants/domain";
+import { currentMediaUrl, freshMediaUrl } from "../../lib/signedMedia";
+import { SignedImage } from "../media/SignedMedia";
 import styles from "./RichPromptEditor.module.scss";
 
 export const PROMPT_MENTION_CATEGORY = {
@@ -98,7 +100,13 @@ function createMentionNode(option: PromptMentionOption) {
   thumb.className = styles.mentionThumbnail;
   if (option.imageUrl) {
     const image = document.createElement("img");
-    image.src = option.imageUrl;
+    image.src = currentMediaUrl(option.imageUrl);
+    let retried = false;
+    image.onerror = () => {
+      if (retried) return;
+      retried = true;
+      void freshMediaUrl(option.imageUrl ?? "", true).then((url) => { image.src = url; }).catch(() => { image.alt = "图片加载失败"; });
+    };
     image.alt = "";
     image.className = styles.thumbnailImage;
     thumb.append(image);
@@ -483,7 +491,7 @@ export function RichPromptEditor({
                         >
                           <span className={styles.optionThumbnail}>
                             {option.imageUrl ? (
-                              <img src={option.imageUrl} alt="" className={styles.thumbnailImage} />
+                              <SignedImage src={option.imageUrl} alt="" className={styles.thumbnailImage} />
                             ) : option.media.includes("audio") ? (
                               <Volume2 className={styles.audioIcon} />
                             ) : (

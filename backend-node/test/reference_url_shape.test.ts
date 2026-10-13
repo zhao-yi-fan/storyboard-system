@@ -37,7 +37,7 @@ function referenceService(app: unknown) {
 }
 
 describe('test/reference_url_shape.test.ts', () => {
-  it('keeps assembled reference urls same-origin even with OSS enabled', async () => {
+  it('signs browser reference previews with OSS enabled', async () => {
     const service = referenceService(ossApp());
     const storyboard = {
       characters: [
@@ -49,14 +49,14 @@ describe('test/reference_url_shape.test.ts', () => {
     assert.equal(images.references.length, 2);
     for (const item of images.references) {
       assert.ok(
-        (item.url as string).startsWith('/generated/'),
-        `reference url must stay same-origin: ${item.url}`,
+        (item.url as string).startsWith('https://'),
+        'reference previews must use HTTPS',
       );
-      assert.ok(!(item.url as string).includes(OSS_HOST));
+      assert.ok((item.url as string).includes(OSS_HOST));
     }
     const videoImages = service.selectVideoCharacterReferenceImages(storyboard);
     assert.equal(videoImages.references.length, 1);
-    assert.ok((videoImages.references[0].url as string).startsWith('/generated/'));
+    assert.ok((videoImages.references[0].url as string).includes(OSS_HOST));
   });
 
   it('signs provider-bound image urls at the Seedream entry', async () => {

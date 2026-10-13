@@ -4,6 +4,7 @@ const response = require('../lib/response');
 
 type MiddlewareContext = {
   path: string;
+  set(name: string, value: string): void;
   cookies: {
     get: (name: string) => string | undefined;
     set: (name: string, value: string, options?: Record<string, unknown>) => void;
@@ -26,6 +27,8 @@ module.exports = (options: { publicPaths?: string[]; sessionCookieName?: string 
       await next();
       return;
     }
+    // Business responses can contain temporary bearer URLs; never cache stale signatures.
+    ctx.set('Cache-Control', 'private, no-store');
 
     if (ctx.path.startsWith('/api/local-worker/') || publicPaths.includes(ctx.path)) {
       await next();

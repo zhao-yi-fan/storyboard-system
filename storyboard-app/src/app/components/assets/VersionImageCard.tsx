@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 
 import type { AssetVersion } from "../../api";
 import styles from "../../pages/asset-library/AssetLibrary.module.scss";
+import { SignedImage } from "../media/SignedMedia";
 import { Button } from "../ui/button";
 
 export type VersionImageCardProps = {
@@ -34,7 +35,7 @@ export function VersionImageCard({
         aria-label={`预览${label}`}
       >
         <div className={`${styles.containedImage} ${aspectClassName} ${styles.fullWidth}`}>
-          <img
+          <SignedImage
             src={src}
             alt=""
             aria-hidden="true"
@@ -42,7 +43,7 @@ export function VersionImageCard({
             decoding="async"
             className={styles.containedImageBackdrop}
           />
-          <img
+          <SignedImage
             src={src}
             alt={alt}
             loading="lazy"

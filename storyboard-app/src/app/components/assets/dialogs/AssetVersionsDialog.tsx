@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 
 import type { AssetVersion } from "../../../api";
 import styles from "../../../pages/asset-library/AssetLibrary.module.scss";
+import { SignedImage } from "../../media/SignedMedia";
 import { Button } from "../../ui/button";
 import {
   Dialog,
@@ -61,7 +62,7 @@ export function AssetVersionsDialog({
                     <div
                       className={`${styles.containedImage} ${styles.aspectVideo} ${styles.fullWidth}`}
                     >
-                      <img
+                      <SignedImage
                         src={src}
                         alt=""
                         aria-hidden="true"
@@ -69,7 +70,7 @@ export function AssetVersionsDialog({
                         decoding="async"
                         className={styles.containedImageBackdrop}
                       />
-                      <img
+                      <SignedImage
                         src={src}
                         alt={alt}
                         loading="lazy"

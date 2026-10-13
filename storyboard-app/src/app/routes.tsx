@@ -10,6 +10,7 @@ export const router = createBrowserRouter([
   },
   {
     Component: GuestOnlyRoute,
+    HydrateFallback: () => <p role="status">正在加载…</p>,
     children: [
       {
         path: "/login",
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
   },
   {
     Component: RequireAuthRoute,
+    HydrateFallback: () => <p role="status">正在加载…</p>,
     children: [
       {
         path: "/projects",
