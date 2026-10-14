@@ -250,7 +250,7 @@ export function AssetDetailSidebar({
                         {getCharacterReferenceSrc(selectedAsset.data) ? (
                           <button
                             type="button"
-                            className={styles.fullSize}
+                            className={`${styles.fullSize} ${styles.mediaPreview}`}
                             onClick={() =>
                               setPreviewImage({
                                 src: getCharacterReferenceSrc(selectedAsset.data),
@@ -324,7 +324,7 @@ export function AssetDetailSidebar({
                         {getCharacterDesignSheetPreviewSrc(selectedAsset.data) ? (
                           <button
                             type="button"
-                            className={styles.fullSize}
+                            className={`${styles.fullSize} ${styles.mediaPreview}`}
                             onClick={() =>
                               setPreviewImage({
                                 src: selectedAsset.data.design_sheet_url ?? "",

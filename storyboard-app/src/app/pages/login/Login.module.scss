@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .page {
@@ -263,9 +264,11 @@
     border-color 0.15s,
     box-shadow 0.15s,
     background 0.15s;
-  &:hover:not(:focus) {
-    background: rgba(255, 255, 255, 0.075);
-    border-color: rgba(255, 255, 255, 0.16);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]):not(:focus) {
+    @media (hover: hover) and (pointer: fine) {
+      background: rgba(255, 255, 255, 0.075);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
   }
   &:focus {
     background: rgba(109, 40, 217, 0.07);
@@ -303,8 +306,10 @@
   transition-duration: 150ms;
   color: rgba(255, 255, 255, 0.25);
 }
-.passwordToggle:hover {
-  color: rgba(255, 255, 255, 0.65);
+.passwordToggle:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+  @media (hover: hover) and (pointer: fine) {
+    color: rgba(255, 255, 255, 0.65);
+  }
 }
 .keepLogin {
   display: flex;
@@ -369,8 +374,10 @@
   user-select: none;
   color: rgba(255, 255, 255, 0.35);
 }
-.keepLogin:hover .keepLoginLabel {
-  color: rgba(255, 255, 255, 0.55);
+.keepLogin:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) .keepLoginLabel {
+  @media (hover: hover) and (pointer: fine) {
+    color: rgba(255, 255, 255, 0.55);
+  }
 }
 .error {
   display: flex;
@@ -434,19 +441,19 @@
     0 4px 16px rgba(109, 40, 217, 0.35),
     0 1px 3px rgba(0, 0, 0, 0.3);
   &:hover:not(:disabled) {
-    background: var(--brand-hover);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.14) inset,
-      0 6px 24px rgba(109, 40, 217, 0.5),
-      0 1px 3px rgba(0, 0, 0, 0.3);
-    transform: translateY(-0.5px);
+    @media (hover: hover) and (pointer: fine) {
+      background: var(--brand-hover);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.14) inset,
+        0 6px 24px rgba(109, 40, 217, 0.5),
+        0 1px 3px rgba(0, 0, 0, 0.3);
+    }
   }
   &:active:not(:disabled) {
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.08) inset,
       0 2px 8px rgba(109, 40, 217, 0.3),
       0 1px 2px rgba(0, 0, 0, 0.3);
-    transform: translateY(0.5px);
   }
 }
 .loadingIcon {
@@ -496,8 +503,10 @@
   a {
     color: var(--color-gray-500, oklch(55.1% 0.027 264.364));
     text-decoration: none;
-    &:hover {
-      text-decoration: underline;
+    &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+      @media (hover: hover) and (pointer: fine) {
+        text-decoration: underline;
+      }
     }
   }
 }
@@ -516,5 +525,30 @@
       --tw-translate-z: 0;
       --tw-duration: initial;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.passwordToggle {
+  @include interaction.feedback(neutral);
+}
+.keepLoginSwitch {
+  @include interaction.feedback;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--surface-border);
+  &[aria-checked="true"] {
+    @include interaction.feedback(primary);
+    background: var(--brand);
+    border-color: var(--brand);
+  }
+}
+.submitButton {
+  @include interaction.feedback(primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

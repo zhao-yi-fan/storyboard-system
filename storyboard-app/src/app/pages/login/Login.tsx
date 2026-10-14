@@ -23,10 +23,7 @@ export default function Login() {
   const [outerGlow, setOuterGlow] = useState({ x: 0, y: 0, alpha: 0 });
   const cardWrapRef = useRef<HTMLDivElement>(null);
 
-  const redirectTarget = useMemo(
-    () => getRedirectTarget(location.search),
-    [location.search],
-  );
+  const redirectTarget = useMemo(() => getRedirectTarget(location.search), [location.search]);
 
   useEffect(() => {
     const fadePx = 220;
@@ -240,15 +237,6 @@ export default function Login() {
                       aria-checked={keepLogin}
                       onClick={() => setKeepLogin((value) => !value)}
                       className={styles.keepLoginSwitch}
-                      style={{
-                        background: keepLogin
-                          ? "var(--brand)"
-                          : "rgba(255,255,255,0.06)",
-                        border: keepLogin
-                          ? "1px solid rgba(139,92,246,0.55)"
-                          : "1px solid rgba(255,255,255,0.1)",
-                        boxShadow: keepLogin ? "0 0 8px rgba(139,92,246,0.3)" : "none",
-                      }}
                     >
                       <span
                         className={styles.keepLoginThumb}
@@ -283,11 +271,7 @@ export default function Login() {
                   </button>
                 </form>
                 <div className={styles.beianFooter}>
-                  <a
-                    href="https://beian.miit.gov.cn/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">
                     津ICP备2026014429号
                   </a>
                 </div>

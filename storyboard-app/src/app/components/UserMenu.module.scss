@@ -1,3 +1,4 @@
+@use "../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .menu {
@@ -34,19 +35,25 @@
   border-color: transparent;
   background-color: transparent;
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      border-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        border-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
+      }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      background-color: #1a1a1a;
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: #1a1a1a;
+      }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+      }
     }
   }
 }
@@ -219,25 +226,31 @@
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
   --tw-duration: 100ms;
   transition-duration: 100ms;
-  &:hover {
-    @media (hover: hover) {
-      background-color: #1c1c1c;
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: #1c1c1c;
+      }
     }
   }
 }
 .menuItem {
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+      }
     }
   }
 }
 .menuItemSubtle {
   color: var(--color-gray-500, oklch(55.1% 0.027 264.364));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-gray-300, oklch(87.2% 0.01 258.338));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-gray-300, oklch(87.2% 0.01 258.338));
+      }
     }
   }
 }
@@ -325,5 +338,22 @@
       --tw-leading: initial;
       --tw-font-weight: initial;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.trigger,
+.menuItem,
+.menuItemSubtle {
+  @include interaction.feedback(neutral);
+}
+.triggerOpen {
+  @include interaction.feedback(selected);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

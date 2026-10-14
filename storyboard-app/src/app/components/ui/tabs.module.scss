@@ -1,0 +1,44 @@
+@use "../../../styles/interaction";
+
+.trigger {
+  @include interaction.feedback;
+  color: var(--muted-foreground);
+  &:disabled,
+  &[data-disabled] {
+    opacity: 0.5;
+  }
+}
+.pill {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  &[data-state="active"] {
+    background: var(--brand-soft);
+    color: var(--brand-text);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    &[data-state="active"]:hover:not(:disabled):not([data-disabled]) {
+      background: var(--brand-soft-hover);
+    }
+  }
+}
+.underline {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  &[data-state="active"] {
+    color: var(--brand-text);
+    border-bottom-color: var(--brand);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled):not([data-disabled]) {
+      background: var(--surface-hover);
+    }
+  }
+}
+.underlineList {
+  background: transparent;
+  border-radius: 0;
+  padding: 3px;
+  flex-shrink: 0;
+}

@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 .layout {
   display: flex;
   height: 100%;
@@ -113,5 +114,25 @@
   }
   .content {
     padding: 12px;
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.chapters button,
+.kinds button {
+  @include interaction.feedback(neutral);
+}
+.chapters button[aria-pressed="true"],
+.kinds button[aria-pressed="true"] {
+  @include interaction.feedback(selected);
+}
+.preview {
+  @include interaction.feedback(media);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

@@ -1,0 +1,44 @@
+@use "interaction";
+
+// Only named shared controls; feature-specific buttons opt in via their own styles.
+[data-slot="dropdown-menu-item"],
+[data-slot="dropdown-menu-checkbox-item"],
+[data-slot="dropdown-menu-radio-item"],
+[data-slot="dropdown-menu-sub-trigger"],
+[data-slot="select-item"],
+[data-slot="select-trigger"],
+[data-slot="dropdown-menu-trigger"],
+[data-slot="popover-trigger"],
+[data-close-button],
+[data-slot="dialog-close"] {
+  @include interaction.feedback;
+}
+[data-slot="dropdown-menu-item"][data-variant="destructive"] {
+  @include interaction.feedback(danger);
+  color: var(--danger);
+}
+[data-slot="select-item"][data-state="checked"] {
+  @include interaction.feedback(selected);
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+[data-slot="switch"] {
+  @include interaction.feedback;
+  &[data-state="checked"] {
+    @include interaction.feedback(primary);
+    background: var(--brand);
+  }
+}
+[data-slot="slider-thumb"] {
+  @include interaction.feedback;
+}
+.PhotoView-Slider__toolbarIcon,
+.PhotoView-Slider__ArrowLeft,
+.PhotoView-Slider__ArrowRight {
+  @include interaction.feedback;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="switch-thumb"] {
+    transition: none;
+  }
+}

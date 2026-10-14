@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .dialog {
@@ -163,9 +164,11 @@
 }
 .modeButton {
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -430,5 +433,23 @@
       --tw-space-y-reverse: 0;
       --tw-border-style: solid;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.modeButton {
+  @include interaction.feedback(neutral);
+}
+.modeActive {
+  @include interaction.feedback(selected);
+}
+.thumbnail {
+  @include interaction.feedback(media);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

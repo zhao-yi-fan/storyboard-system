@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .insertDivider {
@@ -72,27 +73,31 @@
     var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1))
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
-  &:hover {
-    @media (hover: hover) {
-      border-color: color-mix(in srgb, oklch(91% 0.096 180.426) 70%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        border-color: color-mix(
-          in oklab,
-          var(--color-teal-200, oklch(91% 0.096 180.426)) 70%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        border-color: color-mix(in srgb, oklch(91% 0.096 180.426) 70%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          border-color: color-mix(
+            in oklab,
+            var(--color-teal-200, oklch(91% 0.096 180.426)) 70%,
+            transparent
+          );
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, oklch(85.5% 0.138 181.071) 15%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(
-          in oklab,
-          var(--color-teal-300, oklch(85.5% 0.138 181.071)) 15%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, oklch(85.5% 0.138 181.071) 15%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(
+            in oklab,
+            var(--color-teal-300, oklch(85.5% 0.138 181.071)) 15%,
+            transparent
+          );
+        }
       }
     }
   }
@@ -160,11 +165,13 @@
 .insertLineRevealed {
   opacity: 100%;
 }
-.insertDivider:hover .insertButton,
+.insertDivider:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) .insertButton,
 .insertDivider:focus-within .insertButton,
-.insertDivider:hover .insertLine,
+.insertDivider:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) .insertLine,
 .insertDivider:focus-within .insertLine {
-  opacity: 100%;
+  @media (hover: hover) and (pointer: fine) {
+    opacity: 100%;
+  }
 }
 .insertIcon {
   height: calc(var(--spacing, 0.25rem) * 3);
@@ -229,17 +236,21 @@
     var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1))
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 6%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 6%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 6%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 6%, transparent);
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -351,17 +362,21 @@
     var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1))
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 6%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 6%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 6%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 6%, transparent);
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -523,17 +538,21 @@
     var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1))
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 9%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 9%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 9%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 9%, transparent);
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+      }
     }
   }
 }
@@ -600,17 +619,21 @@
   width: calc(var(--spacing, 0.25rem) * 8);
   flex: none;
   color: var(--color-gray-600, oklch(44.6% 0.03 256.802));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 5%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 5%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 5%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 5%, transparent);
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+      }
     }
   }
 }
@@ -647,17 +670,21 @@
   justify-content: center;
   border-radius: var(--radius-lg, 0.5rem);
   color: var(--color-gray-600, oklch(44.6% 0.03 256.802));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 5%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 5%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 5%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 5%, transparent);
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -737,15 +764,17 @@
     var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1))
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 3.5000000000000004%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(
-          in oklab,
-          var(--color-white, #fff) 3.5000000000000004%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 3.5000000000000004%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(
+            in oklab,
+            var(--color-white, #fff) 3.5000000000000004%,
+            transparent
+          );
+        }
       }
     }
   }
@@ -1036,8 +1065,10 @@
     opacity: 100%;
   }
 }
-.videoPreview:hover .extractButton {
-  opacity: 100%;
+.videoPreview:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) .extractButton {
+  @media (hover: hover) and (pointer: fine) {
+    opacity: 100%;
+  }
 }
 .actionIcon {
   height: calc(var(--spacing, 0.25rem) * 4);
@@ -1282,11 +1313,17 @@
   }
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
 }
-.historyItem:hover .historyExtractButton,
-.historyItem:hover .historyDeleteButton,
-.historyItemCurrent:hover .historyExtractButton,
-.historyItemCurrent:hover .historyDeleteButton {
-  display: block;
+.historyItem:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled])
+  .historyExtractButton,
+.historyItem:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled])
+  .historyDeleteButton,
+.historyItemCurrent:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled])
+  .historyExtractButton,
+.historyItemCurrent:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled])
+  .historyDeleteButton {
+  @media (hover: hover) and (pointer: fine) {
+    display: block;
+  }
 }
 .historyIcon {
   height: calc(var(--spacing, 0.25rem) * 3);
@@ -1399,9 +1436,11 @@
   width: calc(var(--spacing, 0.25rem) * 7);
   padding: 0px;
   color: var(--color-gray-600, oklch(44.6% 0.03 256.802));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -1493,7 +1532,9 @@
   background: var(--brand);
   color: var(--brand-foreground);
   &:hover:not(:disabled) {
-    background: var(--brand-hover);
+    @media (hover: hover) and (pointer: fine) {
+      background: var(--brand-hover);
+    }
   }
   &:active:not(:disabled) {
     background: var(--brand-active);
@@ -1522,21 +1563,25 @@
   }
   background-color: var(--storyboard-surface);
   color: var(--color-gray-500, oklch(55.1% 0.027 264.364));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 7.000000000000001%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(
-          in oklab,
-          var(--color-white, #fff) 7.000000000000001%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 7.000000000000001%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(
+            in oklab,
+            var(--color-white, #fff) 7.000000000000001%,
+            transparent
+          );
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -1621,9 +1666,11 @@
   width: calc(var(--spacing, 0.25rem) * 8);
   padding: 0px;
   color: var(--color-gray-600, oklch(44.6% 0.03 256.802));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -1648,9 +1695,11 @@
 .primaryButton {
   background-color: var(--brand);
   color: var(--brand-foreground);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand-hover);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand-hover);
+      }
     }
   }
 }
@@ -1739,11 +1788,13 @@
     var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1))
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, oklch(38.6% 0.063 188.416) 40%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--brand-soft) 40%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, oklch(38.6% 0.063 188.416) 40%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--brand-soft) 40%, transparent);
+        }
       }
     }
   }
@@ -1870,18 +1921,22 @@
 .referenceTypeBadge {
   background-color: #1b2336;
   color: #9ec5ff;
-  &:hover {
-    @media (hover: hover) {
-      background-color: #1b2336;
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: #1b2336;
+      }
     }
   }
 }
 .dangerButton {
   background-color: var(--color-red-600, oklch(57.7% 0.245 27.325));
   color: var(--color-white, #fff);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--color-red-700, oklch(50.5% 0.213 27.518));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--color-red-700, oklch(50.5% 0.213 27.518));
+      }
     }
   }
 }
@@ -1899,15 +1954,17 @@
     );
   }
   color: var(--color-teal-100, oklch(95.3% 0.051 180.801));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, oklch(77.7% 0.152 181.912) 15%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(
-          in oklab,
-          var(--color-teal-400, oklch(77.7% 0.152 181.912)) 15%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, oklch(77.7% 0.152 181.912) 15%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(
+            in oklab,
+            var(--color-teal-400, oklch(77.7% 0.152 181.912)) 15%,
+            transparent
+          );
+        }
       }
     }
   }
@@ -2725,5 +2782,51 @@
       --tw-space-y-reverse: 0;
       --tw-leading: initial;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.backButton,
+.projectMenuTrigger,
+.sceneMenuTrigger,
+.generateMenuTrigger,
+.modelSelect,
+.railReopenButton,
+.railToggle,
+.refreshButton,
+.chapterButton,
+.sceneButton,
+.minimizeButton,
+.fullscreenButton,
+.extractButton,
+.videoTimeoutAction,
+.historyVersionButton,
+.historyExtractButton,
+.secondaryButton {
+  @include interaction.feedback(neutral);
+}
+.chapterButtonActive,
+.sceneButtonActive {
+  @include interaction.feedback(selected);
+}
+.referenceThumbnail {
+  @include interaction.feedback(media);
+}
+.generateVideoButton,
+.primaryButton,
+.insertButton,
+.insertButtonRevealed {
+  @include interaction.feedback(primary);
+}
+.dangerButton,
+.historyDeleteButton,
+.removeAssignedButton {
+  @include interaction.feedback(danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

@@ -5,6 +5,18 @@ import { Button } from "./button";
 import styles from "./button.module.scss";
 
 describe("semantic button variants", () => {
+  it("blocks aria-disabled activation, including a slotted link", () => {
+    const click = vi.fn();
+    render(
+      <Button asChild aria-disabled="true" onClick={click}>
+        <a href="/projects" onClick={click}>
+          不可用链接
+        </a>
+      </Button>,
+    );
+    fireEvent.click(screen.getByRole("link"));
+    expect(click).not.toHaveBeenCalled();
+  });
   it.each([
     ["default", styles.primary],
     ["outline", styles.secondary],

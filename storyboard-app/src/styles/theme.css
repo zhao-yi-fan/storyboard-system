@@ -7,13 +7,16 @@
   --brand-foreground: #ffffff;
   --brand-text: #7e22ce;
   --brand-soft: #f3e8ff;
+  --brand-soft-hover: #e9d5ff;
   --success: #166534;
   --warning: #854d0e;
   --danger: #b91c1c;
   --danger-background: #b91c1c;
   --danger-hover: #991b1b;
+  --danger-active: #7f1d1d;
   --surface: #ffffff;
   --surface-hover: #f3f4f6;
+  --surface-pressed: #e5e7eb;
   --surface-border: #d1d5db;
   --primary: var(--brand);
   --primary-foreground: var(--brand-foreground);
@@ -25,11 +28,13 @@
 .dark {
   --brand-text: #d8b4fe;
   --brand-soft: #302039;
+  --brand-soft-hover: #432b50;
   --success: #86efac;
   --warning: #fde047;
   --danger: #fca5a5;
   --surface: #1a1a1a;
   --surface-hover: #262626;
+  --surface-pressed: #343434;
   --surface-border: #525252;
 }
 
@@ -41,10 +46,4 @@ input[type="radio"] {
 :where(button, input, textarea, select):focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 3px;
-}
-
-[data-slot="tabs-trigger"][data-state="active"] {
-  background: var(--brand-soft);
-  color: var(--brand-text);
-  border-color: var(--brand);
 }

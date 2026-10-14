@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .containedImage {
@@ -35,7 +36,9 @@
   background: var(--brand-soft);
   color: var(--brand-text);
   &:hover:not(:disabled) {
-    background: var(--brand-soft);
+    @media (hover: hover) and (pointer: fine) {
+      background: var(--brand-soft);
+    }
   }
 }
 .fullSize {
@@ -97,15 +100,20 @@
     var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1))
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand);
+      }
     }
   }
 }
-.versionCard:hover .setCurrentButton,
+.versionCard:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled])
+  .setCurrentButton,
 .versionCard:focus-within .setCurrentButton {
-  opacity: 100%;
+  @media (hover: hover) and (pointer: fine) {
+    opacity: 100%;
+  }
 }
 .switchingIcon {
   margin-right: var(--spacing, 0.25rem);
@@ -154,9 +162,11 @@
 }
 .assetGridCard {
   border-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
-  &:hover {
-    @media (hover: hover) {
-      border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+      }
     }
   }
 }
@@ -285,9 +295,11 @@
 }
 .assetListCard {
   border-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
-  &:hover {
-    @media (hover: hover) {
-      border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+      }
     }
   }
 }
@@ -427,9 +439,11 @@
   flex-shrink: 0;
   height: calc(var(--spacing, 0.25rem) * 8);
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+      }
     }
   }
 }
@@ -483,9 +497,11 @@
 .createButton {
   height: calc(var(--spacing, 0.25rem) * 8);
   background-color: var(--brand);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand-hover);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand-hover);
+      }
     }
   }
 }
@@ -502,6 +518,7 @@
   overflow: hidden;
 }
 .assetMain {
+  container-type: inline-size;
   display: flex;
   flex: 1;
   min-width: 0;
@@ -550,17 +567,37 @@
   background-color: transparent;
 }
 .tabTrigger {
-  border-radius: 0;
   padding-inline: calc(var(--spacing, 0.25rem) * 4);
-  &[data-state="active"] {
-    border-bottom-style: var(--tw-border-style);
-    border-bottom-width: 2px;
+}
+@container (max-width: 800px) {
+  .assetToolbar .assetToolbarContent {
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  &[data-state="active"] {
-    border-color: var(--brand);
+  .assetToolbar .tabsList {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
   }
-  &[data-state="active"] {
-    background-color: transparent;
+  .assetToolbar .tabTrigger {
+    padding-inline: 8px;
+    gap: 4px;
+    min-width: 0;
+  }
+  .assetToolbar .tabIcon {
+    margin-right: 0;
+  }
+  .assetToolbar .tabBadge {
+    margin-left: 0;
+  }
+  .assetToolbar .toolbarActions {
+    width: 100%;
+    min-width: 0;
+  }
+  .assetToolbar .search {
+    flex: 1;
+    min-width: 0;
+    width: auto;
   }
 }
 .tabIcon {
@@ -662,9 +699,11 @@
 }
 .characterGridCard {
   border-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
-  &:hover {
-    @media (hover: hover) {
-      border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
+      }
     }
   }
 }
@@ -868,13 +907,17 @@
   font-size: var(--text-sm, 0.875rem);
   line-height: var(--tw-leading, var(--text-sm--line-height, calc(1.25 / 0.875)));
 }
-@media (hover: hover) {
-  .actionMenuItem:hover {
-    background-color: color-mix(in srgb, #fff 10%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .actionMenuItem:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      background-color: color-mix(in srgb, #fff 10%, transparent);
+    }
   }
   @supports (color: color-mix(in lab, red, red)) {
-    .actionMenuItem:hover {
-      background-color: color-mix(in oklab, var(--color-white, #fff) 10%, transparent);
+    .actionMenuItem:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in oklab, var(--color-white, #fff) 10%, transparent);
+      }
     }
   }
 }
@@ -883,15 +926,17 @@
 }
 .actionMenuDelete {
   color: var(--color-red-300, oklch(80.8% 0.114 19.571));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 10%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(
-          in oklab,
-          var(--color-red-500, oklch(63.7% 0.237 25.331)) 10%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 10%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(
+            in oklab,
+            var(--color-red-500, oklch(63.7% 0.237 25.331)) 10%,
+            transparent
+          );
+        }
       }
     }
   }
@@ -1049,9 +1094,11 @@
   flex: 1;
   border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
   color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--color-gray-900, oklch(21% 0.034 264.665));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--color-gray-900, oklch(21% 0.034 264.665));
+      }
     }
   }
 }
@@ -1059,9 +1106,11 @@
   width: 100%;
   border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
   color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--color-gray-900, oklch(21% 0.034 264.665));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--color-gray-900, oklch(21% 0.034 264.665));
+      }
     }
   }
 }
@@ -1247,9 +1296,11 @@
 .saveButton {
   width: 100%;
   background-color: var(--brand);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand-hover);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand-hover);
+      }
     }
   }
 }
@@ -1258,15 +1309,17 @@
   width: 100%;
   border-color: var(--color-red-800, oklch(44.4% 0.177 26.899));
   color: var(--color-red-400, oklch(70.4% 0.191 22.216));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, oklch(39.6% 0.141 25.723) 20%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(
-          in oklab,
-          var(--color-red-900, oklch(39.6% 0.141 25.723)) 20%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, oklch(39.6% 0.141 25.723) 20%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(
+            in oklab,
+            var(--color-red-900, oklch(39.6% 0.141 25.723)) 20%,
+            transparent
+          );
+        }
       }
     }
   }
@@ -1503,9 +1556,11 @@
 .confirmButton {
   background-color: var(--brand);
   color: var(--color-white, #fff);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand-hover);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand-hover);
+      }
     }
   }
 }
@@ -1599,9 +1654,11 @@
 }
 .createTypeActive {
   background-color: var(--brand);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand-hover);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand-hover);
+      }
     }
   }
 }
@@ -1613,22 +1670,28 @@
   border-color: var(--color-gray-600, oklch(44.6% 0.03 256.802));
   background-color: #1a1a1a;
   color: var(--color-gray-100, oklch(96.7% 0.003 264.542));
-  &:hover {
-    @media (hover: hover) {
-      background-color: #262626;
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: #262626;
+      }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
 .createConfirmButton {
   background-color: var(--brand);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand-hover);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand-hover);
+      }
     }
   }
 }
@@ -1639,9 +1702,11 @@
 }
 .deleteConfirmButton {
   background-color: var(--color-red-600, oklch(57.7% 0.245 27.325));
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--color-red-700, oklch(50.5% 0.213 27.518));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--color-red-700, oklch(50.5% 0.213 27.518));
+      }
     }
   }
 }
@@ -1917,5 +1982,54 @@
       --tw-translate-z: 0;
       --tw-leading: initial;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.backButton,
+.detailIconButton,
+.actionMenuItem,
+.showAllVersions,
+.secondaryFullButton,
+.secondaryButton,
+.viewToggleButton,
+.createTypeButton,
+.cancelButton {
+  @include interaction.feedback(neutral);
+}
+.assetViewActive,
+.viewToggleButtonActive,
+.createTypeActive {
+  @include interaction.feedback(selected);
+}
+.versionPreviewButton,
+.assetGridCard,
+.assetGridCardSelected,
+.assetListCard,
+.assetListCardSelected,
+.characterGridCard,
+.characterGridCardSelected,
+.characterListCard,
+.characterListCardSelected,
+.mediaPreview,
+.previewReferenceCard {
+  @include interaction.feedback(media);
+}
+.setCurrentButton,
+.saveButton,
+.confirmButton,
+.createConfirmButton {
+  @include interaction.feedback(primary);
+}
+.deleteButton,
+.deleteConfirmButton,
+.actionMenuDelete {
+  @include interaction.feedback(danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

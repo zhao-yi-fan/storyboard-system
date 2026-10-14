@@ -27,7 +27,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           success: "!border-emerald-800/70 !bg-[#0f1914] !text-emerald-50",
           warning: "!border-amber-800/70 !bg-[#1a1610] !text-amber-50",
           info: "!border-blue-800/70 !bg-[#10141a] !text-blue-50",
-          closeButton: "!border-gray-700 !bg-[#181818] !text-gray-300 hover:!bg-[#222]",
+          closeButton: "!border-gray-700 bg-[#181818] !text-gray-300",
         },
       }}
       {...props}

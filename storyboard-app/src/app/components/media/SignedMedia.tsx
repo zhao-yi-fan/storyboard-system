@@ -7,6 +7,7 @@ import {
   mediaIdentity,
   subscribeMedia,
 } from "../../lib/signedMedia";
+import { Button } from "../ui/button";
 
 function useSignedSource(src = "") {
   const identity = mediaIdentity(src);
@@ -41,9 +42,9 @@ function MediaError({ retry }: { retry: () => void }) {
   return (
     <span role="alert">
       媒体加载失败{" "}
-      <button type="button" onClick={retry}>
+      <Button type="button" variant="link" size="sm" onClick={retry}>
         重试
-      </button>
+      </Button>
     </span>
   );
 }

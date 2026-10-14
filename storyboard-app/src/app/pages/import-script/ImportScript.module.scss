@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .page {
@@ -26,9 +27,11 @@
 .backButton {
   height: calc(var(--spacing, 0.25rem) * 8);
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
+      }
     }
   }
 }
@@ -298,9 +301,11 @@
 .exampleButton {
   border-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
+      }
     }
   }
 }
@@ -314,7 +319,9 @@
   background: var(--brand);
   color: var(--brand-foreground);
   &:hover:not(:disabled) {
-    background: var(--brand-hover);
+    @media (hover: hover) and (pointer: fine) {
+      background: var(--brand-hover);
+    }
   }
   &:active:not(:disabled) {
     background: var(--brand-active);
@@ -625,5 +632,21 @@
       --tw-space-y-reverse: 0;
       --tw-tracking: initial;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.backButton,
+.exampleButton {
+  @include interaction.feedback(neutral);
+}
+.generateButton {
+  @include interaction.feedback(primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

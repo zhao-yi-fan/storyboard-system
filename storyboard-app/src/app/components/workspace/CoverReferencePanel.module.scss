@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .panel {
@@ -24,9 +25,11 @@
   padding-inline: calc(var(--spacing, 0.25rem) * 2);
   font-size: 10px;
   color: var(--color-fuchsia-300, oklch(83.3% 0.145 321.434));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-fuchsia-200, oklch(90.3% 0.076 319.62));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-fuchsia-200, oklch(90.3% 0.076 319.62));
+      }
     }
   }
 }
@@ -47,17 +50,21 @@
   justify-content: center;
   border-radius: var(--radius-md, 0.375rem);
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 5%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 5%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 5%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 5%, transparent);
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -119,9 +126,11 @@
 }
 .dismissError {
   color: var(--color-red-300, oklch(80.8% 0.114 19.571));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -215,12 +224,15 @@
   );
   transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
 }
-.currentCover:hover .previewOverlay {
-  background-color: color-mix(in srgb, #000 45%, transparent);
-  @supports (color: color-mix(in lab, red, red)) {
-    background-color: color-mix(in oklab, var(--color-black, #000) 45%, transparent);
+.currentCover:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled])
+  .previewOverlay {
+  @media (hover: hover) and (pointer: fine) {
+    background-color: color-mix(in srgb, #000 45%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-black, #000) 45%, transparent);
+    }
+    opacity: 100%;
   }
-  opacity: 100%;
 }
 .referencesLoading {
   display: flex;
@@ -314,11 +326,13 @@
   --tw-font-weight: var(--font-weight-medium, 500);
   font-weight: var(--font-weight-medium, 500);
   color: var(--color-gray-200, oklch(92.8% 0.006 264.531));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 9%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 9%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 9%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 9%, transparent);
+        }
       }
     }
   }
@@ -347,9 +361,11 @@
   margin-top: calc(var(--spacing, 0.25rem) * 1.5);
   font-size: 9px;
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-white, #fff);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-white, #fff);
+      }
     }
   }
 }
@@ -698,5 +714,29 @@
       --tw-ring-offset-color: #fff;
       --tw-ring-offset-shadow: 0 0 #0000;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.generateButton {
+  @include interaction.feedback(primary);
+}
+.dismissError,
+.menuTrigger,
+.expandReferences,
+.collapseReferences {
+  @include interaction.feedback(neutral);
+}
+.currentCover,
+.referenceCard,
+.historyItem,
+.historyItemCurrent {
+  @include interaction.feedback(media);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

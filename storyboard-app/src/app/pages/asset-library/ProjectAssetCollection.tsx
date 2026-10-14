@@ -59,6 +59,7 @@ export function ProjectAssetCollection({
   ];
   return (
     <Tabs
+      variant="underline"
       value={activeTab}
       onValueChange={(value) => onTab(value as AssetLibraryTab)}
       className={styles.assetTabs}

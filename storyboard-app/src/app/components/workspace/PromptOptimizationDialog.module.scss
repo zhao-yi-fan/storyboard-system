@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .promptColumn {
@@ -53,11 +54,7 @@
 .promptContentAccent {
   background-color: color-mix(in srgb, oklch(77.7% 0.152 181.912) 5.5%, transparent);
   @supports (color: color-mix(in lab, red, red)) {
-    background-color: color-mix(
-      in oklab,
-      var(--brand-text) 5.5%,
-      transparent
-    );
+    background-color: color-mix(in oklab, var(--brand-text) 5.5%, transparent);
   }
   color: var(--color-gray-100, oklch(96.7% 0.003 264.542));
   --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width))
@@ -67,11 +64,7 @@
     var(--tw-ring-shadow), var(--tw-shadow);
   --tw-ring-color: color-mix(in srgb, oklch(85.5% 0.138 181.071) 15%, transparent);
   @supports (color: color-mix(in lab, red, red)) {
-    --tw-ring-color: color-mix(
-      in oklab,
-      var(--brand-text) 15%,
-      transparent
-    );
+    --tw-ring-color: color-mix(in oklab, var(--brand-text) 15%, transparent);
   }
   --tw-ring-inset: inset;
 }
@@ -235,30 +228,36 @@
 .confirmButton {
   background-color: var(--brand);
   color: var(--brand-foreground);
-  &:hover {
-    @media (hover: hover) {
-      background-color: var(--brand-hover);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: var(--brand-hover);
+      }
     }
   }
 }
 .optimizeButton,
 .optimizeButtonCompact {
   color: var(--color-teal-300, oklch(85.5% 0.138 181.071));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, oklch(77.7% 0.152 181.912) 10%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(
-          in oklab,
-          var(--color-teal-400, oklch(77.7% 0.152 181.912)) 10%,
-          transparent
-        );
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, oklch(77.7% 0.152 181.912) 10%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(
+            in oklab,
+            var(--color-teal-400, oklch(77.7% 0.152 181.912)) 10%,
+            transparent
+          );
+        }
       }
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-teal-200, oklch(91% 0.096 180.426));
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        color: var(--color-teal-200, oklch(91% 0.096 180.426));
+      }
     }
   }
 }
@@ -429,5 +428,21 @@
       --tw-backdrop-sepia: initial;
       --tw-border-style: solid;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.optimizeButton,
+.optimizeButtonCompact {
+  @include interaction.feedback(neutral);
+}
+.confirmButton {
+  @include interaction.feedback(primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

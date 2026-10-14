@@ -5,10 +5,18 @@ import { PhotoSlider } from "react-photo-view";
 
 import { freshMediaUrl, mediaIdentity } from "../../lib/signedMedia";
 import { useSignedMediaUrls } from "../media/useSignedMediaUrls";
+import { Button } from "../ui/button";
 
 function PreviewFailure({ retry, autoRetry }: { retry: () => void; autoRetry: () => void }) {
   useEffect(autoRetry, [autoRetry]);
-  return <span role="alert">图片加载失败 <button type="button" onClick={retry}>重试</button></span>;
+  return (
+    <span role="alert">
+      图片加载失败{" "}
+      <Button type="button" variant="link" size="sm" onClick={retry}>
+        重试
+      </Button>
+    </span>
+  );
 }
 
 type PreviewItem = {
@@ -36,11 +44,16 @@ export function ImagePreviewDialog({
 }: ImagePreviewDialogProps) {
   const previewItems = items?.length ? items : src ? [{ src, alt: "" }] : [];
   const safeIndex = Math.min(Math.max(currentIndex, 0), Math.max(previewItems.length - 1, 0));
-  const urls = useSignedMediaUrls(previewItems.map((item) => item.src), open);
+  const urls = useSignedMediaUrls(
+    previewItems.map((item) => item.src),
+    open,
+  );
   const tried = useRef(new Set<string>());
   const source = previewItems[safeIndex]?.src ?? "";
   const identity = mediaIdentity(source);
-  const retry = () => { void freshMediaUrl(source, true).catch(() => undefined); };
+  const retry = () => {
+    void freshMediaUrl(source, true).catch(() => undefined);
+  };
 
   return (
     <PhotoSlider
@@ -56,11 +69,16 @@ export function ImagePreviewDialog({
       maskOpacity={0.72}
       photoClosable={false}
       loop={previewItems.length > 1}
-      brokenElement={<PreviewFailure retry={retry} autoRetry={() => {
-        if (tried.current.has(identity)) return;
-        tried.current.add(identity);
-        retry();
-      }} />}
+      brokenElement={
+        <PreviewFailure
+          retry={retry}
+          autoRetry={() => {
+            if (tried.current.has(identity)) return;
+            tried.current.add(identity);
+            retry();
+          }}
+        />
+      }
     />
   );
 }

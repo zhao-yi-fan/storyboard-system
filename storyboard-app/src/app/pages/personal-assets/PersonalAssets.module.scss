@@ -1,3 +1,4 @@
+@use "../../../styles/interaction";
 /* Expanded from the former Tailwind utilities; now standard SCSS/CSS. */
 @layer properties;
 .page {
@@ -50,11 +51,13 @@
     background-color: color-mix(in oklab, var(--color-white, #fff) 5%, transparent);
   }
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
-  &:hover {
-    @media (hover: hover) {
-      background-color: color-mix(in srgb, #fff 10%, transparent);
-      @supports (color: color-mix(in lab, red, red)) {
-        background-color: color-mix(in oklab, var(--color-white, #fff) 10%, transparent);
+  &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    @media (hover: hover) and (pointer: fine) {
+      @media (hover: hover) and (pointer: fine) {
+        background-color: color-mix(in srgb, #fff 10%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white, #fff) 10%, transparent);
+        }
       }
     }
   }
@@ -189,5 +192,20 @@
       --tw-font-weight: initial;
       --tw-leading: initial;
     }
+  }
+}
+
+/* Semantic feedback for this feature’s clickable controls. */
+.filter {
+  @include interaction.feedback(neutral);
+}
+.filterActive {
+  @include interaction.feedback(selected);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition: none;
+    animation: none;
   }
 }

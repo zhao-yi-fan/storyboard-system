@@ -1,8 +1,7 @@
+@use "../../../styles/interaction";
+
 .button {
-  &:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 3px;
-  }
+  @include interaction.feedback;
   &:disabled,
   &[aria-disabled="true"] {
     opacity: 0.5;
@@ -10,40 +9,34 @@
   }
 }
 .primary {
+  @include interaction.feedback(primary);
   background: var(--brand);
   color: var(--brand-foreground);
-  &:hover:not(:disabled) {
-    background: var(--brand-hover);
-  }
-  &:active:not(:disabled) {
-    background: var(--brand-active);
-  }
 }
 .secondary {
   background: var(--surface);
   color: var(--foreground);
   border: 1px solid var(--surface-border);
-  &:hover:not(:disabled) {
-    background: var(--surface-hover);
-  }
 }
 .ghost {
   background: transparent;
   color: var(--foreground);
-  &:hover:not(:disabled) {
-    background: var(--surface-hover);
-  }
 }
 .danger {
+  @include interaction.feedback(danger);
   background: var(--danger-background);
   color: #fff;
-  &:hover:not(:disabled) {
-    background: var(--danger-hover);
-  }
 }
 .link {
   color: var(--brand-text);
-  &:hover:not(:disabled) {
+  &:active:not(:disabled):not([aria-disabled="true"]) {
+    background: transparent;
     text-decoration: underline;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled):not([aria-disabled="true"]) {
+      background: transparent;
+      text-decoration: underline;
+    }
   }
 }
