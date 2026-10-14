@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { saveAuthSession } from "./auth";
 import {
+  assetPreparationPath,
   getProjectPosition,
+  legacyAssetsPath,
+  projectAssetsPath,
   rememberProjectPosition,
   sanitizeProjectPosition,
 } from "./projectPosition";
@@ -50,7 +53,37 @@ describe("project position", () => {
     expect(sanitizeProjectPosition("https://evil.test/assets?project=19", 19)).toBeNull();
     expect(sanitizeProjectPosition("/assets?project=20", 19)).toBeNull();
     expect(sanitizeProjectPosition("/assets?project=19&url=secret&Expires=123", 19)).toBe(
-      "/assets?project=19",
+      "/projects/19/assets",
     );
+  });
+  it("normalizes legacy bookmarks and keeps valid business parameters", () => {
+    expect(sanitizeProjectPosition("/assets/?project=30&view=all&chapter=20", 30)).toBe(
+      "/projects/30/assets?view=all&chapter=20",
+    );
+    expect(
+      sanitizeProjectPosition("/projects/30/assets/?view=prepare&chapter=20&project=19", 30),
+    ).toBe("/projects/30/assets?view=prepare&chapter=20");
+    expect(sanitizeProjectPosition("/projects/31/assets?view=all", 30)).toBeNull();
+    expect(sanitizeProjectPosition("/assets/index.js?project=30", 30)).toBeNull();
+    login(1);
+    window.localStorage.setItem(
+      "storyboard_project_position_v1:1:30",
+      "/assets/?project=30&view=all&chapter=20",
+    );
+    expect(getProjectPosition(30)).toBe("/projects/30/assets?view=all&chapter=20");
+  });
+  it("uses scoped paths for new links and legacy confirmation links", () => {
+    expect(assetPreparationPath(30, 20)).toBe("/projects/30/assets?view=prepare&chapter=20");
+    expect(projectAssetsPath(30, new URLSearchParams("project=31&view=all"))).toBe(
+      "/projects/30/assets?view=all",
+    );
+    expect(
+      legacyAssetsPath(
+        new URLSearchParams("project=30&view=all&chapter=20&character=7&q=test"),
+        true,
+      ),
+    ).toBe("/projects/30/assets?view=prepare&chapter=20&entity=character%3A7&q=test");
+    for (const value of ["", "0", "-1", "1.5", "no", "9007199254740992"])
+      expect(legacyAssetsPath(new URLSearchParams({ project: value }))).toBe("/projects");
   });
 });

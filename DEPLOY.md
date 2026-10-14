@@ -26,6 +26,12 @@ gh run watch
 curl -s https://popreels.zhaoyifan.top/api/health/deep
 ```
 
+项目资产页面使用 `/projects/<projectId>/assets?view=all&chapter=<chapterId>`，
+避免与打包目录 `/assets/` 重名。发布后必须检查新地址直接打开和刷新；
+旧 `/assets?project=<id>`、`/assets/?project=<id>` 应返回 SPA，再由前端跳转到新地址，
+并保留集数、页签和选中资产。另检查首页引用的 `/assets/*.js`、`/assets/*.css`
+仍返回正确资源，不返回 SPA HTML。
+
 ## Important rules
 
 - Do not run `git pull` as `root` inside the deployment directory.

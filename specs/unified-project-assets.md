@@ -6,10 +6,13 @@
 
 ## 页面与入口
 
-- `/assets?project=<id>&view=prepare&chapter=<id|all>&kind=<character|scene|prop>` 是准备视图。
+- `/projects/<id>/assets?view=prepare&chapter=<id|all>&kind=<character|scene|prop>` 是准备视图；静态文件继续使用 `/assets/<file>`，两者不重名。
 - `view=all` 是全部资产视图；无 view 的旧资产地址默认 all。
 - `entity=character:<id>` / `entity=asset:<id>` 打开详情，旧 character 参数兼容。
 - 旧 `/asset-confirmation` replace 重定向到准备视图；导入完成默认第一集。
+- 旧 `/assets`、`/assets/` 由 Nginx 精确返回 SPA 入口，前端 replace 到新地址；保留 view/chapter/kind/entity/q，旧 character 转换为 entity。无效项目 ID 回项目列表；路径中的项目 ID 是新地址唯一来源。
+- 本地旧资产位置读取时归一化为新地址，保持账号/项目隔离；工作台路由此次不迁移。
+- 发布验收必须覆盖新旧入口直接打开及刷新、参数保留、JS/CSS 文件正常加载；不把 `/assets/` 前缀整体配置为 SPA。
 - 工作台入口统一叫项目资产，并携带当前集。项目列表按账号和项目恢复上次已加载成功的位置；无记录进入工作台。
 - 位置只在本浏览器保存，限制为 assets/workspace 的安全参数，不保存草稿、签名 URL；失效集/片段回退有效首项。
 

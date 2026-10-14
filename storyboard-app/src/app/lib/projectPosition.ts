@@ -2,22 +2,49 @@ import { getAuthSession } from "./auth";
 
 const PREFIX = "storyboard_project_position_v1";
 const ALLOWED = {
-  "/assets": ["project", "view", "chapter", "kind", "entity", "q"],
+  "/assets": ["view", "chapter", "kind", "entity", "q"],
   "/workspace": ["project", "chapter", "scene"],
 } as const;
+
+export function projectAssetsPath(projectId: number, query?: URLSearchParams): string {
+  const params = new URLSearchParams(query);
+  params.delete("project");
+  return `/projects/${projectId}/assets${params.size ? `?${params}` : ""}`;
+}
+
+export function legacyAssetsPath(query: URLSearchParams, prepare = false): string {
+  const projectId = Number(query.get("project"));
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) return "/projects";
+  const params = new URLSearchParams(query);
+  if (prepare) params.set("view", "prepare");
+  if (params.has("character")) {
+    if (!params.has("entity")) params.set("entity", `character:${params.get("character")}`);
+    params.delete("character");
+  }
+  return sanitizeProjectPosition(projectAssetsPath(projectId, params), projectId) ?? "/projects";
+}
 
 export function sanitizeProjectPosition(value: string, projectId: number): string | null {
   if (!value.startsWith("/") || value.startsWith("//")) return null;
   const url = new URL(value, "https://position.invalid");
-  if (!(url.pathname in ALLOWED) || Number(url.searchParams.get("project")) !== projectId)
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) return null;
+  const assetMatch = /^\/projects\/([1-9]\d*)\/assets\/?$/.exec(url.pathname);
+  const legacyAsset = url.pathname === "/assets" || url.pathname === "/assets/";
+  const asset = Boolean(assetMatch) || legacyAsset;
+  if (
+    assetMatch
+      ? Number(assetMatch[1]) !== projectId
+      : Number(url.searchParams.get("project")) !== projectId
+  )
     return null;
-  const keys = ALLOWED[url.pathname as keyof typeof ALLOWED];
+  if (!asset && url.pathname !== "/workspace") return null;
+  const keys = asset ? ALLOWED["/assets"] : ALLOWED["/workspace"];
   const params = new URLSearchParams();
   for (const key of keys) {
     const item = url.searchParams.get(key);
     if (item) params.set(key, item);
   }
-  return `${url.pathname}?${params}`;
+  return asset ? projectAssetsPath(projectId, params) : `${url.pathname}?${params}`;
 }
 
 function storageKey(projectId: number, workspace = false) {
@@ -52,5 +79,7 @@ export function getProjectPosition(projectId: number, workspace = false) {
 }
 
 export function assetPreparationPath(projectId: number, chapterId?: number) {
-  return `/assets?project=${projectId}&view=prepare${chapterId ? `&chapter=${chapterId}` : ""}`;
+  const params = new URLSearchParams({ view: "prepare" });
+  if (chapterId) params.set("chapter", String(chapterId));
+  return projectAssetsPath(projectId, params);
 }

@@ -49,6 +49,13 @@ export const router = createBrowserRouter([
       {
         path: "/assets",
         async lazy() {
+          const module = await import("./pages/asset-library/LegacyAssetsRedirect");
+          return { Component: module.default };
+        },
+      },
+      {
+        path: "/projects/:projectId/assets",
+        async lazy() {
           const module = await import("./pages/asset-library/AssetLibrary");
           return { Component: module.default };
         },

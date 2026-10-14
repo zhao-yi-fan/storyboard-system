@@ -1,6 +1,6 @@
 import { ArrowLeft, Film, Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 
 import {
   type Asset,
@@ -22,7 +22,11 @@ import {
   type AssetViewMode,
   ENTITY_TYPE,
 } from "../../constants/domain";
-import { getProjectPosition, rememberProjectPosition } from "../../lib/projectPosition";
+import {
+  getProjectPosition,
+  projectAssetsPath,
+  rememberProjectPosition,
+} from "../../lib/projectPosition";
 import { mediaIdentity } from "../../lib/signedMedia";
 import { AssetDetailSidebar } from "./AssetDetailSidebar";
 import type { SelectedAsset } from "./AssetLibrary.helpers";
@@ -40,10 +44,9 @@ import { useResizableDetailSidebar } from "./useAssetLibrarySidebar";
 import { useAssetPreparation } from "./useAssetPreparation";
 import { useAssetVersions } from "./useAssetVersions";
 
-function ProjectAssetPage() {
+function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentProjectId = Number(searchParams.get("project") ?? "0");
   const chapterParam = searchParams.get("chapter");
   const prepare = searchParams.get("view") === "prepare";
   const kind =
@@ -340,7 +343,6 @@ function ProjectAssetPage() {
     if (!project || project.id !== currentProjectId || loading || !preparation.chaptersLoaded)
       return;
     const params = new URLSearchParams({
-      project: String(currentProjectId),
       view: prepare ? "prepare" : "all",
       kind,
     });
@@ -353,7 +355,7 @@ function ProjectAssetPage() {
       params.set("chapter", chapterParam ?? "all");
     if (searchQuery) params.set("q", searchQuery);
     if (selectedAsset) params.set("entity", `${selectedAsset.type}:${selectedAsset.data.id}`);
-    rememberProjectPosition(currentProjectId, `/assets?${params}`);
+    rememberProjectPosition(currentProjectId, projectAssetsPath(currentProjectId, params));
   }, [
     currentProjectId,
     prepare,
@@ -788,6 +790,9 @@ function ProjectAssetPage() {
 }
 
 export default function AssetLibrary() {
-  const [params] = useSearchParams();
-  return <ProjectAssetPage key={params.get("project") ?? "missing"} />;
+  const { projectId } = useParams();
+  const id = Number(projectId);
+  if (!/^[1-9]\d*$/.test(projectId ?? "") || !Number.isSafeInteger(id))
+    return <Navigate to="/projects" replace />;
+  return <ProjectAssetPage key={id} currentProjectId={id} />;
 }
