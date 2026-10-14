@@ -1,12 +1,8 @@
-import { useState } from "react";
-
 import type { AssetRequirement, Chapter } from "../../api";
 import { SignedImage } from "../../components/media/SignedMedia";
 import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import {
   isGenerating,
-  missingCandidates,
   PREPARATION_KINDS,
   preparationSummary,
   uniqueRequirements,
@@ -20,11 +16,9 @@ type Props = {
   items: AssetRequirement[];
   loading: boolean;
   error: string;
-  busy: boolean;
   onChapter: (value: string) => void;
   onKind: (value: string) => void;
   onOpen: (item: AssetRequirement) => void;
-  onGenerate: () => Promise<void>;
   onRefresh: () => void;
 };
 
@@ -35,18 +29,13 @@ export function AssetPreparation({
   items,
   loading,
   error,
-  busy,
   onChapter,
   onKind,
   onOpen,
-  onGenerate,
   onRefresh,
 }: Props) {
-  const [confirmBatch, setConfirmBatch] = useState(false);
   const summary = preparationSummary(items);
-  const candidates = missingCandidates(items);
   const filtered = uniqueRequirements(items).filter((item) => item.kind === kind);
-  const scope = chapterId ? "本集" : "全部集";
   return (
     <div className={styles.layout}>
       <aside className={styles.chapters} aria-label="按集查看">
@@ -87,12 +76,6 @@ export function AssetPreparation({
               </button>
             ))}
           </div>
-          <Button
-            disabled={busy || loading || !candidates.length}
-            onClick={() => setConfirmBatch(true)}
-          >
-            {busy ? "正在补齐图片…" : `补齐${scope}缺失图片（${candidates.length}）`}
-          </Button>
         </div>
         {error ? (
           <p role="alert" className={styles.error}>
@@ -114,32 +97,6 @@ export function AssetPreparation({
           </div>
         )}
       </section>
-      <Dialog open={confirmBatch} onOpenChange={setConfirmBatch}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>补齐{scope}缺失图片</DialogTitle>
-          </DialogHeader>
-          <p>范围包含当前集选择下的所有分类，不受当前分类筛选影响。</p>
-          {PREPARATION_KINDS.map((tab) => (
-            <p key={tab.value}>
-              {tab.label}：{candidates.filter((item) => item.kind === tab.value).length} 项
-            </p>
-          ))}
-          <p>
-            跳过：已有图片 {summary.available} 项、缺生成条件 {summary.blocked} 项、生成中{" "}
-            {summary.generating} 项。共享资产只生成一次。
-          </p>
-          <Button
-            disabled={busy}
-            onClick={() => {
-              setConfirmBatch(false);
-              void onGenerate();
-            }}
-          >
-            确认生成 {candidates.length} 项
-          </Button>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

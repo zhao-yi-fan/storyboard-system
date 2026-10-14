@@ -172,8 +172,7 @@
   @supports (color: color-mix(in lab, red, red)) {
     --tw-shadow-color: color-mix(
       in oklab,
-      color-mix(in oklab, var(--brand) 20%, transparent)
-        var(--tw-shadow-alpha),
+      color-mix(in oklab, var(--brand) 20%, transparent) var(--tw-shadow-alpha),
       transparent
     );
   }
@@ -373,20 +372,59 @@
 }
 .pageHeaderContent {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
-  justify-content: space-between;
+  min-width: 0;
+  height: 56px;
   padding-inline: calc(var(--spacing, 0.25rem) * 4);
   padding-block: calc(var(--spacing, 0.25rem) * 3);
 }
-.pageHeaderStart,
-.pageHeaderActions {
+.pageHeaderStart {
   display: flex;
+  width: 100%;
+  min-width: 0;
   align-items: center;
   gap: calc(var(--spacing, 0.25rem) * 3);
 }
+.viewNavigation {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 57px;
+  border-top: 1px solid var(--surface-border);
+}
+.viewTabs {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  button {
+    width: 104px;
+    flex-shrink: 0;
+  }
+}
+.viewActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 32px;
+}
+@media (max-width: 800px) {
+  .viewNavigation {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 32px 32px;
+    gap: 8px;
+    min-height: 97px;
+  }
+  .viewActions {
+    gap: 8px;
+  }
+}
 .backButton {
+  flex-shrink: 0;
   height: calc(var(--spacing, 0.25rem) * 8);
   color: var(--color-gray-400, oklch(70.7% 0.022 261.325));
   &:hover {
@@ -401,16 +439,19 @@
   width: calc(var(--spacing, 0.25rem) * 4);
 }
 .headerDivider {
+  flex-shrink: 0;
   height: calc(var(--spacing, 0.25rem) * 6);
   width: 1px;
   background-color: var(--color-gray-700, oklch(37.3% 0.034 259.733));
 }
 .pageBrand {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: calc(var(--spacing, 0.25rem) * 2);
 }
 .pageBrandIcon {
+  flex-shrink: 0;
   display: flex;
   height: calc(var(--spacing, 0.25rem) * 7);
   width: calc(var(--spacing, 0.25rem) * 7);
@@ -433,6 +474,9 @@
   width: calc(var(--spacing, 0.25rem) * 4);
 }
 .pageBrandTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--text-sm, 0.875rem);
   line-height: var(--tw-leading, var(--text-sm--line-height, calc(1.25 / 0.875)));
 }
@@ -636,8 +680,7 @@
   @supports (color: color-mix(in lab, red, red)) {
     --tw-shadow-color: color-mix(
       in oklab,
-      color-mix(in oklab, var(--brand) 20%, transparent)
-        var(--tw-shadow-alpha),
+      color-mix(in oklab, var(--brand) 20%, transparent) var(--tw-shadow-alpha),
       transparent
     );
   }
@@ -660,11 +703,7 @@
   }
   --tw-gradient-to: color-mix(in srgb, oklch(38.1% 0.176 304.987) 20%, transparent);
   @supports (color: color-mix(in lab, red, red)) {
-    --tw-gradient-to: color-mix(
-      in oklab,
-      var(--brand-soft) 20%,
-      transparent
-    );
+    --tw-gradient-to: color-mix(in oklab, var(--brand-soft) 20%, transparent);
   }
   --tw-gradient-stops: var(
     --tw-gradient-via-stops,
@@ -727,11 +766,7 @@
   }
   --tw-gradient-to: color-mix(in srgb, oklch(38.1% 0.176 304.987) 20%, transparent);
   @supports (color: color-mix(in lab, red, red)) {
-    --tw-gradient-to: color-mix(
-      in oklab,
-      var(--brand-soft) 20%,
-      transparent
-    );
+    --tw-gradient-to: color-mix(in oklab, var(--brand-soft) 20%, transparent);
   }
   --tw-gradient-stops: var(
     --tw-gradient-via-stops,

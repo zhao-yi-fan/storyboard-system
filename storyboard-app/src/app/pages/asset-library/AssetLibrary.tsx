@@ -1,4 +1,4 @@
-import { ArrowLeft, Film, Plus } from "lucide-react";
+import { ArrowLeft, Film } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 
@@ -33,6 +33,7 @@ import type { SelectedAsset } from "./AssetLibrary.helpers";
 import styles from "./AssetLibrary.module.scss";
 import { AssetLibraryDialogs } from "./AssetLibraryDialogs";
 import { AssetPreparation } from "./AssetPreparation";
+import { AssetViewNavigation } from "./AssetViewNavigation";
 import { PersonalImportDialog } from "./PersonalImportDialog";
 import { ProjectAssetCollection } from "./ProjectAssetCollection";
 import { useAssetCreate } from "./useAssetCreate";
@@ -506,61 +507,31 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
               <span className={styles.pageBrandTitle}>{project?.name ?? "项目"} · 项目资产</span>
             </div>
           </div>
-          <div className={styles.pageHeaderActions}>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-pressed={prepare}
-              className={prepare ? styles.assetViewActive : undefined}
-              onClick={() =>
-                requestAction(() => {
-                  setSelectedAsset(null);
-                  updateQuery({ view: "prepare", entity: null });
-                })
-              }
-            >
-              本集准备
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-pressed={!prepare}
-              className={!prepare ? styles.assetViewActive : undefined}
-              onClick={() =>
-                requestAction(() => {
-                  setSelectedAsset(null);
-                  updateQuery({ view: "all", entity: null });
-                })
-              }
-            >
-              全部资产
-            </Button>
-            {!prepare ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  requestAction(() => {
-                    setImportTarget(undefined);
-                    setShowImport(true);
-                  })
-                }
-              >
-                从个人空间导入
-              </Button>
-            ) : null}
-            {!prepare ? (
-              <Button
-                size="sm"
-                className={styles.createButton}
-                onClick={() => requestAction(openCreateDialog)}
-              >
-                <Plus className={styles.createButtonIcon} />
-                新建资产
-              </Button>
-            ) : null}
-          </div>
         </div>
+        <AssetViewNavigation
+          prepare={prepare}
+          chapterId={preparation.chapterId}
+          items={preparation.requirements}
+          loading={loading || preparation.loading}
+          busy={preparation.batchBusy}
+          onView={(view) =>
+            requestAction(() => {
+              setSelectedAsset(null);
+              updateQuery({ view, entity: null });
+            })
+          }
+          onImport={() =>
+            requestAction(() => {
+              setImportTarget(undefined);
+              setShowImport(true);
+            })
+          }
+          onCreate={() => requestAction(openCreateDialog)}
+          onGenerate={async () => {
+            await preparation.generateMissing();
+            await refreshAll();
+          }}
+        />
       </header>
 
       <div className={styles.pageBody}>
@@ -574,7 +545,6 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
               items={preparation.requirements}
               loading={loading || preparation.loading}
               error={preparation.error}
-              busy={preparation.batchBusy}
               onChapter={(chapter) =>
                 requestAction(() => {
                   setSelectedAsset(null);
@@ -589,10 +559,6 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
               }
               onOpen={(item) => void openRequirement(item)}
               onRefresh={() => void refreshAll()}
-              onGenerate={async () => {
-                await preparation.generateMissing();
-                await refreshAll();
-              }}
             />
           ) : (
             <ProjectAssetCollection
