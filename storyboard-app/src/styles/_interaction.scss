@@ -1,5 +1,24 @@
 // Feature-local opt-in feedback. Media controls use an edge highlight instead of tinting content.
 @mixin feedback($kind: neutral) {
+  @if $kind == media {
+    position: relative;
+    isolation: isolate;
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      border-radius: inherit;
+      pointer-events: none;
+      box-shadow: inset 0 0 0 1px var(--media-feedback-color, transparent);
+      transition: box-shadow 150ms;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      &::after {
+        transition: none;
+      }
+    }
+  }
   cursor: pointer;
   transition:
     background-color 150ms,
@@ -27,9 +46,7 @@
         background-color: var(--brand-soft-hover);
         color: var(--brand-text);
       } @else if $kind == media {
-        box-shadow: inset 0 0 0 2px var(--brand-text);
-        outline: 2px solid var(--brand-text);
-        outline-offset: -2px;
+        --media-feedback-color: var(--brand-text);
       } @else {
         background-color: var(--surface-hover);
       }
@@ -41,9 +58,7 @@
     } @else if $kind == danger {
       background-color: var(--danger-active);
     } @else if $kind == media {
-      box-shadow: inset 0 0 0 2px var(--brand);
-      outline: 2px solid var(--brand);
-      outline-offset: -2px;
+      --media-feedback-color: var(--brand);
     } @else if $kind == selected {
       background-color: var(--brand-soft-hover);
     } @else {
