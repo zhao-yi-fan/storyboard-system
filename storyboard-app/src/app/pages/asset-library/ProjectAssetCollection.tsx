@@ -3,6 +3,7 @@ import { Grid3x3, List, Loader2, MapPin, Package, Search, Users } from "lucide-r
 import type { Asset, Character } from "../../api";
 import { AssetCollection, ContainedAssetImage } from "../../components/assets/AssetCollection";
 import { AssetGenerationStatus } from "../../components/assets/AssetGenerationStatus";
+import { EmptyState } from "../../components/shared/EmptyState";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -35,6 +36,7 @@ type Props = {
   onSearch: (value: string) => void;
   selectedAsset: SelectedAsset;
   onSelect: (asset: SelectedAsset) => void;
+  onCreate: () => void;
 };
 
 export function ProjectAssetCollection({
@@ -51,12 +53,37 @@ export function ProjectAssetCollection({
   onSearch,
   selectedAsset,
   onSelect,
+  onCreate,
 }: Props) {
   const tabs = [
     { value: ASSET_LIBRARY_TAB.CHARACTERS, label: "角色资产", Icon: Users },
     { value: ASSET_LIBRARY_TAB.SCENES, label: "场景资产", Icon: MapPin },
     { value: ASSET_LIBRARY_TAB.PROPS, label: "道具资产", Icon: Package },
   ];
+  const emptyState = (tab: AssetLibraryTab) => {
+    const category = tabs.find((item) => item.value === tab) ?? tabs[0];
+    const searching = Boolean(searchQuery.trim());
+    const label = category.label.replace("资产", "");
+    return (
+      <EmptyState
+        icon={searching ? Search : category.Icon}
+        title={searching ? "未找到匹配资产" : `还没有${category.label}`}
+        description={
+          searching
+            ? "试试其他关键词，或清空搜索查看资产。"
+            : `新建${label}，或从个人空间导入已有资产。`
+        }
+        action={
+          <Button
+            variant={searching ? "outline" : "default"}
+            onClick={searching ? () => onSearch("") : onCreate}
+          >
+            {searching ? "清空搜索" : `新建${label}`}
+          </Button>
+        }
+      />
+    );
+  };
   return (
     <Tabs
       variant="underline"
@@ -115,7 +142,7 @@ export function ProjectAssetCollection({
               <Loader2 className={styles.collectionLoadingIcon} />
             </div>
           ) : !characters.length ? (
-            <div className={styles.collectionEmpty}>暂无角色资产</div>
+            emptyState(ASSET_LIBRARY_TAB.CHARACTERS)
           ) : (
             <div
               className={
@@ -144,16 +171,20 @@ export function ProjectAssetCollection({
       ].map((collection) => (
         <TabsContent key={collection.value} value={collection.value} className={styles.tabContent}>
           <div className={styles.collectionScroll}>
-            <AssetCollection
-              assets={collection.items}
-              emptyLabel={collection.emptyLabel}
-              loading={loading}
-              viewMode={viewMode}
-              selectedAssetId={
-                selectedAsset?.type === ENTITY_TYPE.ASSET ? selectedAsset.data.id : null
-              }
-              onSelect={(asset) => onSelect({ type: ENTITY_TYPE.ASSET, data: asset })}
-            />
+            {!loading && !collection.items.length ? (
+              emptyState(collection.value)
+            ) : (
+              <AssetCollection
+                assets={collection.items}
+                emptyLabel={collection.emptyLabel}
+                loading={loading}
+                viewMode={viewMode}
+                selectedAssetId={
+                  selectedAsset?.type === ENTITY_TYPE.ASSET ? selectedAsset.data.id : null
+                }
+                onSelect={(asset) => onSelect({ type: ENTITY_TYPE.ASSET, data: asset })}
+              />
+            )}
           </div>
         </TabsContent>
       ))}

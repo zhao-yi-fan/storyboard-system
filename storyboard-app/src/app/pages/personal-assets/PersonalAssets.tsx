@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 
 import { assetWorkspaceApi, type PersonalAsset } from "../../api";
 import { SignedImage } from "../../components/media/SignedMedia";
+import { EmptyState } from "../../components/shared/EmptyState";
 import { Button } from "../../components/ui/button";
 import { ASSET_KIND } from "../../constants/domain";
 import styles from "./PersonalAssets.module.scss";
@@ -20,14 +21,28 @@ export default function PersonalAssets() {
   const [kind, setKind] = useState("");
   const [items, setItems] = useState<PersonalAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
+    setError("");
     void assetWorkspaceApi
       .getPersonalAssets(kind || undefined)
-      .then(setItems)
-      .finally(() => setLoading(false));
-  }, [kind]);
+      .then((data) => {
+        if (!cancelled) setItems(data);
+      })
+      .catch((reason) => {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : "个人空间加载失败");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, reload]);
 
   return (
     <div className={styles.page}>
@@ -56,6 +71,17 @@ export default function PersonalAssets() {
           <div className={styles.loading}>
             <Loader2 className={styles.loadingIcon} />
           </div>
+        ) : error ? (
+          <EmptyState
+            error
+            title="个人空间加载失败"
+            description={error}
+            action={
+              <Button variant="outline" onClick={() => setReload((value) => value + 1)}>
+                重新加载
+              </Button>
+            }
+          />
         ) : items.length ? (
           <div className={styles.grid}>
             {items.map((item) => (
@@ -87,11 +113,14 @@ export default function PersonalAssets() {
             ))}
           </div>
         ) : (
-          <div className={styles.emptyState}>
-            <Image className={styles.emptyIcon} />
-            <p>还没有可复用资产</p>
-            <p className={styles.emptyHint}>在项目资产详情中点击“保存到个人空间”</p>
-          </div>
+          <EmptyState
+            title={
+              kind
+                ? `还没有可复用的${FILTERS.find((filter) => filter.value === kind)?.label}资产`
+                : "还没有可复用资产"
+            }
+            description="在项目资产的编辑面板中点击“保存到个人空间”，之后就可以在其他项目复用。"
+          />
         )}
       </main>
     </div>

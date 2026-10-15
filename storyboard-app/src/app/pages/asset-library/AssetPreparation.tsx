@@ -1,5 +1,6 @@
 import type { AssetRequirement, Chapter } from "../../api";
 import { SignedImage } from "../../components/media/SignedMedia";
+import { EmptyState } from "../../components/shared/EmptyState";
 import { Button } from "../../components/ui/button";
 import {
   isGenerating,
@@ -77,18 +78,33 @@ export function AssetPreparation({
             ))}
           </div>
         </div>
-        {error ? (
-          <p role="alert" className={styles.error}>
-            {error}
-          </p>
-        ) : null}
         <p className={styles.hint}>
           图片准备不代表制作全部完成；角色语音在资产详情中独立配置。可随时进入分镜工作台。
         </p>
         {loading ? (
           <p role="status">正在加载资产需求…</p>
+        ) : error ? (
+          <EmptyState
+            compact
+            error
+            title="资产需求加载失败"
+            description={error}
+            action={
+              <Button variant="outline" onClick={onRefresh}>
+                重新加载
+              </Button>
+            }
+          />
         ) : !filtered.length ? (
-          <p>当前范围暂无{PREPARATION_KINDS.find((tab) => tab.value === kind)?.label}需求</p>
+          <EmptyState
+            compact
+            title={`当前范围没有${PREPARATION_KINDS.find((tab) => tab.value === kind)?.label}需求`}
+            description={
+              chapterId
+                ? "当前集没有这类资产需求，可查看其他分类或集数。"
+                : "当前项目的全部集没有这类资产需求。"
+            }
+          />
         ) : (
           <div className={styles.grid}>
             {filtered.map((item) => (

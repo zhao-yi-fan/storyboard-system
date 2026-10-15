@@ -2,6 +2,7 @@ import { Camera, Loader2, Pin, PinOff, Play, Scissors, X } from "lucide-react";
 
 import type { Storyboard, StoryboardMediaGeneration } from "../../api";
 import { SignedImage, SignedVideo } from "../../components/media/SignedMedia";
+import { EmptyState } from "../../components/shared/EmptyState";
 import { GENERATION_STATUS } from "../../constants/domain";
 import {
   getGenerationPreviewSrc,
@@ -230,7 +231,7 @@ export function WorkspacePreviewStage({
             </div>
           ))}
           {!videoGenerations.length ? (
-            <div className={styles.historyEmpty}>还没有视频历史版本</div>
+            <EmptyState compact title="还没有视频历史版本" description="生成视频后，历史版本会显示在这里。" />
           ) : null}
         </div>
       </div>

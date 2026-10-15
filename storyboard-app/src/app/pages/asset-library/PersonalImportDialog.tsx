@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { type AssetRequirement, assetWorkspaceApi, type PersonalAsset } from "../../api";
 import { SignedImage } from "../../components/media/SignedMedia";
+import { EmptyState } from "../../components/shared/EmptyState";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 
@@ -24,11 +25,16 @@ export function PersonalImportDialog({
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [reload, setReload] = useState(0);
+  const kindLabel =
+    kind === "character" ? "角色" : kind === "scene" ? "场景" : kind === "prop" ? "道具" : "同类";
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     setLoading(true);
     setError("");
+    setLoadError("");
     setItems([]);
     void assetWorkspaceApi
       .getPersonalAssets(kind)
@@ -36,7 +42,7 @@ export function PersonalImportDialog({
         if (!cancelled) setItems(data);
       })
       .catch((reason) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "个人空间加载失败");
+        if (!cancelled) setLoadError(reason instanceof Error ? reason.message : "个人空间加载失败");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -44,7 +50,7 @@ export function PersonalImportDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, kind]);
+  }, [open, kind, reload]);
   const importItem = async (item: PersonalAsset) => {
     setBusy(true);
     setError("");
@@ -80,8 +86,29 @@ export function PersonalImportDialog({
         {error ? <p role="alert">{error}</p> : null}
         {loading ? (
           <p role="status">正在加载…</p>
+        ) : loadError ? (
+          <EmptyState
+            compact
+            error
+            title="个人空间加载失败"
+            description={loadError}
+            action={
+              <Button variant="outline" onClick={() => setReload((value) => value + 1)}>
+                重新加载
+              </Button>
+            }
+          />
         ) : !items.length ? (
-          <p>个人空间暂无同类资产</p>
+          <EmptyState
+            compact
+            title={`个人空间还没有${kindLabel}资产`}
+            description="在项目资产的编辑面板中点击“保存到个人空间”，之后就可以在其他项目复用。"
+            action={
+              <Button variant="outline" onClick={onClose}>
+                知道了
+              </Button>
+            }
+          />
         ) : (
           items.map((item) => (
             <Button

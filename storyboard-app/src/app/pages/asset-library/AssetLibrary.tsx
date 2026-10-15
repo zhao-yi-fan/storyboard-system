@@ -562,6 +562,7 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
             />
           ) : (
             <ProjectAssetCollection
+              onCreate={() => requestAction(openCreateDialog)}
               activeTab={activeTab}
               onTab={(tab) =>
                 requestAction(() => {
