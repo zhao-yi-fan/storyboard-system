@@ -12,6 +12,16 @@ describe("signed media presentation", () => {
     clearSignedMedia();
   });
   afterEach(() => vi.restoreAllMocks());
+  it("keeps the image element and source unchanged when the same signature is registered again", async () => {
+    const url = signed("cached.png", Math.floor(Date.now() / 1000) + 3600);
+    registerSignedMedia(url);
+    const { container, rerender } = render(<SignedImage alt="cached" src={url} />);
+    const image = container.querySelector("img");
+    await act(async () => registerSignedMedia(url));
+    rerender(<SignedImage alt="cached" src={url} />);
+    expect(container.querySelector("img")).toBe(image);
+    expect(image).toHaveAttribute("src", url);
+  });
   it("keeps the playing video mounted on its source during background renewal", async () => {
     const now = Math.floor(Date.now() / 1000);
     const original = signed("play.mp4", now + 3600);

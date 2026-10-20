@@ -41,6 +41,17 @@ describe("signed media lifecycle", () => {
     expect(await freshMediaUrl("blob:preview")).toBe("blob:preview");
     expect(refresh).not.toHaveBeenCalled();
   });
+  it("does not notify mounted images when the business API returns the identical signature", () => {
+    const url = signed("stable.png", 4600);
+    const notify = vi.fn();
+    registerSignedMedia(url);
+    const unsubscribe = subscribeMedia(url, notify);
+    registerSignedMedia({ thumbnail_url: url }, vi.fn());
+    expect(notify).not.toHaveBeenCalled();
+    registerSignedMedia(signed("stable.png", 5800));
+    expect(notify).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
   it("pauses in background and renews mounted media when the page becomes visible", async () => {
     const url = signed("visible.png", 1100);
     const refresh = vi.fn(async () => registerSignedMedia(signed("visible.png", 4600), refresh));

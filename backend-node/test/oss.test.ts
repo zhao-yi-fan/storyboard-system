@@ -36,6 +36,9 @@ describe('test/oss.test.ts', () => {
     assert.equal(result.object_key, 'assets/demo.png');
     assert.ok(result.upload_url.includes('test-bucket'));
     assert.ok(result.upload_url.startsWith('https://'));
+    const url = new URL(result.upload_url);
+    assert.equal(url.searchParams.has('response-cache-control'), false);
+    assert.ok(Number(url.searchParams.get('Expires')) >= Date.now() / 1000 + 3590);
   });
 
   it('builds clients without network access', () => {

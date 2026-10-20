@@ -7,6 +7,7 @@ const path = require('node:path');
 const { URL } = require('node:url');
 const OSS = require('ali-oss');
 const DIST_DIR_NAME = 'dist';
+const { BROWSER_MEDIA_POLICY } = require('../../config/shared/browser_media');
 
 type StoryboardConfig = {
   generatedAssetBasePath?: string;
@@ -194,7 +195,7 @@ function resolveUrl(app: App, raw: unknown, publicBaseUrl = ''): string {
     return '';
   }
   if (isGeneratedAssetPath(app, value)) {
-    return isOssEnabled(app) ? resolveGeneratedUrl(app, value) : value;
+    return isOssEnabled(app) ? resolveBrowserGeneratedUrl(app, value) : value;
   }
   if (/^https?:\/\//.test(value)) {
     return normalizeGeneratedAssetReference(app, value);
@@ -203,6 +204,27 @@ function resolveUrl(app: App, raw: unknown, publicBaseUrl = ''): string {
     return `${String(publicBaseUrl).trim().replace(/\/$/, '')}${value}`;
   }
   return value;
+}
+
+function resolveBrowserGeneratedUrl(app: App, value: string): string {
+  const client = createOssClient(app, true);
+  const objectKey = generatedObjectKey(app, value);
+  for (let attempt = 0; attempt < BROWSER_MEDIA_POLICY.signingAttempts; attempt++) {
+    const nowMs = Date.now();
+    const now = Math.floor(nowMs / 1000);
+    const sdkNow = Math.round(nowMs / 1000);
+    const expiresAt = Math.floor(now / BROWSER_MEDIA_POLICY.windowSeconds) *
+      BROWSER_MEDIA_POLICY.windowSeconds + BROWSER_MEDIA_POLICY.lifetimeSeconds;
+    const signed = client.signatureUrl(objectKey, {
+      method: 'GET',
+      expires: expiresAt - sdkNow,
+      response: { 'cache-control': `private, max-age=${BROWSER_MEDIA_POLICY.cacheMaxAgeSeconds}` },
+    });
+    if (Number(new URL(signed).searchParams.get('Expires')) === expiresAt) {
+      return normalizeSignedUrl(signed);
+    }
+  }
+  throw new Error('Unable to generate stable browser media signature');
 }
 
 function resolveSignedUrl(app: App, raw: unknown, publicBaseUrl = ''): string {

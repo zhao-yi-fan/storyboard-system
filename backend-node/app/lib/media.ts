@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
 const { execFile } = require('node:child_process');
+const { randomUUID } = require('node:crypto');
 const {
   generatedPublicPath,
   isGeneratedAssetPath,
@@ -149,6 +150,7 @@ async function createPreviewFromLocalPath(
   spec: PreviewSpec,
 ): Promise<string> {
   await ensureFfmpeg();
+  previewFilename = versionedPreviewFilename(previewFilename);
   const publicPath = generatedPublicPath(app, subdir, previewFilename);
   const outputExtension = path.extname(previewFilename) || '.webp';
 
@@ -194,6 +196,11 @@ async function createPreviewFromLocalPath(
 function isMissingWebpEncoderError(error: unknown): boolean {
   const message = String((error as Error)?.message || error);
   return /(?:webp|encoder).*(?:disabled|not found)|Error selecting an encoder/i.test(message);
+}
+
+function versionedPreviewFilename(filename: string): string {
+  const extension = path.extname(filename);
+  return `${path.basename(filename, extension)}-${randomUUID()}${extension}`;
 }
 
 async function createPreviewFromInput(
@@ -630,5 +637,6 @@ export {
   storeBuffer,
   storyboardPreviewSpec,
   trimVideo,
+  versionedPreviewFilename,
   videoPosterSpec,
 };
