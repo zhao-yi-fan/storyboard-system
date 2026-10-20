@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { Asset, Character } from "../../api";
@@ -37,13 +37,10 @@ describe("useAssetLibraryFilters", () => {
 });
 
 describe("useResizableDetailSidebar", () => {
-  it("starts at default width and enters resize mode", () => {
+  it("starts at default width with separator semantics", () => {
     const { result } = renderHook(() => useResizableDetailSidebar());
     expect(result.current.detailSidebarWidth).toBe(384);
-    act(() => {
-      result.current.handleDetailSidebarMouseDown();
-    });
-    // width only changes on real mousemove; the hook must at least stay mounted
+    expect(result.current.resizeHandleProps.role).toBe("separator");
     expect(result.current.detailSidebarWidth).toBe(384);
   });
 });

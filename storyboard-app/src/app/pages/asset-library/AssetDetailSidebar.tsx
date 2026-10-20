@@ -9,7 +9,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type { Dispatch, HTMLAttributes, RefObject, SetStateAction } from "react";
 
 import type { AssetVersion } from "../../api";
 import {
@@ -48,7 +48,7 @@ type AssetDetailSidebarProps = {
   selectedAsset: SelectedAsset;
   detailSidebarWidth: number;
   isResizingDetailSidebar: boolean;
-  handleDetailSidebarMouseDown: () => void;
+  resizeHandleProps: HTMLAttributes<HTMLDivElement>;
   showActionMenu: boolean;
   setShowActionMenu: Dispatch<SetStateAction<boolean>>;
   setSelectedAsset: (asset: SelectedAsset) => void;
@@ -89,7 +89,7 @@ export function AssetDetailSidebar({
   selectedAsset,
   detailSidebarWidth,
   isResizingDetailSidebar,
-  handleDetailSidebarMouseDown,
+  resizeHandleProps,
   showActionMenu,
   setShowActionMenu,
   setSelectedAsset,
@@ -127,12 +127,12 @@ export function AssetDetailSidebar({
     <>
       {selectedAsset ? (
         <>
-          <div
-            className={`resize-handle resize-handle-left ${styles.resizeHandle} ${isResizingDetailSidebar ? "dragging" : ""}`}
-            onMouseDown={handleDetailSidebarMouseDown}
-          />
-
           <aside style={{ width: detailSidebarWidth }} className={styles.detailSidebar}>
+            <div
+              {...resizeHandleProps}
+              className={styles.resizeHandle}
+              data-dragging={isResizingDetailSidebar || undefined}
+            />
             <>
               <div className={styles.detailHeader}>
                 <h3 className={styles.detailTitle}>

@@ -822,18 +822,48 @@
   gap: calc(var(--spacing, 0.25rem) * 2);
 }
 .resizeHandle {
-  position: relative;
+  position: absolute;
+  inset-block: 0;
+  left: -6px;
   z-index: 20;
-  width: calc(var(--spacing, 0.25rem) * 3);
-  flex-shrink: 0;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    background: var(--color-gray-800);
+    pointer-events: none;
+    transition: background-color 150ms;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover::before {
+      background: var(--brand);
+    }
+  }
+  &[data-dragging]::before {
+    background: var(--brand);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::before {
+      transition: none;
+    }
+  }
 }
 .detailSidebar {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   flex-direction: column;
-  border-left-style: var(--tw-border-style);
-  border-left-width: 1px;
-  border-color: var(--color-gray-800, oklch(27.8% 0.033 256.848));
   background-color: #0f0f0f;
   max-width: 100%;
 }

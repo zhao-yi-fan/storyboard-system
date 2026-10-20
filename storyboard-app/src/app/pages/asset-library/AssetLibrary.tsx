@@ -99,8 +99,8 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
-  const { detailSidebarWidth, isResizingDetailSidebar, handleDetailSidebarMouseDown } =
-    useResizableDetailSidebar();
+  const { detailSidebarWidth, isResizingDetailSidebar, resizeHandleProps } =
+    useResizableDetailSidebar(Boolean(selectedAsset));
   const selectedCharacterReferenceInputRef = useRef<HTMLInputElement | null>(null);
   const handledEntity = useRef<string | null>(null);
   const openSequence = useRef(0);
@@ -611,7 +611,7 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
           }
           detailSidebarWidth={detailSidebarWidth}
           isResizingDetailSidebar={isResizingDetailSidebar}
-          handleDetailSidebarMouseDown={handleDetailSidebarMouseDown}
+          resizeHandleProps={resizeHandleProps}
           showActionMenu={showActionMenu}
           setShowActionMenu={setShowActionMenu}
           setSelectedAsset={(asset) => (asset ? setDraft(asset) : selectAsset(null))}
