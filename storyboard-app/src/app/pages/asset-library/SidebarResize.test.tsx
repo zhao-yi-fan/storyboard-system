@@ -43,6 +43,7 @@ describe("asset sidebar resizing", () => {
     document.body.style.cursor = "crosshair";
     document.body.style.userSelect = "text";
     pointer(handle, "pointerdown", 600);
+    expect(handle).toHaveAttribute("data-pointer-focus", "true");
     expect(handle).toHaveAttribute("aria-valuenow", "384");
     pointer(handle, "pointermove", 550);
     expect(handle).toHaveAttribute("aria-valuenow", "434");
@@ -51,11 +52,26 @@ describe("asset sidebar resizing", () => {
     pointer(handle, "pointermove", 2000);
     expect(handle).toHaveAttribute("aria-valuenow", "320");
     pointer(handle, "pointercancel", 2000);
+    expect(handle).toHaveAttribute("data-pointer-focus", "true");
     expect(handle).toHaveAttribute("data-dragging", "false");
     expect(document.body.style.cursor).toBe("crosshair");
     expect(document.body.style.userSelect).toBe("text");
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+  });
+  it("restores keyboard focus feedback after a pointer interaction or blur", () => {
+    render(<Fixture />);
+    const handle = captureHandle();
+    pointer(handle, "pointerdown", 600);
+    pointer(handle, "pointerup", 600);
+    expect(handle).toHaveAttribute("data-pointer-focus", "true");
+    fireEvent.keyDown(handle, { key: "ArrowLeft" });
+    expect(handle).not.toHaveAttribute("data-pointer-focus");
+    expect(handle).toHaveAttribute("aria-valuenow", "400");
+    pointer(handle, "pointerdown", 600);
+    pointer(handle, "pointerup", 600);
+    fireEvent.blur(handle);
+    expect(handle).not.toHaveAttribute("data-pointer-focus");
   });
   it.each(["pointerup", "lostpointercapture", "blur", "resize", "close", "unmount"])(
     "cleans up active dragging on %s",

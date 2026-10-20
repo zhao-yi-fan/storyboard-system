@@ -14,6 +14,7 @@ const clamp = (width: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width))
 export function useResizableDetailSidebar(enabled = true) {
   const [detailSidebarWidth, setDetailSidebarWidth] = useState(384);
   const [isResizingDetailSidebar, setResizing] = useState(false);
+  const [pointerFocus, setPointerFocus] = useState(false);
   const drag = useRef<{
     x: number;
     width: number;
@@ -56,9 +57,11 @@ export function useResizableDetailSidebar(enabled = true) {
   const finish = (event: PointerEvent<HTMLDivElement>) => {
     if (drag.current?.pointerId === event.pointerId) stop();
   };
-  const resizeHandleProps: HTMLAttributes<HTMLDivElement> = {
+  const resizeHandleProps: HTMLAttributes<HTMLDivElement> & { "data-pointer-focus"?: boolean } = {
     role: "separator",
     tabIndex: 0,
+    "data-pointer-focus": pointerFocus || undefined,
+    onBlur: () => setPointerFocus(false),
     "aria-label": "调整资产编辑面板宽度",
     "aria-orientation": "vertical",
     "aria-valuemin": MIN_WIDTH,
@@ -69,6 +72,7 @@ export function useResizableDetailSidebar(enabled = true) {
       if (!enabled || window.innerWidth <= 800 || event.button !== 0 || drag.current) return;
       event.preventDefault();
       event.currentTarget.focus();
+      setPointerFocus(true);
       event.currentTarget.setPointerCapture(event.pointerId);
       const { cursor, userSelect } = document.body.style;
       drag.current = {
@@ -94,6 +98,7 @@ export function useResizableDetailSidebar(enabled = true) {
     onPointerCancel: finish,
     onLostPointerCapture: finish,
     onKeyDown: (event) => {
+      setPointerFocus(false);
       if (
         !enabled ||
         window.innerWidth <= 800 ||
