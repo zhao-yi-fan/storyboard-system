@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AssetVersion } from "../../api";
+import { AssetVersionsDialog } from "./dialogs/AssetVersionsDialog";
 import { VersionImageCard } from "./VersionImageCard";
 
 const version = (overrides: Partial<AssetVersion> = {}) =>
@@ -24,6 +25,28 @@ const baseProps = {
 };
 
 describe("VersionImageCard", () => {
+  it("shares preview and switch behavior with the all-versions dialog", async () => {
+    const user = userEvent.setup();
+    const onPreview = vi.fn();
+    const onSetCurrent = vi.fn();
+    const item = version({ file_url: baseProps.src });
+    render(
+      <AssetVersionsDialog
+        open
+        versions={[item]}
+        isCharacter
+        switchingVersionId={null}
+        onOpenChange={() => {}}
+        onPreview={onPreview}
+        onSetCurrent={onSetCurrent}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "预览v1" }));
+    expect(onPreview).toHaveBeenCalledWith(baseProps.src, "资产生成版本 1");
+    expect(onSetCurrent).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "设为当前版本" }));
+    expect(onSetCurrent).toHaveBeenCalledWith(item);
+  });
   it("renders image, label and set-current button", () => {
     render(<VersionImageCard {...baseProps} />);
     expect(screen.getByAltText("主设定图版本 1")).toBeInTheDocument();

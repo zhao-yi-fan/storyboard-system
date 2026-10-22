@@ -1,9 +1,5 @@
-import { Loader2 } from "lucide-react";
-
 import type { AssetVersion } from "../../../api";
 import styles from "../../../pages/asset-library/AssetLibrary.module.scss";
-import { SignedImage } from "../../media/SignedMedia";
-import { Button } from "../../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
+import { VersionImageCard } from "../VersionImageCard";
 
 type AssetVersionsDialogProps = {
   open: boolean;
@@ -49,60 +46,17 @@ export function AssetVersionsDialog({
               const alt = `资产生成版本 ${versions.length - index}`;
               const label = `v${versions.length - index}`;
               return (
-                <div
-                  className={version.is_current ? styles.versionCardCurrent : styles.versionCard}
+                <VersionImageCard
                   key={version.id}
-                >
-                  <button
-                    type="button"
-                    className={styles.versionPreviewButton}
-                    onClick={() => onPreview(src, alt)}
-                    aria-label={`预览${label}`}
-                  >
-                    <div
-                      className={`${styles.containedImage} ${styles.aspectVideo} ${styles.fullWidth}`}
-                    >
-                      <SignedImage
-                        src={src}
-                        alt=""
-                        aria-hidden="true"
-                        loading="lazy"
-                        decoding="async"
-                        className={styles.containedImageBackdrop}
-                      />
-                      <SignedImage
-                        src={src}
-                        alt={alt}
-                        loading="lazy"
-                        decoding="async"
-                        className={styles.containedImageSource}
-                      />
-                    </div>
-                  </button>
-                  <div className={styles.versionLabel}>
-                    {version.is_current ? "当前版本" : label}
-                  </div>
-                  {!version.is_current ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={switchingVersionId === version.id}
-                      aria-label="设为当前版本"
-                      title="设为当前版本"
-                      className={styles.setCurrentButton}
-                      onClick={() => onSetCurrent(version)}
-                    >
-                      {switchingVersionId === version.id ? (
-                        <>
-                          <Loader2 className={styles.switchingIcon} />
-                          切换中
-                        </>
-                      ) : (
-                        "设为当前"
-                      )}
-                    </Button>
-                  ) : null}
-                </div>
+                  version={version}
+                  src={src}
+                  alt={alt}
+                  label={label}
+                  aspectClassName={styles.aspectVideo}
+                  switching={switchingVersionId === version.id}
+                  onPreview={() => onPreview(src, alt)}
+                  onSetCurrent={() => onSetCurrent(version)}
+                />
               );
             })}
           </div>

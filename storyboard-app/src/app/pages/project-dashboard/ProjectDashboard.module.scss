@@ -545,6 +545,7 @@
   }
 }
 .projectCover {
+  border-radius: calc(var(--radius-2xl, 1rem) - 1px) calc(var(--radius-2xl, 1rem) - 1px) 0 0;
   position: relative;
   display: block;
   height: calc(var(--spacing, 0.25rem) * 36);

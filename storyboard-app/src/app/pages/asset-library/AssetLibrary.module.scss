@@ -60,9 +60,44 @@
     var(--tw-ring-shadow), var(--tw-shadow);
   --tw-ring-color: var(--brand);
 }
+.versionCard,
+.versionCardCurrent {
+  isolation: isolate;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px var(--version-feedback-color, transparent);
+    transition: box-shadow 150ms;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    &:has(.versionPreviewButton:hover:not(:disabled)) {
+      --version-feedback-color: var(--brand-text);
+    }
+  }
+  &:has(.versionPreviewButton:active:not(:disabled)) {
+    --version-feedback-color: var(--brand);
+  }
+  &:has(.versionPreviewButton:focus-visible)::after {
+    box-shadow: inset 0 0 0 2px var(--brand);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition: none;
+    }
+  }
+}
 .versionPreviewButton {
   display: block;
   width: 100%;
+  border-radius: inherit;
+  cursor: pointer;
+  &:focus-visible {
+    outline: none;
+  }
 }
 .versionLabel {
   pointer-events: none;
@@ -2035,7 +2070,6 @@
 .createTypeActive {
   @include interaction.feedback(selected);
 }
-.versionPreviewButton,
 .assetGridCard,
 .assetGridCardSelected,
 .assetListCard,
