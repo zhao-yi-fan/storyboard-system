@@ -115,9 +115,6 @@ export function AssetCollection({
                 <div className={styles.primaryBadgePosition}>
                   <Badge className={styles.primaryBadge}>{getAssetKindLabel(asset)}</Badge>
                 </div>
-                <div className={styles.secondaryBadgePosition}>
-                  <Badge className={styles.secondaryBadge}>{asset.type?.trim() || "资源"}</Badge>
-                </div>
               </div>
               <div className={styles.assetGridContent}>
                 <h4 className={styles.assetName}>{asset.name}</h4>
