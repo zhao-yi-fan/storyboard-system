@@ -30,11 +30,32 @@ export function importPersonalAsset(
   id: number,
   data: { project_id: number; requirement_id?: number },
 ) {
-  return apiClient.post(`/personal-assets/${id}/import-to-project`, data);
+  return apiClient.post<PersonalImportResult>(`/personal-assets/${id}/import-to-project`, data);
 }
 
 export function saveCharacterToPersonal(id: number) {
   return apiClient.post<PersonalAsset>(`/characters/${id}/save-to-personal`, {});
+}
+
+export type PersonalImageTarget = {
+  entity_type: "character" | "asset";
+  entity_id: number;
+  name: string;
+  image?: string;
+  kind: "character" | "scene" | "prop";
+};
+export type PersonalImportResult = {
+  entity_type: "character" | "asset";
+  entity_id: number;
+  version_id: number;
+  changed: boolean;
+};
+export function applyPersonalImage(id: number, projectId: number, target: PersonalImageTarget) {
+  return apiClient.post<PersonalImportResult>(`/personal-assets/${id}/apply-image`, {
+    project_id: projectId,
+    entity_type: target.entity_type,
+    entity_id: target.entity_id,
+  });
 }
 
 export function saveAssetToPersonal(id: number) {

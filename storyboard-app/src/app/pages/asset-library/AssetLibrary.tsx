@@ -62,7 +62,9 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
   const preparation = useAssetPreparation(currentProjectId, chapterParam, prepare);
   const refreshRequirements = preparation.refresh;
   const [showImport, setShowImport] = useState(false);
-  const [importTarget, setImportTarget] = useState<AssetRequirement | undefined>();
+  const [importTarget, setImportTarget] = useState<
+    assetWorkspaceApi.PersonalImageTarget | undefined
+  >();
   const [versionToAdopt, setVersionToAdopt] = useState<AssetVersion | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -450,11 +452,6 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
       throw reason;
     }
   };
-  const selectedRequirement = preparation.requirements.find(
-    (item) =>
-      item.linked_entity_type === selectedAsset?.type &&
-      item.linked_entity_id === selectedAsset?.data.id,
-  );
 
   const taskSignature =
     `${currentProjectId}:${preparation.chapterId ?? "all"}:` +
@@ -663,10 +660,26 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
           selectedCharacterVoiceReferenceInputRef={selectedCharacterVoiceReferenceInputRef}
           selectedAssetFileInputRef={selectedAssetFileInputRef}
           onImport={
-            selectedRequirement
+            selectedAsset
               ? () =>
                   requestAction(() => {
-                    setImportTarget(selectedRequirement);
+                    setImportTarget({
+                      entity_type: selectedAsset.type,
+                      entity_id: selectedAsset.data.id,
+                      name: selectedAsset.data.name,
+                      kind:
+                        selectedAsset.type === ENTITY_TYPE.CHARACTER
+                          ? "character"
+                          : selectedAsset.data.type === "prop"
+                            ? "prop"
+                            : "scene",
+                      image:
+                        selectedAsset.type === ENTITY_TYPE.CHARACTER
+                          ? selectedAsset.data.design_sheet_url
+                          : selectedAsset.data.cover_url?.length
+                            ? selectedAsset.data.cover_url
+                            : selectedAsset.data.file_url,
+                    });
                     setShowImport(true);
                   })
               : undefined
@@ -674,12 +687,34 @@ function ProjectAssetPage({ currentProjectId }: { currentProjectId: number }) {
         />
       </div>
       <PersonalImportDialog
+        mode={importTarget ? "apply-image" : "create"}
         open={showImport}
         kind={importTarget?.kind ?? kind}
         target={importTarget}
         projectId={currentProjectId}
         onClose={() => setShowImport(false)}
-        onImported={refreshAll}
+        onImported={async () => {
+          const [nextCharacters, nextAssets] = await Promise.all([
+            characterApi.getCharactersByProject(currentProjectId),
+            assetApi.getAssetsByProject(currentProjectId),
+            refreshRequirements(true),
+          ]);
+          setCharacters(nextCharacters ?? []);
+          setAssets(nextAssets ?? []);
+          if (importTarget) {
+            const [entity, nextVersions] = await Promise.all([
+              importTarget.entity_type === ENTITY_TYPE.CHARACTER
+                ? characterApi.getCharacter(importTarget.entity_id)
+                : assetApi.getAsset(importTarget.entity_id),
+              assetWorkspaceApi.getVersions(importTarget.entity_type, importTarget.entity_id),
+            ]);
+            updateSelectedAsset(
+              { type: importTarget.entity_type, data: entity } as SelectedAsset,
+              true,
+            );
+            setVersions(nextVersions);
+          }
+        }}
       />
       {draftDialog}
       <Dialog

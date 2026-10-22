@@ -168,6 +168,7 @@ module.exports = (app: {
 
   router.post('/api/asset-requirements/:id/confirm', controller.assetWorkspace.confirmRequirement);
   router.get('/api/personal-assets', controller.assetWorkspace.personalIndex);
+  router.post('/api/personal-assets/:id/apply-image', controller.assetWorkspace.applyPersonalImage);
   router.post(
     '/api/personal-assets/:id/import-to-project',
     controller.assetWorkspace.importPersonal,

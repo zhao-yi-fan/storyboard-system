@@ -75,7 +75,7 @@ export function useAssetVersions({
       } else {
         await assetWorkspaceApi.saveAssetToPersonal(selectedAsset.data.id);
       }
-      toast.success("已同步到个人空间");
+      toast.success("已保存到个人空间");
     } finally {
       setIsSavingPersonal(false);
     }

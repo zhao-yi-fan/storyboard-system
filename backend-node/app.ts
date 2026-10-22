@@ -10,6 +10,7 @@ const { ensureAssetWorkspaceSchema } = require('./app/lib/asset_workspace_schema
 const { ensureLocalWorkerSchema } = require('./app/lib/local_worker_schema');
 const { ensureSceneGenerationSchema, ensureGenerationPinColumns } = require('./app/lib/scene_generation_schema');
 const { ensureSchemaMigrationsTable, runSchemaSteps } = require('./app/lib/schema_migrations');
+const { ensurePersonalImageSchema } = require('./app/lib/personal_image_schema');
 
 function isUnitTestEnvironment() {
   return (
@@ -47,6 +48,7 @@ class AppBootHook {
       await runSchemaSteps(pool, [
         { name: 'auth', ensure: ensureAuthSchema },
         { name: 'asset_workspace', ensure: ensureAssetWorkspaceSchema },
+        { name: 'personal_image_version_source', ensure: ensurePersonalImageSchema },
         { name: 'scene_generation', ensure: ensureSceneGenerationSchema },
         { name: 'generation_pin', ensure: ensureGenerationPinColumns },
         { name: 'shot_direction', ensure: ensureShotDirectionAnalysisSchema },

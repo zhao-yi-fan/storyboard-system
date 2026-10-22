@@ -44,6 +44,7 @@ describe('domain constants', () => {
       GENERATED: 'generated',
       LEGACY_IMPORT: 'legacy-import',
       MANUAL_UPLOAD: 'manual-upload',
+      PERSONAL_IMPORT: 'personal-import',
     });
     assert.deepEqual(VIDEO_MODEL, {
       SEEDANCE_2: 'seedance-2.0',

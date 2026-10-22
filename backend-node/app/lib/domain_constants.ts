@@ -42,6 +42,7 @@ export const REFERENCE_TYPE = Object.freeze({
 });
 
 export const ASSET_SOURCE_TYPE = Object.freeze({
+  PERSONAL_IMPORT: 'personal-import',
   GENERATED: 'generated',
   LEGACY_IMPORT: 'legacy-import',
   MANUAL_UPLOAD: 'manual-upload',

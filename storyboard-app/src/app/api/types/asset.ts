@@ -77,6 +77,7 @@ export type PersonalAsset = {
 };
 
 export type AssetVersion = {
+  source_personal_asset_id?: number | null;
   id: number;
   entity_type: Exclude<EntityType, "project">;
   entity_id: number;

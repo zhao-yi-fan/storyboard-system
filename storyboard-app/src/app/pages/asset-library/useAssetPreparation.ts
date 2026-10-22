@@ -44,7 +44,7 @@ export function useAssetPreparation(
     };
   }, [projectId]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (strict = false) => {
     if (!projectId || !chaptersLoaded) return;
     const sequence = ++requestSequence.current;
     try {
@@ -56,6 +56,7 @@ export function useAssetPreparation(
     } catch (reason) {
       if (sequence === requestSequence.current)
         setError(reason instanceof Error ? reason.message : "资产需求加载失败");
+      if (strict) throw reason;
     }
   }, [projectId, chaptersLoaded, chapterId]);
 
@@ -63,7 +64,7 @@ export function useAssetPreparation(
   useEffect(() => {
     latestRefresh.current = refresh;
   }, [refresh]);
-  const refreshCurrent = useCallback(() => latestRefresh.current(), []);
+  const refreshCurrent = useCallback((strict = false) => latestRefresh.current(strict), []);
 
   useEffect(() => {
     setRequirements([]);

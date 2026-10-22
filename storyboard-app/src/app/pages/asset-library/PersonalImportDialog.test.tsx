@@ -5,9 +5,20 @@ import { assetWorkspaceApi, type PersonalAsset } from "../../api";
 import { PersonalImportDialog } from "./PersonalImportDialog";
 
 vi.mock("../../api", () => ({
-  assetWorkspaceApi: { getPersonalAssets: vi.fn(), importPersonalAsset: vi.fn() },
+  assetWorkspaceApi: {
+    getPersonalAssets: vi.fn(),
+    importPersonalAsset: vi.fn(),
+    applyPersonalImage: vi.fn(),
+  },
 }));
-const props = { open: true, kind: "scene", projectId: 30, onClose: vi.fn(), onImported: vi.fn() };
+const props = {
+  open: true,
+  mode: "create" as const,
+  kind: "scene",
+  projectId: 30,
+  onClose: vi.fn(),
+  onImported: vi.fn(),
+};
 
 describe("PersonalImportDialog states", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -53,9 +64,69 @@ describe("PersonalImportDialog states", () => {
     vi.mocked(assetWorkspaceApi.importPersonalAsset).mockRejectedValue(new Error("导入失败"));
     render(<PersonalImportDialog {...props} />);
     fireEvent.click(await screen.findByRole("button", { name: "小巷" }));
+    expect(assetWorkspaceApi.importPersonalAsset).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "导入为新资产" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("导入失败");
     expect(screen.getByRole("button", { name: "小巷" })).toBeEnabled();
     expect(props.onClose).not.toHaveBeenCalled();
     expect(props.onImported).not.toHaveBeenCalled();
+  });
+  it("previews a selection and applies by entity, not by requirement", async () => {
+    vi.mocked(assetWorkspaceApi.getPersonalAssets).mockResolvedValue([
+      { id: 1, name: "小巷", file_url: "/generated/new.png" } as PersonalAsset,
+    ]);
+    vi.mocked(assetWorkspaceApi.applyPersonalImage).mockResolvedValue({
+      entity_type: "asset",
+      entity_id: 8,
+      version_id: 12,
+      changed: true,
+    });
+    props.onImported.mockResolvedValue(undefined);
+    const target = {
+      entity_type: "asset" as const,
+      entity_id: 8,
+      kind: "scene" as const,
+      name: "古城",
+      image: "/generated/old.png",
+    };
+    render(<PersonalImportDialog {...props} mode="apply-image" target={target} />);
+    fireEvent.click(await screen.findByRole("button", { name: "小巷" }));
+    expect(screen.getByAltText("当前图片")).toHaveAttribute("src", "/generated/old.png");
+    expect(screen.getByAltText("所选图片")).toHaveAttribute("src", "/generated/new.png");
+    expect(assetWorkspaceApi.applyPersonalImage).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "采用为新版本" }));
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledOnce());
+    expect(assetWorkspaceApi.applyPersonalImage).toHaveBeenCalledWith(1, 30, target);
+    expect(assetWorkspaceApi.importPersonalAsset).not.toHaveBeenCalled();
+  });
+  it("only refreshes after a committed operation whose refresh failed", async () => {
+    vi.mocked(assetWorkspaceApi.getPersonalAssets).mockResolvedValue([
+      { id: 1, name: "小巷" } as PersonalAsset,
+    ]);
+    vi.mocked(assetWorkspaceApi.importPersonalAsset).mockResolvedValue({
+      entity_type: "asset",
+      entity_id: 8,
+      version_id: 12,
+      changed: true,
+    });
+    props.onImported.mockRejectedValueOnce(new Error("网络异常")).mockResolvedValueOnce(undefined);
+    render(<PersonalImportDialog {...props} />);
+    fireEvent.click(await screen.findByRole("button", { name: "小巷" }));
+    fireEvent.click(screen.getByRole("button", { name: "导入为新资产" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("操作已完成，刷新失败");
+    expect(screen.getByRole("button", { name: "小巷" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "重新刷新" }));
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledOnce());
+    expect(assetWorkspaceApi.importPersonalAsset).toHaveBeenCalledTimes(1);
+  });
+  it("cancels a selected image without writing", async () => {
+    vi.mocked(assetWorkspaceApi.getPersonalAssets).mockResolvedValue([
+      { id: 1, name: "小巷" } as PersonalAsset,
+    ]);
+    render(<PersonalImportDialog {...props} />);
+    fireEvent.click(await screen.findByRole("button", { name: "小巷" }));
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
+    expect(props.onClose).toHaveBeenCalledOnce();
+    expect(assetWorkspaceApi.importPersonalAsset).not.toHaveBeenCalled();
   });
 });

@@ -1,32 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { type AssetRequirement, assetWorkspaceApi, type PersonalAsset } from "../../api";
-import { SignedImage } from "../../components/media/SignedMedia";
+import { assetWorkspaceApi, type PersonalAsset } from "../../api";
 import { EmptyState } from "../../components/shared/EmptyState";
 import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import { PersonalImageSelection } from "./PersonalImageSelection";
+import styles from "./PersonalImportDialog.module.scss";
+
+type Props = {
+  open: boolean;
+  mode: "create" | "apply-image";
+  kind: string;
+  target?: assetWorkspaceApi.PersonalImageTarget;
+  projectId: number;
+  onClose: () => void;
+  onImported: () => Promise<void>;
+};
 
 export function PersonalImportDialog({
   open,
+  mode,
   kind,
   target,
   projectId,
   onClose,
   onImported,
-}: {
-  open: boolean;
-  kind: string;
-  target?: AssetRequirement;
-  projectId: number;
-  onClose: () => void;
-  onImported: () => Promise<void>;
-}) {
+}: Props) {
   const [items, setItems] = useState<PersonalAsset[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<PersonalAsset | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [reload, setReload] = useState(0);
+  const [committed, setCommitted] = useState(false);
+  const submitting = useRef(false);
   const kindLabel =
     kind === "character" ? "角色" : kind === "scene" ? "场景" : kind === "prop" ? "道具" : "同类";
   useEffect(() => {
@@ -36,6 +50,8 @@ export function PersonalImportDialog({
     setError("");
     setLoadError("");
     setItems([]);
+    setSelected(null);
+    setCommitted(false);
     void assetWorkspaceApi
       .getPersonalAssets(kind)
       .then((data) => {
@@ -50,20 +66,33 @@ export function PersonalImportDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, kind, reload]);
-  const importItem = async (item: PersonalAsset) => {
+  }, [open, kind, reload, mode, target?.entity_type, target?.entity_id, projectId]);
+
+  const refreshCommitted = async () => {
+    try {
+      await onImported();
+      onClose();
+    } catch {
+      setError("操作已完成，刷新失败。请重新刷新，不需要再次提交。");
+    }
+  };
+  const submit = async () => {
+    if (submitting.current || !selected || (mode === "apply-image" && !target)) return;
+    submitting.current = true;
     setBusy(true);
     setError("");
     try {
-      await assetWorkspaceApi.importPersonalAsset(item.id, {
-        project_id: projectId,
-        requirement_id: target?.id,
-      });
-      await onImported();
-      onClose();
+      if (!committed) {
+        if (mode === "apply-image" && target)
+          await assetWorkspaceApi.applyPersonalImage(selected.id, projectId, target);
+        else await assetWorkspaceApi.importPersonalAsset(selected.id, { project_id: projectId });
+        setCommitted(true);
+      }
+      await refreshCommitted();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "导入失败");
+      setError(reason instanceof Error ? reason.message : "操作失败，请重试");
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   };
@@ -71,18 +100,22 @@ export function PersonalImportDialog({
     <Dialog
       open={open}
       onOpenChange={(value) => {
-        if (!value && !busy) onClose();
+        if (!value && !submitting.current) onClose();
       }}
     >
-      <DialogContent>
+      <DialogContent className={styles.dialog} showCloseButton={!busy}>
         <DialogHeader>
-          <DialogTitle>从个人空间导入{target ? ` · ${target.name}` : "新资产"}</DialogTitle>
+          <DialogTitle>
+            {mode === "create"
+              ? "从个人空间导入新资产"
+              : `选择图片给「${target?.name ?? "当前资产"}」`}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "create"
+              ? "导入为独立项目快照，不自动绑定到当前集，也不与个人空间持续同步。"
+              : "采用后生成新的图片版本，旧版本可以恢复。"}
+          </DialogDescription>
         </DialogHeader>
-        <p>
-          {target
-            ? "将更新此需求对应的项目共享资产，不修改已有分镜输出。"
-            : "导入为独立项目快照，不自动绑定到当前集。"}
-        </p>
         {error ? <p role="alert">{error}</p> : null}
         {loading ? (
           <p role="status">正在加载…</p>
@@ -110,24 +143,30 @@ export function PersonalImportDialog({
             }
           />
         ) : (
-          items.map((item) => (
-            <Button
-              key={item.id}
-              disabled={busy}
-              variant="outline"
-              onClick={() => void importItem(item)}
-              style={{ height: "auto", justifyContent: "flex-start", gap: 12 }}
-            >
-              {item.preview_url || item.file_url ? (
-                <SignedImage
-                  src={item.preview_url?.length ? item.preview_url : item.file_url}
-                  alt={item.name}
-                  style={{ width: 72, height: 72, objectFit: "contain" }}
-                />
-              ) : null}
-              {item.name}
-            </Button>
-          ))
+          <>
+            <PersonalImageSelection
+              items={items}
+              selected={selected}
+              onSelect={setSelected}
+              disabled={busy || committed}
+              mode={mode}
+              target={target}
+            />
+            <div className={styles.footer}>
+              <Button variant="ghost" disabled={busy} onClick={onClose}>
+                {committed ? "关闭" : "取消"}
+              </Button>
+              <Button disabled={busy || !selected} onClick={() => void submit()}>
+                {busy
+                  ? "处理中…"
+                  : committed
+                    ? "重新刷新"
+                    : mode === "create"
+                      ? "导入为新资产"
+                      : "采用为新版本"}
+              </Button>
+            </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

@@ -107,7 +107,7 @@ class AssetWorkspaceService extends Service {
       name: character.name,
       description: character.description,
       file_url: character.design_sheet_url || character.avatar_url,
-      preview_url: character.avatar_url || character.design_sheet_url,
+      preview_url: character.design_sheet_url || character.avatar_url,
       source_project_id: character.project_id,
       source_entity_type: ENTITY_TYPE.CHARACTER,
       source_entity_id: character.id,
@@ -130,90 +130,12 @@ class AssetWorkspaceService extends Service {
     });
   }
 
-  async importPersonal(
-    personalAssetId: number,
-    projectId: number,
-    userId: number,
-    requirementId: number,
-  ) {
-    await this.ensureOwnedProject(projectId, userId);
-    const [rows] = await this.pool.query(
-      'SELECT * FROM personal_assets WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
-      [personalAssetId, userId],
-    );
-    if (!rows.length) throw new Error('个人资产不存在');
-    const item = rows[0];
-    let requirement = null;
-    if (requirementId) {
-      const [requirements] = await this.pool.query(
-        `SELECT * FROM asset_requirements
-         WHERE id = ? AND project_id = ? AND deleted_at IS NULL`,
-        [requirementId, projectId],
-      );
-      if (!requirements.length) throw new Error('资产需求不存在');
-      requirement = requirements[0];
-    }
-    if (item.kind === ASSET_KIND.CHARACTER) {
-      if (requirement && requirement.kind !== ASSET_KIND.CHARACTER)
-        throw new Error('个人资产类型与需求不匹配');
-      const character =
-        requirement?.linked_entity_type === ENTITY_TYPE.CHARACTER && requirement.linked_entity_id
-          ? await this.ctx.service.character.update(requirement.linked_entity_id, {
-              name: item.name,
-              description: item.description,
-              avatar_url: item.preview_url || item.file_url,
-              design_sheet_url: item.file_url,
-            })
-          : await this.ctx.service.character.create(projectId, {
-              name: item.name,
-              description: item.description,
-              avatar_url: item.preview_url || item.file_url,
-              design_sheet_url: item.file_url,
-            });
-      await this.pool.execute('UPDATE characters SET source_personal_asset_id = ? WHERE id = ?', [
-        item.id,
-        character.id,
-      ]);
-      if (requirementId) {
-        await this.pool.execute(
-          "UPDATE asset_requirements SET linked_entity_type = 'character', linked_entity_id = ?, status = 'generated', error_message = NULL WHERE id = ? AND project_id = ?",
-          [character.id, requirementId, projectId],
-        );
-      }
-      return {
-        entity_type: ENTITY_TYPE.CHARACTER,
-        entity: await this.ctx.service.character.findById(character.id),
-      };
-    }
-    if (requirement && requirement.kind !== item.kind) throw new Error('个人资产类型与需求不匹配');
-    const asset =
-      requirement?.linked_entity_type === ENTITY_TYPE.ASSET && requirement.linked_entity_id
-        ? await this.ctx.service.asset.update(requirement.linked_entity_id, {
-            name: item.name,
-            type: item.kind === ASSET_KIND.PROP ? ASSET_KIND.PROP : ASSET_KIND.SCENE,
-            file_url: item.file_url,
-            meta: item.description,
-          })
-        : await this.ctx.service.asset.create(projectId, {
-            name: item.name,
-            type: item.kind === ASSET_KIND.PROP ? ASSET_KIND.PROP : ASSET_KIND.SCENE,
-            file_url: item.file_url,
-            meta: item.description,
-          });
-    await this.pool.execute(
-      'UPDATE assets SET source_personal_asset_id = ?, cover_url = ?, thumbnail_url = ? WHERE id = ?',
-      [item.id, item.file_url || '', item.preview_url || '', asset.id],
-    );
-    if (requirementId) {
-      await this.pool.execute(
-        "UPDATE asset_requirements SET linked_entity_type = 'asset', linked_entity_id = ?, status = 'generated', error_message = NULL WHERE id = ? AND project_id = ?",
-        [asset.id, requirementId, projectId],
-      );
-    }
-    return {
-      entity_type: ENTITY_TYPE.ASSET,
-      entity: await this.ctx.service.asset.findById(asset.id),
-    };
+  async importPersonal(personalAssetId: number, projectId: number, userId: number, requirementId?: number) {
+    return await this.ctx.service.personalAssetImport.execute(personalAssetId, projectId, userId, undefined, requirementId);
+  }
+
+  async applyPersonalImage(personalAssetId: number, projectId: number, userId: number, entityType: string, entityId: number) {
+    return await this.ctx.service.personalAssetImport.execute(personalAssetId, projectId, userId, { type: entityType, id: entityId });
   }
 }
 

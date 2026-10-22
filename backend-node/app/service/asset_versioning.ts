@@ -1,10 +1,11 @@
 'use strict';
 
 const Service = require('egg').Service;
+import { applyImageVersion, lockImageEntity } from '../lib/asset_image_version';
 import type { CharacterEntity, DbRow } from '../lib/entity';
 const { normalizeGeneratedAssetReference } = require('../lib/generated_asset');
 const { mapAssetVersion, mapCharacterVoiceVersion } = require('../lib/asset_workspace_mapper');
-const { ASSET_SOURCE_TYPE, ENTITY_TYPE } = require('../lib/domain_constants');
+const { ASSET_SOURCE_TYPE } = require('../lib/domain_constants');
 
 class AssetVersioningService extends Service {
   get pool() {
@@ -241,42 +242,18 @@ class AssetVersioningService extends Service {
   }
 
   async setCurrentVersion(entityType: string, entityId: number, versionId: number, userId: number) {
-    const [versions] = await this.pool.query(
-      `SELECT av.*, p.user_id FROM asset_versions av
-       JOIN ${entityType === ENTITY_TYPE.CHARACTER ? 'characters' : 'assets'} e ON e.id = av.entity_id
-       JOIN projects p ON p.id = e.project_id
-       WHERE av.id = ? AND av.entity_type = ? AND av.entity_id = ? AND av.deleted_at IS NULL`,
-      [versionId, entityType, entityId],
-    );
-    if (!versions.length || Number(versions[0].user_id) !== Number(userId))
-      throw new Error('版本不存在');
-    const version = versions[0];
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
-      await conn.execute(
-        'UPDATE asset_versions SET is_current = 0 WHERE entity_type = ? AND entity_id = ?',
-        [entityType, entityId],
-      );
-      await conn.execute('UPDATE asset_versions SET is_current = 1 WHERE id = ?', [versionId]);
-      if (entityType === ENTITY_TYPE.CHARACTER) {
-        await conn.execute(
-          "UPDATE characters SET design_sheet_url = ?, design_sheet_status = 'succeeded', design_sheet_error = NULL WHERE id = ?",
-          [version.file_url, entityId],
-        );
-      } else {
-        await conn.execute(
-          "UPDATE assets SET cover_url = ?, thumbnail_url = ?, cover_status = 'succeeded', cover_error = NULL WHERE id = ?",
-          [version.file_url, version.preview_url || '', entityId],
-        );
-      }
+      await lockImageEntity(conn, entityType, entityId, userId);
+      const [versions] = await conn.query('SELECT * FROM asset_versions WHERE id = ? AND entity_type = ? AND entity_id = ? AND deleted_at IS NULL FOR UPDATE', [versionId, entityType, entityId]);
+      if (!versions.length || versions[0].status !== 'succeeded') throw new Error('版本不存在或不可用');
+      await applyImageVersion(conn, entityType, entityId, versions[0]);
       await conn.commit();
     } catch (error) {
       await conn.rollback();
       throw error;
-    } finally {
-      conn.release();
-    }
+    } finally { conn.release(); }
     return await this.listVersions(entityType, entityId);
   }
 }

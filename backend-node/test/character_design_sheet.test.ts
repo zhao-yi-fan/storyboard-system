@@ -181,6 +181,10 @@ describe('test/character_design_sheet.test.ts', () => {
       user_id: 7,
     };
     const connection = {
+      async query(sql: string) {
+        if (sql.includes('SELECT e.*')) return [[{ id: 8, project_id: 30, user_id: 7 }], []];
+        return [[versionRow], []];
+      },
       async beginTransaction() {},
       async execute(sql: string, params: unknown[]) {
         writes.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });

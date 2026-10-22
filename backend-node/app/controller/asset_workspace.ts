@@ -63,6 +63,13 @@ class AssetWorkspaceController extends ApiController {
     );
   }
 
+  async applyPersonalImage() {
+    const body = this.ctx.request.body || {};
+    await this.respond(() => this.ctx.service.assetWorkspace.applyPersonalImage(
+      Number(this.ctx.params.id), Number(body.project_id), this.userId(), String(body.entity_type || ''), Number(body.entity_id),
+    ));
+  }
+
   async saveAsset() {
     await this.respond(() =>
       this.ctx.service.assetWorkspace.saveAssetToPersonal(

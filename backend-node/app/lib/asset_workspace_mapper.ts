@@ -32,6 +32,7 @@ export function mapAssetVersion(app: StoryboardApp, row: DataRow) {
     ...row,
     id: Number(row.id),
     entity_id: Number(row.entity_id),
+    source_personal_asset_id: row.source_personal_asset_id === null || row.source_personal_asset_id === undefined ? null : Number(row.source_personal_asset_id),
     is_current: Boolean(row.is_current),
     file_url: resolveUrl(app, String(row.file_url || ''), base),
     preview_url: resolveUrl(app, String(row.preview_url || ''), base),

@@ -229,11 +229,6 @@ export function AssetDetailSidebar({
                 style={{ minWidth: 0, border: 0 }}
                 aria-label="资产详情编辑"
               >
-                {onImport ? (
-                  <Button variant="outline" onClick={onImport}>
-                    从个人空间导入到此资产
-                  </Button>
-                ) : null}
                 {selectedAsset.type === ENTITY_TYPE.CHARACTER ? (
                   <div className={styles.detailSections}>
                     <div className={styles.detailCard}>
@@ -342,6 +337,11 @@ export function AssetDetailSidebar({
                           <Users className={styles.largePlaceholderIcon} />
                         )}
                       </div>
+                      {onImport ? (
+                        <Button variant="outline" onClick={onImport}>
+                          从个人空间选择图片
+                        </Button>
+                      ) : null}
                       <div className={styles.subsection}>
                         <div className={styles.subsectionHeader}>
                           <div className={styles.detailLabel}>主设定图版本</div>
@@ -642,6 +642,11 @@ export function AssetDetailSidebar({
                         </div>
                       ))}
                     </div>
+                    {onImport ? (
+                      <Button variant="outline" onClick={onImport}>
+                        从个人空间选择图片
+                      </Button>
+                    ) : null}
                     <input
                       ref={selectedAssetFileInputRef}
                       type="file"

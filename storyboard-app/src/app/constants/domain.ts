@@ -37,6 +37,7 @@ export const ENTITY_TYPE = {
 export type EntityType = (typeof ENTITY_TYPE)[keyof typeof ENTITY_TYPE];
 
 export const ASSET_SOURCE_TYPE = {
+  PERSONAL_IMPORT: "personal-import",
   GENERATED: "generated",
   LEGACY_IMPORT: "legacy-import",
   MANUAL_UPLOAD: "manual-upload",
