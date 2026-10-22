@@ -66,6 +66,21 @@
   border: 1px solid #333;
   border-radius: 12px;
   overflow: hidden;
+  transition: border-color 150ms;
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: var(--brand-text);
+    }
+  }
+  &:has(button:focus-visible) {
+    border-color: var(--brand);
+  }
+  &:has(button:active:not(:disabled)) {
+    border-color: var(--brand);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 .preview {
   border-radius: 11px 11px 0 0;
@@ -128,7 +143,11 @@
   @include interaction.feedback(selected);
 }
 .preview {
-  @include interaction.feedback(media);
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
