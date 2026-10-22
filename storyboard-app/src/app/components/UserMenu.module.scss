@@ -104,6 +104,35 @@
     display: block;
   }
 }
+.menu[data-placement="sidebar"] {
+  width: 100%;
+  min-width: 0;
+  .trigger,
+  .triggerOpen {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 64px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    text-align: center;
+  }
+  .triggerName {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .chevron,
+  .chevronOpen {
+    position: absolute;
+    top: 8px;
+    right: 4px;
+  }
+}
 .chevron,
 .chevronOpen {
   opacity: 40%;

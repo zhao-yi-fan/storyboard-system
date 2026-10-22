@@ -151,6 +151,9 @@
   width: calc(var(--spacing, 0.25rem) * 4);
 }
 .sidebarFooter {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 12px;
   margin-top: auto;
   display: flex;
   flex-direction: column;
@@ -512,10 +515,7 @@
   &:hover:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
     @media (hover: hover) and (pointer: fine) {
       @media (hover: hover) and (pointer: fine) {
-        border-color: color-mix(in srgb, oklch(77.7% 0.152 181.912) 30%, transparent);
-        @supports (color: color-mix(in lab, red, red)) {
-          border-color: color-mix(in oklab, var(--brand-text) 30%, transparent);
-        }
+        border-color: var(--brand-text);
       }
     }
   }
@@ -544,7 +544,15 @@
     }
   }
 }
+.projectCard:has(.projectCover:active:not(:disabled)) {
+  border-color: var(--brand);
+}
 .projectCover {
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+  }
   border-radius: calc(var(--radius-2xl, 1rem) - 1px) calc(var(--radius-2xl, 1rem) - 1px) 0 0;
   position: relative;
   display: block;
@@ -1182,7 +1190,6 @@
 .navigationActive {
   @include interaction.feedback(selected);
 }
-.projectCover,
 .createProject {
   @include interaction.feedback(media);
 }

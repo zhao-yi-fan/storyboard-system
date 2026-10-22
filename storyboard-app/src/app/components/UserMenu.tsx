@@ -57,8 +57,12 @@ export function UserMenu({ placement = "header" }: UserMenuProps) {
   };
 
   return (
-    <div ref={ref} className={styles.menu}>
+    <div ref={ref} className={styles.menu} data-placement={placement}>
       <button
+        type="button"
+        aria-label={`账号：${userInfo.name}`}
+        aria-expanded={open}
+        title={userInfo.name}
         onClick={() => setOpen((value) => !value)}
         className={open ? styles.triggerOpen : styles.trigger}
       >
