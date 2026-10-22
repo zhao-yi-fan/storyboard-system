@@ -1,14 +1,4 @@
-import {
-  Loader2,
-  MapPin,
-  MoreHorizontal,
-  Save,
-  Sparkles,
-  Trash2,
-  Upload,
-  Users,
-  X,
-} from "lucide-react";
+import { Loader2, MoreHorizontal, Save, Sparkles, Trash2, Upload, Users, X } from "lucide-react";
 import type { Dispatch, HTMLAttributes, RefObject, SetStateAction } from "react";
 
 import type { AssetVersion } from "../../api";
@@ -41,6 +31,7 @@ import {
   getCharacterVoiceReferenceSrc,
 } from "./AssetLibrary.helpers";
 import styles from "./AssetLibrary.module.scss";
+import { AssetMediaSections } from "./AssetMediaSections";
 
 type AssetDetailSidebarProps = {
   editingBusy?: boolean;
@@ -121,7 +112,6 @@ export function AssetDetailSidebar({
   handleUploadSelectedAssetFile,
   selectedCharacterReferenceInputRef,
   selectedCharacterVoiceReferenceInputRef,
-  selectedAssetFileInputRef,
 }: AssetDetailSidebarProps) {
   return (
     <>
@@ -614,88 +604,25 @@ export function AssetDetailSidebar({
                   </div>
                 ) : (
                   <div className={styles.detailSections}>
-                    <div className={styles.assetMediaGrid}>
-                      {[
-                        { label: "原始素材", src: getAssetOriginalSrc(selectedAsset.data) },
-                        { label: "AI 封面", src: selectedAsset.data.cover_url ?? "" },
-                      ].map((media) => (
-                        <div key={media.label} className={styles.mediaItem}>
-                          <div className={styles.detailLabel}>{media.label}</div>
-                          <button
-                            type="button"
-                            disabled={!media.src}
-                            className={styles.mediaPreview}
-                            onClick={() =>
-                              media.src && setPreviewImage({ src: media.src, alt: media.label })
-                            }
-                          >
-                            {media.src ? (
-                              <ContainedAssetImage
-                                src={media.src}
-                                alt={media.label}
-                                className={styles.fullSize}
-                              />
-                            ) : (
-                              <MapPin className={styles.mediaPlaceholderIcon} />
-                            )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    {onImport ? (
-                      <Button variant="outline" onClick={onImport}>
-                        从个人空间选择图片
-                      </Button>
-                    ) : null}
-                    <input
-                      ref={selectedAssetFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className={styles.hiddenInput}
-                      onChange={(event) =>
-                        void handleUploadSelectedAssetFile(event.target.files?.[0] ?? null)
+                    <AssetMediaSections
+                      key={selectedAsset.data.id}
+                      original={getAssetOriginalSrc(selectedAsset.data)}
+                      cover={selectedAsset.data.cover_url ?? ""}
+                      saving={isSavingAsset}
+                      generating={
+                        generatingAssetCoverId === selectedAsset.data.id ||
+                        selectedAsset.data.cover_status === GENERATION_STATUS.GENERATING
                       }
+                      canGenerate={
+                        selectedAsset.data.type === ASSET_KIND.SCENE ||
+                        selectedAsset.data.type === ASSET_KIND.PROP
+                      }
+                      coverError={selectedAsset.data.cover_error}
+                      onPreview={(src, alt) => setPreviewImage({ src, alt })}
+                      onUpload={handleUploadSelectedAssetFile}
+                      onGenerate={handleGenerateAssetCover}
+                      onImport={onImport}
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={styles.secondaryButton}
-                      onClick={() => selectedAssetFileInputRef.current?.click()}
-                    >
-                      <Upload className={styles.buttonIcon} />
-                      替换原始素材
-                    </Button>
-                    {selectedAsset.data.cover_error ? (
-                      <div className={styles.inlineError}>{selectedAsset.data.cover_error}</div>
-                    ) : null}
-                    {selectedAsset.data.type === ASSET_KIND.SCENE ||
-                    selectedAsset.data.type === ASSET_KIND.PROP ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={styles.secondaryButton}
-                        disabled={
-                          generatingAssetCoverId === selectedAsset.data.id ||
-                          selectedAsset.data.cover_status === GENERATION_STATUS.GENERATING
-                        }
-                        onClick={() => void handleGenerateAssetCover()}
-                      >
-                        {generatingAssetCoverId === selectedAsset.data.id ||
-                        selectedAsset.data.cover_status === GENERATION_STATUS.GENERATING ? (
-                          <>
-                            <Loader2 className={styles.buttonLoadingIcon} />
-                            正在生成
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className={styles.buttonIcon} />
-                            生成封面
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <div className={styles.unsupportedNotice}>当前类型不支持 AI 生成封面。</div>
-                    )}
                     <div>
                       <Label className={styles.detailLabel}>
                         {getAssetKindLabel(selectedAsset.data)}名称
