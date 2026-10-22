@@ -1,0 +1,33 @@
+/* Component-owned focus: one border and one halo, never a second outline. */
+.field {
+  outline: none;
+  transition:
+    border-color 150ms,
+    box-shadow 150ms;
+
+  &:focus:not(:disabled):not([aria-disabled="true"]) {
+    border-color: var(--brand);
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, transparent);
+  }
+
+  &[aria-invalid="true"] {
+    border-color: var(--danger);
+  }
+
+  &[aria-invalid="true"]:focus:not(:disabled):not([aria-disabled="true"]) {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 25%, transparent);
+  }
+
+  &:disabled,
+  &[aria-disabled="true"] {
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field {
+    transition: none;
+  }
+}

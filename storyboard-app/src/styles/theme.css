@@ -43,7 +43,12 @@ input[type="radio"] {
   accent-color: var(--brand);
 }
 
-:where(button, input, textarea, select):focus-visible {
+:where(
+  button,
+  input:not([data-slot="input"]),
+  textarea:not([data-slot="textarea"]),
+  select
+):focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
