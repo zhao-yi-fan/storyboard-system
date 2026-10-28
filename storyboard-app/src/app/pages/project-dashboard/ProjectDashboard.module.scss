@@ -183,12 +183,13 @@
   }
 }
 .tooltip {
+  --tooltip-background: #181818;
   max-width: calc(var(--spacing, 0.25rem) * 72);
   border-color: color-mix(in srgb, #fff 10%, transparent);
   @supports (color: color-mix(in lab, red, red)) {
     border-color: color-mix(in oklab, var(--color-white, #fff) 10%, transparent);
   }
-  background-color: #181818;
+  background-color: var(--tooltip-background);
   color: var(--color-gray-300, oklch(87.2% 0.01 258.338));
 }
 .main {

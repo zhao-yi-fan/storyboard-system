@@ -321,7 +321,7 @@ export default function ProjectDashboard() {
         <div className={styles.sidebarFooter}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className={styles.infoButton}>
+              <button type="button" aria-label="生成能力说明" className={styles.infoButton}>
                 <Info className={styles.icon} />
               </button>
             </TooltipTrigger>
